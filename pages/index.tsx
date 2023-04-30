@@ -12,8 +12,7 @@ export default function Home({ allPostsData }: HomeProps): JSX.Element {
     <Layout home>
       <section className='text-xl flex flex-col gap-4 text-primary'>
         <h2>
-          Olá, sou <span className='font-bold'>Leite</span>. Um "ávido filósofo"
-          e atento observador da política brasileira.
+          Olá, sou <span className='font-bold'>Leite</span>. Um "ávido filósofo" e atento observador da política brasileira.
         </h2>
         <p>
           Veja meus <a href='https://next-domenyk.vercel.app'>Links</a>.
