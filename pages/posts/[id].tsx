@@ -18,7 +18,7 @@ export default function Post({
         <h1 className='text-3xl font-bold'>{title}</h1>
         <Date dateString={date} />
         <div
-          className='flex flex-col gap-4 text-lg'
+          className='flex flex-col gap-4 lg:text-lg sm:text-xs'
           dangerouslySetInnerHTML={{ __html: htmlContent }}
         />
       </article>

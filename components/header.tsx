@@ -9,36 +9,36 @@ const name = 'Domenyk';
 
 export function Header({ home }: HeaderProps) {
   return (
-    <header className='flex flex-col gap-4 items-center'>
+    <header className="flex flex-col gap-4 items-center">
       {home ? (
         <>
           <Image
             priority
-            src='/images/profile.jpg'
-            className='rounded-full'
-            height={144}
-            width={144}
+            src="/images/profile.jpg"
+            className="rounded-full brightness-125"
+            height={148}
+            width={148}
             alt={name}
           />
-          <h1 className='font-bold text-4xl'>{name}</h1>
+          <h1 className="font-bold text-3xl">{name}</h1>
         </>
       ) : (
         <>
-          <Link href='/'>
-            <a className='hover:brightness-150 brightness-125 transition'>
+          <Link href="/">
+            <a className="hover:brightness-150 brightness-125 transition">
               <Image
                 priority
-                src='/images/profile.jpg'
-                className='rounded-full'
-                height={110}
-                width={110}
+                src="/images/profile.jpg"
+                className="rounded-full"
+                height={148}
+                width={148}
                 alt={name}
               />
             </a>
           </Link>
-          <h2 className='font-bold text-2xl'>
-            <Link href='/'>
-              <a className='text-primary hover:text-link'>{name}</a>
+          <h2 className="font-bold text-3xl">
+            <Link href="/">
+              <a className="text-primary hover:text-link">{name}</a>
             </Link>
           </h2>
         </>
