@@ -20,6 +20,6 @@
   }
 
   img {
-    @apply rounded-xl;
+    @apply rounded;
   }
 }
