@@ -3,6 +3,9 @@
 @tailwind utilities;
 
 @layer base {
+  html{
+    @apply scrollbar-thumb-white/50 scrollbar-thin;
+  }
   body {
     @apply bg-background text-primary;
   }

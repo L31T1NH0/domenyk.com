@@ -11,5 +11,8 @@ module.exports = {
       }
     }
   },
-  plugins: [({ addVariant }) => addVariant('inner', '& > *')]
+  plugins: [
+    ({ addVariant }) => addVariant('inner', '& > *'),
+    require("tailwind-scrollbar")
+  ]
 };
