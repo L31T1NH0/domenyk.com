@@ -15,7 +15,7 @@ export default function Post({
   return (
     <Layout title={title} description={title} url={path}>
       <article className="flex flex-col gap-4">
-        <h1 className="text-3xl font-bold">{title}</h1>
+        <h1 className="lg:text-3xl max-sm:text-xl font-bold">{title}</h1>
         <Date dateString={date} />
         <div
           className="flex flex-col gap-4 lg:text-lg sm:text-sm max-sm:text-xs"
