@@ -1,15 +1,58 @@
+import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
 import { Layout } from "@components/layout";
 import { Date } from "@components/date";
-import { getAllPostsId, getPostData } from "@lib/posts";
-import type { PostContent, PostPath } from "@lib/posts";
+import axios from "axios";
 
-type PostProps = {
-  postData: PostContent;
+type PostContent = {
+  id: string;
+  date: string;
+  title: string;
+  htmlContent: string;
 };
 
-export default function Post({
-  postData: { date, title, htmlContent },
-}: PostProps): JSX.Element {
+export default function Post(): JSX.Element {
+  const router = useRouter();
+  const { id } = router.query;
+
+  const [postData, setPostData] = useState<PostContent | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (id) {
+      fetchPostData(id as string);
+    }
+  }, [id]);
+
+  async function fetchPostData(postId: string) {
+    try {
+      const response = await axios.get(`/api/posts/${postId}`);
+      setPostData(response.data);
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("An unknown error occurred");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
+
+  if (!postData) {
+    return <div>No data available</div>;
+  }
+
+  const { date, title, htmlContent } = postData;
   const path = `/posts/${title}`;
 
   return (
@@ -24,23 +67,4 @@ export default function Post({
       </article>
     </Layout>
   );
-}
-
-export async function getStaticPaths() {
-  const paths = await getAllPostsId();
-
-  return {
-    paths,
-    fallback: false,
-  };
-}
-
-export async function getStaticProps({ params: { id } }: PostPath) {
-  const postData = await getPostData(id);
-
-  return {
-    props: {
-      postData,
-    },
-  };
 }
