@@ -16,7 +16,6 @@ export default function Post(): JSX.Element {
   const { id } = router.query;
 
   const [postData, setPostData] = useState<PostContent | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -35,13 +34,7 @@ export default function Post(): JSX.Element {
       } else {
         setError("An unknown error occurred");
       }
-    } finally {
-      setLoading(false);
     }
-  }
-
-  if (loading) {
-    return <div>Loading...</div>;
   }
 
   if (error) {

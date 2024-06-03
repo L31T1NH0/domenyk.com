@@ -16,7 +16,6 @@ type HomeProps = {
 
 export default function Home(): JSX.Element {
   const [allPostsData, setAllPostsData] = useState<PostData[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -33,17 +32,7 @@ export default function Home(): JSX.Element {
       } else {
         setError("An unknown error occurred");
       }
-    } finally {
-      setLoading(false);
     }
-  }
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  if (error) {
-    return <div>Error: {error}</div>;
   }
 
   return (
