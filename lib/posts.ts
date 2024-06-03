@@ -6,7 +6,7 @@ import { remark } from "remark";
 import html from "remark-html";
 
 const username = "L31T1NH0";
-const repository = "blog";
+const repository = "markdown";
 const path = "posts";
 const branch = "main"; // ou outra branch onde estão os arquivos
 
