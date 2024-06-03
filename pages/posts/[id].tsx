@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { GetServerSideProps } from "next";
 import { useRouter } from "next/router";
 import { Layout } from "@components/layout";
 import { Date } from "@components/date";
@@ -11,31 +11,13 @@ type PostContent = {
   htmlContent: string;
 };
 
-export default function Post(): JSX.Element {
+type PostProps = {
+  postData: PostContent | null;
+  error: string | null;
+};
+
+export default function Post({ postData, error }: PostProps): JSX.Element {
   const router = useRouter();
-  const { id } = router.query;
-
-  const [postData, setPostData] = useState<PostContent | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (id) {
-      fetchPostData(id as string);
-    }
-  }, [id]);
-
-  async function fetchPostData(postId: string) {
-    try {
-      const response = await axios.get(`/api/posts/${postId}`);
-      setPostData(response.data);
-    } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("An unknown error occurred");
-      }
-    }
-  }
 
   if (error) {
     return <div>Error: {error}</div>;
@@ -61,3 +43,32 @@ export default function Post(): JSX.Element {
     </Layout>
   );
 }
+
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const { id } = context.params ?? {};
+
+  if (!id) {
+    return {
+      notFound: true,
+    };
+  }
+
+  try {
+    const response = await axios.get(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/posts/${id}`
+    );
+    return {
+      props: {
+        postData: response.data,
+        error: null,
+      },
+    };
+  } catch (error) {
+    return {
+      props: {
+        postData: null,
+        error: "Failed to fetch post data",
+      },
+    };
+  }
+};
