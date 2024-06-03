@@ -3,6 +3,7 @@ import { Layout } from '@components/layout';
 import { Date } from '@components/date';
 import { getSortedPostsData, PostsData } from '@lib/posts';
 
+
 type HomeProps = {
   allPostsData: PostsData;
 };
@@ -44,7 +45,7 @@ type StaticReturn = {
 };
 
 export async function getStaticProps(): Promise<StaticReturn> {
-  const allPostsData = getSortedPostsData();
+  const allPostsData = await getSortedPostsData();
 
   return {
     props: {

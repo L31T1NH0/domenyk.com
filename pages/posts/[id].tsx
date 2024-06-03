@@ -1,14 +1,14 @@
-import { Layout } from '@components/layout';
-import { Date } from '@components/date';
-import { getAllPostsId, getPostData } from '@lib/posts';
-import type { PostContent, PostsPath, PostPath } from '@lib/posts';
+import { Layout } from "@components/layout";
+import { Date } from "@components/date";
+import { getAllPostsId, getPostData } from "@lib/posts";
+import type { PostContent, PostPath } from "@lib/posts";
 
 type PostProps = {
   postData: PostContent;
 };
 
 export default function Post({
-  postData: { date, title, htmlContent }
+  postData: { date, title, htmlContent },
 }: PostProps): JSX.Element {
   const path = `/posts/${title}`;
 
@@ -26,34 +26,21 @@ export default function Post({
   );
 }
 
-type PathPropsReturn = {
-  paths: PostsPath;
-  fallback: boolean;
-};
-
-export async function getStaticPaths(): Promise<PathPropsReturn> {
-  const paths = getAllPostsId();
+export async function getStaticPaths() {
+  const paths = await getAllPostsId();
 
   return {
     paths,
-    fallback: false
+    fallback: false,
   };
 }
 
-type StaticPropsReturn = {
-  props: {
-    postData: PostContent;
-  };
-};
-
-export async function getStaticProps({
-  params: { id }
-}: PostPath): Promise<StaticPropsReturn> {
+export async function getStaticProps({ params: { id } }: PostPath) {
   const postData = await getPostData(id);
 
   return {
     props: {
-      postData
-    }
+      postData,
+    },
   };
 }

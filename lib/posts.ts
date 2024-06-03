@@ -1,10 +1,14 @@
-import fs from 'fs';
-import path from 'path';
-import matter from 'gray-matter';
-import { remark } from 'remark';
-import html from 'remark-html';
+// lib/posts.js
 
-const postsDirectory = path.join(process.cwd(), 'posts');
+import axios from "axios";
+import matter from "gray-matter";
+import { remark } from "remark";
+import html from "remark-html";
+
+const username = "L31T1NH0";
+const repository = "blog";
+const path = "posts";
+const branch = "main"; // ou outra branch onde estão os arquivos
 
 export type PostData = {
   id: string;
@@ -14,26 +18,61 @@ export type PostData = {
 
 export type PostsData = PostData[];
 
-export function getSortedPostsData(): PostsData {
-  const fileNames = fs.readdirSync(postsDirectory);
-
-  const allPostsData = fileNames.map((fileName) => {
-    const id = fileName.replace(/\.md$/, '');
-
-    const fullPath = path.join(postsDirectory, fileName);
-    const fileContents = fs.readFileSync(fullPath, 'utf8');
-
-    const { data } = matter(fileContents);
-
-    return {
-      id,
-      ...data
-    };
-  }) as PostsData;
-
-  return allPostsData.sort().reverse();
+// Função para buscar conteúdo de um arquivo
+async function fetchFileContent(filePath: string): Promise<string> {
+  const url = `https://raw.githubusercontent.com/${username}/${repository}/${branch}/${filePath}`;
+  const response = await axios.get(url);
+  return response.data;
 }
 
+// Função para buscar todos os dados dos posts
+export async function getSortedPostsData(): Promise<PostsData> {
+  const url = `https://api.github.com/repos/${username}/${repository}/contents/${path}?ref=${branch}`;
+  const response = await axios.get(url);
+  const files = response.data;
+
+  const allPostsData = await Promise.all(
+    files.map(async (file: { path: string; name: string }) => {
+      const id = file.name.replace(/\.md$/, "");
+      const fileContents = await fetchFileContent(file.path);
+      const { data } = matter(fileContents);
+
+      return {
+        id,
+        ...data,
+      };
+    })
+  );
+
+  return allPostsData.sort((a, b) => (a.date < b.date ? 1 : -1));
+}
+
+// Função para buscar todos os IDs dos posts
+export async function getAllPostsId(): Promise<{ params: { id: string } }[]> {
+  const postsData = await getSortedPostsData();
+  return postsData.map(({ id }) => ({ params: { id } }));
+}
+
+// Função para buscar os dados de um post específico
+export async function getPostData(
+  id: string
+): Promise<PostData & { htmlContent: string }> {
+  const fileName = `${id}.md`;
+  const fileContents = await fetchFileContent(`${path}/${fileName}`);
+  const { data, content } = matter(fileContents);
+
+  const processedContent = await remark().use(html).process(content);
+  const htmlContent = processedContent.toString();
+
+  return {
+    id,
+    date: data.date,
+    title: data.title,
+    htmlContent,
+  };
+}
+
+// Exportando os tipos necessários
 export type PostPath = {
   params: {
     id: string;
@@ -42,30 +81,6 @@ export type PostPath = {
 
 export type PostsPath = PostPath[];
 
-export function getAllPostsId(): PostsPath {
-  const fileNames = fs.readdirSync(postsDirectory);
-
-  return fileNames.map((fileName) => ({
-    params: { id: fileName.replace(/\.md$/, '') }
-  }));
-}
-
 export type PostContent = PostData & {
   htmlContent: string;
 };
-
-export async function getPostData(id: string): Promise<PostContent> {
-  const fullPath = path.join(postsDirectory, `${id}.md`);
-  const fileContents = fs.readFileSync(fullPath, 'utf8');
-
-  const { data, content } = matter(fileContents);
-
-  const processedContent = await remark().use(html).process(content);
-  const htmlContent = processedContent.toString();
-
-  return {
-    id,
-    htmlContent,
-    ...data
-  } as PostContent;
-}
