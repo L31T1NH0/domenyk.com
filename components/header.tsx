@@ -20,7 +20,7 @@ export function Header({ home }: HeaderProps) {
             width={148}
             alt={name}
           />
-          <h1 className="font-bold lg:text-3xl max-sm:text-xl">{name}</h1>
+          <strong className="text-3xl">{name}</strong>
         </>
       ) : (
         <>
@@ -36,11 +36,11 @@ export function Header({ home }: HeaderProps) {
               />
             </a>
           </Link>
-          <h2 className="font-bold lg:text-3xl max-sm:text-xl">
+          <strong className="text-3xl">
             <Link href="/">
               <a className="text-primary hover:text-link">{name}</a>
             </Link>
-          </h2>
+          </strong>
         </>
       )}
     </header>
