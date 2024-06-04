@@ -15,7 +15,7 @@ export function Header({ home }: HeaderProps) {
           <Image
             priority
             src="/images/profile.jpg"
-            className="rounded-full brightness-125 grayscale"
+            className="rounded-full brightness-125"
             height={148}
             width={148}
             alt={name}
@@ -25,18 +25,16 @@ export function Header({ home }: HeaderProps) {
       ) : (
         <>
           <Link href="/">
-              <Image
-                priority
-                src="/images/profile.jpg"
-                className="rounded-full"
-                height={148}
-                width={148}
-                alt={name}
-              />
+            <Image
+              priority
+              src="/images/profile.jpg"
+              className="rounded-full brightness-125"
+              height={148}
+              width={148}
+              alt={name}
+            />
           </Link>
-          <strong className="text-3xl">
-            Domenyk
-          </strong>
+          <strong className="text-3xl pb-2">Domenyk</strong>
         </>
       )}
     </header>
