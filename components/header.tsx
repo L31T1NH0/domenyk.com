@@ -34,7 +34,7 @@ export function Header({ home }: HeaderProps) {
               alt={name}
             />
           </Link>
-          <strong className="text-3xl pb-2">Domenyk</strong>
+          <strong className="text-3xl">Domenyk</strong>
         </>
       )}
     </header>

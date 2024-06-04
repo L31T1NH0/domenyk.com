@@ -3,6 +3,8 @@ import Link from "next/link";
 import { Layout } from "@components/layout";
 import { Date } from "@components/date";
 import axios from "axios";
+import { BlogIcon } from "../components/BlogIcon";
+
 
 type PostData = {
   id: string;
@@ -22,17 +24,17 @@ export default function Home({ allPostsData, error }: HomeProps): JSX.Element {
 
   return (
     <Layout home>
-      <section className="text-xl flex flex-col gap-4 py-2 text-primary">
+      <section className="text-xl flex flex-col gap-2 py-4 text-primary">
         <h2>
           Olá, sou <span className="font-bold">Leite</span>. Um "ávido filósofo"
           e atento observador da política brasileira.
         </h2>
-        <p>
-          Veja meus <a href="https://next-domenyk.vercel.app">Links</a>.
-        </p>
       </section>
       <section className="flex flex-col gap-4">
-        <h2 className="font-bold text-2xl">Blog</h2>
+        <div className="flex gap-1">
+          <h2 className="font-bold text-2xl">Blog</h2>
+          <BlogIcon />
+        </div>
         <ul className="text-xl ml-0 flex flex-col gap-4">
           {allPostsData.map(({ id, date, title }) => (
             <li className="flex flex-col gap-2" key={id}>
