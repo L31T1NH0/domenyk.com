@@ -22,7 +22,7 @@ export default function Home({ allPostsData, error }: HomeProps): JSX.Element {
 
   return (
     <Layout home>
-      <section className="text-xl flex flex-col gap-4 text-primary">
+      <section className="text-xl flex flex-col gap-4 py-2 text-primary">
         <h2>
           Olá, sou <span className="font-bold">Leite</span>. Um "ávido filósofo"
           e atento observador da política brasileira.
@@ -31,7 +31,7 @@ export default function Home({ allPostsData, error }: HomeProps): JSX.Element {
           Veja meus <a href="https://next-domenyk.vercel.app">Links</a>.
         </p>
       </section>
-      <section className="flex flex-col gap-6">
+      <section className="flex flex-col gap-4">
         <h2 className="font-bold text-2xl">Blog</h2>
         <ul className="text-xl ml-0 flex flex-col gap-4">
           {allPostsData.map(({ id, date, title }) => (
