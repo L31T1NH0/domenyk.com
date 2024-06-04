@@ -25,7 +25,6 @@ export function Header({ home }: HeaderProps) {
       ) : (
         <>
           <Link href="/">
-            <a className="hover:brightness-150 brightness-125 transition grayscale">
               <Image
                 priority
                 src="/images/profile.jpg"
@@ -34,12 +33,9 @@ export function Header({ home }: HeaderProps) {
                 width={148}
                 alt={name}
               />
-            </a>
           </Link>
           <strong className="text-3xl">
-            <Link href="/">
-              <a className="text-primary hover:text-link">{name}</a>
-            </Link>
+            Domenyk
           </strong>
         </>
       )}
