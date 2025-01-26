@@ -15,7 +15,7 @@ export function Header({ home }: HeaderProps) {
           <Image
             priority
             src="/images/profile.jpg"
-            className="rounded-full brightness-125"
+            className="rounded-full brightness-125 foto"
             height={148}
             width={148}
             alt={name}
@@ -28,7 +28,7 @@ export function Header({ home }: HeaderProps) {
             <Image
               priority
               src="/images/profile.jpg"
-              className="rounded-full brightness-125"
+              className="rounded-full brightness-125 foto"
               height={148}
               width={148}
               alt={name}
