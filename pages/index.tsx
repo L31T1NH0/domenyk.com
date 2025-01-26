@@ -4,6 +4,8 @@ import { Layout } from "@components/layout";
 import { Date } from "@components/date";
 import axios from "axios";
 import { BlogIcon } from "../components/BlogIcon";
+import React from "react";
+import { JSX } from "react/jsx-runtime";
 
 
 type PostData = {

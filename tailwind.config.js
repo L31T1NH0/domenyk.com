@@ -1,6 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ["./pages/**/*.tsx", "./components/**/*.tsx"],
+  purge: ['./pages/**/*.{js,ts,jsx,tsx}', './components/**/*.{js,ts,jsx,tsx}'],
+  darkMode: false, // or 'media' or 'class'
   theme: {
     extend: {
       colors: {
@@ -11,8 +12,7 @@ module.exports = {
       },
     },
   },
-  plugins: [
-    ({ addVariant }) => addVariant("inner", "& > *"),
-    require("tailwind-scrollbar"),
-  ],
+  variants: {
+    extend: {},
+  },
 };

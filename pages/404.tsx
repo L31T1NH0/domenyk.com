@@ -1,4 +1,5 @@
 import Error from 'next/error';
+import { JSX } from 'react/jsx-runtime';
 
 type NotFoundProps = {
   message?: string;
