@@ -9,7 +9,7 @@ const name = 'Domenyk';
 
 export function Header({ home }: HeaderProps) {
   return (
-    <header className="flex flex-col gap-4 items-center">
+    (<header className="flex flex-col gap-4 items-center">
       {home ? (
         <>
           <Image
@@ -24,7 +24,7 @@ export function Header({ home }: HeaderProps) {
         </>
       ) : (
         <>
-          <Link href="/">
+          <Link href="/" legacyBehavior>
             <Image
               priority
               src="/images/profile.jpg"
@@ -37,6 +37,6 @@ export function Header({ home }: HeaderProps) {
           <strong className="text-3xl">Domenyk</strong>
         </>
       )}
-    </header>
+    </header>)
   );
 }

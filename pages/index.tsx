@@ -25,7 +25,7 @@ export default function Home({ allPostsData, error }: HomeProps): JSX.Element {
   }
 
   return (
-    <Layout home>
+    (<Layout home>
       <section className="text-xl flex flex-col gap-2 py-4 text-primary">
         <h2>
           Olá, sou <span className="font-bold">Leite</span>. Um "ávido filósofo"
@@ -40,7 +40,7 @@ export default function Home({ allPostsData, error }: HomeProps): JSX.Element {
         <ul className="text-xl ml-0 flex flex-col gap-4">
           {allPostsData.map(({ id, date, title }) => (
             <li className="flex flex-col gap-2" key={id}>
-              <Link href={`/posts/${id}`}>{title}</Link>
+              <Link href={`/posts/${id}`} legacyBehavior>{title}</Link>
               <small>
                 <Date dateString={date} />
               </small>
@@ -48,7 +48,7 @@ export default function Home({ allPostsData, error }: HomeProps): JSX.Element {
           ))}
         </ul>
       </section>
-    </Layout>
+    </Layout>)
   );
 }
 

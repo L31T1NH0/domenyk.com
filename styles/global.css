@@ -34,7 +34,10 @@
   }
 
   ul {
-    list-style-type: disc;
+    @apply list-disc ml-10;
+  }
+  .ml-0 {
+    @apply ml-0;
   }
   .foto {
    @apply rounded-full;
