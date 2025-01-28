@@ -12,7 +12,7 @@ export function Date({ dateString }: DateProps): JSX.Element {
   const formattedDate = format(date, 'eee, dd MMMM yyyy', { locale: ptBR });
 
   return (
-    <time className='text-secondary text-lg' dateTime={dateString}>
+    <time className='text-secondary text-lg text-zinc-500' dateTime={dateString}>
       {formattedDate}
     </time>
   );

@@ -7,7 +7,6 @@ import { BlogIcon } from "../components/BlogIcon";
 import React from "react";
 import { JSX } from "react/jsx-runtime";
 
-
 type PostData = {
   id: string;
   date: string;
@@ -25,16 +24,16 @@ export default function Home({ allPostsData, error }: HomeProps): JSX.Element {
   }
 
   return (
-    (<Layout home>
+    <Layout home>
       <section className="text-xl flex flex-col gap-2 py-4 text-primary">
-        <h2>
-          Olá, sou <span className="font-bold">Leite</span>. Um "ávido filósofo"
+        <h2 className="text-indigo-100">
+          Olá, sou <span className="font-bold text-indigo-100">Leite</span>. Um "ávido filósofo"
           e atento observador da política brasileira.
         </h2>
       </section>
       <section className="flex flex-col gap-4">
         <div className="flex gap-1">
-          <h2 className="font-bold text-2xl">Blog</h2>
+          <h2 className="font-bold text-2xl text-indigo-100">Blog</h2>
           <BlogIcon />
         </div>
         <ul className="text-xl ml-0 flex flex-col gap-4">
@@ -48,7 +47,7 @@ export default function Home({ allPostsData, error }: HomeProps): JSX.Element {
           ))}
         </ul>
       </section>
-    </Layout>)
+    </Layout>
   );
 }
 
