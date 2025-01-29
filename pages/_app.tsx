@@ -2,13 +2,14 @@ import { AppProps } from "next/app";
 import "../styles/global.css";
 import { JSX } from "react";
 import { Analytics } from "@vercel/analytics/react";
-import ThemeSwitcher from "../components/ThemeSwitcher";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export default function App({ Component, pageProps }: AppProps): JSX.Element {
   return (
     <div>
       <Component {...pageProps} />
       <Analytics />
+      <SpeedInsights />
     </div>
   );
 }
