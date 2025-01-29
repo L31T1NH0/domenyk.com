@@ -1,17 +1,11 @@
+import React from 'react';
 import { GetServerSideProps } from "next";
 import { useRouter } from "next/router";
 import { Layout } from "@components/layout";
 import { Date } from "@components/date";
 import axios from "axios";
 import { JSX } from "react";
-
-// Função para calcular o tempo médio de leitura
-const calculateReadingTime = (text: string) => {
-  const wordsPerMinute = 200; // Média de palavras lidas por minuto
-  const words = text.split(/\s+/).length;
-  const minutes = Math.ceil(words / wordsPerMinute);
-  return `${minutes} min de leitura`;
-};
+import ShareButton from '../../components/ShareButton';
 
 type PostContent = {
   id: string;
@@ -25,7 +19,7 @@ type PostProps = {
   error: string | null;
 };
 
-export default function Post({ postData, error }: PostProps): JSX.Element {
+const Post = ({ postData, error }: PostProps): JSX.Element => {
   const router = useRouter();
 
   if (error) {
@@ -36,7 +30,7 @@ export default function Post({ postData, error }: PostProps): JSX.Element {
     return <div>No data available</div>;
   }
 
-  const { date, title, htmlContent } = postData;
+  const { id, date, title, htmlContent } = postData;
   const path = `/posts/${title}`;
   const readingTime = calculateReadingTime(htmlContent);
 
@@ -45,8 +39,13 @@ export default function Post({ postData, error }: PostProps): JSX.Element {
       <article className="flex flex-col gap-4 py-4">
         <h1 className="lg:text-3xl max-sm:text-xl font-bold">{title}</h1>
         <div className="flex items-center gap-2">
-          <Date dateString={date} />
-          <span className="text-sm text-zinc-500">• {readingTime}</span>
+          <div className="flex gap-2">
+            <Date dateString={date} />
+            <ShareButton id={id} />
+            <div>
+              <span className="text-sm text-zinc-500">• {readingTime}</span>
+            </div>
+          </div>
         </div>
         <div
           className="flex flex-col gap-4 lg:text-lg sm:text-sm max-sm:text-xs"
@@ -55,7 +54,9 @@ export default function Post({ postData, error }: PostProps): JSX.Element {
       </article>
     </Layout>
   );
-}
+};
+
+export default Post;
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const { id } = context.params ?? {};
@@ -85,3 +86,11 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     };
   }
 };
+function calculateReadingTime(htmlContent: string): string {
+  const wordsPerMinute = 200;
+  const text = htmlContent.replace(/<[^>]+>/g, '');
+  const words = text.split(/\s+/).length;
+  const minutes = Math.ceil(words / wordsPerMinute);
+  return `${minutes} min de leitura`;
+}
+
