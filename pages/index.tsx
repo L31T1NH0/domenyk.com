@@ -26,13 +26,13 @@ export default function Home({ allPostsData, error }: HomeProps): JSX.Element {
   return (
     <Layout home>
       <section className="text-xl flex flex-col gap-2 py-4 text-primary items-center">
-        <h2 className="text-indigo-100">
+        <h1>
           Dou minhas opiniões aqui
-        </h2>
+        </h1>
       </section>
       <section className="flex flex-col gap-4">
         <div className="flex gap-1">
-          <h2 className="font-bold text-2xl text-indigo-100">Blog</h2>
+          <h1 className="font-bold text-2xl">Blog</h1>
           <BlogIcon />
         </div>
         <ul className="text-xl ml-0 flex flex-col gap-4">

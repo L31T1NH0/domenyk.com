@@ -1,5 +1,6 @@
 import { Header } from './header';
 import { BackHome } from './back-home';
+import ThemeSwitcher from './ThemeSwitcher';
 
 type LayoutProps = {
   title?: string;
@@ -15,11 +16,12 @@ export function Layout({
 }: LayoutProps) {
 
   return (
-    <div className='max-w-xl flex flex-col mx-auto px-4 py-8'>
+    <div className="max-w-xl flex flex-col mx-auto px-2 py-2">
+      <div>
+        <ThemeSwitcher />
+      </div>
       <Header home={home} />
-      <main className={`${home} flex flex-col flex-1`}>
-        {children}
-      </main>
+      <main className={`${home} flex flex-col flex-1`}>{children}</main>
       {!home && <BackHome />}
     </div>
   );
