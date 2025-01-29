@@ -46,7 +46,7 @@ export default function Post({ postData, error }: PostProps): JSX.Element {
         <h1 className="lg:text-3xl max-sm:text-xl font-bold">{title}</h1>
         <div className="flex items-center gap-2">
           <Date dateString={date} />
-          <span className="text-sm text-gray-500">• {readingTime}</span>
+          <span className="text-sm text-zinc-500">• {readingTime}</span>
         </div>
         <div
           className="flex flex-col gap-4 lg:text-lg sm:text-sm max-sm:text-xs"

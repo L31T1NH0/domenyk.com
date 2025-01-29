@@ -15,7 +15,7 @@ export function Layout({
 }: LayoutProps) {
 
   return (
-    <div className='max-w-xl flex flex-col mx-auto px-4 py-12'>
+    <div className='max-w-xl flex flex-col mx-auto px-4 py-8'>
       <Header home={home} />
       <main className={`${home} flex flex-col flex-1`}>
         {children}

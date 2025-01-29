@@ -25,10 +25,9 @@ export default function Home({ allPostsData, error }: HomeProps): JSX.Element {
 
   return (
     <Layout home>
-      <section className="text-xl flex flex-col gap-2 py-4 text-primary">
+      <section className="text-xl flex flex-col gap-2 py-4 text-primary items-center">
         <h2 className="text-indigo-100">
-          Olá, sou <span className="font-bold text-indigo-100">Leite</span>. Um "ávido filósofo"
-          e atento observador da política brasileira.
+          Dou minhas opiniões aqui
         </h2>
       </section>
       <section className="flex flex-col gap-4">
