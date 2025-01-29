@@ -16,7 +16,7 @@ export function Layout({
 }: LayoutProps) {
 
   return (
-    <div className="max-w-xl flex flex-col mx-auto px-2 py-2">
+    <div className="max-w-xl flex flex-col mx-auto px-4 py-2">
       <div>
         <ThemeSwitcher />
       </div>
