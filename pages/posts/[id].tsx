@@ -41,10 +41,12 @@ const Post = ({ postData, error }: PostProps): JSX.Element => {
         <div className="flex items-center gap-2">
           <div className="flex gap-2">
             <Date dateString={date} />
-            <ShareButton id={id} />
             <div>
               <span className="text-sm text-zinc-500">• {readingTime}</span>
             </div>
+
+              <ShareButton id={id} />
+
           </div>
         </div>
         <div
