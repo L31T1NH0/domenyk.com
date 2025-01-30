@@ -36,19 +36,17 @@ const Post = ({ postData, error }: PostProps): JSX.Element => {
 
   return (
     <Layout title={title} description={title} url={path}>
-      <article className="flex flex-col gap-4 py-4">
+      <article className="flex flex-col gap-2 py-4">
         <h1 className="lg:text-3xl max-sm:text-xl font-bold">{title}</h1>
-        <div className="flex items-center gap-2">
-          <div className="flex gap-2">
+        <div className="flex gap-2">
             <Date dateString={date} />
             <div>
               <span className="text-sm text-zinc-500">• {readingTime}</span>
-            </div>
-
-              <ShareButton id={id} />
-
           </div>
         </div>
+          <div>
+            <ShareButton id={id} />
+          </div>
         <div
           className="flex flex-col gap-4 lg:text-lg sm:text-sm max-sm:text-xs"
           dangerouslySetInnerHTML={{ __html: htmlContent }}

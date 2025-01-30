@@ -3,7 +3,6 @@ import Link from "next/link";
 import { Layout } from "@components/layout";
 import { Date } from "@components/date";
 import axios from "axios";
-import { BlogIcon } from "../components/BlogIcon";
 import React from "react";
 import { JSX } from "react/jsx-runtime";
 
@@ -33,7 +32,6 @@ export default function Home({ allPostsData, error }: HomeProps): JSX.Element {
       <section className="flex flex-col gap-4">
         <div className="flex gap-1">
           <h1 className="font-bold text-2xl">Blog</h1>
-          <BlogIcon />
         </div>
         <ul className="text-xl ml-0 flex flex-col gap-4">
           {allPostsData.map(({ id, date, title }) => (
