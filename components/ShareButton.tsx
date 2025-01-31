@@ -45,7 +45,9 @@ const ShareButton: React.FC<ShareButtonProps> = ({ id }) => {
   };
 
   return (
-    <button onClick={copyToClipboard} className="ml-0 text-sm text-blue-500 hover:underline">
+    <button onClick={copyToClipboard} className="ml-0 text-sm 
+    text-cyan-600 active:text-cyan-700 
+    focus:text-cyan-600 hover:text-cyan-700">
       Compartilhar
     </button>
   );

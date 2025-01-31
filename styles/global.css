@@ -24,23 +24,15 @@ body {
 }
 
 .light-mode {
-  background-color: #f1f1f1;
+  background-color: #f4f4f4;
   color: #040404;
   transition: background-color 0.1s, color 0.1s;
-}
-
-.light-mode .svg-icon {
-  fill: #040404;
 }
 
 .dark-mode {
   background-color: #040404;
   color: #f1f1f1;
   transition: background-color 0.1s, color 0.1s;
-}
-
-.dark-mode .svg-icon {
-  fill: #f1f1f1;
 }
 
 a {
