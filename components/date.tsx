@@ -1,5 +1,5 @@
 import React from "react";
-import { format, parseISO } from "date-fns";
+import { parseISO, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { JSX } from "react/jsx-runtime";
 
@@ -8,6 +8,10 @@ type DateProps = {
 };
 
 export function Date({ dateString }: DateProps): JSX.Element {
+  if (!dateString) {
+    return <span>Data inválida</span>;
+  }
+
   const date = parseISO(dateString);
   const formattedDate = format(date, "eee, dd MMMM yyyy", { locale: ptBR });
 
@@ -20,4 +24,3 @@ export function Date({ dateString }: DateProps): JSX.Element {
     </time>
   );
 }
-  

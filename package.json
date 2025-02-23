@@ -13,8 +13,10 @@
     "@vercel/analytics": "^1.4.1",
     "@vercel/speed-insights": "^1.1.0",
     "axios": "^1.7.9",
+    "cookie": "^1.0.2",
     "date-fns": "^4.1.0",
     "gray-matter": "^4.0.3",
+    "mongodb": "^6.13.1",
     "next": "^15.1.6",
     "react": "19.0.0",
     "react-dom": "19.0.0",
@@ -22,7 +24,7 @@
     "remark-html": "^16.0.1"
   },
   "devDependencies": {
-    "@types/node": "22.10.10",
+    "@types/node": "^22.10.10",
     "@types/react": "19.0.8",
     "@types/react-dom": "19.0.3",
     "autoprefixer": "^10.4.20",
