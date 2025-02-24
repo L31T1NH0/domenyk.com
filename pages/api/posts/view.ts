@@ -14,11 +14,6 @@ const client = new MongoClient(uri);
 // Duração do cookie (24 horas)
 const COOKIE_EXPIRY = 24 * 60 * 60; // 24 horas em segundos
 
-// Tipo para o cookie viewedPosts
-interface ViewedPosts {
-  [key: string]: { views: number; timestamp: number };
-}
-
 export default async (req: NextApiRequest, res: NextApiResponse) => {
   console.log("Request received:", req.body);
 
@@ -39,32 +34,28 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
     return res.status(400).json({ error: "ID must be a string" });
   }
 
-  // Verifica se o cookie 'viewedPosts' existe e contém o postId
-  let viewedPosts: ViewedPosts | null = null;
-  const viewedPostsCookie = req.headers.cookie
+  // Nome do cookie para este post (ex.: "viewed_post_smdodfs")
+  const cookieName = `viewed_post_${id}`;
+
+  // Verifica se o cookie específico para este post existe
+  const viewedCookie = req.headers.cookie
     ? req.headers.cookie
         .split(";")
-        .find((c) => c.trim().startsWith("viewedPosts="))
+        .find((c) => c.trim().startsWith(`${cookieName}=`))
     : null;
 
-  if (viewedPostsCookie) {
-    try {
-      const cookieValue = decodeURIComponent(viewedPostsCookie.split("=")[1]);
-      viewedPosts = JSON.parse(cookieValue) as ViewedPosts;
-    } catch (error) {
-      console.error("Error parsing viewedPosts cookie:", error);
-      viewedPosts = {};
+  if (viewedCookie) {
+    const cookieValue = decodeURIComponent(viewedCookie.split("=")[1]);
+    const viewedData = JSON.parse(cookieValue);
+    if (viewedData.viewed) {
+      console.log("User already viewed post with postId:", id);
+      return res
+        .status(200)
+        .json({
+          message: "View not updated (already viewed)",
+          views: viewedData.views || 0,
+        });
     }
-  }
-
-  if (viewedPosts && viewedPosts[id]) {
-    console.log("User already viewed post with postId:", id);
-    return res
-      .status(200)
-      .json({
-        message: "View not updated (already viewed)",
-        views: viewedPosts[id].views || 0,
-      });
   }
 
   try {
@@ -89,14 +80,15 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         { $inc: { views: 1 } }
       );
       console.log("Update result:", result);
-      // Atualiza o cookie com o novo número de views
-      const newViewedPosts: ViewedPosts = {
-        ...(viewedPosts || {}), // Usando o tipo ViewedPosts para evitar o erro TypeScript
-        [id]: { views: existingPost.views + 1, timestamp: Date.now() },
+      // Atualiza o cookie específico para este post
+      const newCookieData = {
+        viewed: true,
+        views: existingPost.views + 1,
+        timestamp: Date.now(),
       };
       res.setHeader(
         "Set-Cookie",
-        serialize("viewedPosts", JSON.stringify(newViewedPosts), {
+        serialize(cookieName, JSON.stringify(newCookieData), {
           path: "/",
           maxAge: COOKIE_EXPIRY, // Expira em 24 horas
           httpOnly: true, // Mais seguro, só acessível via HTTP
@@ -113,13 +105,15 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
       };
       const insertResult = await posts.insertOne(newPost);
       console.log("Insert result:", insertResult);
-      // Cria o cookie com o novo post
-      const newViewedPosts: ViewedPosts = {
-        [id]: { views: 1, timestamp: Date.now() },
+      // Cria o cookie específico para este post
+      const newCookieData = {
+        viewed: true,
+        views: 1,
+        timestamp: Date.now(),
       };
       res.setHeader(
         "Set-Cookie",
-        serialize("viewedPosts", JSON.stringify(newViewedPosts), {
+        serialize(cookieName, JSON.stringify(newCookieData), {
           path: "/",
           maxAge: COOKIE_EXPIRY, // Expira em 24 horas
           httpOnly: true,

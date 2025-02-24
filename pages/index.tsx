@@ -4,7 +4,8 @@ import { Layout } from "@components/layout";
 import { Date } from "@components/date";
 import axios from "axios";
 import { JSX } from "react";
-import { useRouter } from "next/router";
+import { useRouter } from "next/router"; // Importe useRouter do next/router
+import { useEffect } from "react"; // Importe useEffect do react
 import clientPromise from "../lib/mongo";
 
 // Define o componente Views
@@ -26,6 +27,11 @@ type HomeProps = {
 
 export default function Home({ allPostsData, error }: HomeProps): JSX.Element {
   const router = useRouter();
+
+  // Use useEffect para garantir que o router só seja usado no cliente
+  useEffect(() => {
+    console.log("Router mounted on client:", router);
+  }, [router]);
 
   const handlePostClick = async (id: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -81,31 +87,25 @@ export default function Home({ allPostsData, error }: HomeProps): JSX.Element {
 
 export const getServerSideProps: GetServerSideProps = async () => {
   try {
-    // Busca os dados da API externa
     const response = await axios.get(
       `${process.env.NEXT_PUBLIC_API_URL}/api/posts`
     );
-    console.log("Posts data received from API:", response.data);
+    console.log("Server-side data:", response.data);
     const apiPosts: PostData[] = response.data;
 
-    // Conecta ao MongoDB usando o clientPromise
     const client = await clientPromise;
     const database = client.db("blog");
     const postsCollection = database.collection("posts");
 
-    // Pega todos os postIds da API
     const postIds = apiPosts.map((post) => post.id);
-
-    // Busca as views correspondentes no MongoDB
     const mongoPosts = await postsCollection
       .find({ postId: { $in: postIds } })
       .toArray();
     console.log("Posts found in MongoDB:", mongoPosts);
 
-    // Mescla os dados da API com as views do MongoDB
     const allPostsData = apiPosts.map((apiPost) => {
       const mongoPost = mongoPosts.find((p) => p.postId === apiPost.id);
-      const views = mongoPost ? mongoPost.views : 0; // 0 se não existir
+      const views = mongoPost ? mongoPost.views : 0;
       console.log(
         `Merging post ${apiPost.id}: views = ${views}, title = ${apiPost.title}, date = ${apiPost.date}`
       );
