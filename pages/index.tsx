@@ -7,11 +7,8 @@ import { JSX } from "react";
 import { useRouter } from "next/router"; // Importe useRouter do next/router
 import { useEffect } from "react"; // Importe useEffect do react
 import clientPromise from "../lib/mongo";
+import { Views } from "@components/views";
 
-// Define o componente Views
-const Views = ({ views }: { views: number }) => (
-  <span className="text-zinc-400 p-0.5">{views} views</span>
-);
 
 type PostData = {
   id: string;
