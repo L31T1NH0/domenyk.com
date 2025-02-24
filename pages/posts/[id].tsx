@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { GetServerSideProps } from "next";
 import { useRouter } from "next/router";
 import { Layout } from "@components/layout";
@@ -7,6 +7,7 @@ import axios from "axios";
 import { JSX } from "react";
 import ShareButton from "../../components/ShareButton";
 import { Views } from "@components/views";
+import { useViews } from "../../lib/viewsManager"; // Importe o novo hook
 import clientPromise from "../../lib/mongo"; // Importa a conexão com o MongoDB
 
 type PostContent = {
@@ -14,7 +15,7 @@ type PostContent = {
   date: string;
   title: string;
   htmlContent: string;
-  views: number; // Visualizações do post
+  views: number; // Visualizações do post (mantido para SSR)
 };
 
 type PostProps = {
@@ -26,38 +27,8 @@ const Post = ({ postData, error }: PostProps): JSX.Element => {
   const router = useRouter();
   const { id } = router.query; // Obtém o id da URL
 
-  // Estado para as views atualizadas
-  const [views, setViews] = React.useState(postData?.views || 0);
-
-  useEffect(() => {
-    if (!id || typeof id !== "string") return;
-
-    const updateViews = async () => {
-      try {
-        const response = await axios.post("/api/posts/view", { id });
-        console.log("Response from backend for views:", response.data);
-        if (
-          response.data.message === "View count updated" ||
-          response.data.message === "Post created with 1 view"
-        ) {
-          setViews(response.data.views); // Atualiza as views no estado
-        } else if (
-          response.data.message === "View not updated (already viewed)"
-        ) {
-          console.log("User already viewed this post, no update made.");
-          setViews(response.data.views || postData?.views || 0); // Mantém as views atuais
-        }
-      } catch (error: any) {
-        console.error("Failed to update post view count. Error details:", {
-          message: error.message,
-          status: error.response?.status,
-          data: error.response?.data,
-        });
-      }
-    };
-
-    updateViews();
-  }, [id, postData?.views]); // Executa apenas quando o id ou views iniciais mudam
+  // Usa o hook useViews para gerenciar as views dinamicamente, passando as views iniciais
+  const { views } = useViews(id, postData?.views || 0);
 
   if (error) {
     return <div>Error: {error}</div>;
@@ -74,14 +45,13 @@ const Post = ({ postData, error }: PostProps): JSX.Element => {
   return (
     <Layout title={title} description={title} url={path}>
       <article className="flex flex-col gap-2 py-4">
-        <h1 className="lg:text-3xl max-sm:text-xl font-bold">{title}</h1>{" "}
+        <h1 className="lg:text-3xl max-sm:text-xl font-bold">{title}</h1>
         <div className="flex gap-2">
           <Date dateString={date} />
-          {/* Usa o estado local para views */}
           <div>
             <span className="text-sm text-zinc-500">• {readingTime}</span>
             <span className="text-sm text-zinc-500 p-1">
-              <Views views={views} />{" "}
+              <Views views={views} />
             </span>
           </div>
         </div>
@@ -114,7 +84,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     );
     console.log("Post data from API:", response.data);
 
-    // Busca as views no MongoDB para o post
     const client = await clientPromise;
     const database = client.db("blog");
     const postsCollection = database.collection("posts");
@@ -126,7 +95,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       props: {
         postData: {
           ...response.data,
-          views, // Adiciona as views ao postData
+          views, // Adiciona as views ao postData para SSR, garantindo consistência
         },
         error: null,
       },

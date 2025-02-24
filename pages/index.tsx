@@ -2,13 +2,13 @@ import { GetServerSideProps } from "next";
 import Link from "next/link";
 import { Layout } from "@components/layout";
 import { Date } from "@components/date";
-import axios from "axios";
+import axios, { AxiosResponse } from "axios"; // Importe AxiosResponse
 import { JSX } from "react";
 import { useRouter } from "next/router"; // Importe useRouter do next/router
 import { useEffect } from "react"; // Importe useEffect do react
 import clientPromise from "../lib/mongo";
 import { Views } from "@components/views";
-
+import { useViews, ViewResponse } from "../lib/viewsManager"; // Importe ViewResponse
 
 type PostData = {
   id: string;
@@ -25,6 +25,12 @@ type HomeProps = {
 export default function Home({ allPostsData, error }: HomeProps): JSX.Element {
   const router = useRouter();
 
+  // Use useViews no topo do componente para cada post (usamos um objeto para armazenar as funções por postId)
+  const viewsManagers = allPostsData.reduce((acc, post) => {
+    acc[post.id] = useViews(post.id, post.views);
+    return acc;
+  }, {} as Record<string, ReturnType<typeof useViews>>);
+
   // Use useEffect para garantir que o router só seja usado no cliente
   useEffect(() => {
     console.log("Router mounted on client:", router);
@@ -34,20 +40,21 @@ export default function Home({ allPostsData, error }: HomeProps): JSX.Element {
     e.preventDefault();
     console.log("Sending request to /api/posts/view with id:", id);
     try {
-      const response = await axios.post("/api/posts/view", { id });
-      console.log("Response from backend:", response.data);
-      if (response.data.message === "View not updated (already viewed)") {
-        console.log("User already viewed this post, no update made.");
-      }
-      // Navega para o post sem recarregar toda a página
+      const { updateViews } = viewsManagers[id]; // Acesse updateViews para o postId específico
+      const response: AxiosResponse<ViewResponse> = await updateViews(); // Chama updateViews manualmente ao clicar
+      console.log("Response from backend (via handlePostClick):", {
+        message: "View updated or checked",
+        headers: response.headers["set-cookie"] || "No cookie set",
+        data: response.data,
+      });
       router.push(`/posts/${id}`);
     } catch (error: any) {
       console.error("Failed to update post view count. Error details:", {
         message: error.message,
         status: error.response?.status,
         data: error.response?.data,
+        headers: error.response?.headers,
       });
-      // Em caso de erro, ainda navega para o post (opcional, dependendo do caso de uso)
       router.push(`/posts/${id}`);
     }
   };
@@ -72,7 +79,9 @@ export default function Home({ allPostsData, error }: HomeProps): JSX.Element {
                 <a onClick={(e) => handlePostClick(id, e)}>{title}</a>
               </Link>
               <small className="text-zinc-400">
-                <Date dateString={date} /> <Views views={views} />
+                <Date dateString={date} />{" "}
+                <Views views={useViews(id, views).views} />{" "}
+                {/* Passa as views iniciais */}
               </small>
             </li>
           ))}

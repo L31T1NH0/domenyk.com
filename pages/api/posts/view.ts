@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { MongoClient } from "mongodb";
+import { MongoClient } from "mongodb"; // Usando as configurações padrão do MongoClient
 import { serialize } from "cookie"; // Para manipular cookies no backend
 
 const uri = process.env.MONGODB_URI;
@@ -9,13 +9,23 @@ if (!uri) {
   );
 }
 
-const client = new MongoClient(uri);
+let client: MongoClient;
+let clientPromise: Promise<MongoClient>;
 
-// Duração do cookie (24 horas)
+declare global {
+  var _mongoClientPromise: Promise<MongoClient> | undefined;
+}
+
+if (!globalThis._mongoClientPromise) {
+  client = new MongoClient(uri);
+  globalThis._mongoClientPromise = client.connect();
+}
+clientPromise = globalThis._mongoClientPromise;
+
 const COOKIE_EXPIRY = 24 * 60 * 60; // 24 horas em segundos
 
 export default async (req: NextApiRequest, res: NextApiResponse) => {
-  console.log("Request received:", req.body);
+  console.log("Request received for postId:", req.body.id);
 
   if (req.method !== "POST") {
     console.log("Invalid method:", req.method);
@@ -34,10 +44,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
     return res.status(400).json({ error: "ID must be a string" });
   }
 
-  // Nome do cookie para este post (ex.: "viewed_post_smdodfs")
   const cookieName = `viewed_post_${id}`;
 
-  // Verifica se o cookie específico para este post existe
   const viewedCookie = req.headers.cookie
     ? req.headers.cookie
         .split(";")
@@ -48,7 +56,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
     const cookieValue = decodeURIComponent(viewedCookie.split("=")[1]);
     const viewedData = JSON.parse(cookieValue);
     if (viewedData.viewed) {
-      console.log("User already viewed post with postId:", id);
+      console.log("Existing cookie for postId:", id, "with data:", viewedData);
       return res
         .status(200)
         .json({
@@ -59,8 +67,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
   }
 
   try {
-    console.log("Attempting to connect to MongoDB with URI:", uri);
-    await client.connect();
+    const client = await clientPromise;
     console.log("Connected to MongoDB successfully!");
     const database = client.db("blog");
     const posts = database.collection("posts");
@@ -72,26 +79,37 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
       console.log(
         "Post found with postId:",
         id,
-        "Current views:",
+        "Current views before update:",
         existingPost.views
       );
       const result = await posts.updateOne(
         { postId: id },
         { $inc: { views: 1 } }
       );
-      console.log("Update result:", result);
-      // Atualiza o cookie específico para este post
+      console.log(
+        "Update result (MongoDB):",
+        result,
+        "Modified count:",
+        result.modifiedCount
+      );
       const newCookieData = {
         viewed: true,
         views: existingPost.views + 1,
         timestamp: Date.now(),
       };
+      console.log(
+        "Setting cookie for postId:",
+        id,
+        "with data:",
+        newCookieData
+      );
       res.setHeader(
         "Set-Cookie",
         serialize(cookieName, JSON.stringify(newCookieData), {
           path: "/",
-          maxAge: COOKIE_EXPIRY, // Expira em 24 horas
-          httpOnly: true, // Mais seguro, só acessível via HTTP
+          maxAge: COOKIE_EXPIRY,
+          httpOnly: true,
+          sameSite: "lax",
         })
       );
       return res
@@ -104,19 +122,30 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         views: 1,
       };
       const insertResult = await posts.insertOne(newPost);
-      console.log("Insert result:", insertResult);
-      // Cria o cookie específico para este post
+      console.log(
+        "Insert result (MongoDB):",
+        insertResult,
+        "Inserted ID:",
+        insertResult.insertedId
+      );
       const newCookieData = {
         viewed: true,
         views: 1,
         timestamp: Date.now(),
       };
+      console.log(
+        "Setting cookie for postId:",
+        id,
+        "with data:",
+        newCookieData
+      );
       res.setHeader(
         "Set-Cookie",
         serialize(cookieName, JSON.stringify(newCookieData), {
           path: "/",
-          maxAge: COOKIE_EXPIRY, // Expira em 24 horas
+          maxAge: COOKIE_EXPIRY,
           httpOnly: true,
+          sameSite: "lax",
         })
       );
       return res
@@ -124,15 +153,14 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         .json({ message: "Post created with 1 view", postId: id, views: 1 });
     }
   } catch (error) {
-    console.error("Failed to process request. Error details:", error);
+    const err = error as Error;
+    console.error("Failed to process request. Error details:", {
+      message: err.message,
+      type: err.name,
+      stack: err.stack, // Adiciona stack trace para depuração
+    });
     return res
       .status(500)
-      .json({
-        error: "Internal Server Error",
-        details: (error as any).message,
-      });
-  } finally {
-    console.log("Closing MongoDB connection...");
-    await client.close();
+      .json({ error: "Internal Server Error", details: err.message });
   }
 };
