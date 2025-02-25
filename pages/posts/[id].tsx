@@ -9,6 +9,7 @@ import ShareButton from "../../components/ShareButton";
 import { Views } from "@components/views";
 import { useViews } from "../../lib/viewsManager"; // Importe o novo hook
 import clientPromise from "../../lib/mongo"; // Importa a conexão com o MongoDB
+import { NextSeo, ArticleJsonLd } from "next-seo"; // Importe NextSeo e ArticleJsonLd
 
 type PostContent = {
   id: string;
@@ -43,27 +44,53 @@ const Post = ({ postData, error }: PostProps): JSX.Element => {
   const readingTime = calculateReadingTime(htmlContent);
 
   return (
-    <Layout title={title} description={title} url={path}>
-      <article className="flex flex-col gap-2 py-4">
-        <h1 className="lg:text-3xl max-sm:text-xl font-bold">{title}</h1>
-        <div className="flex gap-2">
-          <Date dateString={date} />
-          <div>
-            <span className="text-sm text-zinc-500">• {readingTime}</span>
-            <span className="text-sm text-zinc-500 p-1">
-              <Views views={views} />
-            </span>
+    <>
+      <NextSeo
+        title={`${title} - Blog`}
+        description={title}
+        openGraph={{
+          title: `${title} `,
+          description: title,
+          url: `https://blog-roan-nu.vercel.app/posts/${id}`,
+        }}
+        twitter={{
+          handle: "@l31t1",
+        }}
+      />
+      <ArticleJsonLd
+        type="BlogPosting"
+        url={`https://blog-roan-nu.vercel.app/posts/${id}`}
+        title={title}
+        images={[
+          "https://blog-roan-nu.vercel.app/_next/image?url=%2Fimages%2Fprofile.jpg&w=256&q=75",
+        ]}
+        datePublished={date}
+        dateModified={date} // Ajuste para a data real de modificação, se disponível
+        authorName="Domenyk" // Substitua pelo seu nome ou o da API
+        description={title}
+      />
+      <Layout title={title} description={title} url={path}>
+        <article className="flex flex-col gap-2 py-4">
+          <h1 className="lg:text-3xl max-sm:text-xl font-bold">{title}</h1>
+          <div className="flex gap-2">
+            <Date dateString={date} />
+            <div>
+              <span className="text-sm text-zinc-500">• {readingTime}</span>
+              <span className="text-sm text-zinc-500 p-1">
+                <Views views={views} />
+              </span>
+            </div>
           </div>
-        </div>
-        <div>
-          <ShareButton id={id as string} />
-        </div>
-        <div
-          className="flex flex-col gap-4 lg:text-lg sm:text-sm max-sm:text-xs"
-          dangerouslySetInnerHTML={{ __html: htmlContent }}
-        />
-      </article>
-    </Layout>
+          <div>
+            <ShareButton id={id as string} />
+          </div>
+          <div
+            className="flex flex-col gap-4 lg:text-lg sm:text-sm max-sm:text-xs"
+            dangerouslySetInnerHTML={{ __html: htmlContent }}
+          />
+        </article>
+      </Layout>
+    </>
   );
 };
 

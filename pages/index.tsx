@@ -9,6 +9,7 @@ import { useEffect } from "react"; // Importe useEffect do react
 import clientPromise from "../lib/mongo";
 import { Views } from "@components/views";
 import { useViews, ViewResponse } from "../lib/viewsManager"; // Importe ViewResponse
+import { NextSeo } from "next-seo"; // Importe NextSeo
 
 type PostData = {
   id: string;
@@ -64,30 +65,44 @@ export default function Home({ allPostsData, error }: HomeProps): JSX.Element {
   }
 
   return (
-    <Layout home>
-      <section className="text-xl flex flex-col gap-2 py-4 text-primary items-center">
-        <h1>Dou minhas opiniões aqui</h1>
-      </section>
-      <section className="flex flex-col gap-4">
-        <div className="flex gap-1">
-          <h1 className="font-bold text-2xl">Blog</h1>
-        </div>
-        <ul className="text-xl ml-0 flex flex-col gap-4">
-          {allPostsData.map(({ id, date, title, views }) => (
-            <li className="flex flex-col gap-2" key={id}>
-              <Link href={`/posts/${id}`} legacyBehavior>
-                <a onClick={(e) => handlePostClick(id, e)}>{title}</a>
-              </Link>
-              <small className="text-zinc-400">
-                <Date dateString={date} />{" "}
-                <Views views={useViews(id, views).views} />{" "}
-                {/* Passa as views iniciais */}
-              </small>
-            </li>
-          ))}
-        </ul>
-      </section>
-    </Layout>
+    <>
+      <NextSeo
+        title="Dou minhas opiniões aqui - Blog"
+        description="Minhas opiniões."
+        openGraph={{
+          title: "Dou minhas opiniões aqui - Blog",
+          description: "Minhas opiniões.",
+          url: "https://blog-roan-nu.vercel.app/",
+        }}
+        twitter={{
+          handle: "@l31t1",
+        }}
+      />
+      <Layout home>
+        <section className="text-xl flex flex-col gap-2 py-4 text-primary items-center">
+          <h1>Dou minhas opiniões aqui</h1>
+        </section>
+        <section className="flex flex-col gap-4">
+          <div className="flex gap-1">
+            <h1 className="font-bold text-2xl">Blog</h1>
+          </div>
+          <ul className="text-xl ml-0 flex flex-col gap-4">
+            {allPostsData.map(({ id, date, title, views }) => (
+              <li className="flex flex-col gap-2" key={id}>
+                <Link href={`/posts/${id}`} legacyBehavior>
+                  <a onClick={(e) => handlePostClick(id, e)}>{title}</a>
+                </Link>
+                <small className="text-zinc-400">
+                  <Date dateString={date} />{" "}
+                  <Views views={useViews(id, views).views} />{" "}
+                  {/* Passa as views iniciais */}
+                </small>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </Layout>
+    </>
   );
 }
 
