@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { GetServerSideProps } from "next";
 import { useRouter } from "next/router";
 import { Layout } from "@components/layout";
-import { Date } from "@components/date";
+import { Date } from "@components/date"; // Integração com o componente Date
 import axios from "axios";
 import { JSX } from "react";
 import ShareButton from "../../components/ShareButton";
@@ -12,7 +12,7 @@ import clientPromise from "../../lib/mongo"; // Importa a conexão com o MongoDB
 import { NextSeo, ArticleJsonLd } from "next-seo"; // Importe NextSeo e ArticleJsonLd
 
 type PostContent = {
-  id: string;
+  postId: string; // Substitua id por postId para consistência com o MongoDB
   date: string;
   title: string;
   htmlContent: string;
@@ -26,7 +26,7 @@ type PostProps = {
 
 const Post = ({ postData, error }: PostProps): JSX.Element => {
   const router = useRouter();
-  const { id } = router.query; // Obtém o id da URL
+  const { id } = router.query; // Obtém o postId da URL
 
   // Usa o hook useViews para gerenciar as views dinamicamente, passando as views iniciais
   const { views } = useViews(id, postData?.views || 0);
@@ -40,8 +40,11 @@ const Post = ({ postData, error }: PostProps): JSX.Element => {
   }
 
   const { date, title, htmlContent } = postData;
-  const path = `/posts/${title}`;
+  const path = `/posts/${Post}`; // Use postId na URL para consistência
   const readingTime = calculateReadingTime(htmlContent);
+
+  // Normaliza o htmlContent temporariamente para tratar Markdown e quebras de linha, até corrigir o backend
+const safeHtmlContent = typeof htmlContent === "string" ? htmlContent : "";
 
   return (
     <>
@@ -86,7 +89,7 @@ const Post = ({ postData, error }: PostProps): JSX.Element => {
           </div>
           <div
             className="flex flex-col gap-4 lg:text-lg sm:text-sm max-sm:text-xs"
-            dangerouslySetInnerHTML={{ __html: htmlContent }}
+            dangerouslySetInnerHTML={{ __html: safeHtmlContent }}
           />
         </article>
       </Layout>
@@ -116,12 +119,15 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     const postsCollection = database.collection("posts");
 
     const mongoPost = await postsCollection.findOne({ postId: id });
-    const views = mongoPost ? mongoPost.views : 0;
+    const views = mongoPost ? mongoPost.views || 0 : 0; // Garante que views seja 0 se não existir
 
     return {
       props: {
         postData: {
-          ...response.data,
+          postId: response.data.postId, // Use postId para consistência
+          date: response.data.date,
+          title: response.data.title,
+          htmlContent: response.data.htmlContent,
           views, // Adiciona as views ao postData para SSR, garantindo consistência
         },
         error: null,
