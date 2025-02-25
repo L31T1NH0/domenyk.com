@@ -8,16 +8,15 @@ import Head from "next/head"; // Para scripts adicionais
 
 const defaultSEO = {
   title: "Dou minhas opiniões aqui - Blog",
-  description: "opinioes politicas.",
+  description: "Minhas opiniões.",
   openGraph: {
     type: "website",
     locale: "pt_BR",
-    url: "https://blog-roan-nu.vercel.app/",
-    siteName: "Domenyk Blog",
+    url: "https://blog-roan-nu.vercel.app",
+    siteName: "Dou minhas opiniões aqui",
   },
   twitter: {
     handle: "@l31t1",
-    cardType: "summary_large_image",
   },
 };
 
@@ -25,10 +24,10 @@ export default function MyApp({ Component, pageProps }: AppProps): JSX.Element {
   return (
     <>
       <Head>
-        {/* Adicione o script do Google Analytics (substitua YOUR_GOOGLE_ANALYTICS_ID pelo seu ID) */}
+        {/* Script único do Google Analytics GA4 */}
         <script
           async
-          src={`https://www.googletagmanager.com/gtag/js?id=G-9XX47JFHX6`}
+          src="https://www.googletagmanager.com/gtag/js?id=G-9XX47JFHX6" // Substitua pelo seu ID GA4 real
         />
         <script
           dangerouslySetInnerHTML={{
@@ -36,7 +35,10 @@ export default function MyApp({ Component, pageProps }: AppProps): JSX.Element {
               window.dataLayer = window.dataLayer || [];
               function gtag(){dataLayer.push(arguments);}
               gtag('js', new Date());
-              gtag('config', 'G-9XX47JFHX6');
+              gtag('config', 'G-9XX47JFHX6', {
+                cookie_flags: 'SameSite=None;Secure', // Mantém para cross-site, ajusto para Lax se necessário
+                cookie_domain: 'blog-roan-nu.vercel.app', // Domínio correto no Vercel
+              });
             `,
           }}
         />
