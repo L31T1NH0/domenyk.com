@@ -16,6 +16,7 @@
     "cookie": "^1.0.2",
     "date-fns": "^4.1.0",
     "gray-matter": "^4.0.3",
+    "minidenticons": "^4.2.1",
     "mongodb": "^6.13.1",
     "next": "^15.1.6",
     "next-seo": "^6.6.0",

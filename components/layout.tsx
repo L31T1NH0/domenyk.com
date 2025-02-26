@@ -1,5 +1,5 @@
 import { Header } from './header';
-import { BackHome } from './back-home';
+
 import ThemeSwitcher from './ThemeSwitcher';
 
 type LayoutProps = {
@@ -22,7 +22,7 @@ export function Layout({
       </div>
       <Header home={home} />
       <main className={`${home} flex flex-col flex-1`}>{children}</main>
-      {!home && <BackHome />}
+
     </div>
   );
 }

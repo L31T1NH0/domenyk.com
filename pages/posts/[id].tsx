@@ -10,6 +10,8 @@ import { Views } from "@components/views";
 import { useViews } from "../../lib/viewsManager"; // Importe o novo hook
 import clientPromise from "../../lib/mongo"; // Importa a conexão com o MongoDB
 import { NextSeo, ArticleJsonLd } from "next-seo"; // Importe NextSeo e ArticleJsonLd
+import Comment from "@components/Comment";
+import { BackHome } from "../../components/back-home";
 
 type PostContent = {
   postId: string; // Substitua id por postId para consistência com o MongoDB
@@ -92,6 +94,8 @@ const safeHtmlContent = typeof htmlContent === "string" ? htmlContent : "";
             dangerouslySetInnerHTML={{ __html: safeHtmlContent }}
           />
         </article>
+        <BackHome />
+        <Comment postId={postData.postId} />
       </Layout>
     </>
   );
