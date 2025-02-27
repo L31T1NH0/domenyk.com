@@ -31,7 +31,15 @@ const Post = ({ postData, error }: PostProps): JSX.Element => {
   const { id } = router.query; // Obtém o postId da URL
 
   // Usa o hook useViews para gerenciar as views dinamicamente, passando as views iniciais
-  const { views } = useViews(id, postData?.views || 0);
+  const { views, updateViews } = useViews(id, postData?.views || 0);
+
+  useEffect(() => {
+    if (id && postData?.postId) {
+      updateViews().catch((error) =>
+        console.error("Failed to update views on load:", error)
+      );
+    }
+  }, [id, postData?.postId, updateViews]);
 
   if (error) {
     return <div>Error: {error}</div>;
@@ -42,11 +50,10 @@ const Post = ({ postData, error }: PostProps): JSX.Element => {
   }
 
   const { date, title, htmlContent } = postData;
-  const path = `/posts/${Post}`; // Use postId na URL para consistência
+  const path = `/posts/${id}`; // Corrigido para usar postId (id), não Post
   const readingTime = calculateReadingTime(htmlContent);
 
-  // Normaliza o htmlContent temporariamente para tratar Markdown e quebras de linha, até corrigir o backend
-const safeHtmlContent = typeof htmlContent === "string" ? htmlContent : "";
+  const safeHtmlContent = typeof htmlContent === "string" ? htmlContent : "";
 
   return (
     <>
@@ -94,7 +101,7 @@ const safeHtmlContent = typeof htmlContent === "string" ? htmlContent : "";
             dangerouslySetInnerHTML={{ __html: safeHtmlContent }}
           />
         </article>
-        <div>        
+        <div>
           <BackHome />
         </div>
         <Comment postId={postData.postId} />
@@ -107,6 +114,7 @@ export default Post;
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const { id } = context.params ?? {};
+  const { req, res } = context;
 
   if (!id || typeof id !== "string") {
     return {
@@ -125,16 +133,31 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     const postsCollection = database.collection("posts");
 
     const mongoPost = await postsCollection.findOne({ postId: id });
-    const views = mongoPost ? mongoPost.views || 0 : 0; // Garante que views seja 0 se não existir
+    let views = mongoPost ? mongoPost.views || 0 : 0;
+
+    // Verifica o cookie no servidor para evitar incrementos duplicados
+    const cookieName = `viewed_${id}`;
+    const viewedCookie = req.headers.cookie
+      ?.split(";")
+      .find((c) => c.trim().startsWith(`${cookieName}=true`));
+
+    if (!viewedCookie) {
+      await postsCollection.updateOne({ postId: id }, { $inc: { views: 1 } });
+      views += 1;
+      res.setHeader(
+        "Set-Cookie",
+        `viewed_${id}=true; Max-Age=86400; Path=/; HttpOnly; SameSite=Lax`
+      );
+    }
 
     return {
       props: {
         postData: {
-          postId: response.data.postId, // Use postId para consistência
+          postId: response.data.postId,
           date: response.data.date,
           title: response.data.title,
           htmlContent: response.data.htmlContent,
-          views, // Adiciona as views ao postData para SSR, garantindo consistência
+          views, // Retorna as views atualizadas
         },
         error: null,
       },

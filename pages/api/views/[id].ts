@@ -1,6 +1,8 @@
+// pages/api/views/[id].ts
+
 import { NextApiRequest, NextApiResponse } from "next";
-import { MongoClient } from "mongodb"; // Usando as configurações padrão do MongoClient
-import { serialize } from "cookie"; // Para manipular cookies no backend
+import { MongoClient } from "mongodb";
+import { serialize } from "cookie";
 
 const uri = process.env.MONGODB_URI;
 if (!uri) {
@@ -25,45 +27,37 @@ clientPromise = globalThis._mongoClientPromise;
 const COOKIE_EXPIRY = 24 * 60 * 60; // 24 horas em segundos
 
 export default async (req: NextApiRequest, res: NextApiResponse) => {
-  console.log("Request received for postId:", req.body.id);
+  console.log("Request received for postId:", req.query.id);
 
   if (req.method !== "POST") {
     console.log("Invalid method:", req.method);
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { id } = req.body;
+  const { id } = req.query;
 
-  if (!id) {
-    console.log("Post ID is missing in request body");
-    return res.status(400).json({ error: "Post ID is required" });
+  if (!id || typeof id !== "string") {
+    console.log("Post ID is missing or invalid in request query");
+    return res
+      .status(400)
+      .json({ error: "Post ID is required and must be a string" });
   }
 
-  if (typeof id !== "string") {
-    console.log("ID must be a string:", id);
-    return res.status(400).json({ error: "ID must be a string" });
-  }
-
-  const cookieName = `viewed_post_${id}`;
+  const cookieName = `viewed_${id}`;
 
   const viewedCookie = req.headers.cookie
     ? req.headers.cookie
         .split(";")
-        .find((c) => c.trim().startsWith(`${cookieName}=`))
+        .find((c) => c.trim().startsWith(`${cookieName}=true`))
     : null;
 
   if (viewedCookie) {
-    const cookieValue = decodeURIComponent(viewedCookie.split("=")[1]);
-    const viewedData = JSON.parse(cookieValue);
-    if (viewedData.viewed) {
-      console.log("Existing cookie for postId:", id, "with data:", viewedData);
-      return res
-        .status(200)
-        .json({
-          message: "View not updated (already viewed)",
-          views: viewedData.views || 0,
-        });
-    }
+    console.log("Existing cookie for postId:", id);
+    return res.status(200).json({
+      message: "View not updated (already viewed)",
+      views:
+        JSON.parse(decodeURIComponent(viewedCookie.split("=")[1])).views || 0,
+    });
   }
 
   try {
@@ -92,9 +86,10 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         "Modified count:",
         result.modifiedCount
       );
+      const newViews = existingPost.views + 1;
       const newCookieData = {
         viewed: true,
-        views: existingPost.views + 1,
+        views: newViews,
         timestamp: Date.now(),
       };
       console.log(
@@ -114,12 +109,15 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
       );
       return res
         .status(200)
-        .json({ message: "View count updated", views: existingPost.views + 1 });
+        .json({ message: "View count updated", views: newViews });
     } else {
       console.log("Post not found, creating new post with postId:", id);
       const newPost = {
         postId: id,
         views: 1,
+        date: new Date().toISOString().split("T")[0], // Data no formato YYYY-MM-DD, para consistência
+        title: "Untitled Post", // Placeholder, ajuste conforme necessário
+        htmlContent: "", // Placeholder, ajuste conforme necessário
       };
       const insertResult = await posts.insertOne(newPost);
       console.log(
