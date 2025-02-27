@@ -5,7 +5,7 @@ import { Date } from "@components/date";
 import axios, { AxiosResponse } from "axios"; // Importe AxiosResponse
 import { JSX } from "react";
 import { useRouter } from "next/router"; // Importe useRouter do next/router
-import { useEffect } from "react"; // Importe useEffect do react
+import { useEffect, useState } from "react"; // Importe useState para controlar o estado do cliente
 import clientPromise from "../lib/mongo";
 import { Views } from "@components/views";
 import { useViews, ViewResponse } from "../lib/viewsManager"; // Importe ViewResponse
@@ -25,24 +25,22 @@ type HomeProps = {
 
 export default function Home({ allPostsData, error }: HomeProps): JSX.Element {
   const router = useRouter();
-
-  // Use useViews no topo do componente para cada post (usamos um objeto para armazenar as funções por postId)
-  const viewsManagers = allPostsData.reduce((acc, post) => {
-    acc[post.postId] = useViews(post.postId, post.views); // Use postId em vez de id
-    return acc;
-  }, {} as Record<string, ReturnType<typeof useViews>>);
+  const [isClient, setIsClient] = useState(false); // Estado para verificar se está no cliente
 
   // Use useEffect para garantir que o router só seja usado no cliente
   useEffect(() => {
-    console.log("Router mounted on client:", router);
-  }, [router]);
+    setIsClient(true); // Marca que estamos no cliente após o primeiro render
+    if (isClient) {
+      console.log("Router mounted on client:", router);
+    }
+  }, [isClient]); // Usa isClient como dependência, não router
 
   const handlePostClick = async (postId: string, e: React.MouseEvent) => {
     e.preventDefault();
-    console.log("Sending request to /api/posts/view with postId:", postId);
+    console.log("Sending request to /api/views/[id] with postId:", postId);
     try {
-      const { updateViews } = viewsManagers[postId]; // Acesse updateViews para o postId específico
-      const response: AxiosResponse<ViewResponse> = await updateViews(); // Chama updateViews manualmente ao clicar
+      const { updateViews } = useViews(postId, 0); // Cria uma instância temporária de useViews para o clique
+      const response: AxiosResponse<ViewResponse> = await updateViews();
       console.log("Response from backend (via handlePostClick):", {
         message: "View updated or checked",
         headers: response.headers["set-cookie"] || "No cookie set",
@@ -68,10 +66,10 @@ export default function Home({ allPostsData, error }: HomeProps): JSX.Element {
     <>
       <NextSeo
         title="Domenyk - Blog"
-        description="Leia minhas opiniões e insights no meu blog pessoal."
+        description="Leia minhas opiniões."
         openGraph={{
-          title: "Dou minhas opiniões aqui - Blog",
-          description: "Leia minhas opiniões e insights no meu blog pessoal.",
+          title: "Domenyk - Blog",
+          description: "Leia minhas opiniões.",
           url: "https://blog-roan-nu.vercel.app",
         }}
         twitter={{
@@ -94,9 +92,8 @@ export default function Home({ allPostsData, error }: HomeProps): JSX.Element {
                   <a onClick={(e) => handlePostClick(postId, e)}>{title}</a>
                 </Link>
                 <small className="text-zinc-400">
-                  <Date dateString={date} />{" "}
-                  <Views views={useViews(postId, views).views} />{" "}
-                  {/* Passa as views iniciais usando postId */}
+                  <Date dateString={date} /> • <Views views={views} />{" "}
+                  {/* Usa views estáticos do servidor */}
                 </small>
               </li>
             ))}
