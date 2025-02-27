@@ -56,3 +56,6 @@ ul {
 img {
   border-radius: 0.5rem;
 }
+h4 {
+  @apply lg:text-3xl max-sm:text-xl font-bold;
+}
