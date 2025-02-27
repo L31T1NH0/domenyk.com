@@ -84,13 +84,20 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
 
   return (
     <section
-      className="mt-8 rounded-lg shadow-md"
+      className="mt-2 max-sm:mt-1" // Reduz margem em telas menores
       aria-label="Seção de comentários"
     >
-      <h2 className="text-xl font-bold text-white mb-4">Comentários</h2>
-      {error && <p className="text-red-500 mb-4">{error}</p>}
-      <form onSubmit={handleCommentSubmit} className="flex flex-col  gap-4">
-        <div className="flex gap-4">
+      <h2 className="text-xl font-bold text-white mb-4 max-sm:text-lg max-sm:mb-2">
+        💬 Comentários
+      </h2>
+      {error && (
+        <p className="text-red-500 mb-4 max-sm:mb-2 max-sm:text-sm">{error}</p>
+      )}
+      <form
+        onSubmit={handleCommentSubmit}
+        className="flex flex-col gap-4 max-sm:gap-2"
+      >
+        <div className="flex gap-4 max-sm:flex-col max-sm:gap-2">
           <input
             type="text"
             placeholder="Seu nome"
@@ -98,51 +105,53 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
             onChange={(e) =>
               setNewComment({ ...newComment, nome: e.target.value })
             }
-            className="p-2 bg-zinc-700 text-white rounded"
+            className="p-2 bg-zinc-700 text-white rounded w-full max-sm:p-1 max-sm:text-sm"
           />
-
           <button
             type="submit"
-            className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition-colors"
+            className="w-full h-fit bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition-colors max-sm:px-3 max-sm:py-1 max-sm:text-sm"
           >
             Enviar Comentário
           </button>
         </div>
-
         <textarea
+          maxLength={500}
           placeholder="Seu comentário"
           value={newComment.comentario}
           onChange={(e) =>
             setNewComment({ ...newComment, comentario: e.target.value })
           }
-          className="p-2 bg-zinc-700 text-white rounded h-24"
+          className="p-2 bg-zinc-700 text-white rounded resize-none w-full h-56 max-sm:h-32 max-sm:p-1 max-sm:text-sm"
         />
       </form>
-      <div className="mt-6">
+      <div className="mt-6 max-sm:mt-3">
         {comments.map((comment) => (
           <div
             key={comment._id}
-            className="bg-zinc-700 p-3 rounded-lg mb-4 flex gap-4 items-start"
+            className="bg-zinc-700 p-3 rounded-lg mb-4 max-sm:p-2 max-sm:mb-2 max-sm:rounded-md flex gap-4 max-sm:gap-2 items-start"
           >
             <img
               src={generateIdenticon(comment.nome, comment.ip)}
               alt={`${comment.nome} avatar`}
-              className="w-10 h-10 rounded-full bg-amber-500"
+              className="w-8 h-8 rounded-full max-sm:w-6 max-sm:h-6 icon"
             />
             <div>
-              <div className="flex gap-2">
-                <p className="text-white font-semibold">{comment.nome}</p>
-                <small className="bg-zinc-700 text-sm">
+              <div className="flex gap-2 max-sm:gap-1">
+                <p className="text-white font-semibold max-sm:text-sm">
+                  {comment.nome}
+                </p>
+                <small className="text-gray-400 text-sm max-sm:text-xs">
                   {formatDate(comment.createdAt)}
                 </small>
               </div>
-
-              <p className="bg-zinc-700 mt-1">{comment.comentario}</p>
+              <p className="text-gray-300 max-sm:text-sm">
+                {comment.comentario}
+              </p>
             </div>
           </div>
         ))}
         {comments.length === 0 && (
-          <p className="bg-zinc-700 rounded p-2 mb-4">
+          <p className="bg-zinc-700 rounded p-2 mb-4 max-sm:p-1 max-sm:mb-2 max-sm:text-sm">
             Nenhum comentário ainda. Seja o primeiro!
           </p>
         )}

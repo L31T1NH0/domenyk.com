@@ -51,10 +51,16 @@ ul {
   @apply ml-0;
 }
 .foto {
-  @apply rounded-full;
+  @apply rounded-full w-37 h-37;
+}
+.icon{
+  @apply w-10 h-10 grayscale-0 rounded-full
+}
+.svg-icon {
+  @apply w-8 h-8;
 }
 img {
-  border-radius: 0.5rem;
+  @apply rounded-xl grayscale-100 w-full h-full
 }
 h4 {
   @apply lg:text-3xl max-sm:text-xl font-bold;

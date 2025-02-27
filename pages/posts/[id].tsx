@@ -94,7 +94,9 @@ const safeHtmlContent = typeof htmlContent === "string" ? htmlContent : "";
             dangerouslySetInnerHTML={{ __html: safeHtmlContent }}
           />
         </article>
-        <BackHome />
+        <div>        
+          <BackHome />
+        </div>
         <Comment postId={postData.postId} />
       </Layout>
     </>
@@ -153,5 +155,5 @@ function calculateReadingTime(htmlContent: string): string {
   const text = htmlContent.replace(/<[^>]+>/g, "");
   const words = text.split(/\s+/).length;
   const minutes = Math.ceil(words / wordsPerMinute);
-  return `${minutes} min de leitura`;
+  return `${minutes} min`;
 }
