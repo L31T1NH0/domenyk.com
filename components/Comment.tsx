@@ -87,9 +87,9 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
       className="mt-2 max-sm:mt-1" // Reduz margem em telas menores
       aria-label="Seção de comentários"
     >
-      <h2 className="text-xl font-bold text-white mb-4 max-sm:text-lg max-sm:mb-2">
+      <h1 className="text-xl font-bold mb-4 max-sm:text-lg max-sm:mb-2">
         💬 Comentários
-      </h2>
+      </h1>
       {error && (
         <p className="text-red-500 mb-4 max-sm:mb-2 max-sm:text-sm">{error}</p>
       )}
