@@ -7,13 +7,13 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import Script from "next/script"; // Importe Script do next/script
 
 const defaultSEO = {
-  title: "Dou minhas opiniões aqui - Blog",
+  title: "Domenyk - Blog",
   description: "Minhas opiniões.", // Descrição mais detalhada para SEO
   openGraph: {
     type: "website",
     locale: "pt_BR",
     url: "https://blog-roan-nu.vercel.app",
-    siteName: "Dou minhas opiniões aqui",
+    siteName: "Domenyk - Blog",
   },
   twitter: {
     handle: "@l31t1",
