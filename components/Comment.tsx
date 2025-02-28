@@ -252,7 +252,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
   // Função para gerar identicon com Minidenticons
   const generateIdenticon = (name: string, ip: string): string => {
     const value = `${name}${ip || "Unknown"}`; // Combina nome e IP para hash único
-    const svg = minidenticon(value, 95, 45); // Saturação 95%, luminosidade 45% (padrão)
+    const svg = minidenticon(value, 100, 50); // Saturação 95%, luminosidade 45% (padrão)
     return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`; // Base64 para <img>
   };
 
@@ -291,7 +291,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
         const shouldShowToggleButton = replyCount > 2; // Mostra o botão apenas se houver mais de 2 replies
         const visibleReplies = showAllReplies[comment._id]
           ? comment.replies || []
-          : (comment.replies || []).slice(0, 2); // Mostra apenas os 2 primeiros replies por padrão
+          : (comment.replies || []).slice(0, 1); // Mostra apenas os 2 primeiros replies por padrão
 
         return (
           <div
