@@ -1,20 +1,24 @@
 import { useEffect, useState } from "react";
 
 export default function ThemeSwitcher() {
-  const [darkMode, setDarkMode] = useState(() => {
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
       const savedTheme = localStorage.getItem("theme");
       if (savedTheme) {
         return savedTheme === "dark";
       } else {
+        // Prioriza modo escuro como padrão, mas respeita prefers-color-scheme
         return (
-          window.matchMedia &&
-          window.matchMedia("(prefers-color-scheme: dark)").matches
-        );
+          (window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches) ||
+          true
+        ); // Fallback para dark mode
       }
     }
-    return true; // valor padrão
+    return true; // Valor padrão para SSR: modo escuro
   });
+
+  const [isMounted, setIsMounted] = useState(false); // Estado para controlar o primeiro render
 
   const cacheImage = (src: string) => {
     if (!localStorage.getItem(src)) {
@@ -33,6 +37,7 @@ export default function ThemeSwitcher() {
   useEffect(() => {
     cacheImage("/images/night-mode-light.svg");
     cacheImage("/images/night-mode-dark.svg");
+    setIsMounted(true); // Marca que o componente está montado
   }, []);
 
   const getCachedImage = (src: string) => {
@@ -43,16 +48,18 @@ export default function ThemeSwitcher() {
   };
 
   useEffect(() => {
-    if (darkMode) {
-      document.body.classList.add("dark-mode");
-      document.body.classList.remove("light-mode");
-      localStorage.setItem("theme", "dark");
-    } else {
-      document.body.classList.add("light-mode");
-      document.body.classList.remove("dark-mode");
-      localStorage.setItem("theme", "light");
+    if (isMounted && typeof window !== "undefined") {
+      if (darkMode) {
+        document.body.classList.add("dark-mode");
+        document.body.classList.remove("light-mode");
+        localStorage.setItem("theme", "dark");
+      } else {
+        document.body.classList.add("light-mode");
+        document.body.classList.remove("dark-mode");
+        localStorage.setItem("theme", "light");
+      }
     }
-  }, [darkMode]);
+  }, [darkMode, isMounted]);
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);

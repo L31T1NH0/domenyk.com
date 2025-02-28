@@ -1,4 +1,24 @@
+/* styles/global.css */
 @import "tailwindcss";
+
+/* Estilo inicial do body (modo escuro por padrão) */
+body {
+  background-color: #040404; /* Escuro por padrão */
+  color: #f1f1f1; /* Texto claro por padrão */
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.light-mode {
+  background-color: #f4f4f4;
+  color: #040404;
+  transition: background-color 0.1s, color 0.1s;
+}
+
+.dark-mode {
+  background-color: #040404;
+  color: #f1f1f1;
+  transition: background-color 0.1s, color 0.1s;
+}
 
 /* Estilo do scrollbar */
 ::-webkit-scrollbar {
@@ -19,22 +39,6 @@
   background: #555;
 }
 
-body {
-  transition: background-color 0.3s, color 0.3s;
-}
-
-.light-mode {
-  background-color: #f4f4f4;
-  color: #040404;
-  transition: background-color 0.1s, color 0.1s;
-}
-
-.dark-mode {
-  background-color: #040404;
-  color: #f1f1f1;
-  transition: background-color 0.1s, color 0.1s;
-}
-
 a {
   color: var(--link-color);
   text-decoration: none;
@@ -53,14 +57,14 @@ ul {
 .foto {
   @apply rounded-full w-37 h-37;
 }
-.icon{
-  @apply w-10 h-10 grayscale-0 rounded-full
+.icon {
+  @apply w-10 h-10 grayscale-0 rounded-full;
 }
 .svg-icon {
   @apply w-8 h-8;
 }
 img {
-  @apply rounded-xl grayscale-100 w-full h-full
+  @apply rounded-xl grayscale-100 w-full h-full;
 }
 h4 {
   @apply lg:text-3xl max-sm:text-xl font-bold;
