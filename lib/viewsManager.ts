@@ -48,7 +48,7 @@ export function useViews(
       }
 
       // Se já visualizado, apenas retorna as views atuais sem chamar a API
-      const currentViews = await axios.get<ViewResponse>(`/api/views/${id}`);
+      const currentViews = await axios.post<ViewResponse>(`/api/views/${id}`);
       setViews(currentViews.data.views || initialViews);
       return Promise.resolve({
         data: {
