@@ -130,7 +130,7 @@ export async function GET(
     return NextResponse.json(commentsWithReplies, { status: 200 });
   } catch (mongoError) {
     console.error(
-      "Error fetching comments and replies from MongoDB Atlas (detailed):",
+      "Error fetching comments and replies from MongoDB (detailed):",
       {
         message: (mongoError as Error).message,
         stack: (mongoError as Error).stack,
@@ -171,8 +171,7 @@ export async function POST(
     let ip = "Unknown";
     try {
       const ipResponse = await axios.get("https://api.ipify.org?format=json", {
-        timeout: 15000, // Aumenta o timeout para 15 segundos para evitar hangs
-        withCredentials: true, // Inclui cookies e credenciais, se necessário
+        timeout: 5000, // Adiciona timeout para evitar hangs
       });
       ip = ipResponse.data.ip;
     } catch (ipError) {
