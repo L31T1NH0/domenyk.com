@@ -38,19 +38,18 @@ export async function GET(
       htmlContent = processedContent.toString();
     }
 
-    // Incrementa as visualizações, como no getServerSideProps
-    let views = post.views || 0;
+    // Incrementa as visualizações e define o cookie, como no Pages Router
     const cookieName = `viewed_${id}`;
     const viewedCookie = req.headers
       .get("cookie")
       ?.split(";")
       .find((c) => c.trim().startsWith(`${cookieName}=true`));
 
+    let views = post.views || 0;
     if (!viewedCookie) {
       await postsCollection.updateOne({ postId: id }, { $inc: { views: 1 } });
       views += 1;
 
-      // Define o cookie para evitar incrementos duplicados
       const response = NextResponse.json(
         {
           postId: post.postId,

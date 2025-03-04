@@ -1,3 +1,4 @@
+// post page
 "use client"; // Marca como Client Component
 
 import { useEffect, useState } from "react";
@@ -8,7 +9,6 @@ import { useRouter } from "next/navigation";
 import { Layout } from "@components/layout";
 import { Date } from "@components/date";
 import ShareButton from "@components/ShareButton";
-import Views from "@components/views";
 import Comment from "@components/Comment";
 import { BackHome } from "@components/back-home";
 import { NextSeo, ArticleJsonLd } from "next-seo";
@@ -53,7 +53,7 @@ export default function Post({ params }: PostParams) {
           "URL:",
           `/api/posts/${id}`
         ); // Log mais detalhado
-        const response = await fetch(`/api/posts/${id}`);
+        const response = await fetch(`/api/posts/${id}`, { cache: "no-store" }); // Evita caching para garantir dados frescos
         if (!response.ok) {
           const errorText = await response.text(); // Obtém o texto do erro para depuração
           throw new Error(
@@ -82,6 +82,14 @@ export default function Post({ params }: PostParams) {
     fetchPost();
   }, [id]);
 
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        Carregando...
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <div className="flex justify-center items-center h-screen">{error}</div>
@@ -99,6 +107,8 @@ export default function Post({ params }: PostParams) {
   const { date, title, htmlContent, views } = postData;
   const path = `/posts/${id}`;
   const readingTime = calculateReadingTime(htmlContent);
+
+  if (typeof window === "undefined") return null; // Evita erros de hooks no SSR
 
   return (
     <>
@@ -131,7 +141,7 @@ export default function Post({ params }: PostParams) {
             <Date dateString={date} />
             <span className="text-sm text-zinc-500">• {readingTime}</span>
             <span className="text-sm text-zinc-500 p-1">
-              {/* <Views views={views} /> */}
+              Views: {views || 0}
             </span>
           </div>
           <div>
