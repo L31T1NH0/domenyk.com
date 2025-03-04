@@ -7,7 +7,7 @@ const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/posts(.*)", // Adiciona todas as rotas de posts como públicas
-  "/api/posts(.*)", // Adiciona as rotas da API de posts como públicas
+  "/api(.*)", // Adiciona as rotas da API de posts como públicas
 ]);
 
 // Rotas de admin: requerem role "admin"
@@ -38,3 +38,4 @@ export const config = {
     "/(api/auth|api/clerk)(.*)", // Limite o middleware para rotas de autenticação Clerk, não para todas as APIs
   ],
 };
+
