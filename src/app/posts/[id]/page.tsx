@@ -139,10 +139,14 @@ export default function Post({ params }: PostParams) {
           <h1 className="lg:text-3xl max-sm:text-xl font-bold">{title}</h1>
           <div className="flex gap-2">
             <Date dateString={date} />
-            <span className="text-sm text-zinc-500">• {readingTime}</span>
-            <span className="text-sm text-zinc-500 p-1">
-              Views: {views || 0}
-            </span>
+            <div>
+              <span className="text-sm text-zinc-500">
+                • {readingTime}
+              </span>
+              <span className="text-sm text-zinc-500 p-1">
+                {views || 0} views
+              </span>
+            </div>
           </div>
           <div>
             <ShareButton id={id} />
