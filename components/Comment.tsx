@@ -1,5 +1,7 @@
+"use client"; // Marca o componente como Client Component
+
 import React, { useState, useEffect, useRef } from "react";
-import axios from "axios";
+import axios, { AxiosError, AxiosResponse } from "axios"; // Importe AxiosError e AxiosResponse para melhor tipagem
 import { minidenticon } from "minidenticons"; // Biblioteca para gerar identicons
 
 type Comment = {
@@ -53,8 +55,18 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
 
   const fetchComments = async () => {
     try {
-      const response = await axios.get(`/api/comments/${postId}`);
-      console.log("API response for comments (raw):", response.data);
+      console.log("Tentando buscar comentários para postId:", postId); // Log do postId
+      const response: AxiosResponse<any> = await axios.get(
+        `/api/comments/${postId}`,
+        {
+          timeout: 5000, // Adiciona timeout de 5 segundos para evitar hangs
+        }
+      );
+      console.log("API response for comments (raw):", {
+        data: response.data,
+        status: response.status,
+        headers: response.headers,
+      });
       if (Array.isArray(response.data)) {
         setComments(response.data);
       } else if (response.data && typeof response.data === "object") {
@@ -66,17 +78,25 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
       } else {
         setComments([]);
         console.warn(
-          "Unexpected API response format, setting comments to empty array"
+          "Unexpected API response format, setting comments to empty array. Response:",
+          response.data
         );
       }
       console.log("Comments with replies after setting:", comments);
     } catch (err) {
+      const error = err as AxiosError;
       console.error("Error fetching comments (detailed):", {
-        message: (err as Error).message,
-        response: (err as any).response?.data,
-        status: (err as any).response?.status,
+        message: error.message || "Erro desconhecido",
+        response: error.response?.data || "Sem resposta",
+        status: error.response?.status || "Sem status",
+        request: error.request || "Sem requisição",
+        config: error.config?.url || "Sem URL de configuração", // URL da requisição para depuração
+        isAxiosError: error.isAxiosError, // Verifica se é um erro do Axios
+        code: error.code || "Sem código de erro", // Código do erro (ex.: 'ETIMEDOUT', 'ECONNREFUSED')
       });
-      setError("Failed to load comments: " + (err as Error).message);
+      setError(
+        "Failed to load comments: " + (error.message || "Erro desconhecido")
+      );
       setComments([]);
     }
   };
@@ -95,15 +115,26 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
     try {
       let ip = newComment.ip;
       if (!ip && isClient) {
-        const ipResponse = await axios.get("https://api.ipify.org?format=json");
+        const ipResponse = await axios.get(
+          "https://api.ipify.org?format=json",
+          {
+            timeout: 5000, // Adiciona timeout para evitar hangs
+          }
+        );
         ip = ipResponse.data.ip || "Unknown";
       }
 
-      const response = await axios.post(`/api/comments/${postId}`, {
-        nome: newComment.nome,
-        comentario: newComment.comentario,
-        parentId: newComment.parentId, // Envia parentId para criar um comentário ou resposta
-      });
+      const response = await axios.post(
+        `/api/comments/${postId}`,
+        {
+          nome: newComment.nome,
+          comentario: newComment.comentario,
+          parentId: newComment.parentId, // Envia parentId para criar um comentário ou resposta
+        },
+        {
+          timeout: 5000, // Adiciona timeout para evitar hangs
+        }
+      );
 
       if (isClient) {
         localStorage.setItem(
@@ -140,12 +171,20 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
       setReplyInput({});
       setError(null);
     } catch (err) {
+      const error = err as AxiosError;
       console.error("Error adding comment or reply (detailed):", {
-        message: (err as Error).message,
-        response: (err as any).response?.data,
-        status: (err as any).response?.status,
+        message: error.message || "Erro desconhecido",
+        response: error.response?.data || "Sem resposta",
+        status: error.response?.status || "Sem status",
+        request: error.request || "Sem requisição",
+        config: error.config?.url || "Sem URL de configuração", // URL da requisição para depuração
+        isAxiosError: error.isAxiosError, // Verifica se é um erro do Axios
+        code: error.code || "Sem código de erro", // Código do erro (ex.: 'ETIMEDOUT', 'ECONNREFUSED')
       });
-      setError("Failed to add comment or reply: " + (err as Error).message);
+      setError(
+        "Failed to add comment or reply: " +
+          (error.message || "Erro desconhecido")
+      );
     }
   };
 
@@ -186,11 +225,17 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
     }
 
     // Envia apenas os dados da resposta, mantendo newComment intocado
-    const response = axios.post(`/api/comments/${postId}`, {
-      nome: replyData.nome || newComment.nome, // Usa o nome do replyInput ou o nome atual
-      comentario: replyText,
-      parentId: commentId,
-    });
+    const response = axios.post(
+      `/api/comments/${postId}`,
+      {
+        nome: replyData.nome || newComment.nome, // Usa o nome do replyInput ou o nome atual
+        comentario: replyText,
+        parentId: commentId,
+      },
+      {
+        timeout: 5000, // Adiciona timeout para evitar hangs
+      }
+    );
 
     response
       .then((res) => {
@@ -226,12 +271,19 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
         setError(null);
       })
       .catch((err) => {
+        const error = err as AxiosError;
         console.error("Error adding reply (detailed):", {
-          message: (err as Error).message,
-          response: (err as any).response?.data,
-          status: (err as any).response?.status,
+          message: error.message || "Erro desconhecido",
+          response: error.response?.data || "Sem resposta",
+          status: error.response?.status || "Sem status",
+          request: error.request || "Sem requisição",
+          config: error.config?.url || "Sem URL de configuração", // URL da requisição para depuração
+          isAxiosError: error.isAxiosError, // Verifica se é um erro do Axios
+          code: error.code || "Sem código de erro", // Código do erro (ex.: 'ETIMEDOUT', 'ECONNREFUSED')
         });
-        setError("Failed to add reply: " + (err as Error).message);
+        setError(
+          "Failed to add reply: " + (error.message || "Erro desconhecido")
+        );
       });
 
     // Mantém o foco no campo ou evita redirecionamento visual
