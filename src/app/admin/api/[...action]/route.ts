@@ -1,16 +1,24 @@
-import { NextResponse } from "next/server";
+"use server";
 import { auth } from "@clerk/nextjs/server";
+import { clerkClient } from "@clerk/nextjs/server";
+import { Roles } from "types/globals";
+import { NextResponse } from "next/server"; // Para criar respostas JSON
 
-// Handler para GET requests (verifica se o usuário é admin)
 export async function GET(
   req: Request,
-  { params }: { params: { action: string[] } }
+  { params }: { params: Promise<{ action: string[] }> }
 ) {
-  // Autentica o usuário
+  const resolvedParams = await params;
+  const [action] = resolvedParams.action || [];
+
+  if (action !== "check") {
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+  }
+
   const { sessionClaims } = await auth();
+  if (sessionClaims?.metadata?.role !== "admin") {
+    return NextResponse.json({ isAdmin: false }, { status: 200 });
+  }
 
-  // Verifica se o usuário é um admin
-  const isAdmin = sessionClaims?.metadata?.role === "admin";
-
-  return NextResponse.json({ isAdmin }, { status: 200 });
+  return NextResponse.json({ isAdmin: true }, { status: 200 });
 }
