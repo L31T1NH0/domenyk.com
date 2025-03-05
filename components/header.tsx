@@ -1,15 +1,43 @@
-import Link from 'next/link';
-import Image from 'next/image';
+import Link from "next/link";
+import Image from "next/image";
+import { useState, useEffect } from "react"; // Importe useState e useEffect para gerenciar o carregamento
+import Skeleton from "react-loading-skeleton"; // Importe o Skeleton
+import "react-loading-skeleton/dist/skeleton.css"; // Importe o CSS padrão
 
 type HeaderProps = {
   home?: boolean;
 };
 
-const name = 'Domenyk';
+const name = "Domenyk";
 
 export function Header({ home }: HeaderProps) {
+  const [isLoading, setIsLoading] = useState(true); // Estado para controlar o carregamento
+
+  useEffect(() => {
+    // Simula um carregamento inicial (pode ser removido se os dados já estiverem prontos)
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1000); // Ajuste o tempo conforme necessário ou remova para carregar instantaneamente
+    return () => clearTimeout(timer); // Limpa o timer ao desmontar
+  }, []);
+
+  if (isLoading) {
+    return (
+      <header className="flex flex-col gap-4 items-center">
+        <Skeleton
+          width={148}
+          height={148}
+          circle={true}
+          className="brightness-125 foto"
+        />{" "}
+        {/* Skeleton para a imagem circular */}
+        <Skeleton width={120} height={32} /> {/* Skeleton para o texto */}
+      </header>
+    );
+  }
+
   return (
-    (<header className="flex flex-col gap-4 items-center">
+    <header className="flex flex-col gap-4 items-center">
       {home ? (
         <>
           <Image
@@ -37,6 +65,6 @@ export function Header({ home }: HeaderProps) {
           <strong className="text-3xl">Domenyk</strong>
         </>
       )}
-    </header>)
+    </header>
   );
 }
