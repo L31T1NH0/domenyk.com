@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { NextSeo } from "next-seo";
 import { Date } from "@components/date";
 import { Layout } from "@components/layout";
-import Skeleton from "react-loading-skeleton"; // Importe o Skeleton
-import "react-loading-skeleton/dist/skeleton.css"; // Importe o CSS padrão
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
 
 type PostData = {
   postId: string;
@@ -20,13 +20,16 @@ export default function Home() {
   const [posts, setPosts] = useState<PostData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null); // Estado para o status de admin
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  // Estado para o modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [postToDelete, setPostToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchPosts = async () => {
       try {
         setLoading(true);
-        const response = await fetch("/api/posts", { cache: "no-store" }); // Evita caching para garantir dados frescos
+        const response = await fetch("/api/posts",)
         if (!response.ok) {
           const errorText = await response.text();
           console.warn(
@@ -63,7 +66,7 @@ export default function Home() {
         setIsAdmin(data.isAdmin);
       } catch (error) {
         console.error("Error checking admin status:", error);
-        setIsAdmin(false); // Assume não-admin em caso de erro para segurança
+        setIsAdmin(false);
       }
     };
 
@@ -86,15 +89,27 @@ export default function Home() {
       if (!response.ok) throw new Error("Failed to delete post");
       const data = await response.json();
       console.log(data.message);
-      // Atualiza a lista de posts após exclusão
       setPosts(posts.filter((post) => post.postId !== postId));
     } catch (error) {
       console.error("Error deleting post:", error);
       setError("Failed to delete post: " + (error as Error).message);
+    } finally {
+      setShowDeleteModal(false);
+      setPostToDelete(null);
     }
   };
 
-  if (typeof window === "undefined") return null; // Evita erros de hooks no SSR
+  const openDeleteModal = (postId: string) => {
+    setPostToDelete(postId);
+    setShowDeleteModal(true);
+  };
+
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setPostToDelete(null);
+  };
+
+  if (typeof window === "undefined") return null;
 
   return (
     <>
@@ -121,10 +136,10 @@ export default function Home() {
             <div className="flex flex-col gap-4">
               {Array.from({ length: 4 }).map((_, index) => (
                 <div key={index} className="flex flex-col gap-2">
-                  <Skeleton width="80%" height={24} /> {/* Título do post */}
+                  <Skeleton width="80%" height={24} />
                   <div className="flex gap-2">
-                    <Skeleton width={100} height={16} /> {/* Data */}
-                    <Skeleton width={60} height={16} /> {/* Views */}
+                    <Skeleton width={100} height={16} />
+                    <Skeleton width={60} height={16} />
                   </div>
                 </div>
               ))}
@@ -153,7 +168,7 @@ export default function Home() {
                   </small>
                   {isAdmin && (
                     <button
-                      onClick={() => handleDeletePost(post.postId)}
+                      onClick={() => openDeleteModal(post.postId)}
                       className="absolute right-0 top-0 text-red-500 hover:text-red-700 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                     >
                       Apagar
@@ -164,6 +179,39 @@ export default function Home() {
             </ul>
           )}
         </section>
+
+        
+        {showDeleteModal && postToDelete && (
+          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full border border-gray-200">
+              <h2 className="text-lg font-bold mb-4 text-gray-900">
+                Confirmar Exclusão
+              </h2>
+              <p className="mb-6 text-gray-700">
+                Tem certeza que deseja apagar o post "
+                <span className="font-semibold text-gray-900">
+                  {posts.find((p) => p.postId === postToDelete)?.title ||
+                    "Este post"}
+                </span>
+                "?
+              </p>
+              <div className="flex justify-end gap-4">
+                <button
+                  onClick={closeDeleteModal}
+                  className="px-4 py-2 bg-gray-100 text-gray-800 rounded hover:bg-gray-200 border border-gray-300 transition-colors duration-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => postToDelete && handleDeletePost(postToDelete)}
+                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 border border-red-700 transition-colors duration-200"
+                >
+                  Apagar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </Layout>
     </>
   );
