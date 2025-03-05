@@ -171,7 +171,7 @@ export async function POST(
     let ip = "Unknown";
     try {
       const ipResponse = await axios.get("https://api.ipify.org?format=json", {
-        timeout: 5000, // Adiciona timeout para evitar hangs
+        timeout: 1000, // Adiciona timeout para evitar hangs
       });
       ip = ipResponse.data.ip;
     } catch (ipError) {

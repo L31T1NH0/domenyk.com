@@ -58,9 +58,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
       console.log("Tentando buscar comentários para postId:", postId); // Log do postId
       const response: AxiosResponse<any> = await axios.get(
         `/api/comments/${postId}`,
-        {
-          timeout: 5000, // Adiciona timeout de 5 segundos para evitar hangs
-        }
+
       );
       console.log("API response for comments (raw):", {
         data: response.data,
@@ -118,7 +116,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
         const ipResponse = await axios.get(
           "https://api.ipify.org?format=json",
           {
-            timeout: 5000, // Adiciona timeout para evitar hangs
+            timeout: 1000, // Adiciona timeout para evitar hangs
           }
         );
         ip = ipResponse.data.ip || "Unknown";
@@ -131,9 +129,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
           comentario: newComment.comentario,
           parentId: newComment.parentId, // Envia parentId para criar um comentário ou resposta
         },
-        {
-          timeout: 5000, // Adiciona timeout para evitar hangs
-        }
+
       );
 
       if (isClient) {
@@ -232,9 +228,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
         comentario: replyText,
         parentId: commentId,
       },
-      {
-        timeout: 5000, // Adiciona timeout para evitar hangs
-      }
+
     );
 
     response

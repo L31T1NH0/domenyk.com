@@ -14,11 +14,7 @@ export function Header({ home }: HeaderProps) {
   const [isLoading, setIsLoading] = useState(true); // Estado para controlar o carregamento
 
   useEffect(() => {
-    // Simula um carregamento inicial (pode ser removido se os dados já estiverem prontos)
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000); // Ajuste o tempo conforme necessário ou remova para carregar instantaneamente
-    return () => clearTimeout(timer); // Limpa o timer ao desmontar
+    setIsLoading(false); // Marca o carregamento como concluído após a montagem
   }, []);
 
   if (isLoading) {

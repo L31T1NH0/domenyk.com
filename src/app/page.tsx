@@ -94,6 +94,8 @@ export default function Home() {
     }
   };
 
+  if (typeof window === "undefined") return null; // Evita erros de hooks no SSR
+
   return (
     <>
       <NextSeo
