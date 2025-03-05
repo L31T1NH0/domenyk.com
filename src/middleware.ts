@@ -8,11 +8,10 @@ const isPublicRoute = createRouteMatcher([
   "/sign-up(.*)",
   "/posts(.*)", // Adiciona todas as rotas de posts como públicas
   "/api(.*)", // Adiciona as rotas da API de posts como públicas
-  "/admin/check(.*)", // Adiciona a rota de verificação de admin como pública
 ]);
 
 // Rotas de admin: requerem role "admin"
-const isAdminRoute = createRouteMatcher(["/admin(.*)", "/staff(.*)"]);
+const isAdminRoute = createRouteMatcher(["/admin", "/staff(.*)"]);
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId, redirectToSignIn } = await auth();
