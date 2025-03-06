@@ -374,10 +374,10 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
                   <p className="text-white flex gap-0.5 font-semibold max-sm:text-sm">
                     {displayName}
                     {role === "admin" && (
-                      <CheckBadgeIcon className="size-6 max-sm:size-4 text-yellow-300 hover:text-yellow-400" />
+                      <CheckBadgeIcon className="size-5 max-sm:size-4 text-yellow-300 hover:text-yellow-400" />
                     )}
                     {role === null && (
-                      <CheckBadgeIcon className="size-6 max-sm:size-4 text-blue-300 hover:text-blue-400" />
+                      <CheckBadgeIcon className="size-5 max-sm:size-4 text-blue-300 hover:text-blue-400" />
                     )}
                   </p>
                   <small className="text-gray-400 text-sm max-sm:text-xs">
