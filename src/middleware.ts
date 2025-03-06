@@ -11,7 +11,12 @@ const isPublicRoute = createRouteMatcher([
 ]);
 
 // Rotas de admin: requerem role "admin"
-const isAdminRoute = createRouteMatcher(["/admin", "/staff(.*)"]);
+const isAdminRoute = createRouteMatcher([
+  "/admin",
+  "/admin/editor(.*)", // Protege a página do editor e a API
+  "/staff(.*)",
+  "/admin/api(.*)",
+]);
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId, redirectToSignIn } = await auth();
@@ -38,4 +43,3 @@ export const config = {
     "/(api/auth|api/clerk)(.*)", // Limite o middleware para rotas de autenticação Clerk, não para todas as APIs
   ],
 };
-
