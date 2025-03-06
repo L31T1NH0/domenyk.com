@@ -1,18 +1,34 @@
 "use client"; // Marca o componente como Client Component
 
 import React, { useState, useEffect, useRef } from "react";
-import axios, { AxiosError, AxiosResponse } from "axios"; // Importe AxiosError e AxiosResponse para melhor tipagem
+import axios, { AxiosError } from "axios"; // Importe AxiosError para melhor tipagem
+import { useAuth } from "@clerk/nextjs"; // Para verificar autenticação
 import { minidenticon } from "minidenticons"; // Biblioteca para gerar identicons
 
 type Comment = {
-  _id: string;
+  _id: string; // O MongoDB retorna ObjectId, mas o frontend usa toString()
   postId: string;
-  nome: string;
+  nome?: string; // Opcional para usuários não logados
   comentario: string;
   ip: string;
   createdAt: string;
   parentId: string | null;
-  replies?: Comment[]; // Adiciona suporte a respostas (opcional, para compatibilidade)
+  replies?: Comment[];
+};
+
+type AuthComment = {
+  _id: string; // O MongoDB retorna ObjectId, mas o frontend usa toString()
+  postId: string;
+  firstName: string | null;
+  role: "admin" | null;
+  userId: string;
+  imageURL: string;
+  hasImage: boolean;
+  comentario: string;
+  ip: string;
+  createdAt: string;
+  parentId: string | null;
+  replies?: (Comment | AuthComment)[];
 };
 
 interface CommentProps {
@@ -20,7 +36,8 @@ interface CommentProps {
 }
 
 const Comment: React.FC<CommentProps> = ({ postId }) => {
-  const [comments, setComments] = useState<Comment[]>([]);
+  const { userId, isLoaded } = useAuth(); // Verifica autenticação
+  const [comments, setComments] = useState<(Comment | AuthComment)[]>([]);
   const [newComment, setNewComment] = useState({
     nome: "",
     comentario: "",
@@ -28,25 +45,27 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
     parentId: null as string | null,
   });
   const [error, setError] = useState<string | null>(null);
-  const [replyTo, setReplyTo] = useState<string | null>(null); // Estado para controlar a resposta a um comentário
+  const [replyTo, setReplyTo] = useState<string | null>(null);
   const [replyInput, setReplyInput] = useState<{
     [key: string]: { nome: string; comentario: string };
-  }>({}); // Estado para campos de resposta dentro dos comentários, incluindo nome
-  const [isClient, setIsClient] = useState(false); // Estado para verificar se está no cliente
+  }>({});
+  const [isClient, setIsClient] = useState(false);
   const [showAllReplies, setShowAllReplies] = useState<{
     [key: string]: boolean;
-  }>({}); // Estado para controlar replies visíveis por comentário
-  const replyInputRef = useRef<HTMLInputElement>(null); // Referência para o campo de resposta inline
+  }>({});
+  const replyInputRef = useRef<HTMLInputElement>(null);
 
-  // Carrega nome e IP do localStorage, apenas no cliente
+  // Carrega nome e IP do localStorage apenas para usuários não logados
   useEffect(() => {
     setIsClient(true);
-    const storedUser = localStorage.getItem(`user_${postId}`);
-    if (storedUser) {
-      const { nome, ip } = JSON.parse(storedUser);
-      setNewComment((prev) => ({ ...prev, nome: nome || "", ip: ip || "" }));
+    if (!userId && isLoaded) {
+      const storedUser = localStorage.getItem(`user_${postId}`);
+      if (storedUser) {
+        const { nome, ip } = JSON.parse(storedUser);
+        setNewComment((prev) => ({ ...prev, nome: nome || "", ip: ip || "" }));
+      }
     }
-  }, [postId]);
+  }, [postId, userId, isLoaded]);
 
   // Busca comentários ao montar o componente
   useEffect(() => {
@@ -55,16 +74,8 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
 
   const fetchComments = async () => {
     try {
-      console.log("Tentando buscar comentários para postId:", postId); // Log do postId
-      const response: AxiosResponse<any> = await axios.get(
-        `/api/comments/${postId}`,
-
-      );
-      console.log("API response for comments (raw):", {
-        data: response.data,
-        status: response.status,
-        headers: response.headers,
-      });
+      console.log("Fetching comments for postId:", postId); // Log para depuração
+      const response = await axios.get(`/api/comments/${postId}`);
       if (Array.isArray(response.data)) {
         setComments(response.data);
       } else if (response.data && typeof response.data === "object") {
@@ -75,23 +86,11 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
         );
       } else {
         setComments([]);
-        console.warn(
-          "Unexpected API response format, setting comments to empty array. Response:",
-          response.data
-        );
+        console.warn("Unexpected API response format:", response.data);
       }
-      console.log("Comments with replies after setting:", comments);
     } catch (err) {
       const error = err as AxiosError;
-      console.error("Error fetching comments (detailed):", {
-        message: error.message || "Erro desconhecido",
-        response: error.response?.data || "Sem resposta",
-        status: error.response?.status || "Sem status",
-        request: error.request || "Sem requisição",
-        config: error.config?.url || "Sem URL de configuração", // URL da requisição para depuração
-        isAxiosError: error.isAxiosError, // Verifica se é um erro do Axios
-        code: error.code || "Sem código de erro", // Código do erro (ex.: 'ETIMEDOUT', 'ECONNREFUSED')
-      });
+      console.error("Error fetching comments:", error);
       setError(
         "Failed to load comments: " + (error.message || "Erro desconhecido")
       );
@@ -101,13 +100,26 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newComment.nome || !newComment.comentario) {
-      setError("Name and comment are required");
-      return;
-    }
-    if (newComment.comentario.length > 120) {
-      setError("Comment must not exceed 120 characters");
-      return;
+    if (userId && isLoaded) {
+      // Usuário logado: Não exige nome, usa dados do Clerk
+      if (!newComment.comentario.trim()) {
+        setError("Comment is required");
+        return;
+      }
+      if (newComment.comentario.length > 120) {
+        setError("Comment must not exceed 120 characters");
+        return;
+      }
+    } else {
+      // Usuário não logado: Exige nome
+      if (!newComment.nome || !newComment.comentario.trim()) {
+        setError("Name and comment are required");
+        return;
+      }
+      if (newComment.comentario.length > 120) {
+        setError("Comment must not exceed 120 characters");
+        return;
+      }
     }
 
     try {
@@ -116,51 +128,42 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
         const ipResponse = await axios.get(
           "https://api.ipify.org?format=json",
           {
-            timeout: 1000, // Adiciona timeout para evitar hangs
+            timeout: 1000,
           }
         );
         ip = ipResponse.data.ip || "Unknown";
       }
 
-      const response = await axios.post(
-        `/api/comments/${postId}`,
-        {
-          nome: newComment.nome,
-          comentario: newComment.comentario,
-          parentId: newComment.parentId, // Envia parentId para criar um comentário ou resposta
-        },
+      const data = {
+        comentario: newComment.comentario,
+        parentId: newComment.parentId || null,
+        nome: userId ? undefined : newComment.nome,
+      };
 
-      );
+      console.log("Submitting comment for postId:", postId);
+      console.log("Request URL:", `/api/comments/${postId}`);
+      console.log("Request data:", data);
 
-      if (isClient) {
+      const response = await axios.post(`/api/comments/${postId}`, data);
+
+      if (isClient && !userId) {
         localStorage.setItem(
           `user_${postId}`,
           JSON.stringify({ nome: newComment.nome, ip })
         );
       }
 
-      setComments((prev) => {
-        if (newComment.parentId) {
-          return prev.map((comment) => {
-            if (comment._id === newComment.parentId) {
-              return {
-                ...comment,
-                replies: [
-                  response.data.reply || response.data.comment,
-                  ...(comment.replies || []),
-                ].sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
-              };
-            }
-            return comment;
-          });
-        } else {
-          return [response.data.comment, ...prev];
-        }
-      });
+      const newCommentData = userId
+        ? response.data.comment
+        : { ...response.data.comment, nome: newComment.nome, ip };
+      setComments((prev) => [
+        newCommentData,
+        ...prev.filter((c) => c._id !== newCommentData._id),
+      ]);
       setNewComment({
-        nome: newComment.nome, // Mantém o nome para consistência
+        nome: newComment.nome,
         comentario: "",
-        ip: newComment.ip,
+        ip: ip || "",
         parentId: null,
       });
       setReplyTo(null);
@@ -168,25 +171,21 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
       setError(null);
     } catch (err) {
       const error = err as AxiosError;
-      console.error("Error adding comment or reply (detailed):", {
-        message: error.message || "Erro desconhecido",
-        response: error.response?.data || "Sem resposta",
-        status: error.response?.status || "Sem status",
-        request: error.request || "Sem requisição",
-        config: error.config?.url || "Sem URL de configuração", // URL da requisição para depuração
-        isAxiosError: error.isAxiosError, // Verifica se é um erro do Axios
-        code: error.code || "Sem código de erro", // Código do erro (ex.: 'ETIMEDOUT', 'ECONNREFUSED')
+      console.error("Error adding comment:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
       });
       setError(
-        "Failed to add comment or reply: " +
-          (error.message || "Erro desconhecido")
+        "Failed to add comment: " +
+          (error.response?.data && typeof error.response.data === 'object' && 'error' in error.response.data ? error.response.data.error : error.message)
       );
     }
   };
 
   const handleReply = (commentId: string) => {
     setReplyTo(commentId);
-    if (isClient) {
+    if (!userId && isClient) {
       const storedUser = localStorage.getItem(`user_${postId}`);
       if (storedUser) {
         const { nome, ip } = JSON.parse(storedUser);
@@ -201,7 +200,6 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
         }));
       }
     }
-    // Foca no campo de resposta inline após abrir
     if (replyInputRef.current) {
       replyInputRef.current.focus();
     }
@@ -214,46 +212,54 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
     e.preventDefault();
     const replyData = replyInput[commentId] || { nome: "", comentario: "" };
     const replyText = replyData.comentario || "";
-    if (!replyText.trim()) return;
+    if (!replyText.trim()) {
+      setError("Reply cannot be empty");
+      return;
+    }
     if (replyText.length > 120) {
       setError("Reply must not exceed 120 characters");
       return;
     }
 
-    // Envia apenas os dados da resposta, mantendo newComment intocado
-    const response = axios.post(
-      `/api/comments/${postId}`,
-      {
-        nome: replyData.nome || newComment.nome, // Usa o nome do replyInput ou o nome atual
-        comentario: replyText,
-        parentId: commentId,
-      },
+    const data = {
+      comentario: replyText,
+      parentId: commentId,
+      nome: userId ? undefined : replyData.nome || newComment.nome,
+    };
 
-    );
+    console.log("Submitting reply for postId:", postId); // Log para depuração
+    console.log("Request URL:", `/api/comments/${postId}`);
+    console.log("Request data:", data);
 
-    response
+    axios
+      .post(`/api/comments/${postId}`, data)
       .then((res) => {
-        setComments((prev) => {
-          return prev.map((comment) => {
-            if (comment._id === commentId) {
-              return {
-                ...comment,
-                replies: [
-                  res.data.reply || res.data.comment,
-                  ...(comment.replies || []),
-                ].sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
-              };
-            }
-            return comment;
-          });
-        });
-        if (isClient) {
-          const storedUser = localStorage.getItem(`user_${postId}`);
-          const currentIp = newComment.ip || "Unknown";
-          const currentName = replyData.nome || newComment.nome;
+        const newReply = userId
+          ? res.data.reply
+          : {
+              ...res.data.reply,
+              nome: replyData.nome || newComment.nome,
+              ip: newComment.ip,
+            };
+        setComments((prev) =>
+          prev.map((comment) =>
+            comment._id === commentId
+              ? {
+                  ...comment,
+                  replies: [newReply, ...(comment.replies || [])].sort((a, b) =>
+                    a.createdAt.localeCompare(b.createdAt)
+                  ),
+                }
+              : comment
+          )
+        );
+        if (!userId && isClient) {
           localStorage.setItem(
             `user_${postId}`,
-            JSON.stringify({ nome: currentName, ip: currentIp })
+            JSON.stringify({
+              nome: replyData.nome || newComment.nome,
+              ip: newComment.ip,
+            })
           );
         }
         setReplyInput((prev) => {
@@ -261,28 +267,24 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
           delete newInput[commentId];
           return newInput;
         });
-        setReplyTo(null); // Fecha o campo de resposta
+        setReplyTo(null);
         setError(null);
       })
       .catch((err) => {
         const error = err as AxiosError;
-        console.error("Error adding reply (detailed):", {
-          message: error.message || "Erro desconhecido",
-          response: error.response?.data || "Sem resposta",
-          status: error.response?.status || "Sem status",
-          request: error.request || "Sem requisição",
-          config: error.config?.url || "Sem URL de configuração", // URL da requisição para depuração
-          isAxiosError: error.isAxiosError, // Verifica se é um erro do Axios
-          code: error.code || "Sem código de erro", // Código do erro (ex.: 'ETIMEDOUT', 'ECONNREFUSED')
+        console.error("Error adding reply:", {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status,
         });
         setError(
-          "Failed to add reply: " + (error.message || "Erro desconhecido")
+          "Failed to add reply: " +
+            (error.response?.data && typeof error.response.data === 'object' && 'error' in error.response.data ? error.response.data.error : error.message)
         );
       });
 
-    // Mantém o foco no campo ou evita redirecionamento visual
     if (replyInputRef.current) {
-      replyInputRef.current.blur(); // Remove o foco para evitar redirecionamento visual
+      replyInputRef.current.blur();
     }
   };
 
@@ -295,14 +297,12 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
     });
   };
 
-  // Função para gerar identicon com Minidenticons
   const generateIdenticon = (name: string, ip: string): string => {
-    const value = `${name}${ip || "Unknown"}`; // Combina nome e IP para hash único
-    const svg = minidenticon(value, 100, 50); // Saturação 95%, luminosidade 45% (padrão)
-    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`; // Base64 para <img>
+    const value = `${name}${ip || "Unknown"}`;
+    const svg = minidenticon(value, 100, 50);
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
   };
 
-  // Função para formatar a data (YYYY-MM-DD para "DD de MMMM de YYYY")
   const formatDate = (dateStr: string): string => {
     const date = new Date(dateStr);
     return date.toLocaleDateString("pt-BR", {
@@ -313,14 +313,15 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
   };
 
   const renderComments = (
-    comments: Comment[],
+    comments: (Comment | AuthComment)[],
     parentId: string | null = null
   ) => {
     const hasUserCommented =
       isClient &&
       comments.some(
         (comment) =>
-          comment.ip === newComment.ip && comment.nome === newComment.nome
+          (comment as any).ip === newComment.ip &&
+          (comment as any).nome === newComment.nome
       );
     const hasNameInLocalStorage =
       isClient && !!localStorage.getItem(`user_${postId}`);
@@ -331,13 +332,22 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
         const showReplyAlert =
           replyTo === comment._id &&
           !hasUserCommented &&
-          !hasNameInLocalStorage;
-
-        const replyCount = comment.replies?.length || 0;
-        const shouldShowToggleButton = replyCount > 2; // Mostra o botão apenas se houver mais de 2 replies
+          !hasNameInLocalStorage &&
+          !userId;
+        const replyCount = (comment.replies?.length || 0) as number;
+        const shouldShowToggleButton = replyCount > 2;
         const visibleReplies = showAllReplies[comment._id]
           ? comment.replies || []
-          : (comment.replies || []).slice(0, 1); // Mostra apenas os 2 primeiros replies por padrão
+          : (comment.replies || []).slice(0, 1);
+
+        const displayName =
+          (comment as AuthComment).firstName ||
+          (comment as Comment).nome ||
+          "Anonymous";
+        const role = (comment as AuthComment).role;
+        const imageURL = (comment as AuthComment).imageURL;
+        const hasImage = (comment as AuthComment).hasImage;
+        const ip = (comment as Comment).ip || (comment as AuthComment).ip;
 
         return (
           <div
@@ -345,15 +355,23 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
             className="bg-zinc-700 p-3 rounded-lg mb-4 max-sm:p-2 max-sm:mb-2 max-sm:rounded-md flex flex-col gap-2 max-sm:gap-1 items-start"
           >
             <div className="flex gap-4 max-sm:gap-2 items-start">
-              <img
-                src={generateIdenticon(comment.nome, comment.ip)}
-                alt={`${comment.nome} avatar`}
-                className="w-8 h-8 rounded-full max-sm:w-6 max-sm:h-6 icon"
-              />
+              {hasImage ? (
+                <img
+                  src={imageURL}
+                  alt={`${displayName} avatar`}
+                  className="w-8 h-8 rounded-full max-sm:w-6 max-sm:h-6 icon"
+                />
+              ) : (
+                <img
+                  src={generateIdenticon(displayName, ip)}
+                  alt={`${displayName} avatar`}
+                  className="w-8 h-8 rounded-full max-sm:w-6 max-sm:h-6 icon"
+                />
+              )}
               <div className="flex-1">
                 <div className="flex gap-2 max-sm:gap-1">
                   <p className="text-white font-semibold max-sm:text-sm">
-                    {comment.nome}
+                    {displayName} {role === "admin" && "(Admin)"}
                   </p>
                   <small className="text-gray-400 text-sm max-sm:text-xs">
                     {formatDate(comment.createdAt)}
@@ -384,6 +402,24 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
                 className="mt-1"
               >
                 <div className="flex items-center gap-2 max-sm:gap-1">
+                  {!userId && (
+                    <input
+                      type="text"
+                      maxLength={120}
+                      placeholder="Seu nome..."
+                      value={replyInput[comment._id]?.nome || ""}
+                      onChange={(e) =>
+                        setReplyInput((prev) => ({
+                          ...prev,
+                          [comment._id]: {
+                            ...prev[comment._id],
+                            nome: e.target.value,
+                          },
+                        }))
+                      }
+                      className="p-1 bg-zinc-700 text-white rounded border outline-none border-gray-600 w-full max-sm:p-0.5 max-sm:text-sm"
+                    />
+                  )}
                   <input
                     type="text"
                     maxLength={120}
@@ -398,7 +434,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
                         },
                       }))
                     }
-                    ref={replyInputRef} // Adiciona referência para manter o foco
+                    ref={replyInputRef}
                     className="ml-14 p-1 bg-zinc-700 text-white rounded border outline-none border-gray-600 w-full max-sm:p-0.5 max-sm:text-sm"
                   />
                   <button
@@ -441,10 +477,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
   };
 
   return (
-    <section
-      className="mt-2 max-sm:mt-1" // Reduz margem em telas menores
-      aria-label="Seção de comentários"
-    >
+    <section className="mt-2 max-sm:mt-1" aria-label="Seção de comentários">
       <h1 className="text-xl font-bold mb-4 max-sm:text-lg max-sm:mb-2">
         💬 Comentários
       </h1>
@@ -456,15 +489,17 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
         className="flex flex-col gap-4 max-sm:gap-2"
       >
         <div className="flex gap-4 max-sm:flex-col max-sm:gap-2">
-          <input
-            type="text"
-            placeholder="Seu nome (último usado será salvo)"
-            value={newComment.nome}
-            onChange={(e) =>
-              setNewComment({ ...newComment, nome: e.target.value })
-            }
-            className="p-2 bg-zinc-700 text-white rounded w-full max-sm:p-1 max-sm:text-sm"
-          />
+          {!userId && isLoaded && (
+            <input
+              type="text"
+              placeholder="Seu nome (último usado será salvo)"
+              value={newComment.nome}
+              onChange={(e) =>
+                setNewComment({ ...newComment, nome: e.target.value })
+              }
+              className="p-2 bg-zinc-700 text-white rounded w-full max-sm:p-1 max-sm:text-sm"
+            />
+          )}
           <button
             type="submit"
             className="w-full h-fit bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition-colors max-sm:px-3 max-sm:py-1 max-sm:text-sm"
@@ -474,13 +509,13 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
         </div>
         <textarea
           maxLength={120}
-          placeholder={replyTo ? "Seu comentário..." : "Seu comentário"}
+          placeholder={replyTo ? "Sua resposta..." : "Seu comentário"}
           value={newComment.comentario}
           onChange={(e) =>
             setNewComment({ ...newComment, comentario: e.target.value })
           }
           className="p-2 bg-zinc-700 text-white rounded resize-none w-full h-56 max-sm:h-32 max-sm:p-1 max-sm:text-sm"
-          onFocus={() => setReplyTo(null)} // Remove o foco do reply ao interagir com o textarea principal
+          onFocus={() => setReplyTo(null)}
         />
       </form>
       <div className="mt-6 max-sm:mt-3">
