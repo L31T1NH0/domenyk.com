@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import axios, { AxiosError } from "axios"; // Importe AxiosError para melhor tipagem
 import { useAuth } from "@clerk/nextjs"; // Para verificar autenticação
 import { minidenticon } from "minidenticons"; // Biblioteca para gerar identicons
+import { CheckBadgeIcon } from "@heroicons/react/24/solid";
 
 type Comment = {
   _id: string; // O MongoDB retorna ObjectId, mas o frontend usa toString()
@@ -370,8 +371,14 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
               )}
               <div className="flex-1">
                 <div className="flex gap-2 max-sm:gap-1">
-                  <p className="text-white font-semibold max-sm:text-sm">
-                    {displayName} {role === "admin" && "(Admin)"}
+                  <p className="text-white flex gap-0.5 font-semibold max-sm:text-sm">
+                    {displayName}
+                    {role === "admin" && (
+                      <CheckBadgeIcon className="size-6 max-sm:size-4 text-yellow-300 hover:text-yellow-400" />
+                    )}
+                    {role === null && (
+                      <CheckBadgeIcon className="size-6 max-sm:size-4 text-blue-300 hover:text-blue-400" />
+                    )}
                   </p>
                   <small className="text-gray-400 text-sm max-sm:text-xs">
                     {formatDate(comment.createdAt)}
