@@ -182,7 +182,11 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
       });
       setError(
         "Failed to add comment: " +
-          (error.response?.data && typeof error.response.data === 'object' && 'error' in error.response.data ? error.response.data.error : error.message)
+          (error.response?.data &&
+          typeof error.response.data === "object" &&
+          "error" in error.response.data
+            ? error.response.data.error
+            : error.message)
       );
     }
   };
@@ -283,7 +287,11 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
         });
         setError(
           "Failed to add reply: " +
-            (error.response?.data && typeof error.response.data === 'object' && 'error' in error.response.data ? error.response.data.error : error.message)
+            (error.response?.data &&
+            typeof error.response.data === "object" &&
+            "error" in error.response.data
+              ? error.response.data.error
+              : error.message)
         );
       });
 
@@ -488,9 +496,10 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
 
   return (
     <section className="mt-2 max-sm:mt-1" aria-label="Seção de comentários">
-      <h1 className="text-xl flex font-bold mb-4 max-sm:text-lg max-sm:mb-2">
-        <ChatBubbleLeftRightIcon className="size-4"/> Comentários
-      </h1>
+        <h1 className="text-xl flex font-bold mb-4 max-sm:text-lg max-sm:mb-2">
+          <ChatBubbleLeftRightIcon className="size-4" /> Comentários (
+          {comments.length})
+        </h1>
       {error && (
         <p className="text-red-500 mb-4 max-sm:mb-2 max-sm:text-sm">{error}</p>
       )}
@@ -502,7 +511,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
           {!userId && isLoaded && (
             <input
               type="text"
-              placeholder="Seu nome (último usado será salvo)"
+              placeholder="Seu nome"
               value={newComment.nome}
               onChange={(e) =>
                 setNewComment({ ...newComment, nome: e.target.value })
