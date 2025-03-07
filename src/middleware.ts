@@ -39,7 +39,8 @@ export default clerkMiddleware(async (auth, req) => {
 
 export const config = {
   matcher: [
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    "/(api/auth|api/clerk)(.*)", // Limite o middleware para rotas de autenticação Clerk, não para todas as APIs
+    // Ignora arquivos estáticos e rotas internas do Next.js
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2|ico|csv|docx?|xlsx?|zip|webmanifest)|public/.*).*)",
+    "/(api/auth|api/clerk)(.*)", // Limite o middleware para rotas de autenticação Clerk
   ],
 };
