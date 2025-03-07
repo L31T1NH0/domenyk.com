@@ -7,6 +7,8 @@ import { Date } from "@components/date";
 import { Layout } from "@components/layout";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
+import { TrashIcon } from "@heroicons/react/24/solid";
+
 
 type PostData = {
   postId: string;
@@ -171,7 +173,7 @@ export default function Home() {
                       onClick={() => openDeleteModal(post.postId)}
                       className="absolute right-0 top-0 text-red-500 hover:text-red-700 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                     >
-                      Apagar
+                      <TrashIcon className="size-4" />
                     </button>
                   )}
                 </li>
@@ -182,7 +184,7 @@ export default function Home() {
 
         
         {showDeleteModal && postToDelete && (
-          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-zinc-900/90 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full border border-gray-200">
               <h2 className="text-lg font-bold mb-4 text-gray-900">
                 Confirmar Exclusão
