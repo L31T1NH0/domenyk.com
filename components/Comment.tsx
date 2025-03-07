@@ -4,7 +4,10 @@ import React, { useState, useEffect, useRef } from "react";
 import axios, { AxiosError } from "axios"; // Importe AxiosError para melhor tipagem
 import { useAuth } from "@clerk/nextjs"; // Para verificar autenticação
 import { minidenticon } from "minidenticons"; // Biblioteca para gerar identicons
-import { CheckBadgeIcon } from "@heroicons/react/24/solid";
+import {
+  CheckBadgeIcon,
+  ChatBubbleLeftRightIcon,
+} from "@heroicons/react/24/solid";
 
 type Comment = {
   _id: string; // O MongoDB retorna ObjectId, mas o frontend usa toString()
@@ -374,10 +377,10 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
                   <p className="text-white flex gap-0.5 font-semibold max-sm:text-sm">
                     {displayName}
                     {role === "admin" && (
-                      <CheckBadgeIcon className="size-5 max-sm:size-4 text-yellow-300 hover:text-yellow-400" />
+                      <CheckBadgeIcon className="size-5 max-sm:size-4 text-yellow-400 hover:text-yellow-500" />
                     )}
                     {role === null && (
-                      <CheckBadgeIcon className="size-5 max-sm:size-4 text-blue-300 hover:text-blue-400" />
+                      <CheckBadgeIcon className="size-5 max-sm:size-4 text-blue-400 hover:text-blue-500" />
                     )}
                   </p>
                   <small className="text-gray-400 text-sm max-sm:text-xs">
@@ -485,8 +488,8 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
 
   return (
     <section className="mt-2 max-sm:mt-1" aria-label="Seção de comentários">
-      <h1 className="text-xl font-bold mb-4 max-sm:text-lg max-sm:mb-2">
-        💬 Comentários
+      <h1 className="text-xl flex font-bold mb-4 max-sm:text-lg max-sm:mb-2">
+        <ChatBubbleLeftRightIcon className="size-4"/> Comentários
       </h1>
       {error && (
         <p className="text-red-500 mb-4 max-sm:mb-2 max-sm:text-sm">{error}</p>
