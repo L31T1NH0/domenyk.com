@@ -1,9 +1,12 @@
 import Link from "next/link";
+import { ArrowLeftCircleIcon } from "@heroicons/react/24/outline";
 
 export function BackHome() {
   return (
-    <Link href="/" className="text-lg lg:text-lg max-sm:text-sm">
-      ←
-    </Link>
+    <div>
+      <Link href="/" className="flex w-fit h-fit">
+        <ArrowLeftCircleIcon className="size-5" />
+      </Link>
+    </div>
   );
 }

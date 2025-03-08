@@ -638,9 +638,9 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
   };
 
   return (
-    <section className="mt-2 max-sm:mt-1" aria-label="Seção de comentários">
+    <section className="mt-3 max-sm:mt-1" aria-label="Seção de comentários">
       <h1 className="text-xl flex font-bold mb-4 max-sm:text-lg max-sm:mb-2">
-        <ChatBubbleLeftRightIcon className="size-4 mr-1" /> Comentários (
+        <ChatBubbleLeftRightIcon className="size-4" /> Comentários (
         {countTotalComments(comments)})
       </h1>
       {error && (

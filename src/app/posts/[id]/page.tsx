@@ -54,7 +54,7 @@ export default function Post({ params }: PostParams) {
           "URL:",
           `/api/posts/${id}`
         ); // Log mais detalhado
-        const response = await fetch(`/api/posts/${id}`, { cache: "no-store" }); // Evita caching para garantir dados frescos
+        const response = await fetch(`/api/posts/${id}`); 
         if (!response.ok) {
           const errorText = await response.text(); // Obtém o texto do erro para depuração
           throw new Error(
@@ -203,9 +203,7 @@ export default function Post({ params }: PostParams) {
           <div className="flex gap-2">
             <Date dateString={date} />
             <div>
-              <span className="text-sm text-zinc-500">
-                • {readingTime}
-              </span>
+              <span className="text-sm text-zinc-500">• {readingTime}</span>
               <span className="text-sm text-zinc-500 p-1">
                 {views || 0} views
               </span>
@@ -221,9 +219,10 @@ export default function Post({ params }: PostParams) {
             }}
           />
         </article>
-        <div>
+
           <BackHome />
-        </div>
+
+
         <Comment postId={postData.postId} />
       </Layout>
     </>
