@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { SunIcon, MoonIcon } from "@heroicons/react/24/solid";
 
 export default function ThemeSwitcher() {
   const [darkMode, setDarkMode] = useState<boolean>(() => {
@@ -21,32 +22,9 @@ export default function ThemeSwitcher() {
 
   const [isMounted, setIsMounted] = useState(false); // Estado para controlar o primeiro render
 
-  const cacheImage = (src: string) => {
-    if (!localStorage.getItem(src)) {
-      fetch(src)
-        .then((response) => response.blob())
-        .then((blob) => {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            localStorage.setItem(src, reader.result as string);
-          };
-          reader.readAsDataURL(blob);
-        });
-    }
-  };
-
   useEffect(() => {
-    cacheImage("/images/night-mode-light.svg");
-    cacheImage("/images/night-mode-dark.svg");
     setIsMounted(true); // Marca que o componente está montado
   }, []);
-
-  const getCachedImage = (src: string) => {
-    if (typeof window !== "undefined" && localStorage) {
-      return localStorage.getItem(src) || src;
-    }
-    return src;
-  };
 
   useEffect(() => {
     if (isMounted && typeof window !== "undefined") {
@@ -68,17 +46,11 @@ export default function ThemeSwitcher() {
 
   return (
     <button onClick={toggleDarkMode}>
-      <img
-        src={
-          darkMode
-            ? getCachedImage("/images/night-mode-light.svg")
-            : getCachedImage("/images/night-mode-dark.svg")
-        }
-        alt="Night Mode Icon"
-        className="svg-icon"
-        width={32}
-        height={32}
-      />
+      {darkMode ? (
+        <SunIcon className="svg-icon" width={24} height={24} />
+      ) : (
+        <MoonIcon className="svg-icon" width={24} height={24} />
+      )}
     </button>
   );
 }

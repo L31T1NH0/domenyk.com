@@ -1,12 +1,12 @@
 "use client"; // Marca o componente como Client Component
 
 import React, { useState, useEffect, useRef } from "react";
-import axios, { AxiosError } from "axios"; // Importe AxiosError para melhor tipagem
 import { useAuth } from "@clerk/nextjs"; // Para verificar autenticação
 import { minidenticon } from "minidenticons"; // Biblioteca para gerar identicons
 import {
   CheckBadgeIcon,
   ChatBubbleLeftRightIcon,
+  TrashIcon,
 } from "@heroicons/react/24/solid";
 
 type Comment = {
@@ -40,7 +40,7 @@ interface CommentProps {
 }
 
 const Comment: React.FC<CommentProps> = ({ postId }) => {
-  const { userId, isLoaded } = useAuth(); // Verifica autenticação
+  const { userId, isLoaded } = useAuth(); // Apenas userId e isLoaded
   const [comments, setComments] = useState<(Comment | AuthComment)[]>([]);
   const [newComment, setNewComment] = useState({
     nome: "",
@@ -57,6 +57,8 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
   const [showAllReplies, setShowAllReplies] = useState<{
     [key: string]: boolean;
   }>({});
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null); // Para o modal de confirmação
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null); // Estado para verificar administrador
   const replyInputRef = useRef<HTMLInputElement>(null);
 
   // Carrega nome e IP do localStorage apenas para usuários não logados
@@ -71,6 +73,31 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
     }
   }, [postId, userId, isLoaded]);
 
+  // Verifica o status de administrador
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      try {
+        const response = await fetch("/admin/api/check", {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!response.ok) {
+          throw new Error("Failed to check admin status");
+        }
+        const data = await response.json();
+        setIsAdmin(data.isAdmin);
+        console.log("Admin status from API:", data.isAdmin); // Log para depuração
+      } catch (error) {
+        console.error("Error checking admin status:", error);
+        setIsAdmin(false);
+      }
+    };
+
+    if (isLoaded) {
+      checkAdminStatus();
+    }
+  }, [isLoaded]);
+
   // Busca comentários ao montar o componente
   useEffect(() => {
     fetchComments();
@@ -79,25 +106,24 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
   const fetchComments = async () => {
     try {
       console.log("Fetching comments for postId:", postId); // Log para depuração
-      const response = await axios.get(`/api/comments/${postId}`);
-      if (Array.isArray(response.data)) {
-        setComments(response.data);
-      } else if (response.data && typeof response.data === "object") {
-        setComments(
-          Array.isArray(response.data.comments)
-            ? response.data.comments
-            : [response.data]
+      const response = await fetch(`/api/comments/${postId}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.warn(
+          `Erro ao buscar comentários: ${response.status} - ${errorText}`
+        );
+        setComments([]);
+        setError(
+          `Não foi possível carregar os comentários: ${response.status} - ${errorText}`
         );
       } else {
-        setComments([]);
-        console.warn("Unexpected API response format:", response.data);
+        const commentsData = await response.json();
+        console.log("Comments received from API:", commentsData);
+        setComments(commentsData || []);
       }
-    } catch (err) {
-      const error = err as AxiosError;
+    } catch (error) {
       console.error("Error fetching comments:", error);
-      setError(
-        "Failed to load comments: " + (error.message || "Erro desconhecido")
-      );
+      setError(`Falha ao carregar os comentários: ${(error as Error).message}`);
       setComments([]);
     }
   };
@@ -105,7 +131,6 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (userId && isLoaded) {
-      // Usuário logado: Não exige nome, usa dados do Clerk
       if (!newComment.comentario.trim()) {
         setError("Comment is required");
         return;
@@ -115,7 +140,6 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
         return;
       }
     } else {
-      // Usuário não logado: Exige nome
       if (!newComment.nome || !newComment.comentario.trim()) {
         setError("Name and comment are required");
         return;
@@ -129,13 +153,11 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
     try {
       let ip = newComment.ip;
       if (!ip && isClient) {
-        const ipResponse = await axios.get(
-          "https://api.ipify.org?format=json",
-          {
-            timeout: 1000,
-          }
-        );
-        ip = ipResponse.data.ip || "Unknown";
+        const ipResponse = await fetch("https://api.ipify.org?format=json", {
+          method: "GET",
+        });
+        const ipData = await ipResponse.json();
+        ip = ipData.ip || "Unknown";
       }
 
       const data = {
@@ -144,11 +166,21 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
         nome: userId ? undefined : newComment.nome,
       };
 
-      console.log("Submitting comment for postId:", postId);
-      console.log("Request URL:", `/api/comments/${postId}`);
-      console.log("Request data:", data);
+      const response = await fetch(`/api/comments/${postId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
 
-      const response = await axios.post(`/api/comments/${postId}`, data);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to add comment: ${errorText}`);
+      }
+
+      const responseData = await response.json();
+      const newCommentData = userId
+        ? responseData.comment
+        : { ...responseData.comment, nome: newComment.nome, ip };
 
       if (isClient && !userId) {
         localStorage.setItem(
@@ -157,9 +189,6 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
         );
       }
 
-      const newCommentData = userId
-        ? response.data.comment
-        : { ...response.data.comment, nome: newComment.nome, ip };
       setComments((prev) => [
         newCommentData,
         ...prev.filter((c) => c._id !== newCommentData._id),
@@ -173,21 +202,9 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
       setReplyTo(null);
       setReplyInput({});
       setError(null);
-    } catch (err) {
-      const error = err as AxiosError;
-      console.error("Error adding comment:", {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-      });
-      setError(
-        "Failed to add comment: " +
-          (error.response?.data &&
-          typeof error.response.data === "object" &&
-          "error" in error.response.data
-            ? error.response.data.error
-            : error.message)
-      );
+    } catch (error) {
+      console.error("Error adding comment:", error);
+      setError(`Failed to add comment: ${(error as Error).message}`);
     }
   };
 
@@ -213,7 +230,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
     }
   };
 
-  const handleReplySubmit = (
+  const handleReplySubmit = async (
     commentId: string,
     e: React.FormEvent<HTMLFormElement>
   ) => {
@@ -235,65 +252,61 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
       nome: userId ? undefined : replyData.nome || newComment.nome,
     };
 
-    console.log("Submitting reply for postId:", postId); // Log para depuração
-    console.log("Request URL:", `/api/comments/${postId}`);
-    console.log("Request data:", data);
-
-    axios
-      .post(`/api/comments/${postId}`, data)
-      .then((res) => {
-        const newReply = userId
-          ? res.data.reply
-          : {
-              ...res.data.reply,
-              nome: replyData.nome || newComment.nome,
-              ip: newComment.ip,
-            };
-        setComments((prev) =>
-          prev.map((comment) =>
-            comment._id === commentId
-              ? {
-                  ...comment,
-                  replies: [newReply, ...(comment.replies || [])].sort((a, b) =>
-                    a.createdAt.localeCompare(b.createdAt)
-                  ),
-                }
-              : comment
-          )
-        );
-        if (!userId && isClient) {
-          localStorage.setItem(
-            `user_${postId}`,
-            JSON.stringify({
-              nome: replyData.nome || newComment.nome,
-              ip: newComment.ip,
-            })
-          );
-        }
-        setReplyInput((prev) => {
-          const newInput = { ...prev };
-          delete newInput[commentId];
-          return newInput;
-        });
-        setReplyTo(null);
-        setError(null);
-      })
-      .catch((err) => {
-        const error = err as AxiosError;
-        console.error("Error adding reply:", {
-          message: error.message,
-          response: error.response?.data,
-          status: error.response?.status,
-        });
-        setError(
-          "Failed to add reply: " +
-            (error.response?.data &&
-            typeof error.response.data === "object" &&
-            "error" in error.response.data
-              ? error.response.data.error
-              : error.message)
-        );
+    try {
+      const response = await fetch(`/api/comments/${postId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to add reply: ${errorText}`);
+      }
+
+      const res = await response.json();
+      const newReply = userId
+        ? res.reply
+        : {
+            ...res.reply,
+            nome: replyData.nome || newComment.nome,
+            ip: newComment.ip,
+          };
+
+      setComments((prev) =>
+        prev.map((comment) =>
+          comment._id === commentId
+            ? {
+                ...comment,
+                replies: [newReply, ...(comment.replies || [])].sort((a, b) =>
+                  a.createdAt.localeCompare(b.createdAt)
+                ),
+              }
+            : comment
+        )
+      );
+
+      if (!userId && isClient) {
+        localStorage.setItem(
+          `user_${postId}`,
+          JSON.stringify({
+            nome: replyData.nome || newComment.nome,
+            ip: newComment.ip,
+          })
+        );
+      }
+
+      setReplyInput((prev) => {
+        const newInput = { ...prev };
+        delete newInput[commentId];
+        return newInput;
+      });
+      setReplyTo(null);
+      setError(null);
+    } catch (error) {
+      console.error("Error adding reply:", error);
+      setError(`Failed to add reply: ${(error as Error).message}`);
+    }
 
     if (replyInputRef.current) {
       replyInputRef.current.blur();
@@ -309,6 +322,66 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
     });
   };
 
+  const handleDelete = async (commentId: string, isReply: boolean = false) => {
+    if (deleteConfirm === commentId) {
+      // Confirmação via modal, prossegue com a exclusão
+      console.log("Attempting to delete comment:", {
+        commentId,
+        postId,
+        isReply,
+        userId,
+        isAdmin,
+      }); // Depuração
+      try {
+        const response = await fetch(`/api/comments/${commentId}`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ postId, isReply }), // Envia o postId no corpo
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Delete response error:", errorText); // Depuração
+          throw new Error(`Failed to delete comment: ${errorText}`);
+        }
+
+        const data = await response.json();
+        console.log("Delete success:", data.message);
+
+        setComments((prev) =>
+          isReply
+            ? prev.map((c) =>
+                c._id ===
+                (
+                  prev.find((p) =>
+                    p.replies?.some((r) => r._id === commentId)
+                  ) || c
+                )._id
+                  ? {
+                      ...c,
+                      replies: c.replies?.filter((r) => r._id !== commentId),
+                    }
+                  : c
+              )
+            : prev.filter((c) => c._id !== commentId)
+        );
+
+        setDeleteConfirm(null);
+        setError(null);
+      } catch (error) {
+        console.error("Error deleting comment:", error);
+        setError(`Failed to delete comment: ${(error as Error).message}`);
+      }
+    } else {
+      // Abre o modal de confirmação
+      setDeleteConfirm(commentId);
+    }
+  };
+
+  const closeModal = () => {
+    setDeleteConfirm(null);
+  };
+
   const generateIdenticon = (name: string, ip: string): string => {
     const value = `${name}${ip || "Unknown"}`;
     const svg = minidenticon(value, 100, 50);
@@ -322,6 +395,32 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
       month: "long",
       year: "numeric",
     });
+  };
+
+  const canDelete = (comment: Comment | AuthComment): boolean => {
+    if (!isLoaded || isAdmin === null) return false;
+    const isAuthor = "userId" in comment && comment.userId === userId;
+    console.log("canDelete check:", {
+      commentId: comment._id,
+      isAdmin,
+      isAuthor,
+      userId,
+      commentUserId: "userId" in comment ? comment.userId : null,
+    }); // Log para depuração
+    return isAdmin || isAuthor; // Permite exclusão para admin ou autor
+  };
+
+  // Função recursiva para contar todos os comentários e replies
+  const countTotalComments = (
+    commentsList: (Comment | AuthComment)[]
+  ): number => {
+    return commentsList.reduce((total, comment) => {
+      const baseCount = 1; // Conta o comentário atual
+      const replyCount = comment.replies
+        ? countTotalComments(comment.replies)
+        : 0; // Conta recursivamente as replies
+      return total + baseCount + replyCount;
+    }, 0);
   };
 
   const renderComments = (
@@ -361,10 +460,16 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
         const hasImage = (comment as AuthComment).hasImage;
         const ip = (comment as Comment).ip || (comment as AuthComment).ip;
 
+        console.log("Rendering comment:", {
+          commentId: comment._id,
+          parentId: comment.parentId,
+          canDelete: canDelete(comment),
+        }); // Log para depuração
+
         return (
           <div
             key={comment._id}
-            className="bg-zinc-700 p-3 rounded-lg mb-4 max-sm:p-2 max-sm:mb-2 max-sm:rounded-md flex flex-col gap-2 max-sm:gap-1 items-start"
+            className="bg-zinc-700 p-3 rounded-lg mb-3 max-sm:p-2 max-sm:mb-2 max-sm:rounded-md flex flex-col gap-2 max-sm:gap-1 items-start group relative"
           >
             <div className="flex gap-4 max-sm:gap-2 items-start">
               {hasImage ? (
@@ -381,7 +486,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
                 />
               )}
               <div className="flex-1">
-                <div className="flex gap-2 max-sm:gap-1">
+                <div className="flex gap-2 max-sm:gap-1 items-center">
                   <p className="text-white flex gap-0.5 font-semibold max-sm:text-sm">
                     {displayName}
                     {role === "admin" && (
@@ -394,6 +499,16 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
                   <small className="text-gray-400 text-sm max-sm:text-xs">
                     {formatDate(comment.createdAt)}
                   </small>
+                  {canDelete(comment) && (
+                    <button
+                      onClick={() =>
+                        handleDelete(comment._id, comment.parentId !== null)
+                      }
+                      className="text-red-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:text-red-600"
+                    >
+                      <TrashIcon className="size-4 max-sm:w-3 max-sm:h-3" />
+                    </button>
+                  )}
                 </div>
                 <p className="text-gray-300 max-sm:text-sm">
                   {comment.comentario}
@@ -489,6 +604,34 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
                 {showAllReplies[comment._id] ? "Mostrar menos" : "Mostrar mais"}
               </button>
             )}
+            {deleteConfirm === comment._id && (
+              <div className="fixed inset-0 drop-shadow-2xl flex items-center justify-center z-50">
+                <div className="bg-zinc-700 p-4 rounded-lg shadow-lg">
+                  <h3 className="text-white text-lg mb-2">
+                    Confirmar exclusão
+                  </h3>
+                  <p className="text-gray-300 mb-4">
+                    Tem certeza de que deseja apagar este comentário?
+                  </p>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={closeModal}
+                      className="bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-700"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleDelete(comment._id, comment.parentId !== null)
+                      }
+                      className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
+                    >
+                      Confirmar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         );
       });
@@ -496,10 +639,10 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
 
   return (
     <section className="mt-2 max-sm:mt-1" aria-label="Seção de comentários">
-        <h1 className="text-xl flex font-bold mb-4 max-sm:text-lg max-sm:mb-2">
-          <ChatBubbleLeftRightIcon className="size-4" /> Comentários (
-          {comments.length})
-        </h1>
+      <h1 className="text-xl flex font-bold mb-4 max-sm:text-lg max-sm:mb-2">
+        <ChatBubbleLeftRightIcon className="size-4 mr-1" /> Comentários (
+        {countTotalComments(comments)})
+      </h1>
       {error && (
         <p className="text-red-500 mb-4 max-sm:mb-2 max-sm:text-sm">{error}</p>
       )}
@@ -511,7 +654,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
           {!userId && isLoaded && (
             <input
               type="text"
-              placeholder="Seu nome"
+              placeholder="Seu nome (último usado será salvo)"
               value={newComment.nome}
               onChange={(e) =>
                 setNewComment({ ...newComment, nome: e.target.value })
@@ -537,7 +680,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
           onFocus={() => setReplyTo(null)}
         />
       </form>
-      <div className="mt-6 max-sm:mt-3">
+      <div className="mt-4 max-sm:mt-3">
         {renderComments(comments)}
         {comments.length === 0 && (
           <p className="bg-zinc-700 rounded p-2 mb-4 max-sm:p-1 max-sm:mb-2 max-sm:text-sm">

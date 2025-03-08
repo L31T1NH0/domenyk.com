@@ -1,8 +1,6 @@
-// comments/[id]/route.ts
-
 import { NextResponse } from "next/server";
 import { auth, currentUser } from "@clerk/nextjs/server";
-import { clientPromise } from "../../../../lib/mongo"; // Conexão com o MongoDB
+import { getMongoDb } from "../../../../lib/mongo"; // Usando as funções do seu mongo.ts
 import { Redis } from "@upstash/redis"; // Cliente Redis Upstash
 import axios from "axios";
 import { ObjectId } from "mongodb";
@@ -10,10 +8,36 @@ import { ObjectId } from "mongodb";
 // Configuração do Redis Upstash
 const redis = Redis.fromEnv();
 
-type Comment = {
+// Tipo para documentos que serão inseridos no MongoDB
+type CommentInsert = {
   _id: ObjectId;
   postId: string;
-  nome?: string; // Opcional para usuários não logados
+  nome?: string;
+  comentario: string;
+  ip: string;
+  createdAt: string;
+  parentId: string | null;
+};
+
+type AuthCommentInsert = {
+  _id: ObjectId;
+  postId: string;
+  firstName: string | null;
+  role: "admin" | null;
+  userId: string;
+  imageURL: string;
+  hasImage: boolean;
+  comentario: string;
+  ip: string;
+  createdAt: string;
+  parentId: string | null;
+};
+
+// Tipo para documentos retornados (após leitura do MongoDB ou Redis)
+type Comment = {
+  _id: string | ObjectId;
+  postId: string;
+  nome?: string;
   comentario: string;
   ip: string;
   createdAt: string;
@@ -22,7 +46,7 @@ type Comment = {
 };
 
 type AuthComment = {
-  _id: ObjectId;
+  _id: string | ObjectId;
   postId: string;
   firstName: string | null;
   role: "admin" | null;
@@ -51,8 +75,7 @@ export async function GET(
   }
 
   try {
-    const client = await clientPromise;
-    const db = client.db("blog");
+    const db = await getMongoDb();
     const commentsCollection = db.collection("comments");
     const authCommentsCollection = db.collection("auth-comments");
 
@@ -181,8 +204,7 @@ export async function POST(
       );
     }
 
-    const client = await clientPromise;
-    const db = client.db("blog");
+    const db = await getMongoDb();
 
     if (userId && user) {
       const authCommentsCollection = db.collection("auth-comments");
@@ -196,7 +218,7 @@ export async function POST(
         );
       }
 
-      const newComment: AuthComment = {
+      const newComment: AuthCommentInsert = {
         _id: new ObjectId(),
         postId,
         firstName: user.firstName || null,
@@ -219,7 +241,7 @@ export async function POST(
         );
       } else {
         const replyId = new ObjectId().toString();
-        const replyData = {
+        const replyData: AuthComment = {
           ...newComment,
           _id: replyId,
         };
@@ -240,7 +262,7 @@ export async function POST(
       // Use o nome fornecido pelo frontend, sem fallback para "Anonymous" se o nome estiver presente
       const userProvidedName =
         typeof nome === "string" && nome.trim() ? nome : undefined;
-      const newComment: Comment = {
+      const newComment: CommentInsert = {
         _id: new ObjectId(),
         postId,
         nome: userProvidedName || "Anonymous", // Usa "Anonymous" apenas se nenhum nome for fornecido
@@ -259,7 +281,7 @@ export async function POST(
         );
       } else {
         const replyId = new ObjectId().toString();
-        const replyData = {
+        const replyData: Comment = {
           ...newComment,
           _id: replyId,
         };
@@ -279,6 +301,118 @@ export async function POST(
   } catch (error) {
     console.error("Error adding comment or reply:", {
       message: (error as Error).message,
+      stack: (error as Error).stack,
+    });
+    return NextResponse.json(
+      { error: "Internal server error: " + (error as Error).message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id: commentId } = await params; // commentId vem da URL
+  const { userId, sessionClaims } = await auth();
+  const user = await currentUser();
+
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Depuração do status de administrador
+  const isAdmin =
+    user?.unsafeMetadata?.role === "admin" ||
+    sessionClaims?.metadata?.role === "admin";
+  console.log("Admin check:", {
+    userId,
+    unsafeMetadataRole: user?.unsafeMetadata?.role,
+    sessionClaimsRole: sessionClaims?.metadata?.role,
+    isAdmin,
+  });
+
+  try {
+    const db = await getMongoDb();
+    const authCommentsCollection = db.collection("auth-comments");
+    const commentsCollection = db.collection("comments");
+
+    const { postId, isReply } = await req.json();
+
+    if (!commentId || typeof commentId !== "string") {
+      return NextResponse.json(
+        { error: "Comment ID is required and must be a string" },
+        { status: 400 }
+      );
+    }
+
+    if (!postId || typeof postId !== "string") {
+      return NextResponse.json(
+        { error: "Post ID is required and must be a string" },
+        { status: 400 }
+      );
+    }
+
+    // Busca o comentário nas coleções auth-comments ou comments
+    let comment = await authCommentsCollection.findOne({
+      _id: new ObjectId(commentId),
+    });
+    let collection = authCommentsCollection;
+
+    if (!comment) {
+      comment = await commentsCollection.findOne({
+        _id: new ObjectId(commentId),
+      });
+      collection = commentsCollection;
+    }
+
+    if (!comment) {
+      return NextResponse.json({ error: "Comment not found" }, { status: 404 });
+    }
+
+    // Verifica se o postId do comentário corresponde ao postId da requisição
+    if (comment.postId !== postId) {
+      return NextResponse.json(
+        { error: "Comment does not belong to the specified post" },
+        { status: 403 }
+      );
+    }
+
+    // Verifica permissões: usuário é admin ou autor do comentário
+    const isAuthor = "userId" in comment && comment.userId === userId;
+    console.log("Permission check:", {
+      isAdmin,
+      isAuthor,
+      commentUserId: comment.userId,
+    });
+    if (!isAdmin && !isAuthor) {
+      return NextResponse.json({ error: "Not Authorized" }, { status: 403 });
+    }
+
+    if (isReply) {
+      // Remove a resposta do Redis
+      const parentComment = await collection.findOne({
+        "replies._id": commentId,
+      });
+      if (parentComment) {
+        const replyKey = `${postId}:${parentComment._id}:replies`;
+        await redis.zrem(replyKey, JSON.stringify(comment));
+      }
+    } else {
+      // Remove o comentário principal e suas respostas do Redis
+      await collection.deleteOne({ _id: new ObjectId(commentId) });
+      const replyKey = `${postId}:${commentId}:replies`;
+      await redis.del(replyKey); // Remove todas as respostas associadas
+    }
+
+    return NextResponse.json(
+      { message: "Comment deleted successfully", commentId },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error deleting comment:", {
+      error: (error as Error).message,
       stack: (error as Error).stack,
     });
     return NextResponse.json(
