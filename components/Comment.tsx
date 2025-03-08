@@ -504,9 +504,9 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
                       onClick={() =>
                         handleDelete(comment._id, comment.parentId !== null)
                       }
-                      className="text-red-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:text-red-600"
+                      className="text-red-500 opacity-0 group-hover:opacity-100 max-sm:opacity-100 transition-opacity duration-200 hover:text-red-600"
                     >
-                      <TrashIcon className="size-4 max-sm:w-3 max-sm:h-3" />
+                      <TrashIcon className="size-4 max-sm:size-3" />
                     </button>
                   )}
                 </div>

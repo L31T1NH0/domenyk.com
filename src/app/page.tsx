@@ -171,7 +171,7 @@ export default function Home() {
                   {isAdmin && (
                     <button
                       onClick={() => openDeleteModal(post.postId)}
-                      className="absolute right-0 top-0 text-red-500 hover:text-red-700 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                      className="absolute right-0 top-0 text-red-500 hover:text-red-700 text-sm opacity-0 group-hover:opacity-100 max-sm:opacity-100 transition-opacity duration-200"
                     >
                       <TrashIcon className="size-4" />
                     </button>
