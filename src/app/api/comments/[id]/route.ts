@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth, currentUser } from "@clerk/nextjs/server";
-import { getMongoDb } from "../../../../lib/mongo"; // Usando as funções do seu mongo.ts
-import { Redis } from "@upstash/redis"; // Cliente Redis Upstash
+import { getMongoDb } from "../../../../lib/mongo";
+import { Redis } from "@upstash/redis";
 import axios from "axios";
 import { ObjectId } from "mongodb";
 
@@ -92,10 +92,16 @@ export async function GET(
       .toArray();
 
     // Combina os comentários
-    const allComments = [...nonAuthComments, ...authComments].sort(
+    let allComments = [...nonAuthComments, ...authComments].sort(
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
+
+    // Mascaramento do IP no retorno
+    allComments = allComments.map((comment) => ({
+      ...comment,
+      ip: maskIp(comment.ip),
+    }));
 
     // Busca respostas no Redis para cada comentário
     const commentsWithReplies = await Promise.all(
@@ -109,35 +115,40 @@ export async function GET(
 
         const parsedReplies = replies
           .map((reply: unknown) => {
-            // Verifique e converta para string se necessário
-            let replyString: string;
-            if (typeof reply === "string") {
-              replyString = reply;
-            } else if (reply !== null && typeof reply === "object") {
-              console.warn(
-                "Reply is not a string, attempting to stringify:",
-                reply
-              );
-              replyString = JSON.stringify(reply);
-            } else {
-              console.error(
-                "Reply is neither string nor object, skipping:",
-                reply
-              );
+            // Verifica se reply já é um objeto ou uma string
+            if (reply === null || reply === undefined) {
+              console.error("Reply is null or undefined, skipping:", reply);
               return null;
             }
+
             try {
-              return JSON.parse(replyString) as Comment | AuthComment;
+              if (typeof reply === "string") {
+                // Se for string, faz o parse
+                return JSON.parse(reply) as Comment | AuthComment;
+              } else if (typeof reply === "object") {
+                // Se já for um objeto, usa diretamente
+                return reply as Comment | AuthComment;
+              } else {
+                console.error(
+                  "Reply is neither a string nor an object, skipping:",
+                  reply
+                );
+                return null;
+              }
             } catch (parseError) {
               console.error("Invalid JSON in Redis reply:", {
-                reply: replyString,
+                reply,
                 error: (parseError as Error).message,
               });
               return null;
             }
           })
           .filter((reply): reply is Comment | AuthComment => reply !== null)
-          .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+          .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+          .map((reply) => ({
+            ...reply,
+            ip: maskIp(reply.ip), // Mascaramento do IP no retorno
+          }));
 
         return {
           ...comment,
@@ -159,6 +170,15 @@ export async function GET(
   }
 }
 
+// Função para mascarar o IP
+function maskIp(ip: string): string {
+  const parts = ip.split(".");
+  if (parts.length === 4) {
+    return `${parts[0]}.${parts[1]}.***.**`;
+  }
+  return ip; // Retorna o IP original se não for um formato válido
+}
+
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -166,7 +186,7 @@ export async function POST(
   const paramsData = await params;
   const postId = paramsData.id;
 
-  console.log("Received POST request for postId:", postId); // Log para depuração
+  console.log("Received POST request for postId:", postId);
 
   if (!postId || typeof postId !== "string") {
     console.log("Validation failed: postId is invalid or missing");
@@ -176,8 +196,46 @@ export async function POST(
     );
   }
 
-  const { comentario, parentId, nome } = await req.json();
-  console.log("Request body:", { comentario, parentId, nome }); // Log do corpo da requisição
+  const body = await req.json();
+  console.log("Request body:", body);
+
+  // Validação estrita de campos
+  const allowedFieldsLoggedIn = ["comentario", "parentId"];
+  const allowedFieldsNotLoggedIn = ["comentario", "parentId", "nome"];
+  const receivedFields = Object.keys(body);
+  const { userId } = await auth();
+
+  if (userId) {
+    const invalidFields = receivedFields.filter(
+      (field) => !allowedFieldsLoggedIn.includes(field)
+    );
+    if (invalidFields.length > 0) {
+      return NextResponse.json(
+        {
+          error: `Campos inválidos para usuários logados: ${invalidFields.join(
+            ", "
+          )}`,
+        },
+        { status: 400 }
+      );
+    }
+  } else {
+    const invalidFields = receivedFields.filter(
+      (field) => !allowedFieldsNotLoggedIn.includes(field)
+    );
+    if (invalidFields.length > 0) {
+      return NextResponse.json(
+        {
+          error: `Campos inválidos para usuários não logados: ${invalidFields.join(
+            ", "
+          )}`,
+        },
+        { status: 400 }
+      );
+    }
+  }
+
+  const { comentario, parentId, nome } = body;
 
   if (!comentario || typeof comentario !== "string") {
     console.log("Validation failed: comentario is invalid or missing");
@@ -187,16 +245,41 @@ export async function POST(
     );
   }
 
-  const { userId, sessionClaims } = await auth();
+  // Rate Limiting
+  const ip = req.headers.get("x-forwarded-for") || "unknown";
+  const rateLimitKeyComments = `rate_limit:${ip}:${postId}:comments`;
+  const rateLimitKeyReplies = `rate_limit:${ip}:${postId}:replies`;
+  const multi = redis.multi();
+  if (!parentId) {
+    multi.incr(rateLimitKeyComments);
+    multi.expire(rateLimitKeyComments, 24 * 60 * 60);
+  } else {
+    multi.incr(rateLimitKeyReplies);
+    multi.expire(rateLimitKeyReplies, 24 * 60 * 60);
+  }
+  const results = await multi.exec<[number, string][]>(); // Tipo correto para o resultado
+  const count = Number(results[0][1]); // Conversão explícita de string para number
+
+  if (count > 25) {
+    return NextResponse.json(
+      {
+        error: `Too many ${
+          parentId ? "replies" : "comments"
+        }. Limit is 25 per day per IP.`,
+      },
+      { status: 429 }
+    );
+  }
+
   const user = await currentUser();
 
   try {
-    let ip = "Unknown";
+    let ipValue = "Unknown";
     try {
       const ipResponse = await axios.get("https://api.ipify.org?format=json", {
         timeout: 1000,
       });
-      ip = ipResponse.data.ip;
+      ipValue = ipResponse.data.ip;
     } catch (ipError) {
       console.warn(
         "Failed to fetch IP, using 'Unknown':",
@@ -208,7 +291,7 @@ export async function POST(
 
     if (userId && user) {
       const authCommentsCollection = db.collection("auth-comments");
-      const role = sessionClaims?.metadata?.role === "admin" ? "admin" : null;
+      const role = user.unsafeMetadata?.role === "admin" ? "admin" : null;
 
       if (role === "admin" && !user.firstName) {
         console.log("Validation failed: Admin must have a firstName");
@@ -227,7 +310,7 @@ export async function POST(
         imageURL: user.imageUrl,
         hasImage: user.hasImage,
         comentario,
-        ip,
+        ip: ipValue,
         createdAt: new Date().toISOString().split("T")[0],
         parentId: parentId || null,
       };
@@ -245,7 +328,7 @@ export async function POST(
           ...newComment,
           _id: replyId,
         };
-        const replyString = JSON.stringify(replyData); // Garanta que seja uma string JSON válida
+        const replyString = JSON.stringify(replyData);
         console.log("Saving reply to Redis:", replyString);
         await redis.zadd(`${postId}:${parentId}:replies`, {
           score: Date.now(),
@@ -259,15 +342,14 @@ export async function POST(
       }
     } else {
       const commentsCollection = db.collection("comments");
-      // Use o nome fornecido pelo frontend, sem fallback para "Anonymous" se o nome estiver presente
       const userProvidedName =
         typeof nome === "string" && nome.trim() ? nome : undefined;
       const newComment: CommentInsert = {
         _id: new ObjectId(),
         postId,
-        nome: userProvidedName || "Anonymous", // Usa "Anonymous" apenas se nenhum nome for fornecido
+        nome: userProvidedName || "Anonymous",
         comentario,
-        ip,
+        ip: ipValue,
         createdAt: new Date().toISOString().split("T")[0],
         parentId: parentId || null,
       };
@@ -285,7 +367,7 @@ export async function POST(
           ...newComment,
           _id: replyId,
         };
-        const replyString = JSON.stringify(replyData); // Garanta que seja uma string JSON válida
+        const replyString = JSON.stringify(replyData);
         console.log("Saving reply to Redis:", replyString);
         await redis.zadd(`${postId}:${parentId}:replies`, {
           score: Date.now(),
@@ -314,7 +396,7 @@ export async function DELETE(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id: commentId } = await params; // commentId vem da URL
+  const { id: commentId } = await params;
   const { userId, sessionClaims } = await auth();
   const user = await currentUser();
 
@@ -322,7 +404,6 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Depuração do status de administrador
   const isAdmin =
     user?.unsafeMetadata?.role === "admin" ||
     sessionClaims?.metadata?.role === "admin";
@@ -354,7 +435,6 @@ export async function DELETE(
       );
     }
 
-    // Busca o comentário nas coleções auth-comments ou comments
     let comment = await authCommentsCollection.findOne({
       _id: new ObjectId(commentId),
     });
@@ -371,7 +451,6 @@ export async function DELETE(
       return NextResponse.json({ error: "Comment not found" }, { status: 404 });
     }
 
-    // Verifica se o postId do comentário corresponde ao postId da requisição
     if (comment.postId !== postId) {
       return NextResponse.json(
         { error: "Comment does not belong to the specified post" },
@@ -379,7 +458,6 @@ export async function DELETE(
       );
     }
 
-    // Verifica permissões: usuário é admin ou autor do comentário
     const isAuthor = "userId" in comment && comment.userId === userId;
     console.log("Permission check:", {
       isAdmin,
@@ -391,7 +469,6 @@ export async function DELETE(
     }
 
     if (isReply) {
-      // Remove a resposta do Redis
       const parentComment = await collection.findOne({
         "replies._id": commentId,
       });
@@ -400,10 +477,9 @@ export async function DELETE(
         await redis.zrem(replyKey, JSON.stringify(comment));
       }
     } else {
-      // Remove o comentário principal e suas respostas do Redis
       await collection.deleteOne({ _id: new ObjectId(commentId) });
       const replyKey = `${postId}:${commentId}:replies`;
-      await redis.del(replyKey); // Remove todas as respostas associadas
+      await redis.del(replyKey);
     }
 
     return NextResponse.json(

@@ -119,6 +119,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
       } else {
         const commentsData = await response.json();
         console.log("Comments received from API:", commentsData);
+        // Usa o IP mascarado retornado pela API diretamente
         setComments(commentsData || []);
       }
     } catch (error) {
@@ -324,24 +325,23 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
 
   const handleDelete = async (commentId: string, isReply: boolean = false) => {
     if (deleteConfirm === commentId) {
-      // Confirmação via modal, prossegue com a exclusão
       console.log("Attempting to delete comment:", {
         commentId,
         postId,
         isReply,
         userId,
         isAdmin,
-      }); // Depuração
+      });
       try {
         const response = await fetch(`/api/comments/${commentId}`, {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ postId, isReply }), // Envia o postId no corpo
+          body: JSON.stringify({ postId, isReply }),
         });
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error("Delete response error:", errorText); // Depuração
+          console.error("Delete response error:", errorText);
           throw new Error(`Failed to delete comment: ${errorText}`);
         }
 
@@ -373,7 +373,6 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
         setError(`Failed to delete comment: ${(error as Error).message}`);
       }
     } else {
-      // Abre o modal de confirmação
       setDeleteConfirm(commentId);
     }
   };
@@ -383,7 +382,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
   };
 
   const generateIdenticon = (name: string, ip: string): string => {
-    const value = `${name}${ip || "Unknown"}`;
+    const value = `${name}${ip || "Unknown"}`; // Usa o IP mascarado retornado
     const svg = minidenticon(value, 100, 50);
     return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
   };
@@ -406,22 +405,20 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
       isAuthor,
       userId,
       commentUserId: "userId" in comment ? comment.userId : null,
-    }); // Log para depuração
-    return isAdmin || isAuthor; // Permite exclusão para admin ou autor
+    });
+    return isAdmin || isAuthor;
   };
 
-  // Função recursiva para contar todos os comentários e replies
   const countTotalComments = (
     commentsList: (Comment | AuthComment)[]
-  ): number => {
-    return commentsList.reduce((total, comment) => {
-      const baseCount = 1; // Conta o comentário atual
+  ): number =>
+    commentsList.reduce((total, comment) => {
+      const baseCount = 1;
       const replyCount = comment.replies
         ? countTotalComments(comment.replies)
-        : 0; // Conta recursivamente as replies
+        : 0;
       return total + baseCount + replyCount;
     }, 0);
-  };
 
   const renderComments = (
     comments: (Comment | AuthComment)[],
@@ -458,13 +455,13 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
         const role = (comment as AuthComment).role;
         const imageURL = (comment as AuthComment).imageURL;
         const hasImage = (comment as AuthComment).hasImage;
-        const ip = (comment as Comment).ip || (comment as AuthComment).ip;
+        const ip = (comment as Comment).ip || (comment as AuthComment).ip; // Usa o IP mascarado
 
         console.log("Rendering comment:", {
           commentId: comment._id,
           parentId: comment.parentId,
           canDelete: canDelete(comment),
-        }); // Log para depuração
+        });
 
         return (
           <div
