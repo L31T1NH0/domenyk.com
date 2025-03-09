@@ -136,7 +136,7 @@ export default function Home() {
           <h1 className="font-bold text-2xl">Blog</h1>
           {loading ? (
             <div className="flex flex-col gap-4">
-              {Array.from({ length: 4 }).map((_, index) => (
+              {Array.from({ length: 10 }).map((_, index) => (
                 <div key={index} className="flex flex-col gap-2">
                   <Skeleton width="80%" height={24} />
                   <div className="flex gap-2">
