@@ -121,7 +121,7 @@ export default function Home() {
         openGraph={{
           title: "Domenyk - Blog",
           description: "Leia minhas opiniões.",
-          url: "https://blog-roan-nu.vercel.app",
+          url: "https://domenyk.com/",
         }}
         twitter={{
           handle: "@l31t1",
