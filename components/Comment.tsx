@@ -496,6 +496,9 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
                   <small className="text-gray-400 text-sm max-sm:text-xs">
                     {formatDate(comment.createdAt)}
                   </small>
+                  {role === "admin" && (
+                    <small className="border-b-2 p-0.5 rounded justify-items-end">Autor</small>
+                  )}
                   {canDelete(comment) && (
                     <button
                       onClick={() =>

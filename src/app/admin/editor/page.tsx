@@ -50,7 +50,7 @@ export default function Editor() {
   };
 
   return (
-    <Layout>
+
       <div className="flex container mx-auto p-2 mt-4 mb-8 rounded-xl bg-zinc-800">
         <div className="w-full">
           <div className="gap-4">
@@ -84,8 +84,9 @@ export default function Editor() {
                 <div>
                   <textarea
                     name="content"
-                    className="w-full h-70 resize-none p-2 rounded outline-none bg-zinc-700"
+                    className="w-full h-140 resize-none p-2 rounded outline-none bg-zinc-700"
                     placeholder="Content"
+                    spellCheck="false"
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
                   />
@@ -111,6 +112,6 @@ export default function Editor() {
           </div>
         </div>
       </div>
-    </Layout>
+
   );
 }

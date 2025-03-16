@@ -291,7 +291,7 @@ export async function POST(
 
     if (userId && user) {
       const authCommentsCollection = db.collection("auth-comments");
-      const role = user.unsafeMetadata?.role === "admin" ? "admin" : null;
+      const role = user.publicMetadata?.role === "admin" ? "admin" : null;
 
       if (role === "admin" && !user.firstName) {
         console.log("Validation failed: Admin must have a firstName");

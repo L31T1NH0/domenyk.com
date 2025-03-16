@@ -8,6 +8,7 @@ import { Layout } from "@components/layout";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { TrashIcon } from "@heroicons/react/24/solid";
+import Link from "next/link";
 
 
 type PostData = {
@@ -155,13 +156,13 @@ export default function Home() {
                   key={post.postId}
                   className="flex flex-col gap-2 group relative"
                 >
-                  <a
+                  <Link
                     href={`/posts/${post.postId}`}
                     onClick={(e) => handlePostClick(post.postId, e)}
                     className="text-xl hover:underline"
                   >
                     {post.title}
-                  </a>
+                  </Link>
                   <small className="text-zinc-400">
                     <Date dateString={post.date} /> •{" "}
                     <span className="text-sm text-zinc-500 p-1">

@@ -36,3 +36,6 @@ yarn-error.log*
 README.md
 .husky/pre-commit
 .vscode/settings.json
+
+# clerk configuration (can include secrets)
+/.clerk/
