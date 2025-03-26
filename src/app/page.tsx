@@ -172,7 +172,8 @@ export default function Home() {
                   {isAdmin && (
                     <button
                       onClick={() => openDeleteModal(post.postId)}
-                      className="absolute right-0 top-0 text-red-500 hover:text-red-700 text-sm opacity-0 group-hover:opacity-100 max-sm:opacity-100 transition-opacity duration-200"
+                      className="absolute right-0 top-0 text-red-500 hover:text-red-700 text-sm opacity-0 
+                      group-hover:opacity-100 max-sm:opacity-100 transition-opacity duration-200"
                     >
                       <TrashIcon className="size-4" />
                     </button>
@@ -201,13 +202,15 @@ export default function Home() {
               <div className="flex justify-end gap-4">
                 <button
                   onClick={closeDeleteModal}
-                  className="px-4 py-2 bg-gray-100 text-gray-800 rounded hover:bg-gray-200 border border-gray-300 transition-colors duration-200"
+                  className="px-4 py-2 bg-gray-100 text-gray-800 rounded hover:bg-gray-200 border 
+                  border-gray-300 transition-colors duration-200"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={() => postToDelete && handleDeletePost(postToDelete)}
-                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 border border-red-700 transition-colors duration-200"
+                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 border border-red-700 
+                  transition-colors duration-200"
                 >
                   Apagar
                 </button>

@@ -466,7 +466,8 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
         return (
           <div
             key={comment._id}
-            className="bg-zinc-700 p-3 rounded-lg mb-3 max-sm:p-2 max-sm:mb-2 max-sm:rounded-md flex flex-col gap-2 max-sm:gap-1 items-start group relative"
+            className="bg-zinc-700 p-3 rounded-lg mb-3 max-sm:p-2 max-sm:mb-2 max-sm:rounded-md flex flex-col gap-2 
+            max-sm:gap-1 items-start group relative"
           >
             <div className="flex gap-4 max-sm:gap-2 items-start">
               {hasImage ? (
@@ -504,7 +505,8 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
                       onClick={() =>
                         handleDelete(comment._id, comment.parentId !== null)
                       }
-                      className="text-red-500 opacity-0 group-hover:opacity-100 max-sm:opacity-100 transition-opacity duration-200 hover:text-red-600"
+                      className="text-red-500 opacity-0 group-hover:opacity-100 max-sm:opacity-100 transition-opacity 
+                      duration-200 hover:text-red-600"
                     >
                       <TrashIcon className="size-4 max-sm:size-3" />
                     </button>
@@ -550,7 +552,8 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
                           },
                         }))
                       }
-                      className="p-1 bg-zinc-700 text-white rounded border outline-none border-gray-600 w-full max-sm:p-0.5 max-sm:text-sm"
+                      className="p-1 bg-zinc-700 text-white rounded border outline-none border-gray-600 w-full 
+                      max-sm:p-0.5 max-sm:text-sm"
                     />
                   )}
                   <input
@@ -568,18 +571,21 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
                       }))
                     }
                     ref={replyInputRef}
-                    className="ml-14 p-1 bg-zinc-700 text-white rounded border outline-none border-gray-600 w-full max-sm:p-0.5 max-sm:text-sm"
+                    className="ml-14 p-1 bg-zinc-700 text-white rounded border outline-none border-gray-600 w-full 
+                    max-sm:p-0.5 max-sm:text-sm"
                   />
                   <button
                     type="submit"
-                    className="bg-purple-600 text-white px-2 py-1 rounded hover:bg-purple-700 transition-colors max-sm:px-1 max-sm:py-0.5 max-sm:text-xs"
+                    className="bg-purple-600 text-white px-2 py-1 rounded hover:bg-purple-700 transition-colors 
+                    max-sm:px-1 max-sm:py-0.5 max-sm:text-xs"
                   >
                     Enviar
                   </button>
                   <button
                     type="button"
                     onClick={() => discardReply(comment._id)}
-                    className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition-colors max-sm:px-2 max-sm:py-0.5 max-sm:text-xs"
+                    className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition-colors 
+                    max-sm:px-2 max-sm:py-0.5 max-sm:text-xs"
                   >
                     X
                   </button>
@@ -664,7 +670,8 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
           )}
           <button
             type="submit"
-            className="w-full h-fit bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition-colors max-sm:px-3 max-sm:py-1 max-sm:text-sm"
+            className="w-full h-fit bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 
+            transition-colors max-sm:px-3 max-sm:py-1 max-sm:text-sm"
           >
             Enviar Comentário
           </button>
@@ -676,14 +683,15 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
           onChange={(e) =>
             setNewComment({ ...newComment, comentario: e.target.value })
           }
-          className="p-2 bg-zinc-700 text-white rounded resize-none w-full h-56 max-sm:h-32 max-sm:p-1 max-sm:text-sm"
+          className="p-2 bg-zinc-800 outline-none text-white rounded resize-none w-full h-56 max-sm:h-32 max-sm:p-1 
+          max-sm:text-sm"
           onFocus={() => setReplyTo(null)}
         />
       </form>
       <div className="mt-4 max-sm:mt-3">
         {renderComments(comments)}
         {comments.length === 0 && (
-          <p className="bg-zinc-700 rounded p-2 mb-4 max-sm:p-1 max-sm:mb-2 max-sm:text-sm">
+          <p className="bg-zinc-800 text-zinc-400 rounded p-2 mb-4 max-sm:p-1 max-sm:mb-2 max-sm:text-sm">
             Nenhum comentário ainda. Seja o primeiro!
           </p>
         )}

@@ -55,7 +55,6 @@ a {
 a:hover {
   text-decoration: underline;
 }
-
 ul {
   @apply list-disc ml-10;
 }

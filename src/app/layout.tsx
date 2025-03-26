@@ -5,6 +5,7 @@ import { DefaultSeo } from "next-seo";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { AdjustmentsHorizontalIcon } from "@heroicons/react/24/solid";
+import { Metadata } from "next";
 
 import {
   ClerkProvider,
@@ -13,20 +14,6 @@ import {
   SignedOut,
   UserButton,
 } from "@clerk/nextjs";
-
-const defaultSEO = {
-  title: "Domenyk - Blog",
-  description: "Minhas opiniões.", // Descrição mais detalhada para SEO
-  openGraph: {
-    type: "website",
-    locale: "pt_BR",
-    url: "https://blog-roan-nu.vercel.app",
-    siteName: "Domenyk - Blog",
-  },
-  twitter: {
-    handle: "@l31t1",
-  },
-};
 
 export default function RootLayout({
   children,

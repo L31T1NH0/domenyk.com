@@ -1,7 +1,6 @@
 "use client"; // Marca como Client Component
 
 import { useEffect, useState } from "react";
-
 import { useRouter } from "next/navigation";
 import { Layout } from "@components/layout";
 import { Date } from "@components/date";
@@ -10,6 +9,7 @@ import Comment from "@components/Comment";
 import { BackHome } from "@components/back-home";
 import { NextSeo, ArticleJsonLd } from "next-seo";
 import { use } from "react"; // Importe o use do React
+import AudioPlayer from "@components/AudioPlayer"; // Importe o novo componente
 
 type PostContent = {
   postId: string;
@@ -17,6 +17,7 @@ type PostContent = {
   title: string;
   htmlContent: string;
   views: number;
+  audioUrl?: string;
 };
 
 // Use Awaited<Params> para tipar params corretamente, pois params pode ser uma Promise
@@ -34,8 +35,7 @@ function calculateReadingTime(htmlContent: string): string {
 
 export default function Post({ params }: PostParams) {
   const router = useRouter();
-  // Use React.use() para desestruturar params.id com o tipo correto
-  const { id } = use(params) as { id: string }; // Corrigido para usar React.use(params)
+  const { id } = use(params) as { id: string };
   const [postData, setPostData] = useState<PostContent | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,23 +47,22 @@ export default function Post({ params }: PostParams) {
           id,
           "URL:",
           `/api/posts/${id}`
-        ); // Log mais detalhado
+        );
         const response = await fetch(`/api/posts/${id}`);
         if (!response.ok) {
-          const errorText = await response.text(); // Obtém o texto do erro para depuração
+          const errorText = await response.text();
           throw new Error(
             `Erro ao buscar post: ${response.status} - ${errorText}`
           );
         }
         const data = await response.json();
-        console.log("Post data from API (raw):", data); // Log mais detalhado
+        console.log("Post data from API (raw):", data);
         if (!data || typeof data !== "object" || !data.postId) {
           throw new Error("Dados do post inválidos retornados pela API");
         }
-        // Verifique se htmlContent é uma string válida
         if (typeof data.htmlContent !== "string") {
           console.warn("htmlContent inválido ou ausente:", data.htmlContent);
-          data.htmlContent = "<p>Conteúdo não disponível.</p>"; // Fallback
+          data.htmlContent = "<p>Conteúdo não disponível.</p>";
         }
         setPostData(data);
       } catch (error) {
@@ -82,14 +81,14 @@ export default function Post({ params }: PostParams) {
   }
 
   if (!postData) {
-    return null; // Não renderiza nada até que os dados estejam disponíveis
+    return null;
   }
 
-  const { date, title, htmlContent, views } = postData;
+  const { date, title, htmlContent, views, audioUrl } = postData;
   const path = `/posts/${id}`;
   const readingTime = calculateReadingTime(htmlContent);
 
-  if (typeof window === "undefined") return null; // Evita erros de hooks no SSR
+  if (typeof window === "undefined") return null;
 
   return (
     <>
@@ -117,21 +116,25 @@ export default function Post({ params }: PostParams) {
       />
       <Layout title={title} description={title} url={path}>
         <article className="flex flex-col gap-2 py-4">
-          <h1 className="lg:text-3xl max-sm:text-xl font-bold">{title}</h1>
-          <div className="flex gap-2">
+          <h1 className="lg:text-3xl max-sm:text-xl font-bold text-zinc-100">
+            {title}
+          </h1>
+          <div className="flex gap-2 items-center">
             <Date dateString={date} />
-            <div>
-              <span className="text-sm text-zinc-500">• {readingTime}</span>
-              <span className="text-sm text-zinc-500 p-1">
-                {views || 0} views
-              </span>
+            <div className="flex gap-2 text-sm text-zinc-500">
+              <span>• {readingTime}</span>
+              <span>{views || 0} views</span>
             </div>
           </div>
           <div>
             <ShareButton id={id} />
           </div>
+
+          {/* Usar o componente AudioPlayer */}
+          {audioUrl && <AudioPlayer audioUrl={audioUrl} />}
+
           <div
-            className="flex flex-col gap-4 lg:text-lg sm:text-sm max-sm:text-xs"
+            className="flex flex-col gap-4 lg:text-lg sm:text-sm max-sm:text-xs text-zinc-300"
             dangerouslySetInnerHTML={{
               __html: htmlContent || "<p>Conteúdo não disponível.</p>",
             }}

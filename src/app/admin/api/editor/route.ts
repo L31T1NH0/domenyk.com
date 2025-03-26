@@ -57,6 +57,7 @@ export async function POST(req: Request) {
       htmlContent: content, // Armazena o conteúdo como Markdown (htmlContent para consistência com o projeto)
       date: new Date().toISOString().split("T")[0], // Formato "YYYY-MM-DD"
       views: 0, // Inicializa as views como 0
+      audioUrl: formData.get("audioUrl") as string, // Adiciona o URL do áudio
     };
 
     await postsCollection.insertOne(newPost);

@@ -57,6 +57,7 @@ export async function GET(
           title: post.title,
           htmlContent,
           views,
+          audioUrl: post.audioUrl,
         },
         { status: 200 }
       );
@@ -73,6 +74,7 @@ export async function GET(
       title: post.title,
       htmlContent,
       views,
+      audioUrl: post.audioUrl,
     };
 
     console.log("Post data from API for postId:", id, postData);
