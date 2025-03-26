@@ -466,7 +466,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
         return (
           <div
             key={comment._id}
-            className="bg-zinc-700 p-3 rounded-lg mb-3 max-sm:p-2 max-sm:mb-2 max-sm:rounded-md flex flex-col gap-2 
+            className="bg-zinc-900 p-3 rounded-lg mb-3 max-sm:p-2 max-sm:mb-2 max-sm:rounded-md flex flex-col gap-2 
             max-sm:gap-1 items-start group relative"
           >
             <div className="flex gap-4 max-sm:gap-2 items-start">
@@ -552,7 +552,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
                           },
                         }))
                       }
-                      className="p-1 bg-zinc-700 text-white rounded border outline-none border-gray-600 w-full 
+                      className="p-1 bg-zinc-900 text-white rounded border outline-none border-gray-600 w-full 
                       max-sm:p-0.5 max-sm:text-sm"
                     />
                   )}
@@ -571,7 +571,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
                       }))
                     }
                     ref={replyInputRef}
-                    className="ml-14 p-1 bg-zinc-700 text-white rounded border outline-none border-gray-600 w-full 
+                    className="ml-14 p-1 bg-zinc-900 text-white rounded border outline-none border-gray-600 w-full 
                     max-sm:p-0.5 max-sm:text-sm"
                   />
                   <button
@@ -612,7 +612,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
             )}
             {deleteConfirm === comment._id && (
               <div className="fixed inset-0 drop-shadow-2xl flex items-center justify-center z-50">
-                <div className="bg-zinc-700 p-4 rounded-lg shadow-lg">
+                <div className="bg-zinc-900 p-4 rounded-lg shadow-lg">
                   <h3 className="text-white text-lg mb-2">
                     Confirmar exclusão
                   </h3>
@@ -665,7 +665,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
               onChange={(e) =>
                 setNewComment({ ...newComment, nome: e.target.value })
               }
-              className="p-2 bg-zinc-700 text-white rounded w-full max-sm:p-1 max-sm:text-sm"
+              className="p-2 bg-zinc-900 text-white rounded w-full max-sm:p-1 max-sm:text-sm"
             />
           )}
           <button
@@ -683,7 +683,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
           onChange={(e) =>
             setNewComment({ ...newComment, comentario: e.target.value })
           }
-          className="p-2 bg-zinc-800 outline-none text-white rounded resize-none w-full h-56 max-sm:h-32 max-sm:p-1 
+          className="p-2 bg-zinc-900 outline-none text-white rounded resize-none w-full h-56 max-sm:h-32 max-sm:p-1 
           max-sm:text-sm"
           onFocus={() => setReplyTo(null)}
         />
@@ -691,7 +691,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
       <div className="mt-4 max-sm:mt-3">
         {renderComments(comments)}
         {comments.length === 0 && (
-          <p className="bg-zinc-800 text-zinc-400 rounded p-2 mb-4 max-sm:p-1 max-sm:mb-2 max-sm:text-sm">
+          <p className="bg-zinc-900 text-zinc-400 rounded p-2 mb-4 max-sm:p-1 max-sm:mb-2 max-sm:text-sm">
             Nenhum comentário ainda. Seja o primeiro!
           </p>
         )}

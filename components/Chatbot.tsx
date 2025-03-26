@@ -77,8 +77,8 @@ export default function Chatbot({ htmlContent }: ChatbotProps) {
             isOpen ? "translate-x-0" : "translate-x-full"
           }`}
         >
-          <div className="flex flex-col h-full">
-            <div className="bg-gray-700 p-4 flex justify-between items-center rounded-t-lg">
+          <div className="flex flex-col h-full ">
+            <div className="bg-gray-700 p-4  flex justify-between items-center rounded-t-lg">
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-semibold text-zinc-100">Grok</h3>
               </div>
@@ -146,7 +146,7 @@ export default function Chatbot({ htmlContent }: ChatbotProps) {
 
           <div
             ref={chatContainerRef}
-            className="flex-1 p-6 bg-gray-800 overflow-y-auto space-y-4"
+            className="flex-1 p-6 max-lg:hidden bg-gray-800 overflow-y-auto space-y-4"
           >
             {messages.length === 0 ? (
               <p className="text-gray-400 text-center text-sm">
