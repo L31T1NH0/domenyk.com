@@ -28,12 +28,7 @@ export async function GET(
     }
 
     let htmlContent = post.htmlContent;
-    if (
-      typeof htmlContent === "string" &&
-      (htmlContent.includes("\n") ||
-        htmlContent.includes("![") ||
-        htmlContent.includes("["))
-    ) {
+    if (htmlContent) {
       const processedContent = await remark().use(html).process(htmlContent);
       htmlContent = processedContent.toString();
     }

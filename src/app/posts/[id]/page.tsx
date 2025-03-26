@@ -9,7 +9,8 @@ import Comment from "@components/Comment";
 import { BackHome } from "@components/back-home";
 import { NextSeo, ArticleJsonLd } from "next-seo";
 import { use } from "react"; // Importe o use do React
-import AudioPlayer from "@components/AudioPlayer"; // Importe o novo componente
+import AudioPlayer from "@components/AudioPlayer"; // Importe o AudioPlayer
+import Chatbot from "@components/Chatbot"; // Importe o componente Chatbot
 
 type PostContent = {
   postId: string;
@@ -115,7 +116,7 @@ export default function Post({ params }: PostParams) {
         description={title}
       />
       <Layout title={title} description={title} url={path}>
-        <article className="flex flex-col gap-2 py-4">
+        <article className="flex flex-col gap-4 py-4">
           <h1 className="lg:text-3xl max-sm:text-xl font-bold text-zinc-100">
             {title}
           </h1>
@@ -139,6 +140,9 @@ export default function Post({ params }: PostParams) {
               __html: htmlContent || "<p>Conteúdo não disponível.</p>",
             }}
           />
+
+          {/* Passar o htmlContent para o Chatbot */}
+          <Chatbot htmlContent={htmlContent} />
         </article>
 
         <BackHome />

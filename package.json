@@ -25,6 +25,7 @@
     "mongodb": "^6.13.1",
     "next": "^15.2.0",
     "next-seo": "^6.6.0",
+    "openai": "^4.89.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-loading-skeleton": "^3.5.0",
