@@ -25,7 +25,6 @@ export async function GET(req: Request) {
         .find({
           $or: [
             { title: { $regex: query, $options: "i" } },
-            { htmlContent: { $regex: query, $options: "i" } },
             { tags: { $in: [new RegExp(query, "i")] } },
           ],
         })
