@@ -33,7 +33,7 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
   return (
     <div className=" max-w-xs">
       <div className="relative">
-        <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-2 py-1 shadow-lg">
+        <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 rounded px-2 py-1 shadow-lg">
           <input
             ref={inputRef}
             type="text"
