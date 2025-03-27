@@ -116,7 +116,7 @@ export default function Chatbot({ htmlContent }: ChatbotProps) {
             </div>
           </div>
         ) : (
-          <div className="fixed bottom-16 right-6 h-[75vh] max-h-[600px] w-96 bg-gray-900 rounded-lg shadow-lg z-50">
+          <div className="fixed mb-6 bottom-16 right-6 h-[75vh] max-h-[600px] w-96 bg-gray-900 rounded-lg shadow-lg z-50">
             <div className="flex flex-col h-full">
               <div className="bg-gray-700 p-4 flex justify-between items-center rounded-t-lg">
                 <div className="flex items-center gap-2">
