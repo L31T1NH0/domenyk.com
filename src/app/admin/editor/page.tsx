@@ -7,20 +7,21 @@ export default function Editor() {
   const [title, setTitle] = useState("");
   const [postId, setPostId] = useState("");
   const [content, setContent] = useState("");
-  const [hasAudio, setHasAudio] = useState(false); // Novo estado para o checkbox
-  const [audioUrl, setAudioUrl] = useState(""); // Novo estado para o URL do áudio
+  const [hasAudio, setHasAudio] = useState(false);
+  const [audioUrl, setAudioUrl] = useState("");
+  const [tags, setTags] = useState(""); // Estado para as tags
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false); // Estado para controlar o envio
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeneratingTags, setIsGeneratingTags] = useState(false); // Estado para controle de geração de tags
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // Impede múltiplos envios enquanto a requisição está em andamento
     if (isSubmitting) return;
 
     try {
-      setIsSubmitting(true); // Desativa o botão
+      setIsSubmitting(true);
       setError(null);
       setSuccess(null);
 
@@ -28,10 +29,11 @@ export default function Editor() {
       formData.append("title", title);
       formData.append("postId", postId);
       formData.append("content", content);
-      // Adiciona o audioUrl ao formData apenas se hasAudio for true
       if (hasAudio && audioUrl) {
         formData.append("audioUrl", audioUrl);
       }
+      // Adiciona as tags ao formData
+      formData.append("tags", tags);
 
       const response = await fetch("/admin/api/editor", {
         method: "POST",
@@ -48,12 +50,44 @@ export default function Editor() {
       setTitle("");
       setPostId("");
       setContent("");
-      setHasAudio(false); // Reseta o checkbox
-      setAudioUrl(""); // Reseta o campo de URL do áudio
+      setHasAudio(false);
+      setAudioUrl("");
+      setTags(""); // Reseta o campo de tags
     } catch (error) {
       setError("Falha ao criar o post: " + (error as Error).message);
     } finally {
-      setIsSubmitting(false); // Reativa o botão após a requisição
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleGenerateTags = async () => {
+    if (!content.trim()) {
+      setError("O conteúdo do post é necessário para gerar tags.");
+      return;
+    }
+
+    try {
+      setIsGeneratingTags(true);
+      setError(null);
+
+      const response = await fetch("/admin/api/ai-tags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to generate tags");
+      }
+
+      const data = await response.json();
+      const generatedTags = data.tags.join(", "); // Converte o array de tags em uma string separada por vírgulas
+      setTags(generatedTags);
+    } catch (error) {
+      setError("Falha ao gerar tags: " + (error as Error).message);
+    } finally {
+      setIsGeneratingTags(false);
     }
   };
 
@@ -128,13 +162,42 @@ export default function Editor() {
               </div>
             </div>
 
+            {/* Campo de tags e botão para gerar tags */}
+            <div className="flex gap-2 mb-4">
+              <input
+                name="tags"
+                className="flex w-full p-2 rounded outline-none bg-zinc-700 text-zinc-300"
+                type="text"
+                placeholder="Tags (separadas por vírgula)"
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={handleGenerateTags}
+                className={`w-10 h-10 rounded bg-purple-600 hover:bg-purple-700 text-zinc-300 flex items-center justify-center ${
+                  isGeneratingTags || !content.trim()
+                    ? "opacity-50 cursor-not-allowed"
+                    : ""
+                }`}
+                disabled={isGeneratingTags || !content.trim()}
+                title="Gerar tags com IA"
+              >
+                {isGeneratingTags ? (
+                  <span className="animate-spin">⏳</span>
+                ) : (
+                  <span>IA</span>
+                )}
+              </button>
+            </div>
+
             <div className="flex justify-end mt-2 gap-4">
               <button
                 type="submit"
                 className={`p-2 bg-green-600 hover:bg-green-700 text-zinc-300 rounded ${
                   isSubmitting ? "opacity-50 cursor-not-allowed" : ""
                 }`}
-                disabled={isSubmitting} // Desativa o botão durante o envio
+                disabled={isSubmitting}
               >
                 <h1>{isSubmitting ? "Postando..." : "Postar"}</h1>
               </button>

@@ -16,6 +16,8 @@ export async function POST(req: Request) {
     const title = formData.get("title") as string;
     const postId = formData.get("postId") as string;
     const content = formData.get("content") as string;
+    const tags = formData.get("tags") as string; // Novo campo de tags
+    const audioUrl = formData.get("audioUrl") as string;
 
     // Valida os dados de entrada
     if (!title || typeof title !== "string") {
@@ -37,6 +39,24 @@ export async function POST(req: Request) {
       );
     }
 
+    // Processa o campo tags
+    let tagsArray: string[] = [];
+    if (tags && typeof tags === "string") {
+      tagsArray = tags
+        .split(",")
+        .map((tag) => tag.trim().toLowerCase())
+        .filter((tag) => tag.length > 0)
+        .slice(0, 5); // Limita a 5 tags
+    }
+
+    // Valida o audioUrl, se fornecido
+    if (audioUrl && typeof audioUrl !== "string") {
+      return NextResponse.json(
+        { error: "Audio URL must be a string if provided" },
+        { status: 400 }
+      );
+    }
+
     const client = await clientPromise;
     const db = client.db("blog");
     const postsCollection = db.collection("posts");
@@ -50,14 +70,15 @@ export async function POST(req: Request) {
       );
     }
 
-    // Cria o novo post
+    // Cria o novo post com o campo tags
     const newPost = {
       postId,
       title,
       htmlContent: content, // Armazena o conteúdo como Markdown (htmlContent para consistência com o projeto)
       date: new Date().toISOString().split("T")[0], // Formato "YYYY-MM-DD"
       views: 0, // Inicializa as views como 0
-      audioUrl: formData.get("audioUrl") as string, // Adiciona o URL do áudio
+      audioUrl: audioUrl || null, // Adiciona o URL do áudio, ou null se não fornecido
+      tags: tagsArray.length > 0 ? tagsArray : [], // Adiciona o array de tags, ou vazio se não houver tags
     };
 
     await postsCollection.insertOne(newPost);

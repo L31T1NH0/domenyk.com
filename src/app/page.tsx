@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { NextSeo } from "next-seo";
 import { Date } from "@components/date";
@@ -9,13 +9,15 @@ import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { TrashIcon } from "@heroicons/react/24/solid";
 import Link from "next/link";
-
+import SearchBar from "@components/SearchBar";
 
 type PostData = {
   postId: string;
   title: string;
   date: string;
   views: number;
+  htmlContent: string;
+  tags: string[];
 };
 
 export default function Home() {
@@ -24,38 +26,48 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  // Estado para o modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [postToDelete, setPostToDelete] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch("/api/posts",)
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.warn(
-            `Erro ao buscar posts: ${response.status} - ${errorText}`
-          );
-          setPosts([]);
-          setError(
-            `Não foi possível carregar os posts: ${response.status} - ${errorText}`
-          );
-        } else {
-          const postsData = await response.json();
-          console.log("Posts recebidos da API:", postsData);
-          setPosts(postsData || []);
-        }
-      } catch (error) {
-        console.error("Erro ao carregar posts:", error);
-        setError(`Falha ao carregar os posts: ${(error as Error).message}`);
-        setPosts([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Função para buscar posts com base na query
+  const fetchPosts = async (query: string = "") => {
+    try {
+      setLoading(true);
+      setError(null);
 
+      const response = await fetch(`/api/search-posts?query=${encodeURIComponent(query)}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.warn(`Erro ao buscar posts: ${response.status} - ${errorText}`);
+        setPosts([]);
+        setError(`Não foi possível carregar os posts: ${response.status} - ${errorText}`);
+      } else {
+        const postsData = await response.json();
+        console.log("Posts recebidos da API:", postsData);
+        setPosts(postsData || []);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar posts:", error);
+      setError(`Falha ao carregar os posts: ${(error as Error).message}`);
+      setPosts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Debounce para evitar chamadas excessivas à API
+  const debounce = (func: (...args: any[]) => void, delay: number) => {
+    let timeoutId: NodeJS.Timeout;
+    return (...args: any[]) => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => func(...args), delay);
+    };
+  };
+
+  // Função de busca com debounce
+  const debouncedFetchPosts = useCallback(debounce(fetchPosts, 300), []);
+
+  useEffect(() => {
     const checkAdminStatus = async () => {
       try {
         const response = await fetch("/admin/api/check", {
@@ -73,7 +85,7 @@ export default function Home() {
       }
     };
 
-    fetchPosts();
+    fetchPosts(); // Carrega todos os posts inicialmente
     checkAdminStatus();
   }, []);
 
@@ -133,8 +145,11 @@ export default function Home() {
         <section className="text-xl flex flex-col gap-2 py-4 text-primary items-center">
           <h1>Dou minhas opiniões aqui</h1>
         </section>
-        <section className="flex flex-col gap-4">
-          <h1 className="font-bold text-2xl">Blog</h1>
+        <section className="flex-1 gap-4">
+          <div className="flex items-center gap-4 mb-4">
+            <h1 className="font-bold text-2xl">Blog</h1>
+            <SearchBar onSearch={debouncedFetchPosts} />
+          </div>
           {loading ? (
             <div className="flex flex-col gap-4">
               {Array.from({ length: 10 }).map((_, index) => (
@@ -169,6 +184,19 @@ export default function Home() {
                       {post.views || 0} views
                     </span>
                   </small>
+                  {/* Exibir as tags, se existirem */}
+                  {post.tags && post.tags.length > 0 && (
+                    <div className="mt-2 flex gap-2 flex-wrap">
+                      {post.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="bg-zinc-600 text-xs px-1 py-0.5 rounded-full"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   {isAdmin && (
                     <button
                       onClick={() => openDeleteModal(post.postId)}
@@ -184,7 +212,6 @@ export default function Home() {
           )}
         </section>
 
-        
         {showDeleteModal && postToDelete && (
           <div className="fixed inset-0 bg-zinc-900/90 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full border border-gray-200">
