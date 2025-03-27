@@ -154,7 +154,7 @@ export default function Home() {
               {posts.map((post) => (
                 <li
                   key={post.postId}
-                  className="flex flex-col gap-2 group relative"
+                  className="flex flex-col gap-1 group relative"
                 >
                   <Link
                     href={`/posts/${post.postId}`}

@@ -1,5 +1,6 @@
 import { Header } from "./header";
 import ThemeSwitcher from "./ThemeSwitcher";
+// import SettingsMenu from "./SettingsMenu";
 
 type LayoutProps = {
   title?: string;
@@ -11,9 +12,9 @@ type LayoutProps = {
 
 export function Layout({ home = false, children }: LayoutProps) {
   return (
-    <div className="max-w-xl flex flex-col mx-auto px-4">
-      <div>
-        <ThemeSwitcher />
+    <div className="max-w-xl flex flex-col mx-auto">
+      <ThemeSwitcher /> {/* Botão de brilho à direita */}
+      <div className="flex justify-end items-center py-1">
       </div>
       <Header home={home} />
       <main className={`${home ? "home" : ""} flex flex-col flex-1`}>

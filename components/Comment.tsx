@@ -660,7 +660,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
           {!userId && isLoaded && (
             <input
               type="text"
-              placeholder="Seu nome (último usado será salvo)"
+              placeholder="Seu nome"
               value={newComment.nome}
               onChange={(e) =>
                 setNewComment({ ...newComment, nome: e.target.value })

@@ -1,10 +1,8 @@
-// src/app/layout.tsx (Server Component)
 import { ReactNode } from "react";
 import "./global.css"; // Mantém o CSS global
 import { DefaultSeo } from "next-seo";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { AdjustmentsHorizontalIcon } from "@heroicons/react/24/solid";
 import { Metadata } from "next";
 
 import {
@@ -15,6 +13,8 @@ import {
   UserButton,
 } from "@clerk/nextjs";
 
+import SettingsMenu from "@components/SettingsMenu"; // Importa o novo componente
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -23,7 +23,6 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="pt-BR">
-        {/* <AdjustmentsHorizontalIcon className="size-6 flex justify-end" /> */}
         <body className="min-h-screen bg-zinc-900 text-white">
           <SignedOut>
             <SignInButton />
@@ -32,6 +31,8 @@ export default function RootLayout({
             <UserButton />
           </SignedIn>
           {children}
+          <Analytics />
+          <SpeedInsights />
         </body>
       </html>
     </ClerkProvider>
