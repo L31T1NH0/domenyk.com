@@ -323,20 +323,31 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
     });
   };
 
-  const handleDelete = async (commentId: string, isReply: boolean = false) => {
+  const handleDelete = async (
+    commentId: string,
+    isReply: boolean = false,
+    parentId?: string // Adiciona o parentId como parâmetro opcional
+  ) => {
     if (deleteConfirm === commentId) {
       console.log("Attempting to delete comment:", {
         commentId,
         postId,
         isReply,
+        parentId, // Log para verificar o parentId
         userId,
         isAdmin,
       });
       try {
+        const body = {
+          postId,
+          isReply,
+          ...(isReply && parentId ? { parentId } : {}), // Inclui o parentId apenas se for uma resposta
+        };
+
         const response = await fetch(`/api/comments/${commentId}`, {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ postId, isReply }),
+          body: JSON.stringify(body),
         });
 
         if (!response.ok) {
@@ -351,12 +362,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
         setComments((prev) =>
           isReply
             ? prev.map((c) =>
-                c._id ===
-                (
-                  prev.find((p) =>
-                    p.replies?.some((r) => r._id === commentId)
-                  ) || c
-                )._id
+                c._id === parentId
                   ? {
                       ...c,
                       replies: c.replies?.filter((r) => r._id !== commentId),
@@ -413,7 +419,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
     commentsList: (Comment | AuthComment)[]
   ): number =>
     commentsList.reduce((total, comment) => {
-      const baseCount = 1;
+      const baseCount = 2;
       const replyCount = comment.replies
         ? countTotalComments(comment.replies)
         : 0;
@@ -443,7 +449,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
           !hasNameInLocalStorage &&
           !userId;
         const replyCount = (comment.replies?.length || 0) as number;
-        const shouldShowToggleButton = replyCount > 2;
+        const shouldShowToggleButton = replyCount > 1;
         const visibleReplies = showAllReplies[comment._id]
           ? comment.replies || []
           : (comment.replies || []).slice(0, 1);
@@ -485,7 +491,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
               )}
               <div className="flex-1">
                 <div className="flex gap-2 max-sm:gap-1 items-center">
-                  <p className="text-white flex gap-0.5 font-semibold max-sm:text-sm">
+                  <p className="text-white flex gap-0.5 font-medium max-sm:text-sm">
                     {displayName}
                     {role === "admin" && (
                       <CheckBadgeIcon className="size-5 max-sm:size-4 text-yellow-400 hover:text-yellow-500" />
@@ -503,7 +509,11 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
                   {canDelete(comment) && (
                     <button
                       onClick={() =>
-                        handleDelete(comment._id, comment.parentId !== null)
+                        handleDelete(
+                          comment._id,
+                          comment.parentId !== null,
+                          comment.parentId || undefined // Passa o parentId para respostas
+                        )
                       }
                       className="text-red-500 opacity-0 group-hover:opacity-100 max-sm:opacity-100 transition-opacity 
                       duration-200 hover:text-red-600"
@@ -512,9 +522,10 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
                     </button>
                   )}
                 </div>
-                <p className="text-gray-300 max-sm:text-sm">
-                  {comment.comentario}
-                </p>
+                <p
+                  className="text-gray-300 max-sm:text-sm"
+                  dangerouslySetInnerHTML={{ __html: comment.comentario }}
+                />
                 {comment.parentId === null && comment._id !== replyTo && (
                   <button
                     onClick={() => handleReply(comment._id)}
@@ -628,7 +639,11 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
                     </button>
                     <button
                       onClick={() =>
-                        handleDelete(comment._id, comment.parentId !== null)
+                        handleDelete(
+                          comment._id,
+                          comment.parentId !== null,
+                          comment.parentId || undefined
+                        )
                       }
                       className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
                     >

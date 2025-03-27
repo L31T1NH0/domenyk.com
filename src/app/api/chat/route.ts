@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import { currentUser } from "@clerk/nextjs/server"; // Importa a função currentUser do Clerk
+import { currentUser } from "@clerk/nextjs/server";
+import { remark } from "remark";
+import html from "remark-html";
 
 // Configura o cliente da xAI usando o OpenAI SDK
 const client = new OpenAI({
@@ -52,7 +54,14 @@ export async function POST(req: NextRequest) {
     });
 
     const reply = completion.choices[0]?.message?.content || "Desculpe, não consegui responder.";
-    return NextResponse.json({ reply }, { status: 200 });
+
+    // Processar a resposta do Grok (que pode estar em Markdown) em HTML
+    const processedContent = await remark()
+      .use(html)
+      .process(reply);
+    const htmlReply = processedContent.toString();
+
+    return NextResponse.json({ reply: htmlReply }, { status: 200 });
   } catch (error) {
     console.error("Erro ao chamar o Grok:", error);
     return NextResponse.json(

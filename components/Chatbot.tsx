@@ -2,15 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { ChatBubbleLeftIcon, XMarkIcon } from "@heroicons/react/20/solid";
-import {
-  useUser,  
-  ClerkProvider,
-  SignInButton,
-  SignedIn,
-  SignedOut,
-  UserButton, 
-} from "@clerk/nextjs";	
-import Link from "next/link";
+import { useUser, SignInButton } from "@clerk/nextjs";
 
 type ChatMessage = {
   role: "user" | "assistant";
@@ -105,12 +97,11 @@ export default function Chatbot({ htmlContent }: ChatbotProps) {
                   <p className="text-sm mb-4">
                     Você precisa estar logado para usar o chat com o Grok.
                   </p>
-                  <SignInButton>                  
+                  <SignInButton>
                     <button className="bg-gray-600 text-gray-300 rounded-lg px-4 py-2 hover:bg-gray-500">
                       Fazer Login
                     </button>
                   </SignInButton>
-
                 </div>
               </div>
             </div>
@@ -140,6 +131,57 @@ export default function Chatbot({ htmlContent }: ChatbotProps) {
                   .scrollbar-none::-webkit-scrollbar {
                     display: none;
                   }
+                  .chat-content h1,
+                  .chat-content h2,
+                  .chat-content h3,
+                  .chat-content h4,
+                  .chat-content h5,
+                  .chat-content h6 {
+                    font-weight: 600;
+                    margin-bottom: 0.5rem;
+                  }
+                  .chat-content h1 {
+                    font-size: 1.5rem;
+                  }
+                  .chat-content h2 {
+                    font-size: 1.25rem;
+                  }
+                  .chat-content h3 {
+                    font-size: 1.125rem;
+                  }
+                  .chat-content p {
+                    margin-bottom: 0.5rem;
+                  }
+                  .chat-content ul,
+                  .chat-content ol {
+                    margin-bottom: 0.5rem;
+                    padding-left: 1.5rem;
+                  }
+                  .chat-content li {
+                    margin-bottom: 0.25rem;
+                  }
+                  .chat-content strong {
+                    font-weight: 700;
+                  }
+                  .chat-content em {
+                    font-style: italic;
+                  }
+                  .chat-content code {
+                    background-color: #2d2d2d;
+                    padding: 0.1rem 0.3rem;
+                    border-radius: 0.25rem;
+                    font-family: monospace;
+                  }
+                  .chat-content pre {
+                    background-color: #2d2d2d;
+                    padding: 0.5rem;
+                    border-radius: 0.25rem;
+                    overflow-x: auto;
+                  }
+                  .chat-content pre code {
+                    background-color: transparent;
+                    padding: 0;
+                  }
                 `}</style>
                 {messages.length === 0 ? (
                   <p className="text-gray-400 text-center text-sm">
@@ -154,14 +196,13 @@ export default function Chatbot({ htmlContent }: ChatbotProps) {
                       }`}
                     >
                       <div
-                        className={`max-w-[85%] p-3 rounded-2xl ${
+                        className={`max-w-[85%] p-3 rounded-2xl chat-content ${
                           msg.role === "user"
                             ? "bg-gray-600 text-zinc-100"
                             : "bg-gray-700 text-zinc-300"
                         }`}
-                      >
-                        {msg.content}
-                      </div>
+                        dangerouslySetInnerHTML={{ __html: msg.content }}
+                      />
                     </div>
                   ))
                 )}
