@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { SunIcon, MoonIcon } from "@heroicons/react/24/solid";
+import { SunIcon, MoonIcon } from "@heroicons/react/20/solid";
 
 export default function ThemeSwitcher() {
   const [darkMode, setDarkMode] = useState<boolean>(() => {

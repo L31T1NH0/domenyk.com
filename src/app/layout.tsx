@@ -24,12 +24,6 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="pt-BR">
         <body className="min-h-screen bg-zinc-900 text-white">
-          <SignedOut>
-            <SignInButton />
-          </SignedOut>
-          <SignedIn>
-            <UserButton />
-          </SignedIn>
           {children}
           <Analytics />
           <SpeedInsights />
