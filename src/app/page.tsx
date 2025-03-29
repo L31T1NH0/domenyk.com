@@ -169,15 +169,15 @@ export default function Home() {
               {posts.map((post) => (
                 <li
                   key={post.postId}
-                  className="flex flex-col gap-1 group relative"
+                  className="flex flex-col mb-1 group relative"
                 >
-                  <Link
-                    href={`/posts/${post.postId}`}
-                    onClick={(e) => handlePostClick(post.postId, e)}
-                    className="text-xl hover:underline"
-                  >
-                    {post.title}
-                  </Link>
+                    <Link
+                      href={`/posts/${post.postId}`}
+                      onClick={(e) => handlePostClick(post.postId, e)}
+                      className="text-xl hover:underline"
+                    >
+                      {post.title}
+                    </Link>
                   <small className="text-zinc-400">
                     <Date dateString={post.date} /> •{" "}
                     <span className="text-sm text-zinc-500 p-1">
@@ -196,6 +196,7 @@ export default function Home() {
                         </span>
                       ))}
                     </div>
+                    
                   )}
                   {isAdmin && (
                     <button

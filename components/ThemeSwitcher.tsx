@@ -45,7 +45,7 @@ export default function ThemeSwitcher() {
   };
 
   return (
-    <button className="fixed" onClick={toggleDarkMode}>
+    <button className="" onClick={toggleDarkMode}>
       {darkMode ? (
         <SunIcon className="svg-icon" width={24} height={24} />
       ) : (

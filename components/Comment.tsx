@@ -419,7 +419,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
     commentsList: (Comment | AuthComment)[]
   ): number =>
     commentsList.reduce((total, comment) => {
-      const baseCount = 2;
+      const baseCount = 1;
       const replyCount = comment.replies
         ? countTotalComments(comment.replies)
         : 0;
