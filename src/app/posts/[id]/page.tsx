@@ -140,7 +140,7 @@ export default function Post({ params }: PostParams) {
           />
 
           {/* Passar o htmlContent para o Chatbot */}
-          {/* <Chatbot htmlContent={htmlContent} /> */}
+          <Chatbot htmlContent={htmlContent} />
         </article>
 
         <BackHome />
