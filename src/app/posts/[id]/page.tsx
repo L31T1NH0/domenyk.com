@@ -116,7 +116,7 @@ export default function Post({ params }: PostParams) {
       <Layout title={title} description={title} url={path}>
         <article className="flex flex-col gap-2 py-4">
           <div className="mb-2 flex-1">          
-            <h1 className="lg:text-3xl uppercase max-sm:text-xl font-bold">
+            <h1 className="lg:text-3xl max-sm:text-xl font-bold">
                 {title}
               </h1>
               <div className="flex gap-2 items-center">
