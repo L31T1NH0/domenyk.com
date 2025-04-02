@@ -190,7 +190,7 @@ export default function Home() {
                       {post.tags.map((tag) => (
                         <span
                           key={tag}
-                          className="bg-zinc-600 text-xs px-1 py-0.5 rounded-full"
+                          className="bg-zinc-800 text-zinc-300 text-xs px-1 py-0.5 rounded-full"
                         >
                           {tag}
                         </span>

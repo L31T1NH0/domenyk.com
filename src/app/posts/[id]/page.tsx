@@ -115,22 +115,25 @@ export default function Post({ params }: PostParams) {
       />
       <Layout title={title} description={title} url={path}>
         <article className="flex flex-col gap-2 py-4">
-          <h1 className="lg:text-3xl max-sm:text-xl font-bold">
-            {title}
-          </h1>
-          <div className="flex gap-2 items-center">
-            <Date dateString={date} />
-            <div className="flex gap-2 text-sm text-zinc-500">
-              <span>• {readingTime}</span>
-              <span>{views || 0} views</span>
+          <div className="mb-2 flex-1">          
+            <h1 className="lg:text-3xl uppercase max-sm:text-xl font-bold">
+                {title}
+              </h1>
+              <div className="flex gap-2 items-center">
+                <Date dateString={date} />
+                <div className="flex gap-2 text-sm text-zinc-500">
+                  <span>• {readingTime}</span>
+                  <span>{views || 0} views</span>
+                </div>
+              </div>
+              <div className="mb-0.5">
+                <ShareButton id={id} />
             </div>
-          </div>
-          <div>
-            <ShareButton id={id} />
-          </div>
-
+            
           {/* Usar o componente AudioPlayer */}
           {audioUrl && <AudioPlayer audioUrl={audioUrl} />}
+
+          </div>
 
           <div
             className="flex flex-col gap-4 lg:text-lg sm:text-sm max-sm:text-xs"
@@ -140,7 +143,7 @@ export default function Post({ params }: PostParams) {
           />
 
           {/* Passar o htmlContent para o Chatbot */}
-          <Chatbot htmlContent={htmlContent} />
+          {/* <Chatbot htmlContent={htmlContent} /> */}
         </article>
 
         <BackHome />
