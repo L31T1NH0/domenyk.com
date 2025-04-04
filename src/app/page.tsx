@@ -185,7 +185,7 @@ export default function Home() {
                     </span>
                   </small>
                   {/* Exibir as tags, se existirem */}
-                  {post.tags && post.tags.length > 0 && (
+                  {/* {post.tags && post.tags.length > 0 && (
                     <div className="mt-2 flex gap-2 flex-wrap">
                       {post.tags.map((tag) => (
                         <span
@@ -195,7 +195,7 @@ export default function Home() {
                           {tag}
                         </span>
                       ))}
-                    </div>
+                    </div> */}
                     
                   )}
                   {isAdmin && (
