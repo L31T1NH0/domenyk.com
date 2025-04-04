@@ -71,7 +71,7 @@ ul {
   @apply w-8 h-8;
 }
 img {
-  @apply rounded-xl grayscale-100 w-full h-full;
+  @apply rounded-md grayscale-100 w-full h-full;
 }
 h4 {
   @apply lg:text-3xl max-sm:text-xl font-bold;
