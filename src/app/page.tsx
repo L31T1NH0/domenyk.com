@@ -195,9 +195,8 @@ export default function Home() {
                           {tag}
                         </span>
                       ))}
-                    </div> */}
-                    
-                  )}
+                    </div>
+                  )} */}
                   {isAdmin && (
                     <button
                       onClick={() => openDeleteModal(post.postId)}
