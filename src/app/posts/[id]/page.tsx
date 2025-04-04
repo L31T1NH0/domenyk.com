@@ -124,6 +124,7 @@ export default function Post({ params }: PostParams) {
                 <div className="flex gap-2 text-sm text-zinc-500">
                   <span>• {readingTime}</span>
                   <span>{views || 0} views</span>
+                  
                 </div>
               </div>
               <div className="mb-0.5">

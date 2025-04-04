@@ -76,3 +76,6 @@ img {
 h4 {
   @apply lg:text-3xl max-sm:text-xl font-bold;
 }
+h6 {
+  @apply text-sm font-extralight bg-zinc-950 p-0.5 rounded-md max-w-fit;
+}
