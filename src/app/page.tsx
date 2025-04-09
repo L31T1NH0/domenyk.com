@@ -184,19 +184,6 @@ export default function Home() {
                       {post.views || 0} views
                     </span>
                   </small>
-                  {/* Exibir as tags, se existirem */}
-                  {/* {post.tags && post.tags.length > 0 && (
-                    <div className="mt-2 flex gap-2 flex-wrap">
-                      {post.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="bg-zinc-800 text-zinc-300 text-xs px-1 py-0.5 rounded-full"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )} */}
                   {isAdmin && (
                     <button
                       onClick={() => openDeleteModal(post.postId)}
