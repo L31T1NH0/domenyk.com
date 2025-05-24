@@ -16,7 +16,6 @@ type PostData = {
   title: string;
   date: string;
   views: number;
-  htmlContent: string;
   tags: string[];
 };
 
