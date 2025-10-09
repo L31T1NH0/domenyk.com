@@ -54,7 +54,7 @@ export function PostHeader({ cape, title, friendImage }: PostHeaderProps) {
                 <Image
                   priority
                   src="/images/profile.jpg"
-                  className="w-16 h-16 rounded-full foto-post hover:z-50 transition-all"
+                  className="foto-post hover:z-50 transition-all"
                   height={64}
                   width={64}
                   alt="Domenyk"
@@ -65,7 +65,7 @@ export function PostHeader({ cape, title, friendImage }: PostHeaderProps) {
                   <Image
                     priority
                     src={friendImage}
-                    className="w-16 h-16 rounded-full foto-post hover:z-50 transition-all"
+                    className="foto-post hover:z-50 transition-all"
                     height={64}
                     width={64}
                     alt="Amigo"
