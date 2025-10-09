@@ -65,7 +65,7 @@ ul {
   @apply rounded-full w-37 h-37;
 }
 .foto-post {
-  @apply  rounded-full;
+  @apply  rounded-full w-12 h-12;
 }
 .banner {
   @apply rounded-2xl grayscale-0 w-full h-auto;
