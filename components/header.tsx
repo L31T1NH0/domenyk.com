@@ -2,7 +2,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react"; // Importe useState e useEffect para gerenciar o carregamento
 import Skeleton from "react-loading-skeleton"; // Importe o Skeleton
-import "react-loading-skeleton/dist/skeleton.css"; // Importe o CSS padrão
 
 type HeaderProps = {
   home?: boolean;

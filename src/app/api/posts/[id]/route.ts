@@ -53,6 +53,7 @@ export async function GET(
           htmlContent,
           views,
           audioUrl: post.audioUrl,
+          cape: post.cape, // Adiciona o campo cape ao retorno
         },
         { status: 200 }
       );
@@ -70,6 +71,7 @@ export async function GET(
       htmlContent,
       views,
       audioUrl: post.audioUrl,
+      cape: post.cape, // Adiciona o campo cape ao retorno
     };
 
     console.log("Post data from API for postId:", id, postData);

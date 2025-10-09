@@ -10,6 +10,7 @@ import { NextSeo, ArticleJsonLd } from "next-seo";
 import { use } from "react"; // Importe o use do React
 import AudioPlayer from "@components/AudioPlayer"; // Importe o AudioPlayer
 import Chatbot from "@components/Chatbot"; // Importe o componente Chatbot
+import { PostHeader } from "@components/PostHeader"; // Novo componente
 
 type PostContent = {
   postId: string;
@@ -18,6 +19,7 @@ type PostContent = {
   htmlContent: string;
   views: number;
   audioUrl?: string;
+  cape?: string; // Campo opcional para link de imagem
 };
 
 // Use Awaited<Params> para tipar params corretamente, pois params pode ser uma Promise
@@ -55,7 +57,7 @@ export default function Post({ params }: PostParams) {
           );
         }
         const data = await response.json();
-        console.log("Post data from API (raw):", data);
+        console.log("Post data from API (raw):", data); // Debug para verificar todos os dados
         if (!data || typeof data !== "object" || !data.postId) {
           throw new Error("Dados do post inválidos retornados pela API");
         }
@@ -83,7 +85,7 @@ export default function Post({ params }: PostParams) {
     return null;
   }
 
-  const { date, title, htmlContent, views, audioUrl } = postData;
+  const { date, title, htmlContent, views, audioUrl, cape } = postData;
   const path = `/posts/${id}`;
   const readingTime = calculateReadingTime(htmlContent);
 
@@ -114,27 +116,23 @@ export default function Post({ params }: PostParams) {
         description={title}
       />
       <Layout title={title} description={title} url={path}>
+        <PostHeader cape={cape} title={title} />
         <article className="flex flex-col gap-2 py-4">
-          <div className="mb-2 flex-1">          
-            <h1 className="lg:text-3xl max-sm:text-xl font-bold">
-                {title}
-              </h1>
-              <div className="flex gap-2 items-center">
-                <Date dateString={date} />
-                <div className="flex gap-2 text-sm text-zinc-500">
-                  <span>• {readingTime}</span>
-                  <span>{views || 0} views</span>
-                  
-                </div>
+          <div className="mb-2 flex-1">
+            <div className="flex gap-2 items-center">
+              <Date dateString={date} />
+              <div className="flex gap-2 text-sm text-zinc-500">
+                <span>• {readingTime}</span>
+                <span>{views || 0} views</span>
               </div>
-              <div className="mb-0.5">
-                <ShareButton id={id} />
             </div>
-            
+            <div className="mb-0.5">
+              <ShareButton id={id} />
+            </div>
+          </div>
+
           {/* Usar o componente AudioPlayer */}
           {audioUrl && <AudioPlayer audioUrl={audioUrl} />}
-
-          </div>
 
           <div
             className="flex flex-col gap-4 lg:text-lg sm:text-sm max-sm:text-xs"
@@ -143,7 +141,7 @@ export default function Post({ params }: PostParams) {
             }}
           />
 
-          {/* Passar o htmlContent para o Chatbot */}
+          {/* Passar o htmlContent para o Chatbot (comentado por enquanto) */}
           {/* <Chatbot htmlContent={htmlContent} /> */}
         </article>
 

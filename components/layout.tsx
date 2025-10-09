@@ -1,4 +1,4 @@
-import { Header } from "./header";
+
 import ThemeSwitcher from "./ThemeSwitcher";
 import SettingsMenu from "./SettingsMenu";
 
@@ -17,7 +17,6 @@ export function Layout({ home = false, children }: LayoutProps) {
       <ThemeSwitcher /> {/* Botão de brilho à direita */}
       <SettingsMenu /> {/* Botão de três pontos à esquerda */}
       </div>
-      <Header home={home} />
       <main className={`${home ? "home" : ""} flex flex-col flex-1`}>
         {children}
       </main>

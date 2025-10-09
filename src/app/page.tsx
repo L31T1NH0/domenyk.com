@@ -6,10 +6,10 @@ import { NextSeo } from "next-seo";
 import { Date } from "@components/date";
 import { Layout } from "@components/layout";
 import Skeleton from "react-loading-skeleton";
-import "react-loading-skeleton/dist/skeleton.css";
 import { TrashIcon } from "@heroicons/react/24/solid";
 import Link from "next/link";
 import SearchBar from "@components/SearchBar";
+import { Header } from "@components/header";
 
 type PostData = {
   postId: string;
@@ -141,6 +141,7 @@ export default function Home() {
         }}
       />
       <Layout home>
+        <Header home={true} />
         <section className="text-xl flex flex-col gap-2 py-4 text-primary items-center">
           <h1>Dou minhas opiniões aqui</h1>
         </section>
