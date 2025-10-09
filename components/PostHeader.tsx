@@ -48,15 +48,15 @@ export function PostHeader({ cape, title, friendImage }: PostHeaderProps) {
             <div className="absolute top-0 left-0 w-full h-[50%] bg-gradient-to-b from-[#040404] via-[#040404]/80 to-transparent"></div>
             <div className="absolute bottom-0 left-0 w-full h-[50%] bg-gradient-to-t from-[#040404] via-[#040404]/80 to-transparent"></div>
           </div>
-          <div className="absolute bottom-4 left-4 flex gap-2">
+          <div className="absolute bottom-4 left-2 flex gap-2">
             <div className="flex -space-x-5">
               <Link href="/" legacyBehavior>
                 <Image
                   priority
                   src="/images/profile.jpg"
                   className="foto-post hover:z-50 transition-all"
-                  height={64}
-                  width={64}
+                  height={52}
+                  width={52}
                   alt="Domenyk"
                 />
               </Link>
@@ -66,8 +66,8 @@ export function PostHeader({ cape, title, friendImage }: PostHeaderProps) {
                     priority
                     src={friendImage}
                     className="foto-post hover:z-50 transition-all"
-                    height={64}
-                    width={64}
+                    height={52}
+                    width={52}
                     alt="Amigo"
                   />
                 </Link>
