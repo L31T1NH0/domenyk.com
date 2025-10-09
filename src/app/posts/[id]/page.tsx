@@ -20,6 +20,7 @@ type PostContent = {
   views: number;
   audioUrl?: string;
   cape?: string; // Campo opcional para link de imagem
+  friendImage?: string; // Novo campo para a foto do amigo
 };
 
 // Use Awaited<Params> para tipar params corretamente, pois params pode ser uma Promise
@@ -85,7 +86,7 @@ export default function Post({ params }: PostParams) {
     return null;
   }
 
-  const { date, title, htmlContent, views, audioUrl, cape } = postData;
+  const { date, title, htmlContent, views, audioUrl, cape, friendImage } = postData;
   const path = `/posts/${id}`;
   const readingTime = calculateReadingTime(htmlContent);
 
@@ -116,7 +117,7 @@ export default function Post({ params }: PostParams) {
         description={title}
       />
       <Layout title={title} description={title} url={path}>
-        <PostHeader cape={cape} title={title} />
+        <PostHeader cape={cape} title={title} friendImage={friendImage} />
         <article className="flex flex-col gap-2 py-4">
           <div className="mb-2 flex-1">
             <div className="flex gap-2 items-center">

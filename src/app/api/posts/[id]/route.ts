@@ -53,7 +53,8 @@ export async function GET(
           htmlContent,
           views,
           audioUrl: post.audioUrl,
-          cape: post.cape, // Adiciona o campo cape ao retorno
+          cape: post.cape, // Campo existente
+          friendImage: post.friendImage, // Novo campo para a foto do amigo
         },
         { status: 200 }
       );
@@ -71,7 +72,8 @@ export async function GET(
       htmlContent,
       views,
       audioUrl: post.audioUrl,
-      cape: post.cape, // Adiciona o campo cape ao retorno
+      cape: post.cape, // Campo existente
+      friendImage: post.friendImage, // Novo campo para a foto do amigo
     };
 
     console.log("Post data from API for postId:", id, postData);

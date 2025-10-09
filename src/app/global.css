@@ -85,6 +85,3 @@ h4 {
 h6 {
   @apply text-sm font-extralight bg-zinc-950 p-0.5 rounded-md max-w-fit;
 }
-.gradient-overlay {
-  background: linear-gradient(to top, #040404, rgba(4, 4, 4, 0.7), transparent);
-}
