@@ -480,7 +480,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
                 <img
                   src={imageURL}
                   alt={`${displayName} avatar`}
-                  className="w-8 h-8 rounded-full max-sm:w-6 max-sm:h-6 icon"
+                  className="w-8 h-8 rounded-full object-scale-down max-sm:w-6 max-sm:h-6 icon"
                 />
               ) : (
                 <img
