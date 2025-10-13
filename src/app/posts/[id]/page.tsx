@@ -118,7 +118,7 @@ export default function Post({ params }: PostParams) {
       />
       <Layout title={title} description={title} url={path}>
         <PostHeader cape={cape} title={title} friendImage={friendImage} />
-        <article className="flex flex-col gap-2 py-4">
+        <article className="flex flex-col gap-2">
           <div className="mb-2 flex-1">
             <div className="flex gap-2 items-center">
               <Date dateString={date} />
