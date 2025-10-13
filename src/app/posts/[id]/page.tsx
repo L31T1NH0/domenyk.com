@@ -127,7 +127,7 @@ export default function Post({ params }: PostParams) {
                 <span>{views || 0} views</span>
               </div>
             </div>
-            <div className="mb-0.5">
+            <div className="">
               <ShareButton id={id} />
             </div>
           </div>

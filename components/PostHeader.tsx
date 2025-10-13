@@ -48,9 +48,9 @@ export function PostHeader({ cape, title, friendImage }: PostHeaderProps) {
             <div className="absolute top-0 left-0 w-full h-[50%] bg-gradient-to-b from-[#040404] via-[#040404]/80 to-transparent"></div>
             <div className="absolute bottom-0 left-0 w-full h-[50%] bg-gradient-to-t from-[#040404] via-[#040404]/80 to-transparent"></div>
           </div>
-          <div className="absolute bottom-4 left-2 flex gap-2">
+          <div className="absolute bottom-1 left-2 lg:bottom-3 flex gap-2">
             <div className="flex -space-x-5">
-              <Link href="/" legacyBehavior>
+              <Link href="/">
                 <Image
                   priority
                   src="/images/profile.jpg"
@@ -61,7 +61,7 @@ export function PostHeader({ cape, title, friendImage }: PostHeaderProps) {
                 />
               </Link>
               {friendImage && (
-                <Link href="/" legacyBehavior>
+                <Link href="/">
                   <Image
                     priority
                     src={friendImage}
@@ -80,7 +80,7 @@ export function PostHeader({ cape, title, friendImage }: PostHeaderProps) {
       {!cape && (
         <div className="flex flex-col gap-4 items-center">
           <div className="flex -space-x-4">
-            <Link href="/" legacyBehavior>
+            <Link href="/">
               <Image
                 priority
                 src="/images/profile.jpg"
@@ -91,7 +91,7 @@ export function PostHeader({ cape, title, friendImage }: PostHeaderProps) {
               />
             </Link>
             {friendImage && (
-              <Link href="/" legacyBehavior>
+              <Link href="/">
                 <Image
                   priority
                   src={friendImage}
@@ -103,7 +103,7 @@ export function PostHeader({ cape, title, friendImage }: PostHeaderProps) {
               </Link>
             )}
           </div>
-          <strong className="text-3xl">{title}</strong>
+          <h1 className=" ">{title}</h1>
         </div>
       )}
     </div>
