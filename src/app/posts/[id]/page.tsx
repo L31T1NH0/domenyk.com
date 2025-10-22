@@ -1,5 +1,6 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { NextSeo, ArticleJsonLd } from "next-seo";
+import { unstable_cache } from "next/cache";
 import { Layout } from "@components/layout";
 import { BackHome } from "@components/back-home";
 import Comment from "@components/Comment";
@@ -26,32 +27,45 @@ type PostPageProps = {
   params: Promise<{ id: string }>;
 };
 
-async function getPostById(id: string) {
-  try {
-    const { getMongoDb } = await import("../../../lib/mongo");
-    const db = await getMongoDb();
-    const post = await db.collection<PostDocument>("posts").findOne(
-      { postId: id },
-      {
-        projection: {
-          _id: 0,
-          postId: 1,
-          date: 1,
-          title: 1,
-          htmlContent: 1,
-          content: 1,
-          views: 1,
-          audioUrl: 1,
-          cape: 1,
-          friendImage: 1,
-        },
-      }
-    );
-    return post;
-  } catch (error) {
-    console.error(`Failed to fetch post ${id}:`, error);
-    return null;
+const loadPostById = unstable_cache(
+  async (id: string) => {
+    try {
+      const { getMongoDb } = await import("../../../lib/mongo");
+      const db = await getMongoDb();
+      return db.collection<PostDocument>("posts").findOne(
+        { postId: id },
+        {
+          projection: {
+            _id: 0,
+            postId: 1,
+            date: 1,
+            title: 1,
+            htmlContent: 1,
+            content: 1,
+            views: 1,
+            audioUrl: 1,
+            cape: 1,
+            friendImage: 1,
+          },
+        }
+      );
+    } catch (error) {
+      console.error(`Failed to fetch post ${id}:`, error);
+      return null;
+    }
+  },
+  ["post-by-id"],
+  { revalidate: 60 }
+);
+
+function normalizeDate(date?: string | Date): string {
+  if (typeof date === "string") {
+    return date;
   }
+  if (date instanceof Date) {
+    return date.toISOString();
+  }
+  return "";
 }
 
 function calculateReadingTime(htmlContent: string): string {
@@ -60,6 +74,46 @@ function calculateReadingTime(htmlContent: string): string {
   const words = text.trim() ? text.trim().split(/\s+/).length : 0;
   const minutes = Math.max(1, Math.ceil(words / wordsPerMinute));
   return `${minutes} min`;
+}
+
+export async function generateMetadata({ params }: PostPageProps): Promise<Metadata> {
+  const resolvedParams = await params;
+  const id = resolvedParams?.id;
+  if (!id) {
+    return {
+      title: "Post não encontrado",
+    };
+  }
+
+  const post = await loadPostById(id);
+
+  if (!post) {
+    return {
+      title: "Post não encontrado",
+    };
+  }
+
+  const title = post.title ?? "";
+  const date = normalizeDate(post.date);
+  const url = `https://domenyk.com/posts/${id}`;
+
+  return {
+    title: `${title} - Blog`,
+    description: title,
+    openGraph: {
+      title,
+      description: title,
+      url,
+    },
+    twitter: {
+      site: "@l31t1",
+      card: "summary_large_image",
+    },
+    other: {
+      "article:published_time": date,
+      "article:modified_time": date,
+    },
+  };
 }
 
 export async function generateStaticParams() {
@@ -96,7 +150,7 @@ export default async function PostPage({ params }: PostPageProps) {
     notFound();
   }
 
-  const post = await getPostById(id);
+  const post = await loadPostById(id);
 
   if (!post) {
     notFound();
@@ -107,56 +161,48 @@ export default async function PostPage({ params }: PostPageProps) {
   const processedContent = await remark().use(html).process(markdownSource);
   const htmlContent = processedContent.toString();
   const readingTime = calculateReadingTime(htmlContent);
-  const dateString =
-    typeof post.date === "string"
-      ? post.date
-      : post.date instanceof Date
-      ? post.date.toISOString()
-      : "";
+  const dateString = normalizeDate(post.date);
   const views = typeof post.views === "number" ? post.views : 0;
   const path = `/posts/${post.postId}`;
 
+  const articleJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: title,
+    datePublished: dateString,
+    dateModified: dateString,
+    author: {
+      '@type': 'Person',
+      name: 'Domenyk',
+    },
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': `https://domenyk.com${path}`,
+    },
+  };
+
   return (
-    <>
-      <NextSeo
-        title={`${title} - Blog`}
-        description={title}
-        openGraph={{
-          title,
-          description: title,
-          url: `https://domenyk.com${path}`,
-        }}
-        twitter={{ handle: "@l31t1" }}
+    <Layout title={title} description={title} url={path}>
+      <script
+        type="application/ld+json"
+        suppressHydrationWarning
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
       />
-      <ArticleJsonLd
-        type="Blog"
-        url={`https://domenyk.com${path}`}
+      <PostHeader
+        cape={post.cape}
         title={title}
-        images={[
-          "https://img.clerk.com/eyJ0eXBlIjoicHJveHkiLCJzcmMiOiJodHRwczovL2ltYWdlcy5jbGVyay5kZXYvdXBsb2FkZWQvaW1nXzJ0dHoxemhpRmFjcHdvbVFGdHNpdGhaYkk3eiJ9",
-        ]}
-        datePublished={dateString}
-        dateModified={dateString}
-        authorName="Domenyk"
-        description={title}
+        friendImage={post.friendImage}
       />
-      <Layout title={title} description={title} url={path}>
-        <PostHeader
-          cape={post.cape}
-          title={title}
-          friendImage={post.friendImage}
-        />
-        <PostContentClient
-          postId={post.postId}
-          date={dateString}
-          htmlContent={htmlContent}
-          initialViews={views}
-          audioUrl={post.audioUrl}
-          readingTime={readingTime}
-        />
-        <BackHome />
-        <Comment postId={post.postId} />
-      </Layout>
-    </>
+      <PostContentClient
+        postId={post.postId}
+        date={dateString}
+        htmlContent={htmlContent}
+        initialViews={views}
+        audioUrl={post.audioUrl}
+        readingTime={readingTime}
+      />
+      <BackHome />
+      <Comment postId={post.postId} />
+    </Layout>
   );
 }
