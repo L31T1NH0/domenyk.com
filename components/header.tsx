@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react"; // Importe useState e useEffect para gerenciar o carregamento
