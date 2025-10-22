@@ -4,63 +4,60 @@ import { clientPromise } from "../../../lib/mongo";
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const query = searchParams.get("query")?.trim() ?? "";
-
-    const db = await getMongoDb();
-    const postsCollection = db.collection<RawPost>("posts");
+    const query = searchParams.get("query") || "";
 
     const client = await clientPromise;
     const db = client.db("blog");
     const postsCollection = db.collection("posts");
 
+<<<<<<< HEAD
+    const client = await clientPromise;
+    const db = client.db("blog");
+    const postsCollection = db.collection("posts");
+
     if (query === "") {
+=======
+    // Busca posts com projeção para retornar apenas os campos necessários
+    let posts;
+    if (query.trim() === "") {
+      // Retorna todos os posts se a query estiver vazia
+>>>>>>> parent of ab2cc0b (Refactor home and post pages for server rendering)
       posts = await postsCollection
-        .find({}, { projection: PROJECTION })
+        .find({})
         .sort({ date: -1 })
         .limit(10)
+        .project({
+          postId: 1,
+          title: 1,
+          date: 1,
+          views: 1,
+          tags: 1,
+          _id: 0, // Exclui o campo _id
+        })
         .toArray();
     } else {
+      // Busca com base na query
       posts = await postsCollection
-        .find(
-          { $text: { $search: query } },
-          {
-            projection: {
-              ...PROJECTION,
-              score: { $meta: "textScore" },
-            },
-          }
-        )
-        .collation(SEARCH_COLLATION)
-        .sort({ score: { $meta: "textScore" }, date: -1 })
+        .find({
+          $or: [
+            { title: { $regex: query, $options: "i" } },
+            { tags: { $in: [new RegExp(query, "i")] } },
+          ],
+        })
+        .sort({ date: -1 })
         .limit(10)
+        .project({
+          postId: 1,
+          title: 1,
+          date: 1,
+          views: 1,
+          tags: 1,
+          _id: 0, // Exclui o campo _id
+        })
         .toArray();
-
-      if (posts.length === 0) {
-        posts = await postsCollection
-          .find(
-            {
-              $or: [
-                { title: { $regex: query, $options: "i" } },
-                { tags: { $in: [new RegExp(query, "i")] } },
-              ],
-            },
-            { projection: PROJECTION }
-          )
-          .collation(SEARCH_COLLATION)
-          .sort({ date: -1 })
-          .limit(10)
-          .toArray();
-      }
     }
 
-    const normalized = posts.map(normalizePost);
-
-    return NextResponse.json(normalized, {
-      status: 200,
-      headers: {
-        "Cache-Control": "s-maxage=60, stale-while-revalidate=30",
-      },
-    });
+    return NextResponse.json(posts, { status: 200 });
   } catch (error) {
     console.error("Error searching posts:", {
       error: (error as Error).message,
