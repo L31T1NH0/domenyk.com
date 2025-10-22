@@ -122,9 +122,6 @@ export default function Home() {
     setShowDeleteModal(false);
     setPostToDelete(null);
   };
-
-  if (typeof window === "undefined") return null;
-
   return (
     <>
       <NextSeo

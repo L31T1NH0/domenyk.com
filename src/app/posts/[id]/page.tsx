@@ -89,9 +89,6 @@ export default function Post({ params }: PostParams) {
   const { date, title, htmlContent, views, audioUrl, cape, friendImage } = postData;
   const path = `/posts/${id}`;
   const readingTime = calculateReadingTime(htmlContent);
-
-  if (typeof window === "undefined") return null;
-
   return (
     <>
       <NextSeo
