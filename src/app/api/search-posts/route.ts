@@ -1,48 +1,5 @@
 import { NextResponse } from "next/server";
-import { getMongoDb } from "../../../lib/mongo";
-
-const PROJECTION = {
-  _id: 0,
-  postId: 1,
-  title: 1,
-  date: 1,
-  views: 1,
-  tags: 1,
-};
-
-const SEARCH_COLLATION = { locale: "pt", strength: 2 } as const;
-
-type RawPost = {
-  postId?: string;
-  title?: string;
-  date?: string | Date;
-  views?: number;
-  tags?: string[];
-  score?: number;
-};
-
-type PostResponse = {
-  postId: string;
-  title: string;
-  date: string;
-  views: number;
-  tags: string[];
-};
-
-function normalizePost(post: RawPost): PostResponse {
-  return {
-    postId: String(post.postId ?? ""),
-    title: String(post.title ?? ""),
-    date:
-      typeof post.date === "string"
-        ? post.date
-        : post.date instanceof Date
-        ? post.date.toISOString()
-        : "",
-    views: typeof post.views === "number" ? post.views : 0,
-    tags: Array.isArray(post.tags) ? post.tags : [],
-  };
-}
+import { clientPromise } from "../../../lib/mongo";
 
 export async function GET(req: Request) {
   try {
@@ -52,7 +9,9 @@ export async function GET(req: Request) {
     const db = await getMongoDb();
     const postsCollection = db.collection<RawPost>("posts");
 
-    let posts: RawPost[] = [];
+    const client = await clientPromise;
+    const db = client.db("blog");
+    const postsCollection = db.collection("posts");
 
     if (query === "") {
       posts = await postsCollection
