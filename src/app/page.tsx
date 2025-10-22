@@ -60,6 +60,7 @@ async function resolveIsAdmin(): Promise<boolean> {
   }
 }
 
+<<<<<<< HEAD
 export const revalidate = 60;
 
 export default async function HomePage() {
@@ -68,6 +69,40 @@ export default async function HomePage() {
     resolveIsAdmin(),
   ]);
 
+=======
+  const handleDeletePost = async (postId: string) => {
+    try {
+      const response = await fetch("/staff/deletePost", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId }),
+      });
+      if (!response.ok) throw new Error("Failed to delete post");
+      const data = await response.json();
+      console.log(data.message);
+      setPosts(posts.filter((post) => post.postId !== postId));
+    } catch (error) {
+      console.error("Error deleting post:", error);
+      setError("Failed to delete post: " + (error as Error).message);
+    } finally {
+      setShowDeleteModal(false);
+      setPostToDelete(null);
+    }
+  };
+  
+  if (typeof window === "undefined") return null;
+
+
+  const openDeleteModal = (postId: string) => {
+    setPostToDelete(postId);
+    setShowDeleteModal(true);
+  };
+
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setPostToDelete(null);
+  };
+>>>>>>> main
   return (
     <>
       <NextSeo

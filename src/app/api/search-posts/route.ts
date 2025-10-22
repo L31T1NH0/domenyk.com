@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getMongoDb } from "../../../lib/mongo";
+<<<<<<< HEAD
 
 const PROJECTION = {
   _id: 0,
@@ -43,6 +44,8 @@ function normalizePost(post: RawPost): PostResponse {
     tags: Array.isArray(post.tags) ? post.tags : [],
   };
 }
+=======
+>>>>>>> main
 
 export async function GET(req: Request) {
   try {
@@ -50,7 +53,11 @@ export async function GET(req: Request) {
     const query = searchParams.get("query")?.trim() ?? "";
 
     const db = await getMongoDb();
+<<<<<<< HEAD
     const postsCollection = db.collection<RawPost>("posts");
+=======
+    const postsCollection = db.collection("posts");
+>>>>>>> main
 
     let posts: RawPost[] = [];
 
