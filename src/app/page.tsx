@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { NextSeo } from "next-seo";
 import { Date } from "@components/date";
 import { Layout } from "@components/layout";
@@ -20,7 +19,6 @@ type PostData = {
 };
 
 export default function Home() {
-  const router = useRouter();
   const [posts, setPosts] = useState<PostData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -87,11 +85,6 @@ export default function Home() {
     fetchPosts(); // Carrega todos os posts inicialmente
     checkAdminStatus();
   }, []);
-
-  const handlePostClick = (postId: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    router.push(`/posts/${postId}`);
-  };
 
   const handleDeletePost = async (postId: string) => {
     try {
@@ -173,7 +166,6 @@ export default function Home() {
                 >
                     <Link
                       href={`/posts/${post.postId}`}
-                      onClick={(e) => handlePostClick(post.postId, e)}
                       className="text-xl hover:underline"
                     >
                       {post.title}
