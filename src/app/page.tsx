@@ -112,6 +112,9 @@ export default function Home() {
       setPostToDelete(null);
     }
   };
+  
+  if (typeof window === "undefined") return null;
+
 
   const openDeleteModal = (postId: string) => {
     setPostToDelete(postId);
