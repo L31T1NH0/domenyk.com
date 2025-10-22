@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
-import { clientPromise } from "../../../lib/mongo";
+import { getMongoDb } from "../../../lib/mongo";
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const query = searchParams.get("query") || "";
 
-    const client = await clientPromise;
-    const db = client.db("blog");
+    const db = await getMongoDb();
     const postsCollection = db.collection("posts");
 
     // Busca posts com projeção para retornar apenas os campos necessários
