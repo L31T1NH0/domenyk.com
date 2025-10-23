@@ -52,6 +52,28 @@ export async function GET(req: Request) {
     const db = await getMongoDb();
     const postsCollection = db.collection<RawPost>("posts");
 
+    // Ensure a text index exists to support $text queries.
+    // Mongo allows only one text index per collection, so detect before creating.
+    try {
+      const existing = await postsCollection.indexes();
+      const hasTextIndex = existing.some((idx: any) =>
+        Object.values(idx.key || {}).some((v) => v === "text")
+      );
+      if (!hasTextIndex) {
+        await postsCollection.createIndex(
+          { title: "text", tags: "text" },
+          {
+            name: "posts_text_index",
+            weights: { title: 10, tags: 5 },
+            default_language: "portuguese",
+          }
+        );
+      }
+    } catch (e) {
+      // Non-fatal: if index inspection/creation fails, continue and rely on regex fallback below.
+      // This avoids throwing 500 solely due to missing index.
+    }
+
     let posts: RawPost[] = [];
 
     if (query === "") {
@@ -61,20 +83,25 @@ export async function GET(req: Request) {
         .limit(10)
         .toArray();
     } else {
-      posts = await postsCollection
-        .find(
-          { $text: { $search: query } },
-          {
-            projection: {
-              ...PROJECTION,
-              score: { $meta: "textScore" },
-            },
-          }
-        )
-        .collation(SEARCH_COLLATION)
-        .sort({ score: { $meta: "textScore" }, date: -1 })
-        .limit(10)
-        .toArray();
+      try {
+        posts = await postsCollection
+          .find(
+            { $text: { $search: query } },
+            {
+              projection: {
+                ...PROJECTION,
+                score: { $meta: "textScore" },
+              },
+            }
+          )
+          .collation(SEARCH_COLLATION)
+          .sort({ score: { $meta: "textScore" }, date: -1 })
+          .limit(10)
+          .toArray();
+      } catch (err) {
+        // If $text fails (e.g., missing index), fall back to regex search.
+        posts = [];
+      }
 
       if (posts.length === 0) {
         posts = await postsCollection
