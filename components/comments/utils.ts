@@ -1,4 +1,5 @@
 import DOMPurify from "dompurify";
+import type { Config as DOMPurifyConfig } from "dompurify";
 import { minidenticon } from "minidenticons";
 
 import { CommentEntity, CommentLookup, PublicComment, isAuthComment } from "./types";
@@ -20,9 +21,13 @@ const ALLOWED_TAGS = [
   "ul",
 ];
 
-const ALLOWED_ATTR: Record<string, string[]> = {
-  a: ["href", "title", "target", "rel"],
-  span: ["class"],
+const ALLOWED_ATTR = ["href", "title", "target", "rel", "class"];
+
+const SANITIZE_CONFIG: DOMPurifyConfig = {
+  ALLOWED_TAGS,
+  ALLOWED_ATTR,
+  RETURN_TRUSTED_TYPE: false,
+  FORBID_TAGS: ["script", "style", "iframe", "object", "embed"],
 };
 
 export const sanitizeCommentHtml = (html: string): string => {
@@ -34,12 +39,7 @@ export const sanitizeCommentHtml = (html: string): string => {
     return html;
   }
 
-  return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS,
-    ALLOWED_ATTR,
-    RETURN_TRUSTED_TYPE: false,
-    FORBID_TAGS: ["script", "style", "iframe", "object", "embed"],
-  });
+  return DOMPurify.sanitize(html, SANITIZE_CONFIG);
 };
 
 export const formatDate = (dateStr: string): string => {
