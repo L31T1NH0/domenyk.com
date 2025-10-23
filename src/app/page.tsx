@@ -1,75 +1,59 @@
-import type { Metadata } from "next";
-import { unstable_cache } from "next/cache";
+﻿import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { currentUser } from "@clerk/nextjs/server";
 import { Header } from "@components/header";
 import { Layout } from "@components/layout";
-import HomeClient, { type PostData } from "./home-client";
+import HomeClient from "./home-client";
+import { getPostsCached } from "../lib/posts";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Domenyk - Blog",
-  description: "Leia minhas opiniões.",
-  openGraph: {
-    title: "Domenyk - Blog",
-    description: "Leia minhas opiniões.",
-    url: "https://domenyk.com/",
-  },
-  twitter: {
-    site: "@l31t1",
-    card: "summary_large_image",
-  },
-};
+const PAGE_SIZE = 10;
+const BASE_URL = "https://domenyk.com";
 
-const loadInitialPosts = unstable_cache(
-  async (): Promise<PostData[]> => {
-    try {
-      const { getMongoDb } = await import("../lib/mongo");
-      const db = await getMongoDb();
-      const postsCollection = db.collection("posts");
+function parsePage(p: unknown): number {
+  const num = typeof p === "string" ? parseInt(p, 10) : 1;
+  if (Number.isNaN(num) || num < 1) return 1;
+  return num;
+}
 
-      const posts = await postsCollection
-        .find(
-          {},
-          {
-            projection: {
-              _id: 0,
-              postId: 1,
-              title: 1,
-              date: 1,
-              views: 1,
-              tags: 1,
-            },
-          }
-        )
-        .sort({ date: -1 })
-        .limit(10)
-        .toArray();
+export async function generateMetadata({ searchParams }: { searchParams: { [key: string]: string | string[] | undefined } }): Promise<Metadata> {
+  const page = parsePage(searchParams.page as string | undefined);
+  const query = (searchParams.query as string | undefined)?.trim() || "";
 
-      return posts.map((post) => ({
-        postId: String(post.postId),
-        title: String(post.title ?? ""),
-        date:
-          typeof post.date === "string"
-            ? post.date
-            : post.date instanceof Date
-            ? post.date.toISOString()
-            : "",
-        views: typeof post.views === "number" ? post.views : 0,
-        tags: Array.isArray(post.tags)
-          ? (post.tags as string[])
-          : post.tags
-          ? [String(post.tags)]
-          : [],
-      }));
-    } catch (error) {
-      console.error("Failed to load initial posts on the server:", error);
-      return [];
-    }
-  },
-  ["home-initial-posts"],
-  { revalidate: 60 }
-);
+  const baseTitle = "Domenyk - Blog";
+  const title = query ? `${baseTitle} – Busca: ${query}${page > 1 ? ` (página ${page})` : ""}` : `${baseTitle}${page > 1 ? ` – Página ${page}` : ""}`;
+  const description = query ? `Resultados para "${query}"${page > 1 ? ` – página ${page}` : ""}.` : `Leia minhas opiniões${page > 1 ? ` – página ${page}` : ""}.`;
+
+  const params = new URLSearchParams();
+  if (query) params.set("query", query);
+  const canonical = `${BASE_URL}/${params.toString() ? `?${params.toString()}` : ""}`;
+
+  const spPrev = new URLSearchParams(params);
+  const spNext = new URLSearchParams(params);
+  if (page > 1) spPrev.set("page", String(page - 1));
+  if (page >= 1) spNext.set("page", String(page + 1));
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical,
+    },
+    openGraph: {
+      title,
+      description,
+      url: canonical,
+    },
+    twitter: {
+      site: "@l31t1",
+      card: "summary_large_image",
+      title,
+      description,
+    },
+    // Note: Next Metadata API does not natively support link rel=prev/next.
+  };
+}
 
 async function resolveIsAdmin(): Promise<boolean> {
   try {
@@ -81,11 +65,28 @@ async function resolveIsAdmin(): Promise<boolean> {
   }
 }
 
-export default async function HomePage() {
-  const [initialPosts, isAdmin] = await Promise.all([
-    loadInitialPosts(),
+export default async function HomePage({ searchParams }: { searchParams: { [key: string]: string | string[] | undefined } }) {
+  const page = parsePage(searchParams.page as string | undefined);
+  const query = (searchParams.query as string | undefined)?.trim() || "";
+  const sort = (searchParams.sort as "date" | "views" | undefined) ?? undefined;
+  const order = (searchParams.order as "asc" | "desc" | undefined) ?? undefined;
+
+  const [{ posts, hasNext, total }, isAdmin] = await Promise.all([
+    getPostsCached({ page, pageSize: PAGE_SIZE, query, sort, order }),
     resolveIsAdmin(),
   ]);
+
+  if (typeof total === "number" && total >= 0) {
+    const maxPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    if (page > maxPage) {
+      const params = new URLSearchParams();
+      if (query) params.set("query", query);
+      if (sort) params.set("sort", sort);
+      if (order) params.set("order", order);
+      params.set("page", String(maxPage));
+      redirect(`/${params.toString() ? `?${params.toString()}` : ""}`);
+    }
+  }
 
   return (
     <Layout home>
@@ -93,7 +94,9 @@ export default async function HomePage() {
       <section className="text-xl flex flex-col gap-2 py-4 text-primary items-center">
         <h1>Dou minhas opiniões aqui</h1>
       </section>
-      <HomeClient initialPosts={initialPosts} isAdmin={isAdmin} />
+      <HomeClient posts={posts} isAdmin={isAdmin} page={page} hasNext={hasNext} />
     </Layout>
   );
 }
+
+

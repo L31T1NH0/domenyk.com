@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
-import useSWR from "swr";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Skeleton from "react-loading-skeleton";
 import { TrashIcon } from "@heroicons/react/24/solid";
 import SearchBar from "@components/SearchBar";
+import SortPicker from "@components/SortPicker";
+import Pagination from "@components/Pagination";
 import { Date } from "@components/date";
+import { buildUrl } from "../lib/url";
 
 export type PostData = {
   postId: string;
@@ -17,83 +20,21 @@ export type PostData = {
 };
 
 type HomeClientProps = {
-  initialPosts: PostData[];
+  posts: PostData[];
   isAdmin: boolean;
+  page: number;
+  hasNext: boolean;
 };
 
-const fetcher = async (url: string): Promise<PostData[]> => {
-  const response = await fetch(url, {
-    headers: { Accept: "application/json" },
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(
-      `Não foi possível carregar os posts: ${response.status} - ${errorText}`
-    );
-  }
-
-  const posts = await response.json();
-  return Array.isArray(posts) ? posts : [];
-};
-
-export default function HomeClient({ initialPosts, isAdmin }: HomeClientProps) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedTerm, setDebouncedTerm] = useState("");
+export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClientProps) {
   const [error, setError] = useState<string | null>(null);
   const [postToDelete, setPostToDelete] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const mountedRef = useRef(false);
-  const lastErrorSource = useRef<"search" | "action" | null>(null);
+  const router = useRouter();
+  const pathname = usePathname();
+  const sp = useSearchParams();
 
-  useEffect(() => {
-    mountedRef.current = true;
-  }, []);
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedTerm(searchTerm);
-    }, 300);
-
-    return () => clearTimeout(handler);
-  }, [searchTerm]);
-
-  const searchKey = useMemo(
-    () => `/api/search-posts?query=${encodeURIComponent(debouncedTerm)}`,
-    [debouncedTerm]
-  );
-
-  const {
-    data,
-    error: swrError,
-    isValidating,
-    mutate,
-  } = useSWR<PostData[]>(searchKey, fetcher, {
-    fallbackData: initialPosts,
-    revalidateOnFocus: false,
-    keepPreviousData: true,
-  });
-
-  useEffect(() => {
-    if (swrError) {
-      lastErrorSource.current = "search";
-      setError(swrError.message);
-    } else if (lastErrorSource.current === "search") {
-      lastErrorSource.current = null;
-      setError(null);
-    }
-  }, [swrError]);
-
-  const posts = data ?? [];
-  const showLoading = mountedRef.current && isValidating && posts.length === 0;
-
-  const handleSearch = (query: string) => {
-    if (error && lastErrorSource.current === "action") {
-      lastErrorSource.current = null;
-      setError(null);
-    }
-    setSearchTerm(query);
-  };
+  const query = sp.get("query") ?? "";
 
   const openDeleteModal = (postId: string) => {
     if (!isAdmin) return;
@@ -109,7 +50,6 @@ export default function HomeClient({ initialPosts, isAdmin }: HomeClientProps) {
   const handleDeletePost = async (postId: string) => {
     if (!isAdmin) return;
     try {
-      lastErrorSource.current = null;
       setError(null);
       const response = await fetch("/staff/deletePost", {
         method: "POST",
@@ -122,30 +62,31 @@ export default function HomeClient({ initialPosts, isAdmin }: HomeClientProps) {
         throw new Error(`Failed to delete post: ${errorText}`);
       }
 
-      await mutate((current) => {
-        const next = (current ?? []).filter(
-          (post) => post.postId !== postId
-        );
-        return next.length === 0 ? [] : next;
-      }, false);
-      await mutate();
+      router.refresh();
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to delete post";
-      lastErrorSource.current = "action";
+      const message = err instanceof Error ? err.message : "Failed to delete post";
       setError(message);
     } finally {
       closeDeleteModal();
     }
   };
 
+  const onSearch = (newQuery: string) => {
+    const next = buildUrl(
+      pathname,
+      sp,
+      { query: newQuery },
+      { resetPage: true }
+    );
+    router.push(next);
+  };
+
+  const loading = false; // streaming/loading handled by app/loading.tsx if present
+
   return (
     <section className="flex-1 gap-4">
-      <div className="flex items-center gap-4 mb-4">
-        <h1 className="font-bold text-2xl">Blog</h1>
-        <SearchBar onSearch={handleSearch} />
-      </div>
-      {showLoading ? (
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4"><div className="flex items-center gap-4"><h1 className="font-bold text-2xl">Blog</h1><SearchBar onSearch={onSearch} initialQuery={query} /></div><SortPicker /></div>
+      {loading ? (
         <div className="flex flex-col gap-4">
           {Array.from({ length: 10 }).map((_, index) => (
             <div key={index} className="flex flex-col gap-2">
@@ -160,7 +101,10 @@ export default function HomeClient({ initialPosts, isAdmin }: HomeClientProps) {
       ) : error ? (
         <p className="text-red-500">{error}</p>
       ) : posts.length === 0 ? (
-        <p className="text-sm text-zinc-400">Nenhum post encontrado.</p>
+        <div className="text-sm text-zinc-400">
+          <p>Nenhum post encontrado.</p>
+          <p className="mt-1">Tente ajustar a busca ou filtros.</p>
+        </div>
       ) : (
         <ul className="text-xl ml-0 flex flex-col gap-4">
           {posts.map((post) => (
@@ -172,7 +116,7 @@ export default function HomeClient({ initialPosts, isAdmin }: HomeClientProps) {
                 {post.title}
               </Link>
               <small className="text-zinc-400">
-                <Date dateString={post.date} /> •{" "}
+                <Date dateString={post.date} /> ·{" "}
                 <span className="text-sm text-zinc-500 p-1">
                   {post.views ?? 0} views
                 </span>
@@ -189,6 +133,8 @@ export default function HomeClient({ initialPosts, isAdmin }: HomeClientProps) {
           ))}
         </ul>
       )}
+
+      <Pagination page={page} hasNext={hasNext} pathname={pathname} searchParams={Object.fromEntries(sp.entries())} />
 
       {showDeleteModal && postToDelete && isAdmin && (
         <div className="fixed inset-0 bg-zinc-900/90 flex items-center justify-center z-50">
@@ -224,3 +170,5 @@ export default function HomeClient({ initialPosts, isAdmin }: HomeClientProps) {
     </section>
   );
 }
+
+
