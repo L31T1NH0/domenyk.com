@@ -1,14 +1,15 @@
 ﻿"use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type ReactNode } from "react";
 import { MagnifyingGlassIcon } from "@heroicons/react/16/solid";
 
 interface SearchBarProps {
   onSearch: (query: string) => void;
   initialQuery?: string;
+  rightSlot?: ReactNode;
 }
 
-export default function SearchBar({ onSearch, initialQuery = "" }: SearchBarProps) {
+export default function SearchBar({ onSearch, initialQuery = "", rightSlot }: SearchBarProps) {
   const [query, setQuery] = useState(initialQuery);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -36,7 +37,7 @@ export default function SearchBar({ onSearch, initialQuery = "" }: SearchBarProp
 
   return (
     <form onSubmit={handleSubmit} className="relative">
-      <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md border border-zinc-500/20 rounded px-1 py-0.5">
+      <div className="flex items-center gap-2 bg-zinc-800 border border-zinc-700 rounded px-1 py-0.5">
         <MagnifyingGlassIcon className="w-4 h-4" />
         <input
           ref={inputRef}
@@ -46,7 +47,17 @@ export default function SearchBar({ onSearch, initialQuery = "" }: SearchBarProp
           placeholder="Pesquisar posts..."
           className="bg-transparent outline-none  placeholder-zinc-400"
         />
+        {rightSlot && (
+          <>
+            <span className="h-5 w-px bg-zinc-500/20" aria-hidden />
+            <div className="flex items-center">{rightSlot}</div>
+          </>
+        )}
       </div>
     </form>
   );
 }
+
+
+
+

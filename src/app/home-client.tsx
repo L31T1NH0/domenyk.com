@@ -1,12 +1,11 @@
-"use client";
+﻿"use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Skeleton from "react-loading-skeleton";
-import { TrashIcon } from "@heroicons/react/24/solid";
+import { TrashIcon, ChevronDownIcon } from "@heroicons/react/24/solid";
 import SearchBar from "@components/SearchBar";
-import SortPicker from "@components/SortPicker";
 import Pagination from "@components/Pagination";
 import { Date } from "@components/date";
 import { buildUrl } from "../lib/url";
@@ -26,6 +25,12 @@ type HomeClientProps = {
   hasNext: boolean;
 };
 
+const SORT_OPTIONS = [
+  { label: "Data (mais antigo)", value: { sort: "date" as const, order: "asc" as const } },
+  { label: "Data (mais recente)", value: { sort: "date" as const, order: "desc" as const } },
+  { label: "Views (menor → maior)", value: { sort: "views" as const, order: "asc" as const } },
+  { label: "Views (maior → menor)", value: { sort: "views" as const, order: "desc" as const } },
+];
 export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClientProps) {
   const [error, setError] = useState<string | null>(null);
   const [postToDelete, setPostToDelete] = useState<string | null>(null);
@@ -35,6 +40,47 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
   const sp = useSearchParams();
 
   const query = sp.get("query") ?? "";
+  const sort = (sp.get("sort") as "date" | "views" | undefined) ?? undefined;
+  const order = (sp.get("order") as "asc" | "desc" | undefined) ?? undefined;
+
+  const [openSort, setOpenSort] = useState(false);
+  const sortRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (!sortRef.current) return;
+      if (!sortRef.current.contains(e.target as Node)) setOpenSort(false);
+    }
+    function onEsc(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpenSort(false);
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    document.addEventListener("keyup", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", onClickOutside);
+      document.removeEventListener("keyup", onEsc);
+    };
+  }, []);
+
+  const currentSortKey = `${sort ?? ""}:${order ?? ""}`;
+  const currentSortLabel = (() => {
+    const match = SORT_OPTIONS.find(
+      (opt) => `${opt.value.sort ?? ""}:${opt.value.order ?? ""}` === currentSortKey
+    );
+    return match?.label ?? "Data (mais recente)";
+  })();
+
+  const onSelectSort = (key: string) => {
+    const [s, o] = key.split(":");
+    const next = buildUrl(
+      pathname,
+      sp,
+      { sort: (s || undefined) as any, order: (o || undefined) as any },
+      { resetPage: true }
+    );
+    setOpenSort(false);
+    router.push(next);
+  };
 
   const openDeleteModal = (postId: string) => {
     if (!isAdmin) return;
@@ -85,7 +131,54 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
 
   return (
     <section className="flex-1 gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-4"><div className="flex items-center gap-4"><h1 className="font-bold text-2xl">Blog</h1><SearchBar onSearch={onSearch} initialQuery={query} /></div><SortPicker /></div>
+      <div className="flex items-center mb-4">
+        <h1 className="font-bold text-2xl">Blog</h1>
+        <div className="ml-2">
+          <SearchBar
+            onSearch={onSearch}
+            initialQuery={query}
+            rightSlot={
+              <div className="relative" ref={sortRef}>
+                <button
+                  type="button"
+                  aria-haspopup="listbox"
+                  aria-expanded={openSort}
+                  onClick={() => setOpenSort((v) => !v)}
+                  className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-sm hover:bg-zinc-700 transition-colors"
+                >
+                  <span className="whitespace-nowrap">{currentSortLabel}</span>
+                  <ChevronDownIcon className={`h-4 w-4 transition-transform duration-200 ${openSort ? "rotate-180" : "rotate-0"}`} />
+                </button>
+                {openSort && (
+                  <div
+                    role="listbox"
+                    className="absolute right-0 z-20 mt-2 w-64 rounded-lg border border-zinc-700 bg-zinc-900 p-1 max-h-[200px] overflow-auto shadow-lg"
+                  >
+                    {SORT_OPTIONS.map((opt) => {
+                      const key = `${opt.value.sort ?? ""}:${opt.value.order ?? ""}`;
+                      const selected = key === currentSortKey;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          role="option"
+                          aria-selected={selected}
+                          onClick={() => onSelectSort(key)}
+                          className={`w-full text-left px-4 py-2 rounded-md text-sm transition-colors hover:bg-zinc-700 ${
+                            selected ? "font-medium text-zinc-100" : "text-zinc-300"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            }
+          />
+        </div>
+      </div>
       {loading ? (
         <div className="flex flex-col gap-4">
           {Array.from({ length: 10 }).map((_, index) => (
@@ -116,7 +209,7 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
                 {post.title}
               </Link>
               <small className="text-zinc-400">
-                <Date dateString={post.date} /> ·{" "}
+                <Date dateString={post.date} /> <span aria-hidden className="mx-1">&middot;</span>
                 <span className="text-sm text-zinc-500 p-1">
                   {post.views ?? 0} views
                 </span>
@@ -140,7 +233,7 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
         <div className="fixed inset-0 bg-zinc-900/90 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full border border-gray-200">
             <h2 className="text-lg font-bold mb-4 text-gray-900">
-              Confirmar Exclusão
+              Confirmar ExclusÃ£o
             </h2>
             <p className="mb-6 text-gray-700">
               Tem certeza que deseja apagar o post "
@@ -170,5 +263,12 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
     </section>
   );
 }
+
+
+
+
+
+
+
 
 
