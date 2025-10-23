@@ -17,9 +17,14 @@ function parsePage(p: unknown): number {
   return num;
 }
 
-export async function generateMetadata({ searchParams }: { searchParams: { [key: string]: string | string[] | undefined } }): Promise<Metadata> {
-  const page = parsePage(searchParams.page as string | undefined);
-  const query = (searchParams.query as string | undefined)?.trim() || "";
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}): Promise<Metadata> {
+  const sp = await searchParams;
+  const page = parsePage(sp?.page as string | undefined);
+  const query = (sp?.query as string | undefined)?.trim() || "";
 
   const baseTitle = "Domenyk - Blog";
   const title = query ? `${baseTitle} – Busca: ${query}${page > 1 ? ` (página ${page})` : ""}` : `${baseTitle}${page > 1 ? ` – Página ${page}` : ""}`;
@@ -65,11 +70,16 @@ async function resolveIsAdmin(): Promise<boolean> {
   }
 }
 
-export default async function HomePage({ searchParams }: { searchParams: { [key: string]: string | string[] | undefined } }) {
-  const page = parsePage(searchParams.page as string | undefined);
-  const query = (searchParams.query as string | undefined)?.trim() || "";
-  const sort = (searchParams.sort as "date" | "views" | undefined) ?? undefined;
-  const order = (searchParams.order as "asc" | "desc" | undefined) ?? undefined;
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const sp = (await searchParams) ?? {};
+  const page = parsePage(sp.page as string | undefined);
+  const query = (sp.query as string | undefined)?.trim() || "";
+  const sort = (sp.sort as "date" | "views" | undefined) ?? undefined;
+  const order = (sp.order as "asc" | "desc" | undefined) ?? undefined;
 
   const [{ posts, hasNext, total }, isAdmin] = await Promise.all([
     getPostsCached({ page, pageSize: PAGE_SIZE, query, sort, order }),

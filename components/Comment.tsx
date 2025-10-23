@@ -608,12 +608,6 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
       >
         <div className="flex flex-col gap-3">
           <div className="space-y-2">
-            <label
-              htmlFor="comment-name"
-              className="text-xs font-semibold uppercase tracking-wide text-zinc-400"
-            >
-              Nome
-            </label>
             <input
               id="comment-name"
               type="text"
