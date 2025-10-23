@@ -67,7 +67,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
         <img
           src={avatarUrl}
           alt={`${displayName} avatar`}
-          className="h-10 w-10 flex-shrink-0 rounded-full max-sm:w-6 object-cover icon"
+          className="h-8 w-8 rounded-full max-sm:w-6 object-cover icon"
         />
         <div className="flex-1 space-y-3">
           <div className="flex flex-wrap items-center gap-2 text-sm">
