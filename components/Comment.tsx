@@ -1,79 +1,89 @@
-"use client"; // Marca o componente como Client Component
+"use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { useAuth } from "@clerk/nextjs"; // Para verificar autenticação
-import { minidenticon } from "minidenticons"; // Biblioteca para gerar identicons
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { useAuth, useUser } from "@clerk/nextjs";
+import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/solid";
+
+import CommentThread from "./comments/CommentThread";
 import {
-  CheckBadgeIcon,
-  ChatBubbleLeftRightIcon,
-  TrashIcon,
-} from "@heroicons/react/24/solid";
+  CommentDraft,
+  CommentEntity,
+  SubmissionStatus,
+} from "./comments/types";
+import {
+  buildCommentLookup,
+  flattenServerComments,
+  normalizeServerComment,
+  sanitizeCommentHtml,
+} from "./comments/utils";
 
-type Comment = {
-  _id: string; // O MongoDB retorna ObjectId, mas o frontend usa toString()
+type CommentProps = {
   postId: string;
-  nome?: string; // Opcional para usuários não logados
-  comentario: string;
-  ip: string;
-  createdAt: string;
-  parentId: string | null;
-  replies?: Comment[];
 };
 
-type AuthComment = {
-  _id: string; // O MongoDB retorna ObjectId, mas o frontend usa toString()
-  postId: string;
-  firstName: string | null;
-  role: "admin" | null;
-  userId: string;
-  imageURL: string;
-  hasImage: boolean;
-  comentario: string;
-  ip: string;
-  createdAt: string;
-  parentId: string | null;
-  replies?: (Comment | AuthComment)[];
-};
+const COMMENT_MAX_LENGTH = 120;
+const COOLDOWN_MS = 2500;
 
-interface CommentProps {
-  postId: string;
-}
+const emptyDraft: CommentDraft = { nome: "", comentario: "" };
 
 const Comment: React.FC<CommentProps> = ({ postId }) => {
-  const { userId, isLoaded } = useAuth(); // Apenas userId e isLoaded
-  const [comments, setComments] = useState<(Comment | AuthComment)[]>([]);
-  const [newComment, setNewComment] = useState({
-    nome: "",
-    comentario: "",
-    ip: "",
-    parentId: null as string | null,
-  });
-  const [error, setError] = useState<string | null>(null);
-  const [replyTo, setReplyTo] = useState<string | null>(null);
-  const [replyInput, setReplyInput] = useState<{
-    [key: string]: { nome: string; comentario: string };
-  }>({});
-  const [isClient, setIsClient] = useState(false);
-  const [showAllReplies, setShowAllReplies] = useState<{
-    [key: string]: boolean;
-  }>({});
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null); // Para o modal de confirmação
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null); // Estado para verificar administrador
-  const replyInputRef = useRef<HTMLInputElement>(null);
+  const { userId, isLoaded } = useAuth();
+  const { user } = useUser();
 
-  // Carrega nome e IP do localStorage apenas para usuários não logados
+  const [comments, setComments] = useState<CommentEntity[]>([]);
+  const [commentDraft, setCommentDraft] = useState<CommentDraft>(emptyDraft);
+  const [storedIp, setStoredIp] = useState<string>("");
+  const [submissionStatus, setSubmissionStatus] =
+    useState<SubmissionStatus>("idle");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [activeReplyId, setActiveReplyId] = useState<string | null>(null);
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, CommentDraft>>({});
+  const [replyStatuses, setReplyStatuses] =
+    useState<Record<string, SubmissionStatus>>({});
+  const [replyErrors, setReplyErrors] = useState<Record<string, string | null>>({});
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isClient, setIsClient] = useState(false);
+
+  const pendingRequestRef = useRef<AbortController | null>(null);
+  const replyRequestRefs = useRef<Record<string, AbortController | null>>({});
+  const cooldownUntilRef = useRef<number>(0);
+
   useEffect(() => {
     setIsClient(true);
-    if (!userId && isLoaded) {
-      const storedUser = localStorage.getItem(`user_${postId}`);
-      if (storedUser) {
-        const { nome, ip } = JSON.parse(storedUser);
-        setNewComment((prev) => ({ ...prev, nome: nome || "", ip: ip || "" }));
+  }, []);
+
+  useEffect(() => {
+    if (!isClient || userId || !isLoaded) {
+      return;
+    }
+
+    const storedUser = localStorage.getItem(`user_${postId}`);
+    if (storedUser) {
+      try {
+        const { nome, ip } = JSON.parse(storedUser) as {
+          nome?: string;
+          ip?: string;
+        };
+        setCommentDraft((prev) => ({
+          ...prev,
+          nome: nome ?? "",
+        }));
+        if (ip) {
+          setStoredIp(ip);
+        }
+      } catch (error) {
+        console.warn("Failed to parse stored user", error);
       }
     }
-  }, [postId, userId, isLoaded]);
+  }, [isClient, isLoaded, postId, userId]);
 
-  // Verifica o status de administrador
   useEffect(() => {
     const checkAdminStatus = async () => {
       try {
@@ -82,13 +92,11 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
           headers: { "Content-Type": "application/json" },
         });
         if (!response.ok) {
-          throw new Error("Failed to check admin status");
+          throw new Error(await response.text());
         }
         const data = await response.json();
-        setIsAdmin(data.isAdmin);
-        console.log("Admin status from API:", data.isAdmin); // Log para depuração
+        setIsAdmin(Boolean(data.isAdmin));
       } catch (error) {
-        console.error("Error checking admin status:", error);
         setIsAdmin(false);
       }
     };
@@ -98,615 +106,589 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
     }
   }, [isLoaded]);
 
-  // Busca comentários ao montar o componente
-  useEffect(() => {
-    fetchComments();
-  }, [postId]);
-
-  const fetchComments = async () => {
+  const fetchComments = useCallback(async () => {
     try {
-      console.log("Fetching comments for postId:", postId); // Log para depuração
       const response = await fetch(`/api/comments/${postId}`);
       if (!response.ok) {
-        const errorText = await response.text();
-        console.warn(
-          `Erro ao buscar comentários: ${response.status} - ${errorText}`
-        );
-        setComments([]);
-        setError(
-          `Não foi possível carregar os comentários: ${response.status} - ${errorText}`
-        );
+        throw new Error(await response.text());
+      }
+      const data = (await response.json()) as unknown;
+      if (Array.isArray(data)) {
+        setComments(flattenServerComments(data as any));
       } else {
-        const commentsData = await response.json();
-        console.log("Comments received from API:", commentsData);
-        // Usa o IP mascarado retornado pela API diretamente
-        setComments(commentsData || []);
+        setComments([]);
       }
     } catch (error) {
-      console.error("Error fetching comments:", error);
-      setError(`Falha ao carregar os comentários: ${(error as Error).message}`);
+      const message =
+        error instanceof Error ? error.message : "Falha ao carregar comentários.";
+      setErrorMessage(message);
       setComments([]);
+    }
+  }, [postId]);
+
+  useEffect(() => {
+    fetchComments();
+  }, [fetchComments]);
+
+  useEffect(() => () => {
+    pendingRequestRef.current?.abort();
+    Object.values(replyRequestRefs.current).forEach((controller) =>
+      controller?.abort()
+    );
+  }, []);
+
+  useEffect(() => {
+    if (submissionStatus === "success") {
+      const timeout = window.setTimeout(() => {
+        setSubmissionStatus("idle");
+        setStatusMessage(null);
+      }, 3200);
+      return () => window.clearTimeout(timeout);
+    }
+
+    if (submissionStatus === "error") {
+      const timeout = window.setTimeout(() => {
+        setSubmissionStatus("idle");
+      }, 4000);
+      return () => window.clearTimeout(timeout);
+    }
+  }, [submissionStatus]);
+
+  const commentLookup = useMemo(
+    () => buildCommentLookup(comments),
+    [comments]
+  );
+
+  const totalComments = comments.length;
+
+  const canDeleteComment = useCallback(
+    (comment: CommentEntity) => {
+      if (!isLoaded) {
+        return false;
+      }
+      if (isAdmin) {
+        return true;
+      }
+      return (
+        Boolean(userId) &&
+        "userId" in comment &&
+        comment.userId === userId
+      );
+    },
+    [isAdmin, isLoaded, userId]
+  );
+
+  const resetForm = () => {
+    setCommentDraft((prev) => ({ ...prev, comentario: "" }));
+  };
+
+  const ensureReplyDraft = useCallback(
+    (commentId: string) => {
+      setReplyDrafts((prev) => {
+        if (prev[commentId]) {
+          return prev;
+        }
+        return {
+          ...prev,
+          [commentId]: {
+            nome: commentDraft.nome,
+            comentario: "",
+          },
+        };
+      });
+    },
+    [commentDraft.nome]
+  );
+
+  const handleCommentDraftChange = (
+    field: keyof CommentDraft,
+    value: string
+  ) => {
+    setCommentDraft((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+    if (submissionStatus !== "sending") {
+      setSubmissionStatus(value ? "typing" : "idle");
+    }
+    if (statusMessage) {
+      setStatusMessage(null);
+    }
+    if (errorMessage) {
+      setErrorMessage(null);
     }
   };
 
-  const handleCommentSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (userId && isLoaded) {
-      if (!newComment.comentario.trim()) {
-        setError("Comment is required");
-        return;
-      }
-      if (newComment.comentario.length > 120) {
-        setError("Comment must not exceed 120 characters");
-        return;
-      }
-    } else {
-      if (!newComment.nome || !newComment.comentario.trim()) {
-        setError("Name and comment are required");
-        return;
-      }
-      if (newComment.comentario.length > 120) {
-        setError("Comment must not exceed 120 characters");
-        return;
-      }
+  const removeOptimistic = (tempId: string) => {
+    setComments((prev) => prev.filter((comment) => comment._id !== tempId));
+  };
+
+  const replaceOptimistic = (tempId: string, incoming: CommentEntity) => {
+    setComments((prev) => {
+      const withoutTemp = prev.filter((comment) => comment._id !== tempId);
+      return [...withoutTemp, incoming];
+    });
+  };
+
+  const handleCommentSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (pendingRequestRef.current) {
+      return;
     }
 
+    const now = Date.now();
+    if (cooldownUntilRef.current > now) {
+      setErrorMessage("Aguarde alguns segundos antes de enviar outro comentário.");
+      return;
+    }
+
+    const trimmedComment = commentDraft.comentario.trim();
+    const trimmedName = commentDraft.nome.trim();
+
+    if (!trimmedComment) {
+      setErrorMessage("Escreva um comentário antes de enviar.");
+      return;
+    }
+
+    if (!userId && !trimmedName) {
+      setErrorMessage("Informe seu nome para comentar.");
+      return;
+    }
+
+    if (trimmedComment.length > COMMENT_MAX_LENGTH) {
+      setErrorMessage(
+        `O comentário deve ter no máximo ${COMMENT_MAX_LENGTH} caracteres.`
+      );
+      return;
+    }
+
+    setSubmissionStatus("sending");
+    setStatusMessage(null);
+    setErrorMessage(null);
+
+    const controller = new AbortController();
+    pendingRequestRef.current = controller;
+
+    let ipValue = storedIp;
     try {
-      let ip = newComment.ip;
-      if (!ip && isClient) {
+      if (!ipValue) {
         const ipResponse = await fetch("https://api.ipify.org?format=json", {
           method: "GET",
+          signal: controller.signal,
         });
         const ipData = await ipResponse.json();
-        ip = ipData.ip || "Unknown";
+        ipValue = typeof ipData.ip === "string" ? ipData.ip : "Unknown";
+        setStoredIp(ipValue);
       }
+    } catch (error) {
+      ipValue = ipValue || "Unknown";
+    }
 
-      const data = {
-        comentario: newComment.comentario,
-        parentId: newComment.parentId || null,
-        nome: userId ? undefined : newComment.nome,
+    const tempId = `temp-${Date.now()}`;
+    const createdAt = new Date().toISOString();
+    const optimisticHtml = sanitizeCommentHtml(
+      commentDraft.comentario.replace(/\n/g, "<br />")
+    );
+
+    const optimisticComment: CommentEntity = userId
+      ? {
+          _id: tempId,
+          postId,
+          comentario: optimisticHtml,
+          ip: ipValue,
+          createdAt,
+          parentId: null,
+          firstName: user?.firstName ?? "Você",
+          role: user?.publicMetadata?.role === "admin" ? "admin" : null,
+          userId,
+          imageURL: user?.imageUrl ?? "",
+          hasImage: Boolean(user?.hasImage),
+          optimistic: true,
+        }
+      : {
+          _id: tempId,
+          postId,
+          comentario: optimisticHtml,
+          ip: ipValue,
+          createdAt,
+          parentId: null,
+          nome: trimmedName || "Anonymous",
+          optimistic: true,
+        };
+
+    setComments((prev) => [optimisticComment, ...prev]);
+
+    try {
+      const payload: Record<string, unknown> = {
+        comentario: trimmedComment,
+        parentId: null,
       };
+
+      if (!userId) {
+        payload.nome = trimmedName || "Anonymous";
+      }
 
       const response = await fetch(`/api/comments/${postId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
+        signal: controller.signal,
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to add comment: ${errorText}`);
+        throw new Error(await response.text());
       }
 
-      const responseData = await response.json();
-      const newCommentData = userId
-        ? responseData.comment
-        : { ...responseData.comment, nome: newComment.nome, ip };
+      const result = await response.json();
+      const rawComment = userId ? result.comment : result.comment;
+      const resolved = normalizeServerComment(rawComment);
+      replaceOptimistic(tempId, resolved);
 
-      if (isClient && !userId) {
+      if (!userId && isClient) {
         localStorage.setItem(
           `user_${postId}`,
-          JSON.stringify({ nome: newComment.nome, ip })
+          JSON.stringify({ nome: trimmedName, ip: ipValue })
         );
       }
 
-      setComments((prev) => [
-        newCommentData,
-        ...prev.filter((c) => c._id !== newCommentData._id),
-      ]);
-      setNewComment({
-        nome: newComment.nome,
-        comentario: "",
-        ip: ip || "",
-        parentId: null,
-      });
-      setReplyTo(null);
-      setReplyInput({});
-      setError(null);
+      resetForm();
+      setActiveReplyId(null);
+      setSubmissionStatus("success");
+      setStatusMessage("Comentário enviado com sucesso!");
+      cooldownUntilRef.current = Date.now() + COOLDOWN_MS;
     } catch (error) {
-      console.error("Error adding comment:", error);
-      setError(`Failed to add comment: ${(error as Error).message}`);
+      if ((error as DOMException).name === "AbortError") {
+        return;
+      }
+      removeOptimistic(tempId);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Não foi possível enviar o comentário.";
+      setSubmissionStatus("error");
+      setErrorMessage(message);
+    } finally {
+      pendingRequestRef.current = null;
     }
   };
 
-  const handleReply = (commentId: string) => {
-    setReplyTo(commentId);
-    if (!userId && isClient) {
-      const storedUser = localStorage.getItem(`user_${postId}`);
-      if (storedUser) {
-        const { nome, ip } = JSON.parse(storedUser);
-        setReplyInput((prev) => ({
-          ...prev,
-          [commentId]: { nome: nome || "", comentario: "" },
-        }));
-      } else {
-        setReplyInput((prev) => ({
-          ...prev,
-          [commentId]: { nome: "", comentario: "" },
-        }));
-      }
-    }
-    if (replyInputRef.current) {
-      replyInputRef.current.focus();
-    }
+  const handleReplyRequest = (commentId: string) => {
+    ensureReplyDraft(commentId);
+    setActiveReplyId(commentId);
+  };
+
+  const handleReplyCancel = (commentId: string) => {
+    setActiveReplyId((prev) => (prev === commentId ? null : prev));
+    setReplyDrafts((prev) => ({
+      ...prev,
+      [commentId]: {
+        ...prev[commentId],
+        comentario: "",
+      },
+    }));
+    setReplyStatuses((prev) => ({ ...prev, [commentId]: "idle" }));
+    setReplyErrors((prev) => ({ ...prev, [commentId]: null }));
+  };
+
+  const handleReplyDraftChange = (commentId: string, draft: CommentDraft) => {
+    setReplyDrafts((prev) => ({
+      ...prev,
+      [commentId]: draft,
+    }));
+    setReplyStatuses((prev) => ({
+      ...prev,
+      [commentId]: draft.comentario ? "typing" : "idle",
+    }));
   };
 
   const handleReplySubmit = async (
     commentId: string,
-    e: React.FormEvent<HTMLFormElement>
+    draft: CommentDraft
   ) => {
-    e.preventDefault();
-    const replyData = replyInput[commentId] || { nome: "", comentario: "" };
-    const replyText = replyData.comentario || "";
-    if (!replyText.trim()) {
-      setError("Reply cannot be empty");
-      return;
-    }
-    if (replyText.length > 120) {
-      setError("Reply must not exceed 120 characters");
+    if (replyRequestRefs.current[commentId]) {
       return;
     }
 
-    const data = {
-      comentario: replyText,
-      parentId: commentId,
-      nome: userId ? undefined : replyData.nome || newComment.nome,
-    };
+    const trimmedComment = draft.comentario.trim();
+    const trimmedName = draft.nome.trim();
+
+    if (!trimmedComment) {
+      setReplyErrors((prev) => ({
+        ...prev,
+        [commentId]: "Responda antes de enviar.",
+      }));
+      return;
+    }
+
+    if (!userId && !trimmedName) {
+      setReplyErrors((prev) => ({
+        ...prev,
+        [commentId]: "Informe seu nome.",
+      }));
+      return;
+    }
+
+    if (trimmedComment.length > COMMENT_MAX_LENGTH) {
+      setReplyErrors((prev) => ({
+        ...prev,
+        [commentId]: `A resposta deve ter até ${COMMENT_MAX_LENGTH} caracteres.`,
+      }));
+      return;
+    }
+
+    const controller = new AbortController();
+    replyRequestRefs.current[commentId] = controller;
+    setReplyStatuses((prev) => ({ ...prev, [commentId]: "sending" }));
+    setReplyErrors((prev) => ({ ...prev, [commentId]: null }));
+
+    const tempId = `temp-reply-${Date.now()}`;
+    const createdAt = new Date().toISOString();
+    const htmlContent = sanitizeCommentHtml(
+      draft.comentario.replace(/\n/g, "<br />")
+    );
+
+    const optimisticReply: CommentEntity = userId
+      ? {
+          _id: tempId,
+          postId,
+          comentario: htmlContent,
+          ip: storedIp || "Unknown",
+          createdAt,
+          parentId: commentId,
+          firstName: user?.firstName ?? "Você",
+          role: user?.publicMetadata?.role === "admin" ? "admin" : null,
+          userId,
+          imageURL: user?.imageUrl ?? "",
+          hasImage: Boolean(user?.hasImage),
+          optimistic: true,
+        }
+      : {
+          _id: tempId,
+          postId,
+          comentario: htmlContent,
+          ip: storedIp || "Unknown",
+          createdAt,
+          parentId: commentId,
+          nome: trimmedName || commentDraft.nome || "Anonymous",
+          optimistic: true,
+        };
+
+    setComments((prev) => [optimisticReply, ...prev]);
 
     try {
+      const payload: Record<string, unknown> = {
+        comentario: trimmedComment,
+        parentId: commentId,
+      };
+      if (!userId) {
+        payload.nome = trimmedName || commentDraft.nome || "Anonymous";
+      }
+
       const response = await fetch(`/api/comments/${postId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
+        signal: controller.signal,
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to add reply: ${errorText}`);
+        throw new Error(await response.text());
       }
 
-      const res = await response.json();
-      const newReply = userId
-        ? res.reply
-        : {
-            ...res.reply,
-            nome: replyData.nome || newComment.nome,
-            ip: newComment.ip,
-          };
-
-      setComments((prev) =>
-        prev.map((comment) =>
-          comment._id === commentId
-            ? {
-                ...comment,
-                replies: [newReply, ...(comment.replies || [])].sort((a, b) =>
-                  a.createdAt.localeCompare(b.createdAt)
-                ),
-              }
-            : comment
-        )
-      );
+      const result = await response.json();
+      const rawReply = result.reply ?? result.comment;
+      const resolved = normalizeServerComment(rawReply);
+      replaceOptimistic(tempId, resolved);
 
       if (!userId && isClient) {
         localStorage.setItem(
           `user_${postId}`,
           JSON.stringify({
-            nome: replyData.nome || newComment.nome,
-            ip: newComment.ip,
+            nome: trimmedName || commentDraft.nome,
+            ip: storedIp,
           })
         );
       }
 
-      setReplyInput((prev) => {
-        const newInput = { ...prev };
-        delete newInput[commentId];
-        return newInput;
-      });
-      setReplyTo(null);
-      setError(null);
+      setReplyDrafts((prev) => ({
+        ...prev,
+        [commentId]: {
+          ...prev[commentId],
+          comentario: "",
+        },
+      }));
+      setReplyStatuses((prev) => ({ ...prev, [commentId]: "success" }));
+      setActiveReplyId(null);
     } catch (error) {
-      console.error("Error adding reply:", error);
-      setError(`Failed to add reply: ${(error as Error).message}`);
-    }
-
-    if (replyInputRef.current) {
-      replyInputRef.current.blur();
+      if ((error as DOMException).name === "AbortError") {
+        return;
+      }
+      removeOptimistic(tempId);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Não foi possível enviar a resposta.";
+      setReplyStatuses((prev) => ({ ...prev, [commentId]: "error" }));
+      setReplyErrors((prev) => ({ ...prev, [commentId]: message }));
+    } finally {
+      replyRequestRefs.current[commentId] = null;
     }
   };
 
-  const discardReply = (commentId: string) => {
-    setReplyTo(null);
-    setReplyInput((prev) => {
-      const newInput = { ...prev };
-      delete newInput[commentId];
-      return newInput;
-    });
-  };
-
-  const handleDelete = async (
-    commentId: string,
-    isReply: boolean = false,
-    parentId?: string // Adiciona o parentId como parâmetro opcional
-  ) => {
-    if (deleteConfirm === commentId) {
-      console.log("Attempting to delete comment:", {
-        commentId,
-        postId,
-        isReply,
-        parentId, // Log para verificar o parentId
-        userId,
-        isAdmin,
+  const removeBranch = useCallback(
+    (targetId: string) => {
+      setComments((prev) => {
+        const idsToRemove = new Set<string>([targetId]);
+        const queue = [targetId];
+        while (queue.length > 0) {
+          const current = queue.shift();
+          prev
+            .filter((comment) => comment.parentId === current)
+            .forEach((child) => {
+              if (!idsToRemove.has(child._id)) {
+                idsToRemove.add(child._id);
+                queue.push(child._id);
+              }
+            });
+        }
+        return prev.filter((comment) => !idsToRemove.has(comment._id));
       });
-      try {
-        const body = {
-          postId,
-          isReply,
-          ...(isReply && parentId ? { parentId } : {}), // Inclui o parentId apenas se for uma resposta
-        };
+    },
+    []
+  );
 
-        const response = await fetch(`/api/comments/${commentId}`, {
+  const handleDelete = useCallback(
+    async (comment: CommentEntity) => {
+      const confirmed = window.confirm(
+        "Tem certeza de que deseja remover este comentário?"
+      );
+      if (!confirmed) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/comments/${comment._id}`, {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
+          body: JSON.stringify({
+            postId,
+            isReply: Boolean(comment.parentId),
+            ...(comment.parentId ? { parentId: comment.parentId } : {}),
+          }),
         });
 
         if (!response.ok) {
-          const errorText = await response.text();
-          console.error("Delete response error:", errorText);
-          throw new Error(`Failed to delete comment: ${errorText}`);
+          throw new Error(await response.text());
         }
 
-        const data = await response.json();
-        console.log("Delete success:", data.message);
-
-        setComments((prev) =>
-          isReply
-            ? prev.map((c) =>
-                c._id === parentId
-                  ? {
-                      ...c,
-                      replies: c.replies?.filter((r) => r._id !== commentId),
-                    }
-                  : c
-              )
-            : prev.filter((c) => c._id !== commentId)
-        );
-
-        setDeleteConfirm(null);
-        setError(null);
+        removeBranch(comment._id);
+        setStatusMessage("Comentário removido.");
       } catch (error) {
-        console.error("Error deleting comment:", error);
-        setError(`Failed to delete comment: ${(error as Error).message}`);
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Não foi possível remover o comentário.";
+        setErrorMessage(message);
       }
-    } else {
-      setDeleteConfirm(commentId);
-    }
-  };
-
-  const closeModal = () => {
-    setDeleteConfirm(null);
-  };
-
-  const generateIdenticon = (name: string, ip: string): string => {
-    const value = `${name}${ip || "Unknown"}`; // Usa o IP mascarado retornado
-    const svg = minidenticon(value, 100, 50);
-    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-  };
-
-  const formatDate = (dateStr: string): string => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("pt-BR", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-  };
-
-  const canDelete = (comment: Comment | AuthComment): boolean => {
-    if (!isLoaded || isAdmin === null) return false;
-    const isAuthor = "userId" in comment && comment.userId === userId;
-    console.log("canDelete check:", {
-      commentId: comment._id,
-      isAdmin,
-      isAuthor,
-      userId,
-      commentUserId: "userId" in comment ? comment.userId : null,
-    });
-    return isAdmin || isAuthor;
-  };
-
-  const countTotalComments = (
-    commentsList: (Comment | AuthComment)[]
-  ): number =>
-    commentsList.reduce((total, comment) => {
-      const baseCount = 1;
-      const replyCount = comment.replies
-        ? countTotalComments(comment.replies)
-        : 0;
-      return total + baseCount + replyCount;
-    }, 0);
-
-  const renderComments = (
-    comments: (Comment | AuthComment)[],
-    parentId: string | null = null
-  ) => {
-    const hasUserCommented =
-      isClient &&
-      comments.some(
-        (comment) =>
-          (comment as any).ip === newComment.ip &&
-          (comment as any).nome === newComment.nome
-      );
-    const hasNameInLocalStorage =
-      isClient && !!localStorage.getItem(`user_${postId}`);
-
-    return comments
-      .filter((comment) => comment.parentId === parentId)
-      .map((comment) => {
-        const showReplyAlert =
-          replyTo === comment._id &&
-          !hasUserCommented &&
-          !hasNameInLocalStorage &&
-          !userId;
-        const replyCount = (comment.replies?.length || 0) as number;
-        const shouldShowToggleButton = replyCount > 1;
-        const visibleReplies = showAllReplies[comment._id]
-          ? comment.replies || []
-          : (comment.replies || []).slice(0, 1);
-
-        const displayName =
-          (comment as AuthComment).firstName ||
-          (comment as Comment).nome ||
-          "Anonymous";
-        const role = (comment as AuthComment).role;
-        const imageURL = (comment as AuthComment).imageURL;
-        const hasImage = (comment as AuthComment).hasImage;
-        const ip = (comment as Comment).ip || (comment as AuthComment).ip; // Usa o IP mascarado
-
-        console.log("Rendering comment:", {
-          commentId: comment._id,
-          parentId: comment.parentId,
-          canDelete: canDelete(comment),
-        });
-
-        return (
-          <div
-            key={comment._id}
-            className="bg-zinc-900 p-3 rounded-lg mb-3 max-sm:p-2 max-sm:mb-2 max-sm:rounded-md flex flex-col gap-2 
-            max-sm:gap-1 items-start group relative"
-          >
-            <div className="flex gap-4 max-sm:gap-2 items-start">
-              {hasImage ? (
-                <img
-                  src={imageURL}
-                  alt={`${displayName} avatar`}
-                  className="w-8 h-8 rounded-full object-scale-down max-sm:w-6 max-sm:h-6 icon"
-                />
-              ) : (
-                <img
-                  src={generateIdenticon(displayName, ip)}
-                  alt={`${displayName} avatar`}
-                  className="w-8 h-8 rounded-full max-sm:w-6 max-sm:h-6 icon"
-                />
-              )}
-              <div className="flex-1">
-                <div className="flex gap-2 max-sm:gap-1 items-center">
-                  <p className="text-white flex gap-0.5 font-medium max-sm:text-sm">
-                    {displayName}
-                    {role === "admin" && (
-                      <CheckBadgeIcon className="size-5 max-sm:size-4 text-yellow-400 hover:text-yellow-500" />
-                    )}
-                    {role === null && (
-                      <CheckBadgeIcon className="size-5 max-sm:size-4 text-blue-400 hover:text-blue-500" />
-                    )}
-                  </p>
-                  <small className="text-gray-400 text-sm max-sm:text-xs">
-                    {formatDate(comment.createdAt)}
-                  </small>
-                  {role === "admin" && (
-                    <small className="border-b-2 p-0.5 rounded justify-items-end">Autor</small>
-                  )}
-                  {canDelete(comment) && (
-                    <button
-                      onClick={() =>
-                        handleDelete(
-                          comment._id,
-                          comment.parentId !== null,
-                          comment.parentId || undefined // Passa o parentId para respostas
-                        )
-                      }
-                      className="text-red-500 opacity-0 group-hover:opacity-100 max-sm:opacity-100 transition-opacity 
-                      duration-200 hover:text-red-600"
-                    >
-                      <TrashIcon className="size-4 max-sm:size-3" />
-                    </button>
-                  )}
-                </div>
-                <p
-                  className="text-gray-300 max-sm:text-sm"
-                  dangerouslySetInnerHTML={{ __html: comment.comentario }}
-                />
-                {comment.parentId === null && comment._id !== replyTo && (
-                  <button
-                    onClick={() => handleReply(comment._id)}
-                    className="text-purple-400 hover:text-purple-300 text-sm mt-1 max-sm:text-xs"
-                  >
-                    Responder
-                  </button>
-                )}
-                {showReplyAlert && (
-                  <p className="text-gray-500 text-sm mt-1 max-sm:text-xs">
-                    Faça um comentário primeiro ou ponha seu nome no campo
-                    "nome"
-                  </p>
-                )}
-              </div>
-            </div>
-            {replyTo === comment._id && (
-              <form
-                onSubmit={(e) => handleReplySubmit(comment._id, e)}
-                className="mt-1"
-              >
-                <div className="flex items-center gap-2 max-sm:gap-1">
-                  {!userId && (
-                    <input
-                      type="text"
-                      maxLength={120}
-                      placeholder="Seu nome..."
-                      value={replyInput[comment._id]?.nome || ""}
-                      onChange={(e) =>
-                        setReplyInput((prev) => ({
-                          ...prev,
-                          [comment._id]: {
-                            ...prev[comment._id],
-                            nome: e.target.value,
-                          },
-                        }))
-                      }
-                      className="p-1 bg-zinc-900 text-white rounded border outline-none border-gray-600 w-full 
-                      max-sm:p-0.5 max-sm:text-sm"
-                    />
-                  )}
-                  <input
-                    type="text"
-                    maxLength={120}
-                    placeholder="Sua resposta..."
-                    value={replyInput[comment._id]?.comentario || ""}
-                    onChange={(e) =>
-                      setReplyInput((prev) => ({
-                        ...prev,
-                        [comment._id]: {
-                          ...prev[comment._id],
-                          comentario: e.target.value,
-                        },
-                      }))
-                    }
-                    ref={replyInputRef}
-                    className="ml-14 p-1 bg-zinc-900 text-white rounded border outline-none border-gray-600 w-full 
-                    max-sm:p-0.5 max-sm:text-sm"
-                  />
-                  <button
-                    type="submit"
-                    className="bg-purple-600 text-white px-2 py-1 rounded hover:bg-purple-700 transition-colors 
-                    max-sm:px-1 max-sm:py-0.5 max-sm:text-xs"
-                  >
-                    Enviar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => discardReply(comment._id)}
-                    className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition-colors 
-                    max-sm:px-2 max-sm:py-0.5 max-sm:text-xs"
-                  >
-                    X
-                  </button>
-                </div>
-              </form>
-            )}
-            {visibleReplies.length > 0 && (
-              <div className="ml-4 max-sm:ml-2 border-l-2 border-gray-600 pl-2 mt-2">
-                {renderComments(visibleReplies, comment._id)}
-              </div>
-            )}
-            {shouldShowToggleButton && (
-              <button
-                onClick={() =>
-                  setShowAllReplies((prev) => ({
-                    ...prev,
-                    [comment._id]: !prev[comment._id],
-                  }))
-                }
-                className="text-gray-400 hover:text-gray-300 text-sm mt-1 max-sm:text-xs"
-              >
-                {showAllReplies[comment._id] ? "Mostrar menos" : "Mostrar mais"}
-              </button>
-            )}
-            {deleteConfirm === comment._id && (
-              <div className="fixed inset-0 drop-shadow-2xl flex items-center justify-center z-50">
-                <div className="bg-zinc-900 p-4 rounded-lg shadow-lg">
-                  <h3 className="text-white text-lg mb-2">
-                    Confirmar exclusão
-                  </h3>
-                  <p className="text-gray-300 mb-4">
-                    Tem certeza de que deseja apagar este comentário?
-                  </p>
-                  <div className="flex justify-end gap-2">
-                    <button
-                      onClick={closeModal}
-                      className="bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-700"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      onClick={() =>
-                        handleDelete(
-                          comment._id,
-                          comment.parentId !== null,
-                          comment.parentId || undefined
-                        )
-                      }
-                      className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
-                    >
-                      Confirmar
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      });
-  };
+    },
+    [postId, removeBranch]
+  );
 
   return (
-    <section className="mt-3 max-sm:mt-1" aria-label="Seção de comentários">
-      <h1 className="text-xl flex font-bold mb-4 max-sm:text-lg max-sm:mb-2">
-        <ChatBubbleLeftRightIcon className="size-4" /> Comentários (
-        {countTotalComments(comments)})
-      </h1>
-      {error && (
-        <p className="text-red-500 mb-4 max-sm:mb-2 max-sm:text-sm">{error}</p>
-      )}
+    <section className="space-y-6" aria-label="Seção de comentários">
+      <header className="flex items-center gap-2 text-xl font-semibold text-zinc-100">
+        <ChatBubbleLeftRightIcon className="h-5 w-5" />
+        Comentários ({totalComments})
+      </header>
+
       <form
         onSubmit={handleCommentSubmit}
-        className="flex flex-col gap-4 max-sm:gap-2"
+        className="space-y-4 rounded-3xl border border-zinc-800/80 bg-zinc-950/70 p-6 shadow-inner shadow-black/40"
       >
-        <div className="flex gap-4 max-sm:flex-col max-sm:gap-2">
+        <div className="flex flex-col gap-3">
           {!userId && isLoaded && (
             <input
               type="text"
               placeholder="Seu nome"
-              value={newComment.nome}
-              onChange={(e) =>
-                setNewComment({ ...newComment, nome: e.target.value })
+              value={commentDraft.nome}
+              onChange={(event) =>
+                handleCommentDraftChange("nome", event.target.value)
               }
-              className="p-2 bg-zinc-900 text-white rounded w-full max-sm:p-1 max-sm:text-sm"
+              className="w-full rounded-2xl border border-zinc-800/70 bg-zinc-900/70 px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-500/40"
+              disabled={submissionStatus === "sending"}
             />
           )}
+
+          <textarea
+            maxLength={COMMENT_MAX_LENGTH}
+            placeholder="Escreva seu comentário"
+            value={commentDraft.comentario}
+            onChange={(event) =>
+              handleCommentDraftChange("comentario", event.target.value)
+            }
+            className="h-36 w-full resize-none rounded-2xl border border-zinc-800/70 bg-zinc-900/70 px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-500/40"
+            disabled={submissionStatus === "sending"}
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <div className="text-xs text-zinc-500">
+            {commentDraft.comentario.length}/{COMMENT_MAX_LENGTH}
+          </div>
           <button
             type="submit"
-            className="w-full h-fit bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 
-            transition-colors max-sm:px-3 max-sm:py-1 max-sm:text-sm"
+            disabled={submissionStatus === "sending"}
+            className="rounded-full bg-purple-600 px-6 py-2 text-sm font-semibold text-white transition hover:bg-purple-500 disabled:cursor-not-allowed disabled:bg-purple-800/60"
           >
-            Enviar Comentário
+            {submissionStatus === "sending" ? "Enviando…" : "Enviar comentário"}
           </button>
         </div>
-        <textarea
-          maxLength={120}
-          placeholder={replyTo ? "Sua resposta..." : "Seu comentário"}
-          value={newComment.comentario}
-          onChange={(e) =>
-            setNewComment({ ...newComment, comentario: e.target.value })
-          }
-          className="p-2 bg-zinc-900 outline-none text-white rounded resize-none w-full h-56 max-sm:h-32 max-sm:p-1 
-          max-sm:text-sm"
-          onFocus={() => setReplyTo(null)}
-        />
+
+        {submissionStatus === "success" && statusMessage && (
+          <p className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-300">
+            {statusMessage}
+          </p>
+        )}
+
+        {submissionStatus === "error" && errorMessage && (
+          <p className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-300">
+            {errorMessage}
+          </p>
+        )}
+
+        {submissionStatus === "typing" && (
+          <p className="text-xs text-zinc-500">Pronto para enviar quando quiser.</p>
+        )}
       </form>
-      <div className="mt-4 max-sm:mt-3">
-        {renderComments(comments)}
-        {comments.length === 0 && (
-          <p className="bg-zinc-900 text-zinc-400 rounded p-2 mb-4 max-sm:p-1 max-sm:mb-2 max-sm:text-sm">
+
+      {submissionStatus !== "success" && errorMessage && submissionStatus !== "error" && (
+        <p className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-300">
+          {errorMessage}
+        </p>
+      )}
+
+      <div className="space-y-4">
+        <CommentThread
+          parentId={null}
+          lookup={commentLookup}
+          onReplyRequest={handleReplyRequest}
+          onReplyCancel={handleReplyCancel}
+          onReplySubmit={handleReplySubmit}
+          onReplyDraftChange={handleReplyDraftChange}
+          getReplyDraft={(commentId) =>
+            replyDrafts[commentId] ?? { nome: commentDraft.nome, comentario: "" }
+          }
+          getReplyStatus={(commentId) => replyStatuses[commentId] ?? "idle"}
+          getReplyError={(commentId) => replyErrors[commentId] ?? null}
+          isReplying={(commentId) => activeReplyId === commentId}
+          canDelete={canDeleteComment}
+          onDelete={handleDelete}
+          requiresName={!userId}
+        />
+
+        {totalComments === 0 && (
+          <p className="rounded-2xl border border-zinc-800/80 bg-zinc-950/60 px-4 py-3 text-sm text-zinc-400">
             Nenhum comentário ainda. Seja o primeiro!
           </p>
         )}
