@@ -13,11 +13,13 @@ export async function POST(req: Request) {
 
   try {
     const formData = await req.formData();
-    const title = formData.get("title") as string;
-    const postId = formData.get("postId") as string;
-    const content = formData.get("content") as string;
-    const tags = formData.get("tags") as string; // Novo campo de tags
-    const audioUrl = formData.get("audioUrl") as string;
+    const title = formData.get("title");
+    const postId = formData.get("postId");
+    const content = formData.get("content");
+    const tags = formData.get("tags");
+    const audioUrl = formData.get("audioUrl");
+    const cape = formData.get("cape");
+    const friendImage = formData.get("friendImage");
 
     // Valida os dados de entrada
     if (!title || typeof title !== "string") {
@@ -57,6 +59,11 @@ export async function POST(req: Request) {
       );
     }
 
+    const normalizedAudioUrl = audioUrl && typeof audioUrl === "string" ? audioUrl : null;
+    const normalizedCape = cape && typeof cape === "string" ? cape : null;
+    const normalizedFriendImage =
+      friendImage && typeof friendImage === "string" ? friendImage : null;
+
     const client = await clientPromise;
     const db = client.db("blog");
     const postsCollection = db.collection("posts");
@@ -77,8 +84,10 @@ export async function POST(req: Request) {
       htmlContent: content, // Armazena o conteúdo como Markdown (htmlContent para consistência com o projeto)
       date: new Date().toISOString().split("T")[0], // Formato "YYYY-MM-DD"
       views: 0, // Inicializa as views como 0
-      audioUrl: audioUrl || null, // Adiciona o URL do áudio, ou null se não fornecido
-      tags: tagsArray.length > 0 ? tagsArray : [], // Adiciona o array de tags, ou vazio se não houver tags
+      audioUrl: normalizedAudioUrl,
+      tags: tagsArray.length > 0 ? tagsArray : [],
+      cape: normalizedCape,
+      friendImage: normalizedFriendImage,
     };
 
     await postsCollection.insertOne(newPost);
