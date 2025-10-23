@@ -1,19 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { Layout } from "@components/layout";
 
 export default function Editor() {
   const [title, setTitle] = useState("");
   const [postId, setPostId] = useState("");
-  const [content, setContent] = useState("");
+  const [cape, setCape] = useState("");
+  const [friendImage, setFriendImage] = useState("");
+  const [tags, setTags] = useState("");
   const [hasAudio, setHasAudio] = useState(false);
   const [audioUrl, setAudioUrl] = useState("");
-  const [tags, setTags] = useState(""); // Estado para as tags
+  const [content, setContent] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isGeneratingTags, setIsGeneratingTags] = useState(false); // Estado para controle de geração de tags
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -29,11 +29,12 @@ export default function Editor() {
       formData.append("title", title);
       formData.append("postId", postId);
       formData.append("content", content);
+      formData.append("tags", tags);
+      formData.append("cape", cape);
+      formData.append("friendImage", friendImage);
       if (hasAudio && audioUrl) {
         formData.append("audioUrl", audioUrl);
       }
-      // Adiciona as tags ao formData
-      formData.append("tags", tags);
 
       const response = await fetch("/admin/api/editor", {
         method: "POST",
@@ -45,14 +46,16 @@ export default function Editor() {
         throw new Error(errorData.error || "Failed to create post");
       }
 
-      const data = await response.json();
+      await response.json();
       setSuccess("Post criado com sucesso!");
       setTitle("");
       setPostId("");
-      setContent("");
+      setCape("");
+      setFriendImage("");
+      setTags("");
       setHasAudio(false);
       setAudioUrl("");
-      setTags(""); // Reseta o campo de tags
+      setContent("");
     } catch (error) {
       setError("Falha ao criar o post: " + (error as Error).message);
     } finally {
@@ -60,154 +63,137 @@ export default function Editor() {
     }
   };
 
-  const handleGenerateTags = async () => {
-    if (!content.trim()) {
-      setError("O conteúdo do post é necessário para gerar tags.");
-      return;
-    }
-
-    try {
-      setIsGeneratingTags(true);
-      setError(null);
-
-      const response = await fetch("/admin/api/ai-tags", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to generate tags");
-      }
-
-      const data = await response.json();
-      const generatedTags = data.tags.join(", "); // Converte o array de tags em uma string separada por vírgulas
-      setTags(generatedTags);
-    } catch (error) {
-      setError("Falha ao gerar tags: " + (error as Error).message);
-    } finally {
-      setIsGeneratingTags(false);
-    }
-  };
-
   return (
-    <div className="flex container mx-auto p-2 mt-4 mb-8 rounded-xl bg-zinc-800">
-      <div className="w-full">
-        <div className="gap-4">
-          <div className="mb-4">
-            <div className="gap-4 flex">
-              <h1 className="text-2xl font-bold hover">Editor</h1>
-            </div>
-          </div>
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 py-12">
+      <div className="mx-auto max-w-3xl px-6">
+        <header className="mb-8 text-center">
+          <h1 className="text-3xl font-semibold tracking-tight">Novo post</h1>
+          <p className="mt-2 text-sm text-zinc-400">
+            Preencha os campos abaixo para publicar um novo conteúdo.
+          </p>
+        </header>
 
-          <form onSubmit={handleSubmit}>
-            <div className="flex gap-2 mb-4">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-6 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-8 shadow-2xl shadow-black/20"
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="flex flex-col gap-2">
+              <span className="text-sm font-medium text-zinc-300">Título</span>
               <input
                 name="title"
-                className="flex p-2 rounded outline-none bg-zinc-700"
+                className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/40"
                 type="text"
-                placeholder="titulo"
+                placeholder="Digite o título do post"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
+                required
               />
+            </label>
+            <label className="flex flex-col gap-2">
+              <span className="text-sm font-medium text-zinc-300">Post ID</span>
               <input
                 name="postId"
-                className="flex w-full p-2 rounded outline-none bg-zinc-700"
+                className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/40"
                 type="text"
-                placeholder="post Id"
+                placeholder="Identificador único"
                 value={postId}
                 onChange={(e) => setPostId(e.target.value)}
+                required
               />
-            </div>
+            </label>
+          </div>
 
-            {/* Checkbox para confirmar se o post terá áudio */}
-            <div className="mb-4 flex items-center gap-2">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="flex flex-col gap-2">
+              <span className="text-sm font-medium text-zinc-300">Capa</span>
+              <input
+                name="cape"
+                className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/40"
+                type="text"
+                placeholder="URL da imagem de capa"
+                value={cape}
+                onChange={(e) => setCape(e.target.value)}
+              />
+            </label>
+            <label className="flex flex-col gap-2">
+              <span className="text-sm font-medium text-zinc-300">Foto do amigo</span>
+              <input
+                name="friendImage"
+                className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/40"
+                type="text"
+                placeholder="URL da foto do amigo"
+                value={friendImage}
+                onChange={(e) => setFriendImage(e.target.value)}
+              />
+            </label>
+          </div>
+
+          <label className="flex flex-col gap-2">
+            <span className="text-sm font-medium text-zinc-300">Tags</span>
+            <input
+              name="tags"
+              className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/40"
+              type="text"
+              placeholder="separe por vírgulas"
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+            />
+          </label>
+
+          <div className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3">
+            <label htmlFor="hasAudio" className="flex items-center gap-3 text-sm">
               <input
                 type="checkbox"
                 id="hasAudio"
                 checked={hasAudio}
                 onChange={(e) => setHasAudio(e.target.checked)}
-                className="h-5 w-5 text-green-600 bg-zinc-700 rounded"
+                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-zinc-100 focus:ring-zinc-500"
               />
-              <label htmlFor="hasAudio" className="text-zinc-300">
-                Este post tem áudio?
-              </label>
-            </div>
-
-            {/* Campo condicional para o URL do áudio */}
+              Este post possui áudio
+            </label>
             {hasAudio && (
-              <div className="mb-4">
-                <input
-                  name="audioUrl"
-                  className="w-full p-2 rounded outline-none bg-zinc-700 text-zinc-300"
-                  type="text"
-                  placeholder="Insira o URL do áudio (Cloudinary)"
-                  value={audioUrl}
-                  onChange={(e) => setAudioUrl(e.target.value)}
-                />
-              </div>
-            )}
-
-            <div>
-              <div>
-                <textarea
-                  name="content"
-                  className="w-full h-140 resize-none p-2 rounded outline-none bg-zinc-700"
-                  placeholder="Content"
-                  spellCheck="false"
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Campo de tags e botão para gerar tags */}
-            <div className="flex gap-2 mb-4">
               <input
-                name="tags"
-                className="flex w-full p-2 rounded outline-none bg-zinc-700 text-zinc-300"
+                name="audioUrl"
+                className="w-full max-w-xs rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/40"
                 type="text"
-                placeholder="Tags (separadas por vírgula)"
-                value={tags}
-                onChange={(e) => setTags(e.target.value)}
+                placeholder="URL do áudio"
+                value={audioUrl}
+                onChange={(e) => setAudioUrl(e.target.value)}
               />
-              <button
-                type="button"
-                onClick={handleGenerateTags}
-                className={`w-10 h-10 rounded bg-purple-600 hover:bg-purple-700 text-zinc-300 flex items-center justify-center ${
-                  isGeneratingTags || !content.trim()
-                    ? "opacity-50 cursor-not-allowed"
-                    : ""
-                }`}
-                disabled={isGeneratingTags || !content.trim()}
-                title="Gerar tags com IA"
-              >
-                {isGeneratingTags ? (
-                  <span className="animate-spin">⏳</span>
-                ) : (
-                  <span>IA</span>
-                )}
-              </button>
-            </div>
+            )}
+          </div>
 
-            <div className="flex justify-end mt-2 gap-4">
-              <button
-                type="submit"
-                className={`p-2 bg-green-600 hover:bg-green-700 text-zinc-300 rounded ${
-                  isSubmitting ? "opacity-50 cursor-not-allowed" : ""
-                }`}
-                disabled={isSubmitting}
-              >
-                <h1>{isSubmitting ? "Postando..." : "Postar"}</h1>
-              </button>
-            </div>
-          </form>
+          <label className="flex flex-col gap-2">
+            <span className="text-sm font-medium text-zinc-300">Conteúdo</span>
+            <textarea
+              name="content"
+              className="min-h-[260px] rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-3 text-sm leading-relaxed text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/40"
+              placeholder="Insira o conteúdo em HTML"
+              spellCheck="false"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              required
+            />
+          </label>
 
-          {/* Exibe mensagens de sucesso ou erro */}
-          {success && <p className="text-green-500 mt-2">{success}</p>}
-          {error && <p className="text-red-500 mt-2">{error}</p>}
-        </div>
+          <button
+            type="submit"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-100 px-4 py-3 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Publicando..." : "Publicar post"}
+          </button>
+
+          {success && (
+            <p className="text-center text-sm font-medium text-green-400">
+              {success}
+            </p>
+          )}
+          {error && (
+            <p className="text-center text-sm font-medium text-red-400">{error}</p>
+          )}
+        </form>
       </div>
     </div>
   );
