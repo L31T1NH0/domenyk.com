@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { CheckBadgeIcon, TrashIcon } from "@heroicons/react/24/solid";
 
 import ReplyForm from "./ReplyForm";
@@ -57,7 +57,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
   return (
     <article
-      className={`rounded-2xl border bg-zinc-950/70 p-4 transition-all ${
+      className={`rounded-2xl border bg-zinc-950/70 p-2.5 sm:p-3.5 transition-all ${
         comment.optimistic
           ? "border-purple-500/60 shadow-lg shadow-purple-800/30"
           : "border-zinc-800/80"
@@ -93,7 +93,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
             )}
             {comment.optimistic && (
               <span className="rounded-full border border-purple-500/60 px-2 py-0.5 text-[10px] uppercase tracking-wide text-purple-300">
-                Enviando…
+                Enviando...
               </span>
             )}
           </div>
@@ -138,7 +138,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
             />
           )}
 
-          {children && <div className="space-y-4 border-l border-zinc-800/70 pl-4">{children}</div>}
+          {children && <div className="space-y-3 sm:space-y-4 border-l border-zinc-800/70 pl-3 sm:pl-4">{children}</div>}
         </div>
       </div>
     </article>
@@ -156,3 +156,11 @@ const handleSubmitWrapper = (
 };
 
 export default CommentItem;
+
+
+
+
+
+
+
+

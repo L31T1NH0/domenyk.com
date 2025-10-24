@@ -131,22 +131,22 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
 
   return (
     <section className="flex-1 gap-4">
-      <div className="flex items-center mb-4">
+      <div className="flex items-center flex-wrap mb-4">
         <h1 className="font-bold text-2xl">Blog</h1>
-        <div className="ml-2">
+        <div className="ml-1 sm:ml-2">
           <SearchBar
             onSearch={onSearch}
             initialQuery={query}
             rightSlot={
               <div className="relative" ref={sortRef}>
                 <button
-                  type="button"
+                  type="button" aria-label="Ordenar"
                   aria-haspopup="listbox"
                   aria-expanded={openSort}
                   onClick={() => setOpenSort((v) => !v)}
                   className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-sm hover:bg-zinc-700 transition-colors"
                 >
-                  <span className="whitespace-nowrap">{currentSortLabel}</span>
+                  <span className="hidden sm:inline whitespace-nowrap">{currentSortLabel}</span>
                   <ChevronDownIcon className={`h-4 w-4 transition-transform duration-200 ${openSort ? "rotate-180" : "rotate-0"}`} />
                 </button>
                 {openSort && (
@@ -233,7 +233,7 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
         <div className="fixed inset-0 bg-zinc-900/90 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full border border-gray-200">
             <h2 className="text-lg font-bold mb-4 text-gray-900">
-              Confirmar ExclusÃ£o
+              Confirmar Exclusão
             </h2>
             <p className="mb-6 text-gray-700">
               Tem certeza que deseja apagar o post "
@@ -263,6 +263,15 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
     </section>
   );
 }
+
+
+
+
+
+
+
+
+
 
 
 

@@ -37,19 +37,19 @@ export default function SearchBar({ onSearch, initialQuery = "", rightSlot }: Se
 
   return (
     <form onSubmit={handleSubmit} className="relative">
-      <div className="flex items-center gap-2 bg-zinc-800 border border-zinc-700 rounded px-1 py-0.5">
+      <div className="flex items-center gap-2 bg-zinc-800 border border-zinc-700 rounded px-1 py-0.5 w-[30vw] min-w-[220px] sm:w-1/3 md:w-[360px]">
         <MagnifyingGlassIcon className="w-4 h-4" />
         <input
           ref={inputRef}
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Pesquisar posts..."
-          className="bg-transparent outline-none  placeholder-zinc-400"
+          placeholder="Pesquisar posts"
+          className="bg-transparent outline-none placeholder-zinc-400 flex-1 min-w-0"
         />
         {rightSlot && (
           <>
-            <span className="h-5 w-px bg-zinc-500/20" aria-hidden />
+            <span className="h-4 w-px bg-zinc-500/20" aria-hidden />
             <div className="flex items-center">{rightSlot}</div>
           </>
         )}
@@ -57,6 +57,9 @@ export default function SearchBar({ onSearch, initialQuery = "", rightSlot }: Se
     </form>
   );
 }
+
+
+
 
 
 
