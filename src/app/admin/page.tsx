@@ -1,7 +1,8 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { getMongoDb } from "../../lib/mongo";
+import VisibilityToggle from "./VisibilityToggle";
 
 type PostRow = {
   _id?: string;
@@ -9,6 +10,7 @@ type PostRow = {
   title: string;
   date?: string;
   views?: number;
+  hidden?: boolean;
 };
 
 export default async function AdminDashboard() {
@@ -21,7 +23,7 @@ export default async function AdminDashboard() {
   const postsCollection = db.collection("posts");
 
   const [count, viewsAgg, latest] = await Promise.all([
-    postsCollection.countDocuments({}),
+    postsCollection.countDocuments({ hidden: { $ne: true } }),
     postsCollection
       .aggregate<{ totalViews: number }>([
         { $group: { _id: null, totalViews: { $sum: { $ifNull: ["$views", 0] } } } },
@@ -83,6 +85,7 @@ export default async function AdminDashboard() {
                 <th className="px-4 py-2 font-medium">ID</th>
                 <th className="px-4 py-2 font-medium">Data</th>
                 <th className="px-4 py-2 font-medium text-right">Views</th>
+                <th className="px-4 py-2 font-medium text-right">Visibilidade</th>
               </tr>
             </thead>
             <tbody>
@@ -94,8 +97,9 @@ export default async function AdminDashboard() {
                     </Link>
                   </td>
                   <td className="px-4 py-2 text-zinc-400">{p.postId}</td>
-                  <td className="px-4 py-2 text-zinc-400">{p.date ?? "—"}</td>
+                  <td className="px-4 py-2 text-zinc-400">{p.date ?? "â€”"}</td>
                   <td className="px-4 py-2 text-right">{p.views ?? 0}</td>
+                  <td className="px-4 py-2 text-right"><VisibilityToggle postId={p.postId} hidden={p.hidden} /></td>
                 </tr>
               ))}
               {latest.length === 0 && (
@@ -112,3 +116,6 @@ export default async function AdminDashboard() {
     </div>
   );
 }
+
+
+

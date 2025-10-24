@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { unstable_cache } from "next/cache";
 import { Layout } from "@components/layout";
@@ -21,6 +21,7 @@ type PostDocument = {
   audioUrl?: string;
   cape?: string;
   friendImage?: string;
+  hidden?: boolean;
 };
 
 type PostPageProps = {
@@ -46,6 +47,7 @@ const loadPostById = unstable_cache(
             audioUrl: 1,
             cape: 1,
             friendImage: 1,
+            hidden: 1,
           },
         }
       );
@@ -123,7 +125,7 @@ export async function generateStaticParams() {
     const posts = await db
       .collection<{ postId: string }>("posts")
       .find(
-        {},
+        { hidden: { $ne: true } },
         {
           projection: { _id: 0, postId: 1 },
         }
@@ -153,6 +155,10 @@ export default async function PostPage({ params }: PostPageProps) {
   const post = await loadPostById(id);
 
   if (!post) {
+    notFound();
+  }
+
+  if ((post as any).hidden === true) {
     notFound();
   }
 

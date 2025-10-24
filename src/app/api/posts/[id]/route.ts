@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
-import { clientPromise } from "../../../../lib/mongo"; // Use clientPromise, que agora está exportado
+﻿import { NextResponse } from "next/server";
+import { clientPromise } from "../../../../lib/mongo"; // Use clientPromise, que agora estÃ¡ exportado
 import { remark } from "remark";
 import html from "remark-html";
 
@@ -26,6 +26,9 @@ export async function GET(
     if (!post) {
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
+    if ((post as any).hidden === true) {
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    }
 
     let htmlContent = post.htmlContent;
     if (htmlContent) {
@@ -33,7 +36,7 @@ export async function GET(
       htmlContent = processedContent.toString();
     }
 
-    // Incrementa as visualizações e define o cookie, como no Pages Router
+    // Incrementa as visualizaÃ§Ãµes e define o cookie, como no Pages Router
     const cookieName = `viewed_${id}`;
     const viewedCookie = req.headers
       .get("cookie")
@@ -87,3 +90,4 @@ export async function GET(
     );
   }
 }
+

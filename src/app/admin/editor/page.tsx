@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 
@@ -10,6 +10,7 @@ export default function Editor() {
   const [tags, setTags] = useState("");
   const [hasAudio, setHasAudio] = useState(false);
   const [audioUrl, setAudioUrl] = useState("");
+  const [hidden, setHidden] = useState(false);
   const [content, setContent] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -36,7 +37,7 @@ export default function Editor() {
         formData.append("audioUrl", audioUrl);
       }
 
-      const response = await fetch("/admin/api/editor", {
+      formData.append("hidden", hidden ? "true" : "false");      const response = await fetch("/admin/api/editor", {
         method: "POST",
         body: formData,
       });
@@ -55,6 +56,7 @@ export default function Editor() {
       setTags("");
       setHasAudio(false);
       setAudioUrl("");
+      setHidden(false);
       setContent("");
     } catch (error) {
       setError("Falha ao criar o post: " + (error as Error).message);
@@ -69,7 +71,7 @@ export default function Editor() {
         <header className="mb-8 text-center">
           <h1 className="text-3xl font-semibold tracking-tight">Novo post</h1>
           <p className="mt-2 text-sm text-zinc-400">
-            Preencha os campos abaixo para publicar um novo conteúdo.
+            Preencha os campos abaixo para publicar um novo conteÃºdo.
           </p>
         </header>
 
@@ -79,12 +81,12 @@ export default function Editor() {
         >
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="flex flex-col gap-2">
-              <span className="text-sm font-medium text-zinc-300">Título</span>
+              <span className="text-sm font-medium text-zinc-300">titulo</span>
               <input
                 name="title"
                 className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/40"
                 type="text"
-                placeholder="Digite o título do post"
+                placeholder="Digite o titulo do post"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
@@ -96,11 +98,23 @@ export default function Editor() {
                 name="postId"
                 className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/40"
                 type="text"
-                placeholder="Identificador único"
+                placeholder="Identificador único do post"
                 value={postId}
                 onChange={(e) => setPostId(e.target.value)}
                 required
               />
+            </label>
+          </div>
+          <div className="flex items-center rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3">
+            <label htmlFor="hidden" className="flex items-center gap-3 text-sm">
+              <input
+                type="checkbox"
+                id="hidden"
+                checked={hidden}
+                onChange={(e) => setHidden(e.target.checked)}
+                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-zinc-100 focus:ring-zinc-500"
+              />
+              Ocultar post (não aparecer em listagens públicas)
             </label>
           </div>
 
@@ -135,7 +149,7 @@ export default function Editor() {
               name="tags"
               className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/40"
               type="text"
-              placeholder="separe por vírgulas"
+              placeholder="separe por virgulas"
               value={tags}
               onChange={(e) => setTags(e.target.value)}
             />
@@ -150,14 +164,14 @@ export default function Editor() {
                 onChange={(e) => setHasAudio(e.target.checked)}
                 className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-zinc-100 focus:ring-zinc-500"
               />
-              Este post possui áudio
+              Este post possui Audio?
             </label>
             {hasAudio && (
               <input
                 name="audioUrl"
                 className="w-full max-w-xs rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/40"
                 type="text"
-                placeholder="URL do áudio"
+                placeholder="URL do Audio"
                 value={audioUrl}
                 onChange={(e) => setAudioUrl(e.target.value)}
               />
@@ -165,11 +179,11 @@ export default function Editor() {
           </div>
 
           <label className="flex flex-col gap-2">
-            <span className="text-sm font-medium text-zinc-300">Conteúdo</span>
+            <span className="text-sm font-medium text-zinc-300">ConteÃºdo</span>
             <textarea
               name="content"
               className="min-h-[260px] rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-3 text-sm leading-relaxed text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/40"
-              placeholder="Insira o conteúdo em HTML"
+              placeholder="Insira o conteudo do Post"
               spellCheck="false"
               value={content}
               onChange={(e) => setContent(e.target.value)}
@@ -198,3 +212,7 @@ export default function Editor() {
     </div>
   );
 }
+
+
+
+

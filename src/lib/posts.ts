@@ -43,6 +43,9 @@ export async function getPosts({
   const collection = db.collection("posts");
 
   const filter: Record<string, unknown> = { ...(filters ?? {}) };
+  if (!filters || typeof filters.hidden === "undefined") {
+    (filter as any).hidden = { $ne: true };
+  }
 
   if (query && query.trim() !== "") {
     // Prefer full-text search if an index exists; fallback to case-insensitive regex
@@ -98,3 +101,4 @@ export const getPostsCached = unstable_cache(
   ["home-posts"],
   { revalidate: 60 }
 );
+

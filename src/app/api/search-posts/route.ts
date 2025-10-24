@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { getMongoDb } from "../../../lib/mongo";
 
 const PROJECTION = {
@@ -78,15 +78,14 @@ export async function GET(req: Request) {
 
     if (query === "") {
       posts = await postsCollection
-        .find({}, { projection: PROJECTION })
+        .find({ hidden: { $ne: true } }, { projection: PROJECTION })
         .sort({ date: -1 })
         .limit(10)
         .toArray();
     } else {
       try {
         posts = await postsCollection
-          .find(
-            { $text: { $search: query } },
+          .find({ hidden: { $ne: true }, $text: { $search: query } },
             {
               projection: {
                 ...PROJECTION,
@@ -105,9 +104,7 @@ export async function GET(req: Request) {
 
       if (posts.length === 0) {
         posts = await postsCollection
-          .find(
-            {
-              $or: [
+          .find({ hidden: { $ne: true }, $or: [
                 { title: { $regex: query, $options: "i" } },
                 { tags: { $in: [new RegExp(query, "i")] } },
               ],
@@ -140,3 +137,4 @@ export async function GET(req: Request) {
     );
   }
 }
+
