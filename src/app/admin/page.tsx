@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { getMongoDb } from "../../lib/mongo";
 import VisibilityToggle from "./VisibilityToggle";
+import RecentPostsClient from "./RecentPostsClient";
 
 type PostRow = {
   _id?: string;
@@ -89,19 +90,7 @@ export default async function AdminDashboard() {
               </tr>
             </thead>
             <tbody>
-              {latest.map((p) => (
-                <tr key={p.postId} className="border-t border-zinc-800 hover:bg-zinc-900/40">
-                  <td className="px-4 py-2 max-w-[420px] truncate">
-                    <Link href={`/posts/${p.postId}`} className="hover:underline">
-                      {p.title}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-2 text-zinc-400">{p.postId}</td>
-                  <td className="px-4 py-2 text-zinc-400">{p.date ?? "â€”"}</td>
-                  <td className="px-4 py-2 text-right">{p.views ?? 0}</td>
-                  <td className="px-4 py-2 text-right"><VisibilityToggle postId={p.postId} hidden={p.hidden} /></td>
-                </tr>
-              ))}
+              <RecentPostsClient initial={latest as any} />
               {latest.length === 0 && (
                 <tr>
                   <td colSpan={4} className="px-4 py-8 text-center text-zinc-400">
@@ -116,6 +105,9 @@ export default async function AdminDashboard() {
     </div>
   );
 }
+
+
+
 
 
 
