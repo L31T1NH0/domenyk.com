@@ -75,12 +75,12 @@ const CommentItem: React.FC<CommentItemProps> = ({
               {displayName}
               {isAuthComment(comment) && (
                 <CheckBadgeIcon
-                  className={`h-4 w-4 ${
+                  className={`h-4 w-4 transition-transform transform duration-150 ease-in-out hover:scale-110 ${
                     comment.role === "admin"
-                      ? "text-yellow-400"
+                      ? "text-yellow-500 hover:text-yellow-600"
                       : comment.role === "moderator"
-                      ? "text-emerald-400"
-                      : "text-blue-400"
+                      ? "text-red-500 hover:text-red-600"
+                      : "text-blue-500 hover:text-blue-600"
                   }`}
                 />
               )}
@@ -94,7 +94,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
               </span>
             )}
             {isAuthComment(comment) && comment.role === "moderator" && (
-              <span className="rounded-full border border-emerald-500/40 px-2 py-0.5 text-[10px] uppercase tracking-wide text-emerald-300">
+              <span className="rounded-full border border-red-500/40 px-2 py-0.5 text-[10px] uppercase tracking-wide text-red-300">
                 Colaborador
               </span>
             )}
