@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect } from "react"; // Importe useState e useEffect para gerenciar o carregamento
-import Skeleton from "react-loading-skeleton"; // Importe o Skeleton
+ 
 
 type PostHeaderProps = {
   cape?: string; // Link opcional para a imagem principal (capa)
@@ -13,33 +12,7 @@ type PostHeaderProps = {
 
 export function PostHeader({ cape, title, friendImage }: PostHeaderProps) {
   console.log("Cape value in PostHeader:", cape); // Debug para verificar o valor de cape
-  const [isLoading, setIsLoading] = useState(true); // Estado para controlar o carregamento
-
-  useEffect(() => {
-    setIsLoading(false); // Marca o carregamento como concluído após a montagem
-  }, []);
-
-  if (isLoading) {
-    return (
-      <div className="w-full relative">
-        {cape && (
-          <div className="w-full">
-            <Skeleton height={200} width="100%" /> {/* Skeleton para a capa */}
-            <div className="absolute bottom-4 left-4 flex items-center gap-4">
-              <Skeleton circle={true} height={56} width={56} /> {/* Skeleton para a foto */}
-              <Skeleton width={200} height={32} /> {/* Skeleton para o título */}
-            </div>
-          </div>
-        )}
-        {!cape && (
-          <div className="flex flex-col gap-4 items-center">
-            <Skeleton circle={true} height={148} width={148} /> {/* Skeleton para a foto */}
-            <Skeleton width={120} height={32} /> {/* Skeleton para o texto */}
-          </div>
-        )}
-      </div>
-    );
-  }
+  
 
   return (
     <div className="w-full relative">

@@ -3,7 +3,6 @@
 import { useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import Skeleton from "react-loading-skeleton";
 import { TrashIcon, ChevronDownIcon } from "@heroicons/react/24/solid";
 import SearchBar from "@components/SearchBar";
 import Pagination from "@components/Pagination";
@@ -127,8 +126,6 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
     router.push(next);
   };
 
-  const loading = false; // streaming/loading handled by app/loading.tsx if present
-
   return (
     <section className="flex-1 gap-4">
       <div className="flex items-center flex-wrap mb-4">
@@ -179,19 +176,7 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
           />
         </div>
       </div>
-      {loading ? (
-        <div className="flex flex-col gap-4">
-          {Array.from({ length: 10 }).map((_, index) => (
-            <div key={index} className="flex flex-col gap-2">
-              <Skeleton width="80%" height={24} />
-              <div className="flex gap-2">
-                <Skeleton width={100} height={16} />
-                <Skeleton width={60} height={16} />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : error ? (
+      {error ? (
         <p className="text-red-500">{error}</p>
       ) : posts.length === 0 ? (
         <div className="text-sm text-zinc-400">
