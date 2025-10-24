@@ -78,6 +78,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
                   className={`h-4 w-4 ${
                     comment.role === "admin"
                       ? "text-yellow-400"
+                      : comment.role === "moderator"
+                      ? "text-emerald-400"
                       : "text-blue-400"
                   }`}
                 />
@@ -89,6 +91,11 @@ const CommentItem: React.FC<CommentItemProps> = ({
             {isAuthComment(comment) && comment.role === "admin" && (
               <span className="rounded-full border border-yellow-500/40 px-2 py-0.5 text-[10px] uppercase tracking-wide text-yellow-300">
                 Autor
+              </span>
+            )}
+            {isAuthComment(comment) && comment.role === "moderator" && (
+              <span className="rounded-full border border-emerald-500/40 px-2 py-0.5 text-[10px] uppercase tracking-wide text-emerald-300">
+                Colaborador
               </span>
             )}
             {comment.optimistic && (

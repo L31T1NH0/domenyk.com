@@ -69,7 +69,7 @@ type ServerComment = {
   parentId: string | null;
   nome?: string;
   firstName?: string | null;
-  role?: "admin" | null;
+  role?: "admin" | "moderator" | null;
   userId?: string;
   imageURL?: string;
   hasImage?: boolean;

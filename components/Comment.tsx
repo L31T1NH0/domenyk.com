@@ -222,7 +222,12 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
           createdAt,
           parentId: null,
           firstName: user?.firstName ?? "Você",
-          role: user?.publicMetadata?.role === "admin" ? "admin" : null,
+          role:
+            user?.publicMetadata?.role === "admin"
+              ? "admin"
+              : user?.publicMetadata?.role === "moderator"
+              ? "moderator"
+              : null,
           userId,
           imageURL: user?.imageUrl ?? "",
           hasImage: Boolean(user?.hasImage),
@@ -335,7 +340,12 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
           createdAt,
           parentId: commentId,
           firstName: user?.firstName ?? "Você",
-          role: user?.publicMetadata?.role === "admin" ? "admin" : null,
+          role:
+            user?.publicMetadata?.role === "admin"
+              ? "admin"
+              : user?.publicMetadata?.role === "moderator"
+              ? "moderator"
+              : null,
           userId,
           imageURL: user?.imageUrl ?? "",
           hasImage: Boolean(user?.hasImage),
@@ -535,4 +545,3 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
 };
 
 export default Comment;
-

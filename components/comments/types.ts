@@ -18,7 +18,7 @@ export type PublicComment = BaseComment & {
 
 export type AuthComment = BaseComment & {
   firstName: string | null;
-  role: "admin" | null;
+  role: "admin" | "moderator" | null;
   userId: string;
   imageURL: string;
   hasImage: boolean;

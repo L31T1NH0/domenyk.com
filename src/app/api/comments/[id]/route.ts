@@ -25,7 +25,7 @@ type AuthCommentInsert = {
   _id: ObjectId;
   postId: string;
   firstName: string | null;
-  role: "admin" | null;
+  role: "admin" | "moderator" | null;
   userId: string;
   imageURL: string;
   hasImage: boolean;
@@ -51,7 +51,7 @@ type AuthComment = {
   _id: string | ObjectId;
   postId: string;
   firstName: string | null;
-  role: "admin" | null;
+  role: "admin" | "moderator" | null;
   userId: string;
   imageURL: string;
   hasImage: boolean;
@@ -296,7 +296,12 @@ export async function POST(
 
     if (userId && user) {
       const authCommentsCollection = db.collection("auth-comments");
-      const role = user.publicMetadata?.role === "admin" ? "admin" : null;
+      const role =
+        user.publicMetadata?.role === "admin"
+          ? "admin"
+          : user.publicMetadata?.role === "moderator"
+          ? "moderator"
+          : null;
 
       if (role === "admin" && !user.firstName) {
         console.log("Validation failed: Admin must have a firstName");
