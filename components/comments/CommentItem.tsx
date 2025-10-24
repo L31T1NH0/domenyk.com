@@ -1,4 +1,4 @@
-﻿import React from "react";
+﻿import React, { useState, useEffect } from "react";
 import { CheckBadgeIcon, TrashIcon } from "@heroicons/react/24/solid";
 
 import ReplyForm from "./ReplyForm";
@@ -46,6 +46,15 @@ const CommentItem: React.FC<CommentItemProps> = ({
   requiresName,
   children,
 }) => {
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  useEffect(() => {
+    if (!showDeleteModal) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowDeleteModal(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [showDeleteModal]);
   const displayName = extractDisplayName(comment);
   const avatarUrl = isAuthComment(comment) && comment.hasImage
     ? comment.imageURL
@@ -121,13 +130,54 @@ const CommentItem: React.FC<CommentItemProps> = ({
               Responder
             </button>
             {canDelete && (
-              <button
-                type="button"
-                onClick={onDelete}
-                className="flex items-center gap-1 rounded-full border border-red-500/40 px-3 py-1 font-medium text-red-300 transition hover:border-red-500 hover:text-red-200"
-              >
-                <TrashIcon className="h-3.5 w-3.5" /> Remover
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteModal(true)}
+                  className="flex items-center gap-1 rounded-full border border-red-500/40 px-3 py-1 font-medium text-red-300 transition hover:border-red-500 hover:text-red-200"
+                >
+                  <TrashIcon className="h-3.5 w-3.5" /> Remover
+                </button>
+
+                {showDeleteModal && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    <div
+                      className="fixed inset-0 bg-black/70"
+                      aria-hidden="true"
+                      onClick={() => setShowDeleteModal(false)}
+                    />
+
+                    <div
+                      role="dialog"
+                      aria-modal="true"
+                      aria-labelledby={`delete-modal-${comment._id}`}
+                      className="z-50 mx-4 max-w-md w-full rounded-2xl border border-zinc-800/90 bg-zinc-950 p-4 shadow-lg"
+                    >
+                      <h3 id={`delete-modal-${comment._id}`} className="text-sm font-semibold text-zinc-100">Confirmar remoção</h3>
+                      <p className="mt-2 text-sm text-zinc-400">Tem certeza que deseja remover este comentário? Esta ação não pode ser desfeita.</p>
+                      <div className="mt-4 flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowDeleteModal(false)}
+                          className="rounded-full border border-zinc-700/60 px-3 py-1 text-sm text-zinc-200"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowDeleteModal(false);
+                            onDelete();
+                          }}
+                          className="rounded-full bg-red-600 px-4 py-1 text-sm font-semibold text-white hover:bg-red-500"
+                        >
+                          Remover
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -147,7 +197,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
           {children && <div className="space-y-3 sm:space-y-4 border-l border-zinc-800/70 pl-3 sm:pl-4">{children}</div>}
         </div>
-      </div>
+  </div>
     </article>
   );
 };
@@ -163,7 +213,6 @@ const handleSubmitWrapper = (
 };
 
 export default CommentItem;
-
 
 
 

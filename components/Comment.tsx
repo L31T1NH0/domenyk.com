@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth, useUser } from "@clerk/nextjs";
@@ -84,7 +84,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
       if (Array.isArray(data)) setComments(flattenServerComments(data as any));
       else setComments([]);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Falha ao carregar comentários.";
+  const message = error instanceof Error ? error.message : "Falha ao carregar comentários.";
       setErrorMessage(message);
       setComments([]);
     }
@@ -165,7 +165,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
 
     const now = Date.now();
     if (cooldownUntilRef.current > now) {
-      setErrorMessage("Aguarde alguns segundos antes de enviar outro comentário.");
+  setErrorMessage("Aguarde alguns segundos antes de enviar outro comentário.");
       return;
     }
 
@@ -173,7 +173,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
     const trimmedName = commentDraft.nome.trim();
 
     if (!trimmedComment) {
-      setErrorMessage("Escreva um comentário antes de enviar.");
+  setErrorMessage("Escreva um comentário antes de enviar.");
       return;
     }
 
@@ -183,7 +183,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
     }
 
     if (trimmedComment.length > COMMENT_MAX_LENGTH) {
-      setErrorMessage(`O comentário deve ter no máximo ${COMMENT_MAX_LENGTH} caracteres.`);
+  setErrorMessage(`O comentário deve ter no máximo ${COMMENT_MAX_LENGTH} caracteres.`);
       return;
     }
 
@@ -271,12 +271,12 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
       resetForm();
       setActiveReplyId(null);
       setSubmissionStatus("success");
-      setStatusMessage("Comentário enviado com sucesso!");
+  setStatusMessage("Comentário enviado com sucesso!");
       cooldownUntilRef.current = Date.now() + COOLDOWN_MS;
     } catch (error) {
       if ((error as DOMException).name === "AbortError") return;
       removeOptimistic(tempId);
-      const message = error instanceof Error ? error.message : "Não foi possível enviar o comentário.";
+  const message = error instanceof Error ? error.message : "Não foi possível enviar o comentário.";
       setSubmissionStatus("error");
       setErrorMessage(message);
     } finally {
@@ -318,7 +318,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
     }
 
     if (trimmedComment.length > COMMENT_MAX_LENGTH) {
-      setReplyErrors((prev) => ({ ...prev, [commentId]: `A resposta deve ter até ${COMMENT_MAX_LENGTH} caracteres.` }));
+  setReplyErrors((prev) => ({ ...prev, [commentId]: `A resposta deve ter até ${COMMENT_MAX_LENGTH} caracteres.` }));
       return;
     }
 
@@ -395,7 +395,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
     } catch (error) {
       if ((error as DOMException).name === "AbortError") return;
       removeOptimistic(tempId);
-      const message = error instanceof Error ? error.message : "Não foi possível enviar a resposta.";
+  const message = error instanceof Error ? error.message : "Não foi possível enviar a resposta.";
       setReplyStatuses((prev) => ({ ...prev, [commentId]: "error" }));
       setReplyErrors((prev) => ({ ...prev, [commentId]: message }));
     } finally {
@@ -424,9 +424,6 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
 
   const handleDelete = useCallback(
     async (comment: CommentEntity) => {
-      const confirmed = window.confirm("Tem certeza de que deseja remover este comentário?");
-      if (!confirmed) return;
-
       try {
         const response = await fetch(`/api/comments/${comment._id}`, {
           method: "DELETE",
@@ -441,9 +438,9 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
         if (!response.ok) throw new Error(await response.text());
 
         removeBranch(comment._id);
-        setStatusMessage("Comentário removido.");
+  setStatusMessage("Comentário removido.");
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Não foi possível remover o comentário.";
+  const message = error instanceof Error ? error.message : "Não foi possível remover o comentário.";
         setErrorMessage(message);
       }
     },
@@ -451,7 +448,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
   );
 
   return (
-    <section className="space-y-6" aria-label="Seção de comentários">
+  <section className="space-y-6" aria-label="Seção de comentários">
       <div className="mx-auto w-full">
         <header className="flex items-center gap-2 text-xl font-semibold text-zinc-100">
           <ChatBubbleLeftRightIcon className="h-5 w-5" />
