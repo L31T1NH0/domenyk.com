@@ -9,7 +9,8 @@ export async function setRole(formData: FormData) {
   if (!id || typeof id !== "string") throw new Error("Missing user id");
   if (!role || typeof role !== "string") throw new Error("Missing role");
 
-  await clerkClient.users.updateUser(id, {
+  const client = await clerkClient();
+  await client.users.updateUser(id, {
     publicMetadata: { role },
   });
 
@@ -20,7 +21,8 @@ export async function removeRole(formData: FormData) {
   const id = formData.get("id");
   if (!id || typeof id !== "string") throw new Error("Missing user id");
 
-  await clerkClient.users.updateUser(id, {
+  const client = await clerkClient();
+  await client.users.updateUser(id, {
     publicMetadata: { role: null },
   });
 
