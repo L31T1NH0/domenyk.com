@@ -127,10 +127,10 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
   };
 
   return (
-    <section className="flex-1 gap-4">
-      <div className="flex items-center flex-wrap mb-4">
+    <section className="flex-1 gap-6">
+      <div className="flex items-center flex-wrap mb-6 gap-4">
         <h1 className="font-bold text-2xl">Blog</h1>
-        <div className="ml-1 sm:ml-2">
+        <div className="ml-2 sm:ml-4">
           <SearchBar
             onSearch={onSearch}
             initialQuery={query}
@@ -141,7 +141,7 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
                   aria-haspopup="listbox"
                   aria-expanded={openSort}
                   onClick={() => setOpenSort((v) => !v)}
-                  className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-sm hover:bg-zinc-700 transition-colors"
+                  className="inline-flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-zinc-700 transition-colors"
                 >
                   <span className="hidden sm:inline whitespace-nowrap">{currentSortLabel}</span>
                   <ChevronDownIcon className={`h-4 w-4 transition-transform duration-200 ${openSort ? "rotate-180" : "rotate-0"}`} />
@@ -149,7 +149,7 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
                 {openSort && (
                   <div
                     role="listbox"
-                    className="absolute right-0 z-20 mt-2 w-64 rounded-lg border border-zinc-700 bg-zinc-900 p-1 max-h-[200px] overflow-auto shadow-lg"
+                    className="absolute right-0 z-20 mt-2 w-64 rounded-lg border border-zinc-700 bg-zinc-900 p-2 max-h-[200px] overflow-auto shadow-lg"
                   >
                     {SORT_OPTIONS.map((opt) => {
                       const key = `${opt.value.sort ?? ""}:${opt.value.order ?? ""}`;
@@ -179,14 +179,14 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
       {error ? (
         <p className="text-red-500">{error}</p>
       ) : posts.length === 0 ? (
-        <div className="text-sm text-zinc-400">
+        <div className="text-sm text-zinc-400 space-y-2">
           <p>Nenhum post encontrado.</p>
-          <p className="mt-1">Tente ajustar a busca ou filtros.</p>
+          <p>Tente ajustar a busca ou filtros.</p>
         </div>
       ) : (
         <ul className="text-xl ml-0 flex flex-col gap-4">
           {posts.map((post) => (
-            <li key={post.postId} className="flex flex-col mb-1 group relative">
+            <li key={post.postId} className="flex flex-col mb-2 group relative">
               <Link
                 href={`/posts/${post.postId}`}
                 className="text-xl hover:underline"
@@ -194,8 +194,8 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
                 {post.title}
               </Link>
               <small className="text-zinc-400">
-                <Date dateString={post.date} /> <span aria-hidden className="mx-1">&middot;</span>
-                <span className="text-sm text-zinc-500 p-1">
+                <Date dateString={post.date} /> <span aria-hidden className="mx-2">&middot;</span>
+                <span className="inline-flex items-center rounded px-2 py-1 text-sm text-zinc-500">
                   {post.views ?? 0} views
                 </span>
               </small>

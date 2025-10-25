@@ -54,7 +54,7 @@ export default async function UsersAdmin() {
                   </td>
                   <td className="px-4 py-3 text-zinc-300">{primaryEmail}</td>
                   <td className="px-4 py-3">
-                    <span className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-xs text-zinc-300">
+                    <span className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-1 text-xs text-zinc-300">
                       {role ?? "-"}
                     </span>
                   </td>
@@ -63,11 +63,11 @@ export default async function UsersAdmin() {
                       const comments = commentsMap.get(user.id) ?? 0;
                       const total = comments + 0 + 0;
                       return (
-                        <div className="flex flex-col">
-                          <span className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-xs text-zinc-300">
+                        <div className="flex flex-col gap-2">
+                          <span className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-1 text-xs text-zinc-300">
                             Total: {total}
                           </span>
-                          <span className="mt-1 text-xs text-zinc-400">
+                          <span className="text-xs text-zinc-400">
                             Comentários: {comments} • Posts: 0 • Sugestões: 0
                           </span>
                         </div>
@@ -75,13 +75,13 @@ export default async function UsersAdmin() {
                     })()}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex items-center justify-end gap-3">
                       <form action={setRole} className="inline">
                         <input type="hidden" value={user.id} name="id" />
                         <input type="hidden" value="admin" name="role" />
                         <button
                           type="submit"
-                          className="rounded-md border border-zinc-700 bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-900 hover:bg-zinc-200"
+                          className="rounded-md border border-zinc-700 bg-zinc-100 px-3 py-2 text-xs font-medium text-zinc-900 hover:bg-zinc-200"
                         >
                           Tornar Admin
                         </button>
@@ -91,7 +91,7 @@ export default async function UsersAdmin() {
                         <input type="hidden" value="moderator" name="role" />
                         <button
                           type="submit"
-                          className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800"
+                          className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:bg-zinc-800"
                         >
                           Tornar Moderator
                         </button>
@@ -100,7 +100,7 @@ export default async function UsersAdmin() {
                         <input type="hidden" value={user.id} name="id" />
                         <button
                           type="submit"
-                          className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-red-300 hover:bg-zinc-800"
+                          className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-red-300 hover:bg-zinc-800"
                         >
                           Remover Papel
                         </button>

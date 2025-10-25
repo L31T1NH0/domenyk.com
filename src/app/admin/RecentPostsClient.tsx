@@ -26,7 +26,7 @@ function CheckboxBtn({ checked, onChange, label }: { checked: boolean; onChange:
       type="button"
       aria-pressed={checked}
       onClick={() => onChange(!checked)}
-      className={`inline-flex items-center gap-2 rounded-md border px-2 py-1 text-xs ${
+      className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs ${
         checked
           ? "border-zinc-500 bg-zinc-100 text-zinc-900"
           : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"
@@ -60,11 +60,11 @@ function TagListEditor({
     setEditing(false);
   };
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex flex-wrap gap-1">
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap gap-2">
         {values.length > 0 ? (
           values.map((t, i) => (
-            <span key={`${t}-${i}`} className="rounded border border-zinc-700 bg-zinc-900 px-1.5 py-0.5 text-xs text-zinc-300">
+            <span key={`${t}-${i}`} className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-300">
               {t}
             </span>
           ))
@@ -73,23 +73,23 @@ function TagListEditor({
         )}
       </div>
       {editing ? (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}
-            className="min-w-[160px] flex-1 rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-xs"
+            className="min-w-[160px] flex-1 rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-xs"
             placeholder={`${label} separadas por vírgula`}
           />
           <button
             onClick={onSubmit}
             disabled={saving}
-            className="rounded border border-zinc-700 bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-60"
+            className="rounded border border-zinc-700 bg-zinc-100 px-4 py-2 text-xs font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-60"
           >
             Salvar
           </button>
           <button
             onClick={() => setEditing(false)}
-            className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800"
+            className="rounded border border-zinc-700 bg-zinc-900 px-4 py-2 text-xs text-zinc-200 hover:bg-zinc-800"
           >
             Cancelar
           </button>
@@ -100,7 +100,7 @@ function TagListEditor({
             setText(values.join(", "));
             setEditing(true);
           }}
-          className="self-start rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800"
+          className="self-start rounded border border-zinc-700 bg-zinc-900 px-4 py-2 text-xs text-zinc-200 hover:bg-zinc-800"
         >
           Editar
         </button>
@@ -225,27 +225,27 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
       {selectedIds.length > 0 && (
         <tr className="border-t border-zinc-800 bg-zinc-900/60">
           <td className="px-4 py-2" colSpan={9}>
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="text-sm text-zinc-300">{selectedIds.length} selecionado(s)</div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => bulkAction("visibility", { hidden: false })}
                   disabled={bulkLoading}
-                  className="rounded-md border border-zinc-700 bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-60"
+                  className="rounded-md border border-zinc-700 bg-zinc-100 px-3 py-2 text-xs font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-60"
                 >
                   Tornar visível
                 </button>
                 <button
                   onClick={() => bulkAction("visibility", { hidden: true })}
                   disabled={bulkLoading}
-                  className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800 disabled:opacity-60"
+                  className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:bg-zinc-800 disabled:opacity-60"
                 >
                   Ocultar
                 </button>
                 <button
                   onClick={() => bulkAction("delete")}
                   disabled={bulkLoading}
-                  className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-red-300 hover:bg-zinc-800 disabled:opacity-60"
+                  className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-red-300 hover:bg-zinc-800 disabled:opacity-60"
                 >
                   Excluir
                 </button>
@@ -256,7 +256,7 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
       )}
       <tr className="border-t border-zinc-800">
         <td className="px-4 py-2" colSpan={9}>
-          <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-300">
+          <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-300">
             <CheckboxBtn
               checked={allSelected}
               onChange={(next) => {
@@ -269,34 +269,34 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
             <span className="text-zinc-400">Ordenar por:</span>
             <button
               onClick={() => toggleSort("views")}
-              className={`rounded border px-2 py-1 ${sortKey === "views" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
+              className={`rounded border px-3 py-2 ${sortKey === "views" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
             >
               Views
             </button>
             <button
               onClick={() => toggleSort("date")}
-              className={`rounded border px-2 py-1 ${sortKey === "date" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
+              className={`rounded border px-3 py-2 ${sortKey === "date" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
             >
               Data
             </button>
             <button
               onClick={() => toggleSort("status")}
-              className={`rounded border px-2 py-1 ${sortKey === "status" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
+              className={`rounded border px-3 py-2 ${sortKey === "status" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
             >
               Visibilidade
             </button>
-            <div className="flex items-center gap-1 ml-2">
+            <div className="flex items-center gap-2 ml-2">
               <span className="text-zinc-400">Ordem:</span>
               <button
                 onClick={() => setSortOrder("asc")}
-                className={`rounded border px-2 py-1 ${sortOrder === "asc" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
+                className={`rounded border px-3 py-2 ${sortOrder === "asc" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
                 title="Crescente"
               >
                 ↑
               </button>
               <button
                 onClick={() => setSortOrder("desc")}
-                className={`rounded border px-2 py-1 ${sortOrder === "desc" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
+                className={`rounded border px-3 py-2 ${sortOrder === "desc" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
                 title="Decrescente"
               >
                 ↓
@@ -305,7 +305,7 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
             <span className="mx-2 h-4 w-px bg-zinc-800" />
             <button
               onClick={() => { setModalMode("all"); setModalPostId(null); setModalOpen(true); }}
-              className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-zinc-200 hover:bg-zinc-800"
+              className="rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-200 hover:bg-zinc-800"
             >
               Ver todos os comentários
             </button>
@@ -335,7 +335,7 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
                 setModalPostId(null);
                 setModalOpen(true);
               }}
-              className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800"
+              className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:bg-zinc-800"
               title="Visualizar comentários"
             >
               {p.commentCount ?? 0} comentários
@@ -365,7 +365,7 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
           </td>
           <td className="px-4 py-2">
             <select
-              className="min-w-[160px] rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-200"
+              className="min-w-[160px] rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-200"
               value={p.coAuthorUserId ?? ""}
               onChange={async (e) => {
                 const next = e.target.value;
@@ -385,12 +385,12 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
       <tr>
         <td colSpan={9} className="px-4 py-3">
           <div className="flex items-center justify-center">
-            {error && <span className="text-red-500 text-sm mr-3">{error}</span>}
+            {error && <span className="text-red-500 text-sm mr-4">{error}</span>}
             {hasMore ? (
               <button
                 onClick={() => onLoadMore(false)}
                 disabled={loading}
-                className="inline-flex items-center justify-center rounded-md bg-zinc-100 px-3 py-1.5 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-60"
+                className="inline-flex items-center justify-center rounded-md bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-60"
               >
                 {loading ? "Carregando..." : "Mostrar mais"}
               </button>

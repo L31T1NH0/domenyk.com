@@ -41,16 +41,16 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               </li>
             </ul>
           </nav>
-          <div className="p-3 border-t border-zinc-800">
+          <div className="p-4 border-t border-zinc-800">
             <SignedIn>
-              <div className="flex items-center justify-between rounded-md bg-zinc-900 px-3 py-2">
+              <div className="flex items-center justify-between rounded-md bg-zinc-900 px-4 py-3">
                 <span className="text-xs text-zinc-400">Logado</span>
                 <UserButton appearance={{ elements: { userButtonPopoverCard: "bg-zinc-900" } }} />
               </div>
             </SignedIn>
             <SignedOut>
               <SignInButton>
-                <button className="w-full rounded-md bg-zinc-100 px-3 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200">
+                <button className="w-full rounded-md bg-zinc-100 px-4 py-3 text-sm font-medium text-zinc-900 hover:bg-zinc-200">
                   Entrar
                 </button>
               </SignInButton>
@@ -59,18 +59,18 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </aside>
         <div className="flex flex-col">
           <header className="sticky top-0 z-10 border-b border-zinc-800 bg-zinc-950/70 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/60">
-            <div className="flex items-center justify-between gap-3 px-4 py-3 md:px-6">
+            <div className="flex items-center justify-between gap-4 px-6 py-4 md:px-8">
               <div className="md:hidden">
                 <Link href="/admin" className="font-semibold">Admin</Link>
               </div>
               <div className="flex-1" />
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-4">
                 <SignedIn>
                   <UserButton appearance={{ elements: { userButtonPopoverCard: "bg-zinc-900" } }} />
                 </SignedIn>
                 <SignedOut>
                   <SignInButton>
-                    <button className="rounded-md bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-zinc-200">
+                    <button className="rounded-md bg-zinc-100 px-4 py-2 text-xs font-medium text-zinc-900 hover:bg-zinc-200">
                       Entrar
                     </button>
                   </SignInButton>
@@ -78,7 +78,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               </div>
             </div>
           </header>
-          <main className="p-4 md:p-6">{children}</main>
+          <main className="p-6 md:p-8">{children}</main>
         </div>
       </div>
     </div>
