@@ -82,10 +82,14 @@ export default async function AdminDashboard() {
           <table className="min-w-full text-left text-sm">
             <thead className="bg-zinc-900/40 text-zinc-400">
               <tr>
+                <th className="px-4 py-2 font-medium" />
                 <th className="px-4 py-2 font-medium">Titulo</th>
                 <th className="px-4 py-2 font-medium">ID</th>
                 <th className="px-4 py-2 font-medium">Data</th>
                 <th className="px-4 py-2 font-medium text-right">Views</th>
+                <th className="px-4 py-2 font-medium text-right">Comentários</th>
+                <th className="px-4 py-2 font-medium">Tags</th>
+                <th className="px-4 py-2 font-medium">Categorias</th>
                 <th className="px-4 py-2 font-medium text-right">Visibilidade</th>
               </tr>
             </thead>
@@ -93,7 +97,7 @@ export default async function AdminDashboard() {
               <RecentPostsClient initial={latest as any} />
               {latest.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-zinc-400">
+                  <td colSpan={9} className="px-4 py-8 text-center text-zinc-400">
                     Nenhum post encontrado.
                   </td>
                 </tr>
