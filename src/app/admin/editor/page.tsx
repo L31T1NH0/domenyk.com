@@ -11,6 +11,7 @@ export default function Editor() {
   const [hasAudio, setHasAudio] = useState(false);
   const [audioUrl, setAudioUrl] = useState("");
   const [hidden, setHidden] = useState(false);
+  const [paragraphCommentsEnabled, setParagraphCommentsEnabled] = useState(true);
   const [content, setContent] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -37,7 +38,13 @@ export default function Editor() {
         formData.append("audioUrl", audioUrl);
       }
 
-      formData.append("hidden", hidden ? "true" : "false");      const response = await fetch("/admin/api/editor", {
+      formData.append("hidden", hidden ? "true" : "false");
+      formData.append(
+        "paragraphCommentsEnabled",
+        paragraphCommentsEnabled ? "true" : "false"
+      );
+
+      const response = await fetch("/admin/api/editor", {
         method: "POST",
         body: formData,
       });
@@ -57,6 +64,7 @@ export default function Editor() {
       setHasAudio(false);
       setAudioUrl("");
       setHidden(false);
+      setParagraphCommentsEnabled(true);
       setContent("");
     } catch (error) {
       setError("Falha ao criar o post: " + (error as Error).message);
@@ -115,6 +123,22 @@ export default function Editor() {
                 className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-zinc-100 focus:ring-zinc-500"
               />
               Ocultar post (não aparecer em listagens públicas)
+            </label>
+          </div>
+
+          <div className="flex items-center rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3">
+            <label
+              htmlFor="paragraph-comments"
+              className="flex items-center justify-between gap-3 w-full text-sm"
+            >
+              <span>Permitir comentários por parágrafo</span>
+              <input
+                type="checkbox"
+                id="paragraph-comments"
+                checked={paragraphCommentsEnabled}
+                onChange={(e) => setParagraphCommentsEnabled(e.target.checked)}
+                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-zinc-100 focus:ring-zinc-500"
+              />
             </label>
           </div>
 

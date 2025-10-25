@@ -1,14 +1,26 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { clientPromise } from "../../../../lib/mongo";
 import { Redis } from "@upstash/redis";
+import { resolveAdminStatus } from "../../../../lib/admin";
 
-// Redis instance (for counting replies)
-const redis = Redis.fromEnv();
+// Redis instance (for counting replies). When the environment variables are not
+// provided we still want the dashboard to work, so we attempt to instantiate it
+// but fall back to a null client instead of throwing at import time.
+let redis: Redis | null = null;
+
+try {
+  redis = Redis.fromEnv();
+} catch (error) {
+  console.warn(
+    "Upstash Redis não configurado; contagem de respostas será ignorada.",
+    error
+  );
+  redis = null;
+}
 
 export async function GET(req: Request) {
-  const { sessionClaims } = await auth();
-  if (sessionClaims?.metadata?.role !== "admin") {
+  const { isAdmin } = await resolveAdminStatus();
+  if (!isAdmin) {
     return NextResponse.json({ error: "Not Authorized" }, { status: 403 });
   }
 
@@ -23,7 +35,18 @@ export async function GET(req: Request) {
     const db = client.db("blog");
     const postsCollection = db.collection("posts");
 
-    const projection = { _id: 0, postId: 1, title: 1, date: 1, views: 1, hidden: 1, tags: 1, categories: 1, coAuthorUserId: 1 } as const;
+    const projection = {
+      _id: 0,
+      postId: 1,
+      title: 1,
+      date: 1,
+      views: 1,
+      hidden: 1,
+      tags: 1,
+      categories: 1,
+      coAuthorUserId: 1,
+      paragraphCommentsEnabled: 1,
+    } as const;
 
     // Build sort doc
     let sortDoc: Record<string, 1 | -1> = { date: -1 };
@@ -64,13 +87,13 @@ export async function GET(req: Request) {
       const totalTopLevel = nonAuthIds.length + authIds.length;
       // Count replies in Redis for each top-level comment
       const ids = [...nonAuthIds, ...authIds].map((d: any) => d._id?.toString()).filter(Boolean) as string[];
-      if (ids.length === 0) return totalTopLevel;
+      if (ids.length === 0 || !redis) return totalTopLevel;
       const replyCounts = await Promise.all(
         ids.map(async (cid) => {
           try {
             // Using ZCARD to count replies per comment
             const key = `${postId}:${cid}:replies`;
-            const n = await redis.zcard(key);
+            const n = await redis!.zcard(key);
             return typeof n === "number" ? n : 0;
           } catch {
             return 0;
@@ -95,6 +118,8 @@ export async function GET(req: Request) {
         : (p as any).categories
         ? [String((p as any).categories)]
         : [],
+      paragraphCommentsEnabled:
+        (p as any).paragraphCommentsEnabled === false ? false : true,
     }));
 
     const hasMore = offset + posts.length < total;
@@ -107,8 +132,8 @@ export async function GET(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  const { sessionClaims } = await auth();
-  if (sessionClaims?.metadata?.role !== "admin") {
+  const { isAdmin } = await resolveAdminStatus();
+  if (!isAdmin) {
     return NextResponse.json({ error: "Not Authorized" }, { status: 403 });
   }
 

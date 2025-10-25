@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { clientPromise } from "../../../../lib/mongo";
+import { resolveAdminStatus } from "../../../../lib/admin";
 
 type AdminComment = {
   _id: string;
@@ -12,8 +12,8 @@ type AdminComment = {
 };
 
 export async function GET(req: Request) {
-  const { sessionClaims } = await auth();
-  if (sessionClaims?.metadata?.role !== "admin") {
+  const { isAdmin } = await resolveAdminStatus();
+  if (!isAdmin) {
     return NextResponse.json({ error: "Not Authorized" }, { status: 403 });
   }
 

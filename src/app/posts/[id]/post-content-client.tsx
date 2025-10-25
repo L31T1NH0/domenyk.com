@@ -1,9 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Date } from "@components/date";
 import ShareButton from "@components/ShareButton";
 import AudioPlayer from "@components/AudioPlayer";
+import parse, {
+  DOMNode,
+  Element,
+  attributesToProps,
+  domToReact,
+} from "html-react-parser";
+import ParagraphCommentWidget from "@components/paragraph-comments/ParagraphCommentWidget";
 
 type PostContentClientProps = {
   postId: string;
@@ -12,6 +19,8 @@ type PostContentClientProps = {
   initialViews: number;
   audioUrl?: string;
   readingTime: string;
+  coAuthorUserId?: string | null;
+  paragraphCommentsEnabled: boolean;
 };
 
 export default function PostContentClient({
@@ -21,6 +30,8 @@ export default function PostContentClient({
   initialViews,
   audioUrl,
   readingTime,
+  coAuthorUserId,
+  paragraphCommentsEnabled,
 }: PostContentClientProps) {
   const [views, setViews] = useState(initialViews);
 
@@ -49,6 +60,41 @@ export default function PostContentClient({
     };
   }, [postId]);
 
+  const parsedContent = useMemo(() => {
+    if (!htmlContent) {
+      return <p>Conteúdo não disponível.</p>;
+    }
+
+    let paragraphIndex = 0;
+
+    return parse(htmlContent, {
+      replace: (node: DOMNode) => {
+        if (node.type === "tag" && node.name === "p" && paragraphCommentsEnabled) {
+          const element = node as Element;
+          const paragraphId = `${postId}-paragraph-${paragraphIndex}`;
+          const currentIndex = paragraphIndex;
+          paragraphIndex += 1;
+
+          const paragraphProps = attributesToProps(element.attribs ?? {});
+
+          return (
+            <ParagraphCommentWidget
+              key={paragraphId}
+              postId={postId}
+              paragraphId={paragraphId}
+              paragraphIndex={currentIndex}
+              coAuthorUserId={coAuthorUserId}
+              paragraphProps={paragraphProps}
+            >
+              {domToReact((element.children ?? []) as DOMNode[])}
+            </ParagraphCommentWidget>
+          );
+        }
+        return undefined;
+      },
+    });
+  }, [coAuthorUserId, htmlContent, paragraphCommentsEnabled, postId]);
+
   return (
     <article className="flex flex-col gap-2">
       <div className="mb-2 flex-1">
@@ -66,12 +112,9 @@ export default function PostContentClient({
 
       {audioUrl && <AudioPlayer audioUrl={audioUrl} />}
 
-      <div
-        className="flex flex-col gap-4 lg:text-lg sm:text-sm max-sm:text-xs"
-        dangerouslySetInnerHTML={{
-          __html: htmlContent || "<p>Conteúdo não disponível.</p>",
-        }}
-      />
+      <div className="flex flex-col gap-4 lg:text-lg sm:text-sm max-sm:text-xs">
+        {parsedContent}
+      </div>
 
       {/* <Chatbot htmlContent={htmlContent} /> */}
     </article>

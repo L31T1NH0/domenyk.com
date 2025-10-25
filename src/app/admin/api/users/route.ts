@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
-import { auth, clerkClient } from "@clerk/nextjs/server";
+import { getClerkServerClient } from "../../../../lib/clerk-server";
+import { resolveAdminStatus } from "../../../../lib/admin";
 
 export async function GET() {
-  const { sessionClaims } = await auth();
-  if (sessionClaims?.metadata?.role !== "admin") {
+  const { isAdmin } = await resolveAdminStatus();
+  if (!isAdmin) {
     return NextResponse.json({ error: "Not Authorized" }, { status: 403 });
   }
 
   try {
-    const client = await clerkClient();
+    const client = await getClerkServerClient();
     const list = await client.users.getUserList();
     const users = list.data.map((u) => ({
       id: u.id,
