@@ -23,7 +23,7 @@ export async function GET(req: Request) {
     const db = client.db("blog");
     const postsCollection = db.collection("posts");
 
-    const projection = { _id: 0, postId: 1, title: 1, date: 1, views: 1, hidden: 1, tags: 1, categories: 1 } as const;
+    const projection = { _id: 0, postId: 1, title: 1, date: 1, views: 1, hidden: 1, tags: 1, categories: 1, coAuthorUserId: 1 } as const;
 
     // Build sort doc
     let sortDoc: Record<string, 1 | -1> = { date: -1 };
@@ -113,10 +113,11 @@ export async function PATCH(req: Request) {
   }
 
   try {
-    const { postId, tags, categories } = (await req.json()) as {
+    const { postId, tags, categories, coAuthorUserId } = (await req.json()) as {
       postId?: string;
       tags?: string[] | string;
       categories?: string[] | string;
+      coAuthorUserId?: string | null;
     };
     if (!postId || typeof postId !== "string") {
       return NextResponse.json(
@@ -147,6 +148,9 @@ export async function PATCH(req: Request) {
             .map((t) => t.trim())
             .filter(Boolean);
       (updateDoc as any).categories = arr.slice(0, 10);
+    }
+    if (typeof coAuthorUserId !== "undefined") {
+      (updateDoc as any).coAuthorUserId = coAuthorUserId && String(coAuthorUserId).trim() !== "" ? String(coAuthorUserId) : null;
     }
 
     if (Object.keys(updateDoc).length === 0) {

@@ -58,6 +58,7 @@ export async function GET(
           audioUrl: post.audioUrl,
           cape: post.cape, // Campo existente
           friendImage: post.friendImage, // Novo campo para a foto do amigo
+          coAuthorUserId: (post as any).coAuthorUserId ?? null,
         },
         { status: 200 }
       );
@@ -77,6 +78,7 @@ export async function GET(
       audioUrl: post.audioUrl,
       cape: post.cape, // Campo existente
       friendImage: post.friendImage, // Novo campo para a foto do amigo
+      coAuthorUserId: (post as any).coAuthorUserId ?? null,
     };
 
     console.log("Post data from API for postId:", id, postData);

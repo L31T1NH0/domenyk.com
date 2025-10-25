@@ -22,6 +22,7 @@ type CommentThreadProps = {
   canDelete: (comment: CommentEntity) => boolean;
   onDelete: (comment: CommentEntity) => void;
   requiresName: boolean;
+  coAuthorUserId?: string;
 };
 
 const CommentThread: React.FC<CommentThreadProps> = ({
@@ -38,6 +39,7 @@ const CommentThread: React.FC<CommentThreadProps> = ({
   canDelete,
   onDelete,
   requiresName,
+  coAuthorUserId,
 }) => {
   const siblings = lookup.get(parentId ?? null) ?? [];
 
@@ -62,6 +64,7 @@ const CommentThread: React.FC<CommentThreadProps> = ({
           canDelete={canDelete(comment)}
           onDelete={() => onDelete(comment)}
           requiresName={requiresName}
+          coAuthorUserId={coAuthorUserId}
         >
           <CommentThread
             parentId={comment._id}
@@ -77,6 +80,7 @@ const CommentThread: React.FC<CommentThreadProps> = ({
             canDelete={canDelete}
             onDelete={onDelete}
             requiresName={requiresName}
+            coAuthorUserId={coAuthorUserId}
           />
         </CommentItem>
       ))}

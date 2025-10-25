@@ -29,6 +29,7 @@ type CommentItemProps = {
   onDelete: () => void;
   requiresName: boolean;
   children?: React.ReactNode;
+  coAuthorUserId?: string;
 };
 
 const CommentItem: React.FC<CommentItemProps> = ({
@@ -45,6 +46,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   onDelete,
   requiresName,
   children,
+  coAuthorUserId,
 }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   useEffect(() => {
@@ -105,6 +107,11 @@ const CommentItem: React.FC<CommentItemProps> = ({
             {isAuthComment(comment) && comment.role === "moderator" && (
               <span className="rounded-full border border-red-500/40 px-2 py-0.5 text-[10px] uppercase tracking-wide text-red-300">
                 Colaborador
+              </span>
+            )}
+            {isAuthComment(comment) && coAuthorUserId && comment.userId === coAuthorUserId && (
+              <span className="rounded-full border border-blue-500/40 px-2 py-0.5 text-[10px] tracking-wide text-blue-300">
+                (co-autor)
               </span>
             )}
             {comment.optimistic && (
@@ -213,7 +220,6 @@ const handleSubmitWrapper = (
 };
 
 export default CommentItem;
-
 
 
 

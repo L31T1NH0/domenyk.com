@@ -14,6 +14,7 @@ type PostRow = {
   commentCount?: number;
   tags?: string[];
   categories?: string[];
+  coAuthorUserId?: string | null;
 };
 
 type SortKey = "date" | "views" | "status";
@@ -120,6 +121,7 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
   const [modalPostId, setModalPostId] = useState<string | null>(null);
   const [modalMode, setModalMode] = useState<"all" | "post">("all");
   const [modalOpen, setModalOpen] = useState(false);
+  const [users, setUsers] = useState<Array<{ id: string; name: string }>>([]);
 
   const selectedIds = useMemo(() => Object.keys(selected).filter((k) => selected[k]), [selected]);
   const allSelected = posts.length > 0 && selectedIds.length === posts.length;
@@ -168,7 +170,22 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortKey, sortOrder]);
 
-  async function updateMeta(postId: string, patch: Partial<Pick<PostRow, "tags" | "categories">>) {
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const res = await fetch("/admin/api/users", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = (await res.json()) as { users: Array<{ id: string; firstName?: string | null; lastName?: string | null }> };
+        const mapped = data.users.map((u) => ({ id: u.id, name: `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() || u.id }));
+        setUsers(mapped);
+      } catch {
+        // ignore
+      }
+    };
+    loadUsers();
+  }, []);
+
+  async function updateMeta(postId: string, patch: Partial<Pick<PostRow, "tags" | "categories" | "coAuthorUserId">>) {
     setError(null);
     const res = await fetch(`/admin/api/posts`, {
       method: "PATCH",
@@ -345,6 +362,22 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
                 setPosts((rows) => rows.map((r) => (r.postId === p.postId ? { ...r, categories: next } : r)));
               }}
             />
+          </td>
+          <td className="px-4 py-2">
+            <select
+              className="min-w-[160px] rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-200"
+              value={p.coAuthorUserId ?? ""}
+              onChange={async (e) => {
+                const next = e.target.value;
+                await updateMeta(p.postId, { coAuthorUserId: next || null });
+                setPosts((rows) => rows.map((r) => (r.postId === p.postId ? { ...r, coAuthorUserId: next || null } : r)));
+              }}
+            >
+              <option value="">Nenhum</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>{u.name}</option>
+              ))}
+            </select>
           </td>
           <td className="px-4 py-2 text-right"><VisibilityToggle postId={p.postId} hidden={p.hidden} /></td>
         </tr>

@@ -8,11 +8,13 @@ type PostHeaderProps = {
   cape?: string; // Link opcional para a imagem principal (capa)
   title: string; // Título do post
   friendImage?: string; // Link opcional para a foto do amigo
+  coAuthorImageUrl?: string | null;
 };
 
-export function PostHeader({ cape, title, friendImage }: PostHeaderProps) {
+export function PostHeader({ cape, title, friendImage, coAuthorImageUrl }: PostHeaderProps) {
   console.log("Cape value in PostHeader:", cape); // Debug para verificar o valor de cape
   
+  const secondaryImage = coAuthorImageUrl || friendImage || undefined;
 
   return (
     <div className="w-full relative">
@@ -35,11 +37,11 @@ export function PostHeader({ cape, title, friendImage }: PostHeaderProps) {
                   alt="Domenyk"
                 />
               </Link>
-              {friendImage && (
+              {secondaryImage && (
                 <Link href="/">
                   <Image
                     priority
-                    src={friendImage}
+                    src={secondaryImage}
                     className="foto-post hover:z-30 transition-all"
                     height={56}
                     width={56}
@@ -65,11 +67,11 @@ export function PostHeader({ cape, title, friendImage }: PostHeaderProps) {
                 alt="Domenyk"
               />
             </Link>
-            {friendImage && (
+            {secondaryImage && (
               <Link href="/">
                 <Image
                   priority
-                  src={friendImage}
+                  src={secondaryImage}
                   className="rounded-full brightness-125 foto"
                   height={148}
                   width={148}

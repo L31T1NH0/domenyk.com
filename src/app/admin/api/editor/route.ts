@@ -19,7 +19,9 @@ export async function POST(req: Request) {
     const tags = formData.get("tags");
     const audioUrl = formData.get("audioUrl");
     const cape = formData.get("cape");
-    const friendImage = formData.get("friendImage");    const hiddenRaw = formData.get("hidden");
+    const friendImage = formData.get("friendImage");
+    const coAuthorUserId = formData.get("coAuthorUserId");
+    const hiddenRaw = formData.get("hidden");
     const hidden = hiddenRaw === "true" || hiddenRaw === "on";
 
     // Valida os dados de entrada
@@ -64,6 +66,10 @@ export async function POST(req: Request) {
     const normalizedCape = cape && typeof cape === "string" ? cape : null;
     const normalizedFriendImage =
       friendImage && typeof friendImage === "string" ? friendImage : null;
+    const normalizedCoAuthorUserId =
+      coAuthorUserId && typeof coAuthorUserId === "string" && coAuthorUserId.trim() !== ""
+        ? coAuthorUserId
+        : null;
 
     const client = await clientPromise;
     const db = client.db("blog");
@@ -89,6 +95,7 @@ export async function POST(req: Request) {
       tags: tagsArray.length > 0 ? tagsArray : [],
       cape: normalizedCape,
       friendImage: normalizedFriendImage,
+      coAuthorUserId: normalizedCoAuthorUserId,
       hidden,
     };
 

@@ -15,6 +15,7 @@ import {
 
 type CommentProps = {
   postId: string;
+  coAuthorUserId?: string;
 };
 
 const COMMENT_MAX_LENGTH = 120;
@@ -22,7 +23,7 @@ const COOLDOWN_MS = 2500;
 
 const emptyDraft: CommentDraft = { nome: "", comentario: "" };
 
-const Comment: React.FC<CommentProps> = ({ postId }) => {
+const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId }) => {
   const { userId, isLoaded } = useAuth();
   const { user } = useUser();
 
@@ -530,6 +531,7 @@ const Comment: React.FC<CommentProps> = ({ postId }) => {
             canDelete={canDeleteComment}
             onDelete={handleDelete}
             requiresName={!userId}
+            coAuthorUserId={coAuthorUserId}
           />
 
           {totalComments === 0 && (

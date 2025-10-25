@@ -21,6 +21,7 @@ type PostDocument = {
   audioUrl?: string;
   cape?: string;
   friendImage?: string;
+  coAuthorUserId?: string | null;
   hidden?: boolean;
 };
 
@@ -47,6 +48,7 @@ const loadPostById = unstable_cache(
             audioUrl: 1,
             cape: 1,
             friendImage: 1,
+            coAuthorUserId: 1,
             hidden: 1,
           },
         }
@@ -171,6 +173,18 @@ export default async function PostPage({ params }: PostPageProps) {
   const views = typeof post.views === "number" ? post.views : 0;
   const path = `/posts/${post.postId}`;
 
+  let coAuthorImageUrl: string | null = null;
+  try {
+    if (post.coAuthorUserId) {
+      const { clerkClient } = await import("@clerk/nextjs/server");
+      const client = await clerkClient();
+      const user = await client.users.getUser(post.coAuthorUserId);
+      coAuthorImageUrl = user.imageUrl ?? null;
+    }
+  } catch (e) {
+    coAuthorImageUrl = null;
+  }
+
   const articleJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'BlogPosting',
@@ -198,6 +212,7 @@ export default async function PostPage({ params }: PostPageProps) {
         cape={post.cape}
         title={title}
         friendImage={post.friendImage}
+        coAuthorImageUrl={coAuthorImageUrl}
       />
       <PostContentClient
         postId={post.postId}
@@ -208,7 +223,7 @@ export default async function PostPage({ params }: PostPageProps) {
         readingTime={readingTime}
       />
       <BackHome />
-      <Comment postId={post.postId} />
+      <Comment postId={post.postId} coAuthorUserId={post.coAuthorUserId ?? undefined} />
     </Layout>
   );
 }
