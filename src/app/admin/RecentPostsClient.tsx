@@ -19,6 +19,24 @@ type PostRow = {
 type SortKey = "date" | "views" | "status";
 type SortOrder = "asc" | "desc";
 
+function CheckboxBtn({ checked, onChange, label }: { checked: boolean; onChange: (next: boolean) => void; label?: string }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={checked}
+      onClick={() => onChange(!checked)}
+      className={`inline-flex items-center gap-2 rounded-md border px-2 py-1 text-xs ${
+        checked
+          ? "border-zinc-500 bg-zinc-100 text-zinc-900"
+          : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"
+      }`}
+    >
+      <span className={`inline-block h-3 w-3 rounded-sm ${checked ? "bg-zinc-900" : "bg-transparent border border-zinc-600"}`} />
+      {label}
+    </button>
+  );
+}
+
 function TagListEditor({
   values,
   label,
@@ -44,8 +62,8 @@ function TagListEditor({
     <div className="flex flex-col gap-1">
       <div className="flex flex-wrap gap-1">
         {values.length > 0 ? (
-          values.map((t) => (
-            <span key={t} className="rounded border border-zinc-700 bg-zinc-900 px-1.5 py-0.5 text-xs text-zinc-300">
+          values.map((t, i) => (
+            <span key={`${t}-${i}`} className="rounded border border-zinc-700 bg-zinc-900 px-1.5 py-0.5 text-xs text-zinc-300">
               {t}
             </span>
           ))
@@ -100,6 +118,8 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [bulkLoading, setBulkLoading] = useState(false);
   const [modalPostId, setModalPostId] = useState<string | null>(null);
+  const [modalMode, setModalMode] = useState<"all" | "post">("all");
+  const [modalOpen, setModalOpen] = useState(false);
 
   const selectedIds = useMemo(() => Object.keys(selected).filter((k) => selected[k]), [selected]);
   const allSelected = posts.length > 0 && selectedIds.length === posts.length;
@@ -220,19 +240,15 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
       <tr className="border-t border-zinc-800">
         <td className="px-4 py-2" colSpan={9}>
           <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-300">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={allSelected}
-                onChange={(e) => {
-                  const next: Record<string, boolean> = {};
-                  posts.forEach((p) => (next[p.postId] = e.target.checked));
-                  setSelected(next);
-                }}
-                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-zinc-100 focus:ring-zinc-500"
-              />
-              Selecionar todos
-            </label>
+            <CheckboxBtn
+              checked={allSelected}
+              onChange={(next) => {
+                const map: Record<string, boolean> = {};
+                posts.forEach((p) => (map[p.postId] = next));
+                setSelected(map);
+              }}
+              label="Selecionar todos"
+            />
             <span className="text-zinc-400">Ordenar por:</span>
             <button
               onClick={() => toggleSort("views")}
@@ -252,12 +268,29 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
             >
               Visibilidade
             </button>
+            <div className="flex items-center gap-1 ml-2">
+              <span className="text-zinc-400">Ordem:</span>
+              <button
+                onClick={() => setSortOrder("asc")}
+                className={`rounded border px-2 py-1 ${sortOrder === "asc" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
+                title="Crescente"
+              >
+                ↑
+              </button>
+              <button
+                onClick={() => setSortOrder("desc")}
+                className={`rounded border px-2 py-1 ${sortOrder === "desc" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
+                title="Decrescente"
+              >
+                ↓
+              </button>
+            </div>
+            <span className="mx-2 h-4 w-px bg-zinc-800" />
             <button
-              onClick={() => setSortOrder((o) => (o === "asc" ? "desc" : "asc"))}
-              className="ml-2 rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-zinc-200 hover:bg-zinc-800"
-              title="Alternar ordem"
+              onClick={() => { setModalMode("all"); setModalPostId(null); setModalOpen(true); }}
+              className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-zinc-200 hover:bg-zinc-800"
             >
-              {sortOrder === "asc" ? "Asc" : "Desc"}
+              Ver todos os comentários
             </button>
           </div>
         </td>
@@ -265,11 +298,9 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
       {posts.map((p) => (
         <tr key={p.postId} className="border-t border-zinc-800 hover:bg-zinc-900/40">
           <td className="px-4 py-2">
-            <input
-              type="checkbox"
+            <CheckboxBtn
               checked={!!selected[p.postId]}
-              onChange={(e) => setSelected((s) => ({ ...s, [p.postId]: e.target.checked }))}
-              className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-zinc-100 focus:ring-zinc-500"
+              onChange={(next) => setSelected((s) => ({ ...s, [p.postId]: next }))}
             />
           </td>
           <td className="px-4 py-2 max-w-[320px] truncate">
@@ -282,7 +313,11 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
           <td className="px-4 py-2 text-right">{p.views ?? 0}</td>
           <td className="px-4 py-2 text-right">
             <button
-              onClick={() => setModalPostId(p.postId)}
+              onClick={() => {
+                setModalMode("all");
+                setModalPostId(null);
+                setModalOpen(true);
+              }}
               className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800"
               title="Visualizar comentários"
             >
@@ -333,7 +368,7 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
         </td>
       </tr>
 
-      <CommentsModal postId={modalPostId} open={modalPostId !== null} onClose={() => setModalPostId(null)} />
+      <CommentsModal mode={modalMode} postId={modalPostId} open={modalOpen} onClose={() => { setModalOpen(false); setModalPostId(null); setModalMode("all"); }} />
     </>
   );
 }

@@ -50,13 +50,13 @@ export default async function AdminDashboard() {
         </div>
         <Link
           href="/admin/editor"
-          className="inline-flex items-center justify-center rounded-md bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200"
+          className="inline-flex items-center justify-center rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-200 shadow-sm hover:bg-zinc-800 hover:text-zinc-100 transition-colors"
         >
           Novo post
         </Link>
       </div>
 
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <section className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
           <div className="text-xs text-zinc-400">Posts publicados</div>
           <div className="mt-2 text-3xl font-semibold">{count}</div>
@@ -65,18 +65,11 @@ export default async function AdminDashboard() {
           <div className="text-xs text-zinc-400">Visualizacoes (total)</div>
           <div className="mt-2 text-3xl font-semibold">{totalViews}</div>
         </div>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
-          <div className="text-xs text-zinc-400">Rascunhos</div>
-          <div className="mt-2 text-3xl font-semibold">0</div>
-        </div>
       </section>
 
       <section className="rounded-xl border border-zinc-800 bg-zinc-900/60">
         <div className="flex items-center justify-between border-b border-zinc-800 p-4">
           <h2 className="text-sm font-medium">Recentes</h2>
-          <Link href="/admin/editor" className="text-sm text-zinc-400 hover:text-zinc-200">
-            Criar
-          </Link>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
