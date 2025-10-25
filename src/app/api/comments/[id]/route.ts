@@ -6,6 +6,7 @@ import axios from "axios";
 import { ObjectId } from "mongodb";
 import { remark } from "remark";
 import html from "remark-html";
+import { resolveAdminStatus } from "../../../../lib/admin";
 
 // Configuração do Redis Upstash
 const redis = Redis.fromEnv();
@@ -408,18 +409,14 @@ export async function DELETE(
 ) {
   const { id: commentId } = await params;
   const { userId, sessionClaims } = await auth();
-  const user = await currentUser();
+  const { isAdmin } = await resolveAdminStatus({ sessionClaims, userId });
 
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const isAdmin =
-    user?.unsafeMetadata?.role === "admin" ||
-    sessionClaims?.metadata?.role === "admin";
   console.log("Admin check:", {
     userId,
-    unsafeMetadataRole: user?.unsafeMetadata?.role,
     sessionClaimsRole: sessionClaims?.metadata?.role,
     isAdmin,
   });

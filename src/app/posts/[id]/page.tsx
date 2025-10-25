@@ -8,6 +8,7 @@ import { PostHeader } from "@components/PostHeader";
 import PostContentClient from "./post-content-client";
 import { remark } from "remark";
 import html from "remark-html";
+import { resolveAdminStatus } from "../../../lib/admin";
 
 export const revalidate = 60;
 
@@ -23,6 +24,7 @@ type PostDocument = {
   friendImage?: string;
   coAuthorUserId?: string | null;
   hidden?: boolean;
+  paragraphCommentsEnabled?: boolean;
 };
 
 type PostPageProps = {
@@ -50,6 +52,7 @@ const loadPostById = unstable_cache(
             friendImage: 1,
             coAuthorUserId: 1,
             hidden: 1,
+            paragraphCommentsEnabled: 1,
           },
         }
       );
@@ -80,6 +83,15 @@ function calculateReadingTime(htmlContent: string): string {
   return `${minutes} min`;
 }
 
+async function resolveIsAdmin(): Promise<boolean> {
+  try {
+    const { isAdmin } = await resolveAdminStatus();
+    return isAdmin;
+  } catch {
+    return false;
+  }
+}
+
 export async function generateMetadata({ params }: PostPageProps): Promise<Metadata> {
   const resolvedParams = await params;
   const id = resolvedParams?.id;
@@ -95,6 +107,15 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
     return {
       title: "Post não encontrado",
     };
+  }
+
+  if (post.hidden === true) {
+    const isAdmin = await resolveIsAdmin();
+    if (!isAdmin) {
+      return {
+        title: "Post não encontrado",
+      };
+    }
   }
 
   const title = post.title ?? "";
@@ -161,7 +182,10 @@ export default async function PostPage({ params }: PostPageProps) {
   }
 
   if ((post as any).hidden === true) {
-    notFound();
+    const isAdmin = await resolveIsAdmin();
+    if (!isAdmin) {
+      notFound();
+    }
   }
 
   const title = post.title ?? "";
@@ -172,12 +196,13 @@ export default async function PostPage({ params }: PostPageProps) {
   const dateString = normalizeDate(post.date);
   const views = typeof post.views === "number" ? post.views : 0;
   const path = `/posts/${post.postId}`;
+  const paragraphCommentsEnabled = post.paragraphCommentsEnabled !== false;
 
   let coAuthorImageUrl: string | null = null;
   try {
     if (post.coAuthorUserId) {
-      const { clerkClient } = await import("@clerk/nextjs/server");
-      const client = await clerkClient();
+      const { getClerkServerClient } = await import("../../../lib/clerk-server");
+      const client = await getClerkServerClient();
       const user = await client.users.getUser(post.coAuthorUserId);
       coAuthorImageUrl = user.imageUrl ?? null;
     }
@@ -221,6 +246,8 @@ export default async function PostPage({ params }: PostPageProps) {
         initialViews={views}
         audioUrl={post.audioUrl}
         readingTime={readingTime}
+        coAuthorUserId={post.coAuthorUserId ?? null}
+        paragraphCommentsEnabled={paragraphCommentsEnabled}
       />
       <BackHome />
       <Comment postId={post.postId} coAuthorUserId={post.coAuthorUserId ?? undefined} />

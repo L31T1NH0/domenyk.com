@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { clientPromise } from "../../../lib/mongo"; // Conexão com o MongoDB
+import { resolveAdminStatus } from "../../../lib/admin";
 
 // Tipos para os dados de entrada
 type DeletePostBody = {
@@ -16,10 +16,10 @@ export async function POST(
   const [action] = resolvedParams.action || []; // Captura a primeira parte do wildcard (ex.: "deletePost")
 
   // Autentica o usuário
-  const { sessionClaims } = await auth();
+  const { isAdmin } = await resolveAdminStatus();
 
   // Verifica se o usuário é um admin
-  if (sessionClaims?.metadata?.role !== "admin") {
+  if (!isAdmin) {
     return NextResponse.json({ error: "Not Authorized" }, { status: 403 });
   }
 

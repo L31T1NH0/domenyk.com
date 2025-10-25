@@ -1,9 +1,9 @@
 ﻿import Link from "next/link";
 import { notFound } from "next/navigation";
-import { auth } from "@clerk/nextjs/server";
 import { getMongoDb } from "../../lib/mongo";
 import VisibilityToggle from "./VisibilityToggle";
 import RecentPostsClient from "./RecentPostsClient";
+import { resolveAdminStatus } from "../../lib/admin";
 
 type PostRow = {
   _id?: string;
@@ -12,11 +12,12 @@ type PostRow = {
   date?: string;
   views?: number;
   hidden?: boolean;
+  paragraphCommentsEnabled?: boolean;
 };
 
 export default async function AdminDashboard() {
-  const { sessionClaims } = await auth();
-  if (sessionClaims?.metadata?.role !== "admin") {
+  const { isAdmin } = await resolveAdminStatus();
+  if (!isAdmin) {
     notFound();
   }
 
@@ -33,7 +34,21 @@ export default async function AdminDashboard() {
       .toArray()
       .then((arr) => arr[0]?.totalViews ?? 0),
     postsCollection
-      .find({}, { projection: { _id: 0, postId: 1, title: 1, date: 1, views: 1, coAuthorUserId: 1 } })
+      .find(
+        {},
+        {
+          projection: {
+            _id: 0,
+            postId: 1,
+            title: 1,
+            date: 1,
+            views: 1,
+            coAuthorUserId: 1,
+            paragraphCommentsEnabled: 1,
+            hidden: 1,
+          },
+        }
+      )
       .sort({ date: -1 })
       .limit(6)
       .toArray() as unknown as Promise<PostRow[]>,
@@ -84,6 +99,7 @@ export default async function AdminDashboard() {
                 <th className="px-4 py-2 font-medium">Tags</th>
                 <th className="px-4 py-2 font-medium">Categorias</th>
                 <th className="px-4 py-2 font-medium">Co-autor</th>
+                <th className="px-4 py-2 font-medium text-right">Parágrafos</th>
                 <th className="px-4 py-2 font-medium text-right">Visibilidade</th>
               </tr>
             </thead>
@@ -91,7 +107,7 @@ export default async function AdminDashboard() {
               <RecentPostsClient initial={latest as any} />
               {latest.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="px-4 py-8 text-center text-zinc-400">
+                  <td colSpan={11} className="px-4 py-8 text-center text-zinc-400">
                     Nenhum post encontrado.
                   </td>
                 </tr>

@@ -1,7 +1,19 @@
-﻿import { NextResponse } from "next/server";
-import { clientPromise } from "../../../../lib/mongo"; // Use clientPromise, que agora estÃ¡ exportado
+import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
+import { clientPromise } from "../../../../lib/mongo";
 import { remark } from "remark";
 import html from "remark-html";
+import { resolveAdminStatus } from "../../../../lib/admin";
+
+async function resolveIsAdminFromRequest(): Promise<boolean> {
+  try {
+    const { sessionClaims, userId } = await auth();
+    const { isAdmin } = await resolveAdminStatus({ sessionClaims, userId });
+    return isAdmin;
+  } catch (error) {
+    return false;
+  }
+}
 
 export async function GET(
   req: Request,
@@ -26,7 +38,9 @@ export async function GET(
     if (!post) {
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
-    if ((post as any).hidden === true) {
+
+    const isAdmin = await resolveIsAdminFromRequest();
+    if ((post as any).hidden === true && !isAdmin) {
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
 
@@ -36,7 +50,7 @@ export async function GET(
       htmlContent = processedContent.toString();
     }
 
-    // Incrementa as visualizaÃ§Ãµes e define o cookie, como no Pages Router
+    // Increment views and set cookie, similar to Pages Router implementation
     const cookieName = `viewed_${id}`;
     const viewedCookie = req.headers
       .get("cookie")
@@ -56,8 +70,8 @@ export async function GET(
           htmlContent,
           views,
           audioUrl: post.audioUrl,
-          cape: post.cape, // Campo existente
-          friendImage: post.friendImage, // Novo campo para a foto do amigo
+          cape: post.cape,
+          friendImage: post.friendImage,
           coAuthorUserId: (post as any).coAuthorUserId ?? null,
         },
         { status: 200 }
@@ -76,8 +90,8 @@ export async function GET(
       htmlContent,
       views,
       audioUrl: post.audioUrl,
-      cape: post.cape, // Campo existente
-      friendImage: post.friendImage, // Novo campo para a foto do amigo
+      cape: post.cape,
+      friendImage: post.friendImage,
       coAuthorUserId: (post as any).coAuthorUserId ?? null,
     };
 
@@ -92,4 +106,3 @@ export async function GET(
     );
   }
 }
-
