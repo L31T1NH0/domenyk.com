@@ -87,8 +87,7 @@ async function resolveIsAdmin(): Promise<boolean> {
   try {
     const { isAdmin } = await resolveAdminStatus();
     return isAdmin;
-  } catch (error) {
-    console.error("Failed to resolve admin role:", error);
+  } catch {
     return false;
   }
 }

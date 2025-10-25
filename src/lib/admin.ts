@@ -3,6 +3,15 @@ import type { User } from "@clerk/backend";
 
 import { getClerkServerClient } from "./clerk-server";
 
+function isDynamicServerUsageError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "digest" in (error as Record<string, unknown>) &&
+    (error as Record<string, unknown>).digest === "DYNAMIC_SERVER_USAGE"
+  );
+}
+
 type SessionClaimsLike = Record<string, unknown> | null | undefined;
 
 function hasAdminRole(metadata: unknown): boolean {
@@ -52,10 +61,16 @@ export async function resolveAdminStatus(
   let providedUserId = options.userId ?? null;
 
   if (!providedSessionClaims) {
-    const { sessionClaims, userId } = await auth();
-    providedSessionClaims = sessionClaims;
-    if (!providedUserId && userId) {
-      providedUserId = userId;
+    try {
+      const { sessionClaims, userId } = await auth();
+      providedSessionClaims = sessionClaims;
+      if (!providedUserId && userId) {
+        providedUserId = userId;
+      }
+    } catch (error) {
+      if (!isDynamicServerUsageError(error)) {
+        throw error;
+      }
     }
   }
 
@@ -70,7 +85,9 @@ export async function resolveAdminStatus(
       return { isAdmin: true, userId: user.id ?? providedUserId ?? null };
     }
   } catch (error) {
-    // ignore and try fallback
+    if (!isDynamicServerUsageError(error)) {
+      // ignore and try fallback
+    }
   }
 
   const finalUserId = user?.id ?? providedUserId;
