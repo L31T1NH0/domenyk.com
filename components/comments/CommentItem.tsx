@@ -110,8 +110,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
               </span>
             )}
             {isAuthComment(comment) && coAuthorUserId && comment.userId === coAuthorUserId && (
-              <span className="rounded-full border border-blue-500/40 px-3 py-1 text-[10px] tracking-wide text-blue-300">
-                (co-autor)
+              <span className="rounded-full border uppercase border-blue-500/40 px-2 py-0.5 text-[10px] tracking-wide text-blue-300">
+                co-autor
               </span>
             )}
             {comment.optimistic && (
