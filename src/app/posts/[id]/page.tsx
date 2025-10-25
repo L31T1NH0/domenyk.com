@@ -8,6 +8,7 @@ import { PostHeader } from "@components/PostHeader";
 import PostContentClient from "./post-content-client";
 import { remark } from "remark";
 import html from "remark-html";
+import { resolveAdminStatus } from "../../../lib/admin";
 
 export const revalidate = 60;
 
@@ -84,15 +85,8 @@ function calculateReadingTime(htmlContent: string): string {
 
 async function resolveIsAdmin(): Promise<boolean> {
   try {
-    const { currentUser } = await import("@clerk/nextjs/server");
-    const user = await currentUser();
-    if (!user) return false;
-    const metadataSources = [
-      user.publicMetadata,
-      user.unsafeMetadata,
-      user.privateMetadata,
-    ] as Array<Record<string, unknown> | null | undefined>;
-    return metadataSources.some((meta) => meta?.role === "admin");
+    const { isAdmin } = await resolveAdminStatus();
+    return isAdmin;
   } catch (error) {
     console.error("Failed to resolve admin role:", error);
     return false;
@@ -116,11 +110,13 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
     };
   }
 
-  const isAdmin = await resolveIsAdmin();
-  if (post.hidden === true && !isAdmin) {
-    return {
-      title: "Post não encontrado",
-    };
+  if (post.hidden === true) {
+    const isAdmin = await resolveIsAdmin();
+    if (!isAdmin) {
+      return {
+        title: "Post não encontrado",
+      };
+    }
   }
 
   const title = post.title ?? "";
@@ -186,9 +182,11 @@ export default async function PostPage({ params }: PostPageProps) {
     notFound();
   }
 
-  const isAdmin = await resolveIsAdmin();
-  if ((post as any).hidden === true && !isAdmin) {
-    notFound();
+  if ((post as any).hidden === true) {
+    const isAdmin = await resolveIsAdmin();
+    if (!isAdmin) {
+      notFound();
+    }
   }
 
   const title = post.title ?? "";

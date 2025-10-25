@@ -1,22 +1,15 @@
 import { NextResponse } from "next/server";
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
 import { clientPromise } from "../../../../lib/mongo";
 import { remark } from "remark";
 import html from "remark-html";
+import { resolveAdminStatus } from "../../../../lib/admin";
 
 async function resolveIsAdminFromRequest(): Promise<boolean> {
   try {
-    const { sessionClaims } = await auth();
-    if (sessionClaims?.metadata?.role === "admin") {
-      return true;
-    }
-    const user = await currentUser();
-    const metadataSources = [
-      user?.publicMetadata,
-      user?.unsafeMetadata,
-      user?.privateMetadata,
-    ] as Array<Record<string, unknown> | null | undefined>;
-    return metadataSources.some((meta) => meta?.role === "admin");
+    const { sessionClaims, userId } = await auth();
+    const { isAdmin } = await resolveAdminStatus({ sessionClaims, userId });
+    return isAdmin;
   } catch (error) {
     return false;
   }

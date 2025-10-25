@@ -1,9 +1,9 @@
 ﻿import Link from "next/link";
 import { notFound } from "next/navigation";
-import { auth } from "@clerk/nextjs/server";
 import { getMongoDb } from "../../lib/mongo";
 import VisibilityToggle from "./VisibilityToggle";
 import RecentPostsClient from "./RecentPostsClient";
+import { resolveAdminStatus } from "../../lib/admin";
 
 type PostRow = {
   _id?: string;
@@ -16,8 +16,8 @@ type PostRow = {
 };
 
 export default async function AdminDashboard() {
-  const { sessionClaims } = await auth();
-  if (sessionClaims?.metadata?.role !== "admin") {
+  const { isAdmin } = await resolveAdminStatus();
+  if (!isAdmin) {
     notFound();
   }
 

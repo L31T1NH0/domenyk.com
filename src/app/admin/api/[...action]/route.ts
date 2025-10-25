@@ -1,8 +1,6 @@
 "use server";
-import { auth } from "@clerk/nextjs/server";
-import { clerkClient } from "@clerk/nextjs/server";
-import { Roles } from "types/globals";
 import { NextResponse } from "next/server"; // Para criar respostas JSON
+import { resolveAdminStatus } from "../../../../lib/admin";
 
 export async function GET(
   req: Request,
@@ -15,8 +13,8 @@ export async function GET(
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   }
 
-  const { sessionClaims } = await auth();
-  if (sessionClaims?.metadata?.role !== "admin") {
+  const { isAdmin } = await resolveAdminStatus();
+  if (!isAdmin) {
     return NextResponse.json({ isAdmin: false }, { status: 200 });
   }
 

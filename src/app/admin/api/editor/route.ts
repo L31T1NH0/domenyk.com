@@ -1,13 +1,13 @@
-﻿import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
-import { clientPromise } from "../../../../lib/mongo"; // ConexÃ£o com o MongoDB
+import { NextResponse } from "next/server";
+import { clientPromise } from "../../../../lib/mongo"; // Conexão com o MongoDB
+import { resolveAdminStatus } from "../../../../lib/admin";
 
-// Handler para POST requests (publicaÃ§Ã£o de posts)
+// Handler para POST requests (publicação de posts)
 export async function POST(req: Request) {
-  const { sessionClaims } = await auth();
+  const { isAdmin } = await resolveAdminStatus();
 
-  // Verifica se o usuÃ¡rio Ã© um admin
-  if (sessionClaims?.metadata?.role !== "admin") {
+  // Verifica se o usuário é um admin
+  if (!isAdmin) {
     return NextResponse.json({ error: "Not Authorized" }, { status: 403 });
   }
 
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
     const db = client.db("blog");
     const postsCollection = db.collection("posts");
 
-    // Verifica se jÃ¡ existe um post com o mesmo postId
+    // Verifica se já existe um post com o mesmo postId
     const existingPost = await postsCollection.findOne({ postId });
     if (existingPost) {
       return NextResponse.json(
@@ -93,7 +93,7 @@ export async function POST(req: Request) {
     const newPost = {
       postId,
       title,
-      htmlContent: content, // Armazena o conteÃºdo como Markdown (htmlContent para consistÃªncia com o projeto)
+      htmlContent: content, // Armazena o conteúdo como Markdown (htmlContent para consistência com o projeto)
       date: new Date().toISOString().split("T")[0], // Formato "YYYY-MM-DD"
       views: 0, // Inicializa as views como 0
       audioUrl: normalizedAudioUrl,
@@ -122,5 +122,3 @@ export async function POST(req: Request) {
     );
   }
 }
-
-

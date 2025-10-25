@@ -1,14 +1,14 @@
 "use server";
-import { auth } from "@clerk/nextjs/server";
 import { Roles } from "types/globals";
 import { revalidatePath } from "next/cache";
 import { getClerkServerClient } from "../../lib/clerk-server";
+import { resolveAdminStatus } from "../../lib/admin";
 
 export async function setRole(formData: FormData) {
-  const { sessionClaims } = await auth();
+  const { isAdmin } = await resolveAdminStatus();
 
   // Check that the user trying to set the role is an admin
-  if (sessionClaims?.metadata?.role !== "admin") {
+  if (!isAdmin) {
     throw new Error("Not Authorized");
   }
 
@@ -27,9 +27,9 @@ export async function setRole(formData: FormData) {
 }
 
 export async function removeRole(formData: FormData) {
-  const { sessionClaims } = await auth();
+  const { isAdmin } = await resolveAdminStatus();
 
-  if (sessionClaims?.metadata?.role !== "admin") {
+  if (!isAdmin) {
     throw new Error("Not Authorized");
   }
 

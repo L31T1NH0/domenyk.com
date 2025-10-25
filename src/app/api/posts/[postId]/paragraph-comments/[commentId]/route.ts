@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
 import { ObjectId } from "mongodb";
 
 import { getMongoDb } from "../../../../../../lib/mongo";
+import { resolveAdminStatus } from "../../../../../../lib/admin";
 
 const COLLECTION_NAME = "paragraph-comments";
 
@@ -29,14 +30,12 @@ export async function DELETE(
   }
 
   const { userId, sessionClaims } = await auth();
+  const adminStatus = await resolveAdminStatus({ sessionClaims, userId });
   if (!userId) {
     return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
   }
 
-  const user = await currentUser();
-  const isAdmin =
-    sessionClaims?.metadata?.role === "admin" ||
-    (user?.unsafeMetadata as Record<string, unknown> | undefined)?.role === "admin";
+  const isAdmin = adminStatus.isAdmin;
 
   const db = await getMongoDb();
   const postsCollection = db.collection("posts");

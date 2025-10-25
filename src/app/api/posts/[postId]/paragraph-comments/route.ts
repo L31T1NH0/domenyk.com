@@ -4,6 +4,7 @@ import { ObjectId } from "mongodb";
 
 import { getMongoDb } from "../../../../../lib/mongo";
 import type { ParagraphComment } from "../../../../../../types/paragraph-comments";
+import { resolveAdminStatus } from "../../../../../lib/admin";
 
 const COLLECTION_NAME = "paragraph-comments";
 const MAX_LENGTH = 480;
@@ -58,7 +59,7 @@ export async function GET(
   }
 
   try {
-    const { sessionClaims } = await auth();
+    const adminStatus = await resolveAdminStatus();
     const db = await getMongoDb();
 
     const postsCollection = db.collection("posts");
@@ -74,20 +75,7 @@ export async function GET(
       );
     }
 
-    let isAdmin = sessionClaims?.metadata?.role === "admin";
-    if (!isAdmin) {
-      try {
-        const user = await currentUser();
-        const metadataSources = [
-          user?.publicMetadata,
-          user?.unsafeMetadata,
-          user?.privateMetadata,
-        ] as Array<Record<string, unknown> | null | undefined>;
-        isAdmin = metadataSources.some((meta) => meta?.role === "admin");
-      } catch (error) {
-        isAdmin = false;
-      }
-    }
+    const isAdmin = adminStatus.isAdmin;
 
     if ((post as any).hidden === true && !isAdmin) {
       return NextResponse.json(
@@ -137,6 +125,7 @@ export async function POST(
   }
 
   const { userId, sessionClaims } = await auth();
+  const adminStatus = await resolveAdminStatus({ sessionClaims, userId });
   if (!userId) {
     return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
   }
@@ -146,15 +135,7 @@ export async function POST(
     return NextResponse.json({ error: "Usuário não encontrado." }, { status: 401 });
   }
 
-  let isAdmin = sessionClaims?.metadata?.role === "admin";
-  if (!isAdmin) {
-    const metadataSources = [
-      user.publicMetadata,
-      user.unsafeMetadata,
-      user.privateMetadata,
-    ] as Array<Record<string, unknown> | null | undefined>;
-    isAdmin = metadataSources.some((meta) => meta?.role === "admin");
-  }
+  const isAdmin = adminStatus.isAdmin;
 
   let body: unknown;
   try {

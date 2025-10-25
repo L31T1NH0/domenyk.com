@@ -1,8 +1,15 @@
+import { notFound } from "next/navigation";
 import { setRole, removeRole } from "./actions";
 import { getMongoDb } from "../../../lib/mongo";
 import { getClerkServerClient } from "../../../lib/clerk-server";
+import { resolveAdminStatus } from "../../../lib/admin";
 
 export default async function UsersAdmin() {
+  const { isAdmin } = await resolveAdminStatus();
+  if (!isAdmin) {
+    notFound();
+  }
+
   const client = await getClerkServerClient();
   const users = (await client.users.getUserList()).data;
 

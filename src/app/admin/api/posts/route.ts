@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { clientPromise } from "../../../../lib/mongo";
 import { Redis } from "@upstash/redis";
+import { resolveAdminStatus } from "../../../../lib/admin";
 
 // Redis instance (for counting replies). When the environment variables are not
 // provided we still want the dashboard to work, so we attempt to instantiate it
@@ -19,8 +19,8 @@ try {
 }
 
 export async function GET(req: Request) {
-  const { sessionClaims } = await auth();
-  if (sessionClaims?.metadata?.role !== "admin") {
+  const { isAdmin } = await resolveAdminStatus();
+  if (!isAdmin) {
     return NextResponse.json({ error: "Not Authorized" }, { status: 403 });
   }
 
@@ -132,8 +132,8 @@ export async function GET(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  const { sessionClaims } = await auth();
-  if (sessionClaims?.metadata?.role !== "admin") {
+  const { isAdmin } = await resolveAdminStatus();
+  if (!isAdmin) {
     return NextResponse.json({ error: "Not Authorized" }, { status: 403 });
   }
 
