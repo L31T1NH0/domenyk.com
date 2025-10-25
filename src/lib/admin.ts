@@ -3,6 +3,10 @@ import type { User } from "@clerk/backend";
 
 import { getClerkServerClient } from "./clerk-server";
 
+function isStaticGenerationEnvironment(): boolean {
+  return process.env.NEXT_PHASE === "phase-production-build";
+}
+
 function isDynamicServerUsageError(error: unknown): boolean {
   return (
     typeof error === "object" &&
@@ -57,6 +61,10 @@ type AdminResolutionOptions = {
 export async function resolveAdminStatus(
   options: AdminResolutionOptions = {}
 ): Promise<AdminResolution> {
+  if (isStaticGenerationEnvironment()) {
+    return { isAdmin: false, userId: null };
+  }
+
   let providedSessionClaims = options.sessionClaims;
   let providedUserId = options.userId ?? null;
 

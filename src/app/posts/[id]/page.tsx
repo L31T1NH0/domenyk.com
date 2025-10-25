@@ -10,6 +10,10 @@ import { remark } from "remark";
 import html from "remark-html";
 import { resolveAdminStatus } from "../../../lib/admin";
 
+function isStaticGenerationEnvironment(): boolean {
+  return process.env.NEXT_PHASE === "phase-production-build";
+}
+
 export const revalidate = 60;
 
 type PostDocument = {
@@ -199,15 +203,17 @@ export default async function PostPage({ params }: PostPageProps) {
   const paragraphCommentsEnabled = post.paragraphCommentsEnabled !== false;
 
   let coAuthorImageUrl: string | null = null;
-  try {
-    if (post.coAuthorUserId) {
-      const { getClerkServerClient } = await import("../../../lib/clerk-server");
-      const client = await getClerkServerClient();
-      const user = await client.users.getUser(post.coAuthorUserId);
-      coAuthorImageUrl = user.imageUrl ?? null;
+  if (!isStaticGenerationEnvironment()) {
+    try {
+      if (post.coAuthorUserId) {
+        const { getClerkServerClient } = await import("../../../lib/clerk-server");
+        const client = await getClerkServerClient();
+        const user = await client.users.getUser(post.coAuthorUserId);
+        coAuthorImageUrl = user.imageUrl ?? null;
+      }
+    } catch (e) {
+      coAuthorImageUrl = null;
     }
-  } catch (e) {
-    coAuthorImageUrl = null;
   }
 
   const articleJsonLd = {

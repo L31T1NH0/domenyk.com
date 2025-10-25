@@ -1,6 +1,19 @@
 import { createClerkClient, type ClerkClient } from "@clerk/backend";
 import { clerkClient as runtimeClerkClient } from "@clerk/nextjs/server";
 
+function isStaticGenerationEnvironment(): boolean {
+  return process.env.NEXT_PHASE === "phase-production-build";
+}
+
+function isDynamicServerUsageError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "digest" in (error as Record<string, unknown>) &&
+    (error as Record<string, unknown>).digest === "DYNAMIC_SERVER_USAGE"
+  );
+}
+
 let fallbackClient: ClerkClient | null = null;
 
 async function createFallbackClient(): Promise<ClerkClient> {
@@ -30,10 +43,16 @@ async function createFallbackClient(): Promise<ClerkClient> {
 }
 
 export async function getClerkServerClient(): Promise<ClerkClient> {
+  if (isStaticGenerationEnvironment()) {
+    return createFallbackClient();
+  }
+
   try {
     return await runtimeClerkClient();
   } catch (error) {
-    console.error("Failed to resolve Clerk client from request context. Falling back to secret key.", error);
+    if (!isDynamicServerUsageError(error)) {
+      console.error("Failed to resolve Clerk client from request context. Falling back to secret key.", error);
+    }
     return createFallbackClient();
   }
 }
