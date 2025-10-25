@@ -1,8 +1,8 @@
 "use server";
 import { auth } from "@clerk/nextjs/server";
-import { clerkClient } from "@clerk/nextjs/server";
 import { Roles } from "types/globals";
 import { revalidatePath } from "next/cache";
+import { getClerkServerClient } from "../../lib/clerk-server";
 
 export async function setRole(formData: FormData) {
   const { sessionClaims } = await auth();
@@ -12,11 +12,11 @@ export async function setRole(formData: FormData) {
     throw new Error("Not Authorized");
   }
 
-  const client = await clerkClient();
   const id = formData.get("id") as string;
   const role = formData.get("role") as Roles;
 
   try {
+    const client = await getClerkServerClient();
     await client.users.updateUser(id, {
       publicMetadata: { role },
     });
@@ -33,10 +33,10 @@ export async function removeRole(formData: FormData) {
     throw new Error("Not Authorized");
   }
 
-  const client = await clerkClient();
   const id = formData.get("id") as string;
 
   try {
+    const client = await getClerkServerClient();
     await client.users.updateUser(id, {
       publicMetadata: { role: null },
     });

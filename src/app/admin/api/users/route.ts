@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { auth, clerkClient } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
+
+import { getClerkServerClient } from "../../../../lib/clerk-server";
 
 export async function GET() {
   const { sessionClaims } = await auth();
@@ -8,7 +10,7 @@ export async function GET() {
   }
 
   try {
-    const client = await clerkClient();
+    const client = await getClerkServerClient();
     const list = await client.users.getUserList();
     const users = list.data.map((u) => ({
       id: u.id,

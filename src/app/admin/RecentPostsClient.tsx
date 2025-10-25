@@ -335,8 +335,8 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
           <td className="px-4 py-2 text-right">
             <button
               onClick={() => {
-                setModalMode("all");
-                setModalPostId(null);
+                setModalMode("post");
+                setModalPostId(p.postId);
                 setModalOpen(true);
               }}
               className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:bg-zinc-800"

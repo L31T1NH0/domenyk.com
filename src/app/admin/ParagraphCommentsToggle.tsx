@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 
 export default function ParagraphCommentsToggle({
   postId,
@@ -14,6 +14,10 @@ export default function ParagraphCommentsToggle({
   const [enabled, setEnabled] = useState(initialEnabled !== false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setEnabled(initialEnabled !== false);
+  }, [initialEnabled]);
 
   const toggle = () => {
     startTransition(async () => {

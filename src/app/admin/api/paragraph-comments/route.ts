@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
+import { revalidatePath } from "next/cache";
 
 import { getMongoDb } from "../../../../lib/mongo";
 
@@ -36,10 +37,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
 
-    return NextResponse.json(
-      { message: "Parágrafo atualizado", postId, enabled: enabledRaw },
-      { status: 200 }
-    );
+    revalidatePath(`/posts/${postId}`);
+    revalidatePath("/admin");
+
+    return NextResponse.json({ message: "Parágrafo atualizado", postId, enabled: enabledRaw }, { status: 200 });
   } catch (error) {
     console.error("Error updating paragraph comments flag:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

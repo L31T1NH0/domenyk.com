@@ -204,8 +204,8 @@ export default async function PostPage({ params }: PostPageProps) {
   let coAuthorImageUrl: string | null = null;
   try {
     if (post.coAuthorUserId) {
-      const { clerkClient } = await import("@clerk/nextjs/server");
-      const client = await clerkClient();
+      const { getClerkServerClient } = await import("../../../lib/clerk-server");
+      const client = await getClerkServerClient();
       const user = await client.users.getUser(post.coAuthorUserId);
       coAuthorImageUrl = user.imageUrl ?? null;
     }

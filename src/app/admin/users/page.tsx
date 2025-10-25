@@ -1,9 +1,9 @@
-import { clerkClient } from "@clerk/nextjs/server";
 import { setRole, removeRole } from "./actions";
 import { getMongoDb } from "../../../lib/mongo";
+import { getClerkServerClient } from "../../../lib/clerk-server";
 
 export default async function UsersAdmin() {
-  const client = await clerkClient();
+  const client = await getClerkServerClient();
   const users = (await client.users.getUserList()).data;
 
   // Aggregate contributions (comments only for now)

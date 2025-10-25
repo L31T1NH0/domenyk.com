@@ -1,7 +1,7 @@
 "use server";
 
-import { clerkClient } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
+import { getClerkServerClient } from "../../../lib/clerk-server";
 
 export async function setRole(formData: FormData) {
   const id = formData.get("id");
@@ -9,7 +9,7 @@ export async function setRole(formData: FormData) {
   if (!id || typeof id !== "string") throw new Error("Missing user id");
   if (!role || typeof role !== "string") throw new Error("Missing role");
 
-  const client = await clerkClient();
+  const client = await getClerkServerClient();
   await client.users.updateUser(id, {
     publicMetadata: { role },
   });
@@ -21,7 +21,7 @@ export async function removeRole(formData: FormData) {
   const id = formData.get("id");
   if (!id || typeof id !== "string") throw new Error("Missing user id");
 
-  const client = await clerkClient();
+  const client = await getClerkServerClient();
   await client.users.updateUser(id, {
     publicMetadata: { role: null },
   });
