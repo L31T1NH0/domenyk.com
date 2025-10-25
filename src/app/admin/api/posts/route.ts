@@ -51,7 +51,7 @@ export async function GET(req: Request) {
     const commentsCol = db.collection("comments");
     const authCommentsCol = db.collection("auth-comments");
 
-    async function countCommentsForPost(postId: string): Promise<number> {
+    const countCommentsForPost = async (postId: string): Promise<number> => {
       // Get top-level comment ids
       const [nonAuthIds, authIds] = await Promise.all([
         commentsCol
@@ -79,7 +79,7 @@ export async function GET(req: Request) {
       );
       const repliesTotal = replyCounts.reduce((a, b) => a + b, 0);
       return totalTopLevel + repliesTotal;
-    }
+    };
 
     const counts = await Promise.all(
       posts.map(async (p: any) => ({ postId: p.postId, count: await countCommentsForPost(p.postId) }))
@@ -164,4 +164,3 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
-
