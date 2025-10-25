@@ -79,26 +79,26 @@ export default function CommentsModal({
   const content = (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
       <div className="mx-4 w-full max-w-2xl rounded-xl border border-zinc-800 bg-zinc-950">
-        <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
+        <div className="flex items-center justify-between border-b border-zinc-800 px-6 py-4">
           <h3 className="text-sm font-medium">Comentários</h3>
           <button
             onClick={onClose}
-            className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800"
+            className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:bg-zinc-800"
           >
             Fechar
           </button>
         </div>
-        <div className="max-h-[60vh] overflow-y-auto px-4 py-3 text-sm">
+        <div className="max-h-[60vh] overflow-y-auto px-6 py-4 text-sm">
           {loading && <div className="text-zinc-400">Carregando...</div>}
           {error && <div className="text-red-400">{error}</div>}
           {!loading && !error && comments.length === 0 && (
             <div className="text-zinc-400">Nenhum comentário.</div>
           )}
-          <ul className="space-y-4">
+          <ul className="space-y-5">
             {comments.map((c: any) => (
-              <li key={c._id} className="rounded-md border border-zinc-800 bg-zinc-900/40 p-3">
+              <li key={c._id} className="rounded-md border border-zinc-800 bg-zinc-900/40 p-4">
                 {mode === "all" ? (
-                  <div className="mb-2 flex items-center justify-between text-xs text-zinc-400">
+                  <div className="mb-4 flex items-center justify-between text-xs text-zinc-400">
                     <span>
                       <span className="text-zinc-500">Post:</span>{" "}
                       <Link href={`/posts/${c.postId}`} className="text-zinc-200 hover:underline">
@@ -109,20 +109,20 @@ export default function CommentsModal({
                     <span>{c.createdAt}</span>
                   </div>
                 ) : (
-                  <div className="mb-2 flex items-center justify-between text-xs text-zinc-400">
+                  <div className="mb-4 flex items-center justify-between text-xs text-zinc-400">
                     <span>{c.firstName || c.nome || "Usuário"}</span>
                     <span>{c.createdAt}</span>
                   </div>
                 )}
                 {mode === "all" ? (
-                  <div className="mb-2 text-xs text-zinc-400">Autor: {c.author || "Usuário"}</div>
+                  <div className="mb-4 text-xs text-zinc-400">Autor: {c.author || "Usuário"}</div>
                 ) : null}
                 <div className="prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: c.comentario }} />
                 {mode === "post" && Array.isArray(c.replies) && c.replies.length > 0 && (
-                  <ul className="mt-3 space-y-3 border-l border-zinc-800 pl-3">
+                  <ul className="mt-4 space-y-4 border-l border-zinc-800 pl-4">
                     {c.replies.map((r: any) => (
                       <li key={r._id}>
-                        <div className="mb-1 flex items-center justify-between text-xs text-zinc-500">
+                        <div className="mb-2 flex items-center justify-between text-xs text-zinc-500">
                           <span>{r.firstName || r.nome || "Usuário"}</span>
                           <span>{r.createdAt}</span>
                         </div>

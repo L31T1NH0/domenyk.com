@@ -458,9 +458,9 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId }) => {
 
         <form
           onSubmit={handleCommentSubmit}
-          className="space-y-4 rounded-3xl border border-zinc-800/80 bg-zinc-950/70 p-3 sm:p-4 md:p-5 shadow-inner shadow-black/40"
+          className="space-y-6 rounded-3xl border border-zinc-800/80 bg-zinc-950/70 p-4 sm:p-6 md:p-8 shadow-inner shadow-black/40"
         >
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-4">
             {!userId && (
               <div className="space-y-2">
                 <input
@@ -469,7 +469,7 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId }) => {
                   placeholder="Digite seu nome"
                   value={commentDraft.nome}
                   onChange={(event) => handleCommentDraftChange("nome", event.target.value)}
-                  className="w-full rounded-2xl border border-zinc-800/70 bg-zinc-900/70 px-3 py-2 sm:px-4 sm:py-2.5 text-sm text-zinc-100 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-500/40"
+                  className="w-full rounded-2xl border border-zinc-800/70 bg-zinc-900/70 px-4 py-2 sm:px-6 sm:py-4 text-sm text-zinc-100 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-500/40"
                   disabled={submissionStatus === "sending"}
                 />
                 <p className="text-xs text-zinc-500">Esse nome aparecerá junto ao seu comentário.</p>
@@ -481,12 +481,12 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId }) => {
               placeholder="Escreva seu comentário"
               value={commentDraft.comentario}
               onChange={(event) => handleCommentDraftChange("comentario", event.target.value)}
-              className="h-20 sm:h-24 w-full resize-none rounded-2xl border border-zinc-800/70 bg-zinc-900/70 px-3 py-2 sm:px-4 sm:py-2.5 text-sm text-zinc-100 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-500/40"
+              className="h-20 sm:h-24 w-full resize-none rounded-2xl border border-zinc-800/70 bg-zinc-900/70 px-4 py-2 sm:px-6 sm:py-4 text-sm text-zinc-100 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-500/40"
               disabled={submissionStatus === "sending"}
             />
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-4 text-sm">
             <div className="text-xs text-zinc-500">
               {commentDraft.comentario.length}/{COMMENT_MAX_LENGTH}
             </div>
@@ -516,7 +516,7 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId }) => {
           <p className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-300">{errorMessage}</p>
         )}
 
-        <div className="mt-6 space-y-4">
+        <div className="mt-8 space-y-6">
           <CommentThread
             parentId={null}
             lookup={commentLookup}
@@ -535,7 +535,7 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId }) => {
           />
 
           {totalComments === 0 && (
-            <p className="rounded-2xl border border-zinc-800/80 bg-zinc-950/60 px-3 py-2 sm:px-4 sm:py-2.5 text-sm text-zinc-400">Nenhum comentário ainda. Seja o primeiro!</p>
+            <p className="rounded-2xl border border-zinc-800/80 bg-zinc-950/60 px-4 py-2 sm:px-6 sm:py-4 text-sm text-zinc-400">Nenhum comentário ainda. Seja o primeiro!</p>
           )}
         </div>
       </div>

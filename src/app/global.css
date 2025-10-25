@@ -83,7 +83,7 @@ h4 {
   @apply lg:text-3xl max-sm:text-xl font-bold;
 }
 h6 {
-  @apply text-sm font-extralight bg-zinc-950 p-0.5 rounded-md max-w-fit;
+  @apply text-sm font-extralight bg-zinc-950 px-2 py-1 rounded-md max-w-fit;
 }
 h1 {
   @apply sm:text-sm md:text-lg;

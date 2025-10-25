@@ -55,8 +55,8 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto rounded-lg shadow-md flex 
-                    items-center gap-3">
+    <div className="w-full max-w-2xl mx-auto rounded-lg shadow-md flex
+                    items-center gap-4">
       {/* Elemento de áudio oculto para controle */}
       <audio
         ref={audioRef}
@@ -69,7 +69,7 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
       {/* Botão de play/pause */}
       <button
         onClick={togglePlayPause}
-        className="text-zinc-400 hover:text-zinc-300 rounded p-0.5"
+        className="text-zinc-400 hover:text-zinc-300 rounded p-2"
         aria-label={isPlaying ? "Pausar" : "Tocar"}
       >
         {isPlaying ? (
