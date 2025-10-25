@@ -165,9 +165,11 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
   }
 
   useEffect(() => {
-    // Reset and fetch when sorting changes
-    setPosts([]);
+    // Reset and fetch when sorting changes. We keep the previous list visible
+    // until the new request succeeds to avoid wiping the dashboard in case the
+    // network call falhe (por exemplo, quando o Redis não está configurado).
     setHasMore(true);
+    setError(null);
     void onLoadMore(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortKey, sortOrder]);

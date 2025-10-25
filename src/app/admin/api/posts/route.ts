@@ -3,8 +3,20 @@ import { auth } from "@clerk/nextjs/server";
 import { clientPromise } from "../../../../lib/mongo";
 import { Redis } from "@upstash/redis";
 
-// Redis instance (for counting replies)
-const redis = Redis.fromEnv();
+// Redis instance (for counting replies). When the environment variables are not
+// provided we still want the dashboard to work, so we attempt to instantiate it
+// but fall back to a null client instead of throwing at import time.
+let redis: Redis | null = null;
+
+try {
+  redis = Redis.fromEnv();
+} catch (error) {
+  console.warn(
+    "Upstash Redis não configurado; contagem de respostas será ignorada.",
+    error
+  );
+  redis = null;
+}
 
 export async function GET(req: Request) {
   const { sessionClaims } = await auth();
@@ -75,13 +87,13 @@ export async function GET(req: Request) {
       const totalTopLevel = nonAuthIds.length + authIds.length;
       // Count replies in Redis for each top-level comment
       const ids = [...nonAuthIds, ...authIds].map((d: any) => d._id?.toString()).filter(Boolean) as string[];
-      if (ids.length === 0) return totalTopLevel;
+      if (ids.length === 0 || !redis) return totalTopLevel;
       const replyCounts = await Promise.all(
         ids.map(async (cid) => {
           try {
             // Using ZCARD to count replies per comment
             const key = `${postId}:${cid}:replies`;
-            const n = await redis.zcard(key);
+            const n = await redis!.zcard(key);
             return typeof n === "number" ? n : 0;
           } catch {
             return 0;

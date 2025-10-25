@@ -60,6 +60,7 @@ export default function ParagraphCommentWidget({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isFeatureBlocked, setIsFeatureBlocked] = useState(false);
+  const [queuedExpand, setQueuedExpand] = useState<boolean | null>(null);
 
   const loadComments = useCallback(async () => {
     try {
@@ -104,7 +105,10 @@ export default function ParagraphCommentWidget({
   }, [paragraphId, postId]);
 
   const toggleComments = useCallback(async () => {
+    const next = !isExpanded;
+
     if (!isLoaded) {
+      setQueuedExpand(next);
       return;
     }
 
@@ -113,12 +117,35 @@ export default function ParagraphCommentWidget({
       return;
     }
 
-    if (!isExpanded && !hasLoaded) {
+    if (next && !hasLoaded) {
       await loadComments();
     }
 
-    setIsExpanded((prev) => !prev);
+    setIsExpanded(next);
   }, [hasLoaded, isExpanded, isLoaded, loadComments, userId]);
+
+  useEffect(() => {
+    if (!isLoaded || queuedExpand === null) {
+      return;
+    }
+
+    const next = queuedExpand;
+    setQueuedExpand(null);
+
+    if (!userId) {
+      window.location.href = buildRedirectUrl();
+      return;
+    }
+
+    const applyToggle = async () => {
+      if (next && !hasLoaded) {
+        await loadComments();
+      }
+      setIsExpanded(next);
+    };
+
+    void applyToggle();
+  }, [hasLoaded, isLoaded, loadComments, queuedExpand, userId]);
 
   useEffect(() => {
     if (!isLoaded || !userId) {
