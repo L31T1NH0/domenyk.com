@@ -221,6 +221,7 @@ export default async function PostPage({ params }: PostPageProps) {
         initialViews={views}
         audioUrl={post.audioUrl}
         readingTime={readingTime}
+        coAuthorUserId={post.coAuthorUserId ?? null}
       />
       <BackHome />
       <Comment postId={post.postId} coAuthorUserId={post.coAuthorUserId ?? undefined} />
