@@ -39,6 +39,27 @@ export async function DELETE(
     (user?.unsafeMetadata as Record<string, unknown> | undefined)?.role === "admin";
 
   const db = await getMongoDb();
+  const postsCollection = db.collection("posts");
+  const post = await postsCollection.findOne(
+    { postId },
+    { projection: { _id: 1, hidden: 1, paragraphCommentsEnabled: 1 } }
+  );
+
+  if (!post) {
+    return NextResponse.json({ error: "Post não encontrado." }, { status: 404 });
+  }
+
+  if ((post as any).hidden === true && !isAdmin) {
+    return NextResponse.json({ error: "Post não encontrado." }, { status: 404 });
+  }
+
+  if ((post as any).paragraphCommentsEnabled === false && !isAdmin) {
+    return NextResponse.json(
+      { error: "Comentários por parágrafo desativados para este post." },
+      { status: 403 }
+    );
+  }
+
   const collection = db.collection<ParagraphCommentDocument>(COLLECTION_NAME);
 
   let objectId: ObjectId;

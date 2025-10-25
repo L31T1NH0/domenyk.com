@@ -59,6 +59,7 @@ export default function ParagraphCommentWidget({
   const [draft, setDraft] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isFeatureBlocked, setIsFeatureBlocked] = useState(false);
 
   const loadComments = useCallback(async () => {
     try {
@@ -72,6 +73,19 @@ export default function ParagraphCommentWidget({
         }
       );
 
+      if (response.status === 403) {
+        const data = (await response.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+        setErrorMessage(
+          data?.error ?? "Comentários por parágrafo desativados para este post."
+        );
+        setIsFeatureBlocked(true);
+        setComments([]);
+        setHasLoaded(true);
+        return;
+      }
+
       if (!response.ok) {
         throw new Error(await response.text());
       }
@@ -80,6 +94,7 @@ export default function ParagraphCommentWidget({
       setComments(data);
       setHasLoaded(true);
       setErrorMessage(null);
+      setIsFeatureBlocked(false);
     } catch (error) {
       console.error("Failed to load paragraph comments", error);
       setErrorMessage("Não foi possível carregar os comentários agora.");
@@ -166,6 +181,17 @@ export default function ParagraphCommentWidget({
         }),
       });
 
+      if (response.status === 403) {
+        const data = (await response.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+        setErrorMessage(
+          data?.error ?? "Comentários por parágrafo desativados para este post."
+        );
+        setIsFeatureBlocked(true);
+        return;
+      }
+
       if (!response.ok) {
         throw new Error(await response.text());
       }
@@ -174,6 +200,7 @@ export default function ParagraphCommentWidget({
       setComments((prev) => [...prev, data.comment]);
       setDraft("");
       setErrorMessage(null);
+      setIsFeatureBlocked(false);
       if (!hasLoaded) {
         setHasLoaded(true);
       }
@@ -187,6 +214,9 @@ export default function ParagraphCommentWidget({
 
   const handleSubmit: React.FormEventHandler<HTMLFormElement> = async (event) => {
     event.preventDefault();
+    if (isFeatureBlocked) {
+      return;
+    }
     if (!isLoaded || !userId || isSubmitting) {
       if (!isLoaded) return;
       if (!userId) {
@@ -199,7 +229,7 @@ export default function ParagraphCommentWidget({
 
   const handleDelete = useCallback(
     async (commentId: string) => {
-      if (!isLoaded || !userId) {
+      if (!isLoaded || !userId || isFeatureBlocked) {
         return;
       }
 
@@ -222,11 +252,23 @@ export default function ParagraphCommentWidget({
           }
         );
 
+        if (response.status === 403) {
+          const data = (await response.json().catch(() => null)) as
+            | { error?: string }
+            | null;
+          setErrorMessage(
+            data?.error ?? "Comentários por parágrafo desativados para este post."
+          );
+          setIsFeatureBlocked(true);
+          return;
+        }
+
         if (!response.ok) {
           throw new Error(await response.text());
         }
 
         setComments((prev) => prev.filter((comment) => comment._id !== commentId));
+        setIsFeatureBlocked(false);
       } catch (error) {
         console.error("Failed to delete paragraph comment", error);
         setErrorMessage("Não foi possível remover o comentário.");
@@ -234,7 +276,7 @@ export default function ParagraphCommentWidget({
         setDeletingId(null);
       }
     },
-    [comments, isAdmin, isLoaded, postId, userId]
+    [comments, isAdmin, isFeatureBlocked, isLoaded, postId, userId]
   );
 
   const formattedComments = useMemo(
@@ -296,7 +338,7 @@ export default function ParagraphCommentWidget({
               value={draft}
               onChange={(event) => {
                 setDraft(event.target.value);
-                if (errorMessage) {
+                if (errorMessage && !isFeatureBlocked) {
                   setErrorMessage(null);
                 }
               }}
@@ -304,6 +346,7 @@ export default function ParagraphCommentWidget({
               maxLength={MAX_COMMENT_LENGTH}
               rows={3}
               className="w-full resize-none rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm text-zinc-800 shadow-inner outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-700"
+              disabled={isFeatureBlocked}
             />
             <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
               <span>
@@ -311,7 +354,7 @@ export default function ParagraphCommentWidget({
               </span>
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isFeatureBlocked}
                 className="inline-flex items-center gap-1 rounded-full bg-zinc-900 px-3 py-1 text-sm font-medium text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-400 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
               >
                 {isSubmitting ? "Enviando..." : "Publicar"}

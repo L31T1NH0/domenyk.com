@@ -20,6 +20,7 @@ type PostContentClientProps = {
   audioUrl?: string;
   readingTime: string;
   coAuthorUserId?: string | null;
+  paragraphCommentsEnabled: boolean;
 };
 
 export default function PostContentClient({
@@ -30,6 +31,7 @@ export default function PostContentClient({
   audioUrl,
   readingTime,
   coAuthorUserId,
+  paragraphCommentsEnabled,
 }: PostContentClientProps) {
   const [views, setViews] = useState(initialViews);
 
@@ -67,7 +69,7 @@ export default function PostContentClient({
 
     return parse(htmlContent, {
       replace: (node: DOMNode) => {
-        if (node.type === "tag" && node.name === "p") {
+        if (node.type === "tag" && node.name === "p" && paragraphCommentsEnabled) {
           const element = node as Element;
           const paragraphId = `${postId}-paragraph-${paragraphIndex}`;
           const currentIndex = paragraphIndex;
@@ -91,7 +93,7 @@ export default function PostContentClient({
         return undefined;
       },
     });
-  }, [coAuthorUserId, htmlContent, postId]);
+  }, [coAuthorUserId, htmlContent, paragraphCommentsEnabled, postId]);
 
   return (
     <article className="flex flex-col gap-2">

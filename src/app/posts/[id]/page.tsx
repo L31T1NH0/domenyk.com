@@ -23,6 +23,7 @@ type PostDocument = {
   friendImage?: string;
   coAuthorUserId?: string | null;
   hidden?: boolean;
+  paragraphCommentsEnabled?: boolean;
 };
 
 type PostPageProps = {
@@ -50,6 +51,7 @@ const loadPostById = unstable_cache(
             friendImage: 1,
             coAuthorUserId: 1,
             hidden: 1,
+            paragraphCommentsEnabled: 1,
           },
         }
       );
@@ -80,6 +82,23 @@ function calculateReadingTime(htmlContent: string): string {
   return `${minutes} min`;
 }
 
+async function resolveIsAdmin(): Promise<boolean> {
+  try {
+    const { currentUser } = await import("@clerk/nextjs/server");
+    const user = await currentUser();
+    if (!user) return false;
+    const metadataSources = [
+      user.publicMetadata,
+      user.unsafeMetadata,
+      user.privateMetadata,
+    ] as Array<Record<string, unknown> | null | undefined>;
+    return metadataSources.some((meta) => meta?.role === "admin");
+  } catch (error) {
+    console.error("Failed to resolve admin role:", error);
+    return false;
+  }
+}
+
 export async function generateMetadata({ params }: PostPageProps): Promise<Metadata> {
   const resolvedParams = await params;
   const id = resolvedParams?.id;
@@ -92,6 +111,13 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
   const post = await loadPostById(id);
 
   if (!post) {
+    return {
+      title: "Post não encontrado",
+    };
+  }
+
+  const isAdmin = await resolveIsAdmin();
+  if (post.hidden === true && !isAdmin) {
     return {
       title: "Post não encontrado",
     };
@@ -160,7 +186,8 @@ export default async function PostPage({ params }: PostPageProps) {
     notFound();
   }
 
-  if ((post as any).hidden === true) {
+  const isAdmin = await resolveIsAdmin();
+  if ((post as any).hidden === true && !isAdmin) {
     notFound();
   }
 
@@ -172,6 +199,7 @@ export default async function PostPage({ params }: PostPageProps) {
   const dateString = normalizeDate(post.date);
   const views = typeof post.views === "number" ? post.views : 0;
   const path = `/posts/${post.postId}`;
+  const paragraphCommentsEnabled = post.paragraphCommentsEnabled !== false;
 
   let coAuthorImageUrl: string | null = null;
   try {
@@ -222,6 +250,7 @@ export default async function PostPage({ params }: PostPageProps) {
         audioUrl={post.audioUrl}
         readingTime={readingTime}
         coAuthorUserId={post.coAuthorUserId ?? null}
+        paragraphCommentsEnabled={paragraphCommentsEnabled}
       />
       <BackHome />
       <Comment postId={post.postId} coAuthorUserId={post.coAuthorUserId ?? undefined} />

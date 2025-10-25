@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import VisibilityToggle from "./VisibilityToggle";
+import ParagraphCommentsToggle from "./ParagraphCommentsToggle";
 import CommentsModal from "./CommentsModal";
 
 type PostRow = {
@@ -15,6 +16,7 @@ type PostRow = {
   tags?: string[];
   categories?: string[];
   coAuthorUserId?: string | null;
+  paragraphCommentsEnabled?: boolean;
 };
 
 type SortKey = "date" | "views" | "status";
@@ -224,7 +226,7 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
     <>
       {selectedIds.length > 0 && (
         <tr className="border-t border-zinc-800 bg-zinc-900/60">
-          <td className="px-4 py-2" colSpan={9}>
+          <td className="px-4 py-2" colSpan={11}>
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="text-sm text-zinc-300">{selectedIds.length} selecionado(s)</div>
               <div className="flex items-center gap-2">
@@ -255,7 +257,7 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
         </tr>
       )}
       <tr className="border-t border-zinc-800">
-        <td className="px-4 py-2" colSpan={9}>
+        <td className="px-4 py-2" colSpan={11}>
           <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-300">
             <CheckboxBtn
               checked={allSelected}
@@ -379,11 +381,26 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
               ))}
             </select>
           </td>
+          <td className="px-4 py-2 text-right">
+            <ParagraphCommentsToggle
+              postId={p.postId}
+              enabled={p.paragraphCommentsEnabled !== false}
+              onToggle={(next) =>
+                setPosts((rows) =>
+                  rows.map((r) =>
+                    r.postId === p.postId
+                      ? { ...r, paragraphCommentsEnabled: next }
+                      : r
+                  )
+                )
+              }
+            />
+          </td>
           <td className="px-4 py-2 text-right"><VisibilityToggle postId={p.postId} hidden={p.hidden} /></td>
         </tr>
       ))}
       <tr>
-        <td colSpan={9} className="px-4 py-3">
+        <td colSpan={11} className="px-4 py-3">
           <div className="flex items-center justify-center">
             {error && <span className="text-red-500 text-sm mr-4">{error}</span>}
             {hasMore ? (

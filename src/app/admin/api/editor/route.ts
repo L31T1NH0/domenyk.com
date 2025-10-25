@@ -23,6 +23,11 @@ export async function POST(req: Request) {
     const coAuthorUserId = formData.get("coAuthorUserId");
     const hiddenRaw = formData.get("hidden");
     const hidden = hiddenRaw === "true" || hiddenRaw === "on";
+    const paragraphCommentsRaw = formData.get("paragraphCommentsEnabled");
+    const paragraphCommentsEnabled =
+      paragraphCommentsRaw === "false"
+        ? false
+        : !(paragraphCommentsRaw === null || paragraphCommentsRaw === "false");
 
     // Valida os dados de entrada
     if (!title || typeof title !== "string") {
@@ -97,6 +102,7 @@ export async function POST(req: Request) {
       friendImage: normalizedFriendImage,
       coAuthorUserId: normalizedCoAuthorUserId,
       hidden,
+      paragraphCommentsEnabled,
     };
 
     await postsCollection.insertOne(newPost);

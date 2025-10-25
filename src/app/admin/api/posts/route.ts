@@ -23,7 +23,18 @@ export async function GET(req: Request) {
     const db = client.db("blog");
     const postsCollection = db.collection("posts");
 
-    const projection = { _id: 0, postId: 1, title: 1, date: 1, views: 1, hidden: 1, tags: 1, categories: 1, coAuthorUserId: 1 } as const;
+    const projection = {
+      _id: 0,
+      postId: 1,
+      title: 1,
+      date: 1,
+      views: 1,
+      hidden: 1,
+      tags: 1,
+      categories: 1,
+      coAuthorUserId: 1,
+      paragraphCommentsEnabled: 1,
+    } as const;
 
     // Build sort doc
     let sortDoc: Record<string, 1 | -1> = { date: -1 };
@@ -95,6 +106,8 @@ export async function GET(req: Request) {
         : (p as any).categories
         ? [String((p as any).categories)]
         : [],
+      paragraphCommentsEnabled:
+        (p as any).paragraphCommentsEnabled === false ? false : true,
     }));
 
     const hasMore = offset + posts.length < total;

@@ -58,7 +58,52 @@ export async function GET(
   }
 
   try {
+    const { sessionClaims } = await auth();
     const db = await getMongoDb();
+
+    const postsCollection = db.collection("posts");
+    const post = await postsCollection.findOne(
+      { postId },
+      { projection: { _id: 1, hidden: 1, paragraphCommentsEnabled: 1 } }
+    );
+
+    if (!post) {
+      return NextResponse.json(
+        { error: "Post não encontrado." },
+        { status: 404 }
+      );
+    }
+
+    let isAdmin = sessionClaims?.metadata?.role === "admin";
+    if (!isAdmin) {
+      try {
+        const user = await currentUser();
+        const metadataSources = [
+          user?.publicMetadata,
+          user?.unsafeMetadata,
+          user?.privateMetadata,
+        ] as Array<Record<string, unknown> | null | undefined>;
+        isAdmin = metadataSources.some((meta) => meta?.role === "admin");
+      } catch (error) {
+        isAdmin = false;
+      }
+    }
+
+    if ((post as any).hidden === true && !isAdmin) {
+      return NextResponse.json(
+        { error: "Post não encontrado." },
+        { status: 404 }
+      );
+    }
+
+    const commentsEnabled = (post as any).paragraphCommentsEnabled !== false;
+    if (!commentsEnabled) {
+      return NextResponse.json(
+        { error: "Comentários por parágrafo desativados para este post." },
+        { status: 403 }
+      );
+    }
+
     const collection = db.collection<ParagraphCommentDocument>(COLLECTION_NAME);
 
     const documents = await collection
@@ -91,7 +136,7 @@ export async function POST(
     );
   }
 
-  const { userId } = await auth();
+  const { userId, sessionClaims } = await auth();
   if (!userId) {
     return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
   }
@@ -99,6 +144,16 @@ export async function POST(
   const user = await currentUser();
   if (!user) {
     return NextResponse.json({ error: "Usuário não encontrado." }, { status: 401 });
+  }
+
+  let isAdmin = sessionClaims?.metadata?.role === "admin";
+  if (!isAdmin) {
+    const metadataSources = [
+      user.publicMetadata,
+      user.unsafeMetadata,
+      user.privateMetadata,
+    ] as Array<Record<string, unknown> | null | undefined>;
+    isAdmin = metadataSources.some((meta) => meta?.role === "admin");
   }
 
   let body: unknown;
@@ -152,21 +207,49 @@ export async function POST(
     user.fullName || user.firstName || user.username || "Leitor";
   const authorImageUrl = user.imageUrl ?? null;
 
-  const document: ParagraphCommentDocument = {
-    _id: new ObjectId(),
-    postId,
-    paragraphId,
-    userId,
-    authorName,
-    authorImageUrl,
-    content,
-    createdAt: now,
-    updatedAt: now,
-  };
-
   try {
     const db = await getMongoDb();
+    const postsCollection = db.collection("posts");
+    const post = await postsCollection.findOne(
+      { postId },
+      { projection: { _id: 1, hidden: 1, paragraphCommentsEnabled: 1 } }
+    );
+
+    if (!post) {
+      return NextResponse.json(
+        { error: "Post não encontrado." },
+        { status: 404 }
+      );
+    }
+
+    if ((post as any).hidden === true && !isAdmin) {
+      return NextResponse.json(
+        { error: "Post não encontrado." },
+        { status: 404 }
+      );
+    }
+
+    const commentsEnabled = (post as any).paragraphCommentsEnabled !== false;
+    if (!commentsEnabled) {
+      return NextResponse.json(
+        { error: "Comentários por parágrafo desativados para este post." },
+        { status: 403 }
+      );
+    }
+
     const collection = db.collection<ParagraphCommentDocument>(COLLECTION_NAME);
+
+    const document: ParagraphCommentDocument = {
+      _id: new ObjectId(),
+      postId,
+      paragraphId,
+      userId,
+      authorName,
+      authorImageUrl,
+      content,
+      createdAt: now,
+      updatedAt: now,
+    };
     await collection.insertOne(document);
 
     return NextResponse.json(
