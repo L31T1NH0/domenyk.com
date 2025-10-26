@@ -33,7 +33,7 @@ const ReplyForm: React.FC<ReplyFormProps> = ({
         event.preventDefault();
         onSubmit(commentId, draft);
       }}
-      className="mt-4 space-y-4 rounded-2xl border border-zinc-800/80 bg-zinc-950/70 p-4 sm:p-6 text-sm"
+      className="mt-3 space-y-2 rounded-xl border border-zinc-200 bg-white p-3 shadow-sm text-sm dark:border-zinc-700 dark:bg-zinc-900/70"
     >
       {requiresName && (
         <input
@@ -46,7 +46,7 @@ const ReplyForm: React.FC<ReplyFormProps> = ({
               nome: event.target.value,
             })
           }
-          className="w-full rounded-xl border border-zinc-800/70 bg-zinc-900/70 px-4 py-2 text-sm text-zinc-100 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-500/40"
+          className="w-full rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm text-zinc-800 shadow-inner outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-700"
           disabled={isSending}
         />
       )}
@@ -60,10 +60,10 @@ const ReplyForm: React.FC<ReplyFormProps> = ({
             comentario: event.target.value,
           })
         }
-        className="h-20 sm:h-24 w-full resize-none rounded-xl border border-zinc-800/70 bg-zinc-900/70 px-4 py-2 text-sm text-zinc-100 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-500/40"
+        className="h-20 sm:h-24 w-full resize-none rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm text-zinc-800 shadow-inner outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-700"
         disabled={isSending}
       />
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
         {errorMessage && (
           <span className="text-xs font-medium text-red-400">{errorMessage}</span>
         )}
@@ -71,17 +71,17 @@ const ReplyForm: React.FC<ReplyFormProps> = ({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-xl border border-zinc-700/80 px-4 py-2 text-xs font-medium text-zinc-300 transition hover:border-zinc-500 hover:text-zinc-100"
+            className="rounded-full border border-zinc-300 px-4 py-1 text-xs font-medium text-zinc-700 transition hover:border-zinc-400 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-200"
             disabled={isSending}
           >
             Cancelar
           </button>
           <button
             type="submit"
-            className="rounded-xl bg-purple-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-purple-500 disabled:cursor-not-allowed disabled:bg-purple-800/60"
+            className="inline-flex items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 py-1 text-xs font-medium text-zinc-700 transition-colors hover:border-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700"
             disabled={isSending}
           >
-            {isSending ? "Enviando………" : "Responder"}
+            {isSending ? "Enviando..." : "Responder"}
           </button>
         </div>
       </div>
@@ -90,6 +90,9 @@ const ReplyForm: React.FC<ReplyFormProps> = ({
 };
 
 export default ReplyForm;
+
+
+
 
 
 

@@ -68,21 +68,21 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
   return (
     <article
-      className={`rounded-2xl border bg-zinc-950/70 p-4 sm:p-6 transition-all ${
+      className={`rounded-lg border p-3 shadow-sm transition-all bg-white dark:bg-zinc-900/70 ${
         comment.optimistic
-          ? "border-purple-500/60 shadow-lg shadow-purple-800/30"
-          : "border-zinc-800/80"
+          ? "border-purple-500/60 shadow-purple-300/30"
+          : "border-zinc-200 dark:border-zinc-700"
       }`}
     >
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-3">
         <img
           src={avatarUrl}
           alt={`${displayName} avatar`}
           className="h-8 w-8 rounded-full max-sm:w-6 object-cover icon"
         />
-        <div className="flex-1 space-y-4">
-          <div className="flex flex-wrap items-center gap-4 text-sm">
-            <span className="font-semibold text-zinc-100 flex items-center gap-2">
+        <div className="flex-1 space-y-3">
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <span className="font-semibold text-zinc-800 dark:text-white flex items-center gap-2">
               {displayName}
               {isAuthComment(comment) && (
                 <CheckBadgeIcon
@@ -122,17 +122,17 @@ const CommentItem: React.FC<CommentItemProps> = ({
           </div>
 
           <div
-            className="prose prose-invert max-w-none text-sm leading-relaxed text-zinc-200"
+            className="prose prose-zinc dark:prose-invert max-w-none text-sm leading-relaxed text-zinc-700 dark:text-zinc-100"
             dangerouslySetInnerHTML={{
               __html: sanitizeCommentHtml(comment.comentario),
             }}
           />
 
-          <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-400">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500 dark:text-zinc-400">
             <button
               type="button"
               onClick={onReplyRequest}
-              className="rounded-full border border-zinc-700/60 px-4 py-2 font-medium text-zinc-200 transition hover:border-purple-500 hover:text-white"
+              className="inline-flex items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 py-1 text-sm font-medium text-zinc-700 transition-colors hover:border-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700"
             >
               Responder
             </button>
@@ -141,7 +141,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowDeleteModal(true)}
-                  className="flex items-center gap-2 rounded-full border border-red-500/40 px-4 py-2 font-medium text-red-300 transition hover:border-red-500 hover:text-red-200"
+                  className="flex items-center gap-2 text-xs font-medium text-red-500 transition-colors hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded-full"
                 >
                   <TrashIcon className="h-3.5 w-3.5" /> Remover
                 </button>
@@ -158,15 +158,15 @@ const CommentItem: React.FC<CommentItemProps> = ({
                       role="dialog"
                       aria-modal="true"
                       aria-labelledby={`delete-modal-${comment._id}`}
-                      className="z-50 mx-4 max-w-md w-full rounded-2xl border border-zinc-800/90 bg-zinc-950 p-4 shadow-lg"
+                      className="z-50 mx-4 max-w-md w-full rounded-2xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-800/90 dark:bg-zinc-950"
                     >
-                      <h3 id={`delete-modal-${comment._id}`} className="text-sm font-semibold text-zinc-100">Confirmar remoção</h3>
-                      <p className="mt-2 text-sm text-zinc-400">Tem certeza que deseja remover este comentário? Esta ação não pode ser desfeita.</p>
-                      <div className="mt-4 flex justify-end gap-4">
+                      <h3 id={`delete-modal-${comment._id}`} className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">Confirmar remoção</h3>
+                      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Tem certeza que deseja remover este comentário? Esta ação não pode ser desfeita.</p>
+                      <div className="mt-3 flex justify-end gap-3">
                         <button
                           type="button"
                           onClick={() => setShowDeleteModal(false)}
-                          className="rounded-full border border-zinc-700/60 px-4 py-2 text-sm text-zinc-200"
+                          className="rounded-full border border-zinc-300 px-4 py-2 text-sm text-zinc-700 dark:border-zinc-700 dark:text-zinc-200"
                         >
                           Cancelar
                         </button>
@@ -176,7 +176,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                             setShowDeleteModal(false);
                             onDelete();
                           }}
-                          className="rounded-full bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-500"
+                          className="rounded-full bg-red-600 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                         >
                           Remover
                         </button>
@@ -202,7 +202,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
             />
           )}
 
-          {children && <div className="space-y-4 sm:space-y-6 border-l border-zinc-800/70 pl-4 sm:pl-6">{children}</div>}
+          {children && <div className="space-y-3 sm:space-y-4 border-l border-zinc-200 dark:border-zinc-700 pl-3 sm:pl-4">{children}</div>}
         </div>
   </div>
     </article>
@@ -220,6 +220,13 @@ const handleSubmitWrapper = (
 };
 
 export default CommentItem;
+
+
+
+
+
+
+
 
 
 

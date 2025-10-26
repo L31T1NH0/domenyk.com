@@ -85,8 +85,11 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId }) => {
       if (Array.isArray(data)) setComments(flattenServerComments(data as any));
       else setComments([]);
     } catch (error) {
-  const message = error instanceof Error ? error.message : "Falha ao carregar comentários.";
-      setErrorMessage(message);
+      const raw = error instanceof Error ? error.message : String(error);
+      const friendly = /Failed to fetch|NetworkError|TypeError/i.test(raw)
+        ? "Falha ao conectar ao servidor. Tente novamente."
+        : raw || "Falha ao carregar comentários.";
+      setErrorMessage(friendly);
       setComments([]);
     }
   }, [postId]);
@@ -277,9 +280,12 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId }) => {
     } catch (error) {
       if ((error as DOMException).name === "AbortError") return;
       removeOptimistic(tempId);
-  const message = error instanceof Error ? error.message : "Não foi possível enviar o comentário.";
+      const raw = error instanceof Error ? error.message : String(error);
+      const friendly = /Failed to fetch|NetworkError|TypeError/i.test(raw)
+        ? "Falha ao conectar ao servidor. Tente novamente."
+        : raw || "Não foi possível enviar o comentário.";
       setSubmissionStatus("error");
-      setErrorMessage(message);
+      setErrorMessage(friendly);
     } finally {
       pendingRequestRef.current = null;
     }
@@ -396,9 +402,12 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId }) => {
     } catch (error) {
       if ((error as DOMException).name === "AbortError") return;
       removeOptimistic(tempId);
-  const message = error instanceof Error ? error.message : "Não foi possível enviar a resposta.";
+      const raw = error instanceof Error ? error.message : String(error);
+      const friendly = /Failed to fetch|NetworkError|TypeError/i.test(raw)
+        ? "Falha ao conectar ao servidor. Tente novamente."
+        : raw || "Não foi possível enviar a resposta.";
       setReplyStatuses((prev) => ({ ...prev, [commentId]: "error" }));
-      setReplyErrors((prev) => ({ ...prev, [commentId]: message }));
+      setReplyErrors((prev) => ({ ...prev, [commentId]: friendly }));
     } finally {
       replyRequestRefs.current[commentId] = null;
     }
@@ -436,20 +445,23 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId }) => {
           }),
         });
 
-        if (!response.ok) throw new Error(await response.text());
+      if (!response.ok) throw new Error(await response.text());
 
-        removeBranch(comment._id);
+      removeBranch(comment._id);
   setStatusMessage("Comentário removido.");
-      } catch (error) {
-  const message = error instanceof Error ? error.message : "Não foi possível remover o comentário.";
-        setErrorMessage(message);
+    } catch (error) {
+        const raw = error instanceof Error ? error.message : String(error);
+        const friendly = /Failed to fetch|NetworkError|TypeError/i.test(raw)
+          ? "Falha ao conectar ao servidor. Tente novamente."
+          : raw || "Não foi possível remover o comentário.";
+        setErrorMessage(friendly);
       }
     },
     [postId, removeBranch]
   );
 
   return (
-  <section className="space-y-6" aria-label="Seção de comentários">
+  <section className="space-y-4" aria-label="Seção de comentários">
       <div className="mx-auto w-full">
         <header className="flex items-center gap-2 text-xl font-semibold text-zinc-100">
           <ChatBubbleLeftRightIcon className="h-5 w-5" />
@@ -458,9 +470,9 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId }) => {
 
         <form
           onSubmit={handleCommentSubmit}
-          className="space-y-6 rounded-3xl border border-zinc-800/80 bg-zinc-950/70 p-4 sm:p-6 md:p-8 shadow-inner shadow-black/40"
+          className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/70"
         >
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
             {!userId && (
               <div className="space-y-2">
                 <input
@@ -469,7 +481,7 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId }) => {
                   placeholder="Digite seu nome"
                   value={commentDraft.nome}
                   onChange={(event) => handleCommentDraftChange("nome", event.target.value)}
-                  className="w-full rounded-2xl border border-zinc-800/70 bg-zinc-900/70 px-4 py-2 sm:px-6 sm:py-4 text-sm text-zinc-100 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-500/40"
+                  className="w-full rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm text-zinc-800 shadow-inner outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-700"
                   disabled={submissionStatus === "sending"}
                 />
                 <p className="text-xs text-zinc-500">Esse nome aparecerá junto ao seu comentário.</p>
@@ -481,21 +493,21 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId }) => {
               placeholder="Escreva seu comentário"
               value={commentDraft.comentario}
               onChange={(event) => handleCommentDraftChange("comentario", event.target.value)}
-              className="h-20 sm:h-24 w-full resize-none rounded-2xl border border-zinc-800/70 bg-zinc-900/70 px-4 py-2 sm:px-6 sm:py-4 text-sm text-zinc-100 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-500/40"
+              className="h-20 sm:h-24 w-full resize-none rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm text-zinc-800 shadow-inner outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-700"
               disabled={submissionStatus === "sending"}
             />
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-4 text-sm">
+          <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
             <div className="text-xs text-zinc-500">
               {commentDraft.comentario.length}/{COMMENT_MAX_LENGTH}
             </div>
             <button
               type="submit"
               disabled={submissionStatus === "sending"}
-              className="rounded-full bg-purple-600 px-6 py-2 text-sm font-semibold text-white transition hover:bg-purple-500 disabled:cursor-not-allowed disabled:bg-purple-800/60"
+              className="inline-flex items-center my-2 gap-1 rounded-full border border-zinc-300 bg-white px-3 py-1 text-sm font-medium text-zinc-700 transition-colors hover:border-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700"
             >
-              {submissionStatus === "sending" ? "Enviando..." : "Enviar comentário"}
+              {submissionStatus === "sending" ? "Enviando..." : "Publicar"}
             </button>
           </div>
 
@@ -516,7 +528,7 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId }) => {
           <p className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-300">{errorMessage}</p>
         )}
 
-        <div className="mt-8 space-y-6">
+        <div className="mt-4 space-y-4">
           <CommentThread
             parentId={null}
             lookup={commentLookup}
@@ -544,3 +556,10 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId }) => {
 };
 
 export default Comment;
+
+
+
+
+
+
+

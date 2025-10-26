@@ -1,14 +1,24 @@
 import { MongoClient } from "mongodb";
 
-const MONGODB_URI = process.env.MONGODB_URI;
+const RAW_MONGODB_URI = process.env.MONGODB_URI;
 const MONGODB_DB = process.env.MONGODB_DB || "blog";
 
-if (!MONGODB_URI || !MONGODB_DB) {
+if (!RAW_MONGODB_URI || !MONGODB_DB) {
   throw new Error("Defina MONGODB_URI e MONGODB_DB no .env.local");
 }
 
-// Configurações adicionais para MongoDB Atlas
-const options = {};
+// Normaliza "localhost" para 127.0.0.1 (evita problemas de resolução/IPv6 em alguns ambientes Windows)
+const MONGODB_URI = RAW_MONGODB_URI.replace(
+  /^mongodb:\/\/localhost(?=[:/])/i,
+  "mongodb://127.0.0.1"
+);
+
+// Configurações para falhar mais rápido quando o servidor não está acessível
+const options = {
+  serverSelectionTimeoutMS: 5000,
+  connectTimeoutMS: 5000,
+  maxPoolSize: 10,
+} as const;
 
 let globalWithMongo = global as typeof globalThis & {
   _mongoClientPromise: Promise<MongoClient>;

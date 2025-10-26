@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 
 import CommentItem from "./CommentItem";
 import {
@@ -48,7 +48,7 @@ const CommentThread: React.FC<CommentThreadProps> = ({
   }
 
   return (
-    <div className={parentId ? "space-y-4" : "space-y-5"}>
+    <div className={parentId ? "space-y-3" : "space-y-4"}>
       {siblings.map((comment) => (
         <CommentItem
           key={comment._id}
@@ -89,3 +89,4 @@ const CommentThread: React.FC<CommentThreadProps> = ({
 };
 
 export default CommentThread;
+

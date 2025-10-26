@@ -37,10 +37,10 @@ const mapDocumentToResponse = (
 
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ postId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const resolvedParams = await params;
-  const postId = resolvedParams?.postId;
+  const postId = resolvedParams?.id;
   if (!postId) {
     return NextResponse.json(
       { error: "Post ID inválido." },
@@ -113,10 +113,10 @@ export async function GET(
 
 export async function POST(
   req: Request,
-  { params }: { params: Promise<{ postId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const resolvedParams = await params;
-  const postId = resolvedParams?.postId;
+  const postId = resolvedParams?.id;
   if (!postId) {
     return NextResponse.json(
       { error: "Post ID inválido." },

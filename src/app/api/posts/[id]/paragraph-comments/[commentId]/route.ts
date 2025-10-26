@@ -16,10 +16,10 @@ type ParagraphCommentDocument = {
 
 export async function DELETE(
   _req: Request,
-  { params }: { params: Promise<{ postId: string; commentId: string }> }
+  { params }: { params: Promise<{ id: string; commentId: string }> }
 ) {
   const resolvedParams = await params;
-  const postId = resolvedParams?.postId;
+  const postId = resolvedParams?.id;
   const commentId = resolvedParams?.commentId;
 
   if (!postId || !commentId) {

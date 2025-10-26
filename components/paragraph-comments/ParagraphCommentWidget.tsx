@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useAuth } from "@clerk/nextjs";
 import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/outline";
@@ -98,7 +98,7 @@ export default function ParagraphCommentWidget({
       setIsFeatureBlocked(false);
     } catch (error) {
       console.error("Failed to load paragraph comments", error);
-      setErrorMessage("Não foi possível carregar os comentários agora.");
+  setErrorMessage("Não foi possível carregar os comentários agora.");
     } finally {
       setIsLoading(false);
     }
@@ -233,7 +233,7 @@ export default function ParagraphCommentWidget({
       }
     } catch (error) {
       console.error("Failed to submit paragraph comment", error);
-      setErrorMessage("Não foi possível enviar seu comentário.");
+  setErrorMessage("Não foi possível enviar seu comentário.");
     } finally {
       setIsSubmitting(false);
     }
@@ -264,7 +264,7 @@ export default function ParagraphCommentWidget({
         return;
       }
 
-      const confirmed = window.confirm("Remover este comentário?");
+  const confirmed = window.confirm("Remover este comentário?");
       if (!confirmed) {
         return;
       }
@@ -298,7 +298,7 @@ export default function ParagraphCommentWidget({
         setIsFeatureBlocked(false);
       } catch (error) {
         console.error("Failed to delete paragraph comment", error);
-        setErrorMessage("Não foi possível remover o comentário.");
+  setErrorMessage("Não foi possível remover o comentário.");
       } finally {
         setDeletingId(null);
       }
@@ -328,17 +328,18 @@ export default function ParagraphCommentWidget({
 
   return (
     <section className="flex flex-col gap-3" data-paragraph-id={paragraphId}>
-      <div className="flex items-start gap-3">
-        <p {...restParagraphProps} className={paragraphClassName}>
+      <div className="relative group">
+        <p {...restParagraphProps} className={`${paragraphClassName} peer`}>
           {children}
         </p>
+        <span aria-hidden="true" className="absolute right-[-2rem] top-0 h-full w-8" />
         <button
           type="button"
           onClick={toggleComments}
-          className="flex shrink-0 items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 py-1 text-sm font-medium text-zinc-600 shadow-sm transition hover:border-zinc-400 hover:text-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:text-white"
+          className="pointer-events-none absolute right-[-2rem] top-1/2 z-10 -translate-y-1/2 opacity-0 transition-opacity peer-hover:opacity-100 group-hover:opacity-100 hover:opacity-100 focus:opacity-100 peer-hover:pointer-events-auto group-hover:pointer-events-auto hover:pointer-events-auto focus:pointer-events-auto inline-flex shrink-0 items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 py-1 text-sm font-medium text-zinc-600 shadow-sm hover:border-zinc-400 hover:text-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:text-white"
+          aria-label="Comentar parágrafo"
         >
           <ChatBubbleLeftRightIcon className="h-4 w-4" />
-          <span className="hidden sm:inline">Comentar</span>
         </button>
       </div>
 
@@ -382,7 +383,7 @@ export default function ParagraphCommentWidget({
               <button
                 type="submit"
                 disabled={isSubmitting || isFeatureBlocked}
-                className="inline-flex items-center gap-1 rounded-full bg-zinc-900 px-3 py-1 text-sm font-medium text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-400 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                className="inline-flex items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 py-1 text-sm font-medium text-zinc-700 transition-colors hover:border-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700"
               >
                 {isSubmitting ? "Enviando..." : "Publicar"}
               </button>
@@ -403,7 +404,7 @@ export default function ParagraphCommentWidget({
                     <img
                       src={comment.authorImageUrl}
                       alt={comment.authorName}
-                      className="h-8 w-8 rounded-full object-cover"
+                      className="h-8 w-8 rounded-full object-cover icon"
                       loading="lazy"
                     />
                   ) : (
@@ -430,7 +431,7 @@ export default function ParagraphCommentWidget({
                             type="button"
                             onClick={() => handleDelete(comment._id)}
                             disabled={deletingId === comment._id}
-                            className="text-xs font-medium text-red-500 transition hover:text-red-600 disabled:cursor-not-allowed disabled:text-red-300"
+                            className="text-xs font-medium text-red-500 transition-colors hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded-full disabled:cursor-not-allowed disabled:text-red-300"
                           >
                             {deletingId === comment._id ? "Removendo..." : "Remover"}
                           </button>
@@ -451,3 +452,4 @@ export default function ParagraphCommentWidget({
     </section>
   );
 }
+
