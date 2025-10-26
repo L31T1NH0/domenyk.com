@@ -1,8 +1,8 @@
 ﻿"use client";
 
 import { useAuth } from "@clerk/nextjs";
-import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/outline";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { ChatBubbleLeftRightIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { sanitizeCommentHtml } from "@components/comments/utils";
 import type { ParagraphComment } from "../../types/paragraph-comments";
 
@@ -49,6 +49,7 @@ export default function ParagraphCommentWidget({
   children,
 }: ParagraphCommentWidgetProps) {
   const { isLoaded, userId } = useAuth();
+  const OPEN_EVENT = "paragraph-comments:open";
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -136,6 +137,12 @@ export default function ParagraphCommentWidget({
       await loadComments();
     }
 
+    if (next) {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent(OPEN_EVENT, { detail: { paragraphId } }));
+      }
+    }
+
     setIsExpanded(next);
   }, [hasLoaded, isExpanded, isLoaded, loadComments, userId]);
 
@@ -154,6 +161,10 @@ export default function ParagraphCommentWidget({
 
     if (next && !hasLoaded) {
       await loadComments();
+    }
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent(OPEN_EVENT, { detail: { paragraphId } }));
     }
 
     setIsExpanded(next);
@@ -175,6 +186,11 @@ export default function ParagraphCommentWidget({
     const applyToggle = async () => {
       if (next && !hasLoaded) {
         await loadComments();
+      }
+      if (next) {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent(OPEN_EVENT, { detail: { paragraphId } }));
+        }
       }
       setIsExpanded(next);
     };
@@ -367,8 +383,49 @@ export default function ParagraphCommentWidget({
     return `${baseClass} ${extra}`.trim();
   }, [incomingClassName]);
 
+  const sectionRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!isExpanded) return;
+    const handleDocClick = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node | null;
+      if (!target || !sectionRef.current) return;
+      if (!sectionRef.current.contains(target)) {
+        setIsExpanded(false);
+      }
+    };
+    document.addEventListener("mousedown", handleDocClick);
+    document.addEventListener("touchstart", handleDocClick, { passive: true });
+    return () => {
+      document.removeEventListener("mousedown", handleDocClick);
+      document.removeEventListener("touchstart", handleDocClick);
+    };
+  }, [isExpanded]);
+
+  useEffect(() => {
+    const onOtherParagraphOpen = (e: Event) => {
+      try {
+        const ce = e as CustomEvent<{ paragraphId: string }>;
+        if (!ce?.detail) return;
+        if (ce.detail.paragraphId !== paragraphId) {
+          setIsExpanded(false);
+        }
+      } catch {
+        // noop
+      }
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener(OPEN_EVENT, onOtherParagraphOpen as EventListener);
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener(OPEN_EVENT, onOtherParagraphOpen as EventListener);
+      }
+    };
+  }, [paragraphId]);
+
   return (
-    <section className="flex flex-col gap-3" data-paragraph-id={paragraphId}>
+    <section ref={sectionRef} className="flex flex-col gap-3" data-paragraph-id={paragraphId}>
       <div className="relative group">
         <p
           {...restParagraphProps}
@@ -400,7 +457,7 @@ export default function ParagraphCommentWidget({
         <button
           type="button"
           onClick={toggleComments}
-          className="hidden md:inline-flex pointer-events-none absolute right-[-2rem] top-1/2 z-10 -translate-y-1/2 opacity-0 transition-opacity peer-hover:opacity-100 group-hover:opacity-100 hover:opacity-100 focus:opacity-100 peer-hover:pointer-events-auto group-hover:pointer-events-auto hover:pointer-events-auto focus:pointer-events-auto inline-flex shrink-0 items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 py-1 text-sm font-medium text-zinc-600 shadow-sm hover:border-zinc-400 hover:text-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:text-white"
+          className="hidden md:inline-flex pointer-events-none absolute right-[-2rem] top-1/2 z-10 -translate-y-1/2 opacity-0 transition-opacity peer-hover:opacity-100 group-hover:opacity-100 hover:opacity-100 focus:opacity-100 peer-hover:pointer-events-auto group-hover:pointer-events-auto hover:pointer-events-auto focus:pointer-events-auto md:inline-flex shrink-0 items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 py-1 text-sm font-medium text-zinc-600 shadow-sm hover:border-zinc-400 hover:text-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:text-white"
           aria-label="Comentar parágrafo"
         >
           <ChatBubbleLeftRightIcon className="h-4 w-4" />
@@ -416,6 +473,17 @@ export default function ParagraphCommentWidget({
             <span className="text-xs text-zinc-500 dark:text-zinc-400">
               Parágrafo {paragraphIndex + 1}
             </span>
+          </div>
+
+          <div className="-mt-2 mb-1 flex justify-end">
+            <button
+              type="button"
+              onClick={() => setIsExpanded(false)}
+              aria-label="Fechar comentarios deste paragrafo"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-zinc-300 text-zinc-500 hover:text-zinc-700 hover:border-zinc-400 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 dark:border-zinc-700 dark:text-zinc-400 dark:hover:text-white dark:hover:border-zinc-500"
+            >
+              <XMarkIcon className="h-4 w-4" />
+            </button>
           </div>
 
           {errorMessage && (
