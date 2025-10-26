@@ -21,6 +21,7 @@ type PostContentClientProps = {
   readingTime: string;
   coAuthorUserId?: string | null;
   paragraphCommentsEnabled: boolean;
+  isAdmin: boolean;
 };
 
 export default function PostContentClient({
@@ -32,6 +33,7 @@ export default function PostContentClient({
   readingTime,
   coAuthorUserId,
   paragraphCommentsEnabled,
+  isAdmin,
 }: PostContentClientProps) {
   const [views, setViews] = useState(initialViews);
 
@@ -85,6 +87,7 @@ export default function PostContentClient({
               paragraphIndex={currentIndex}
               coAuthorUserId={coAuthorUserId}
               paragraphProps={paragraphProps}
+              isAdmin={isAdmin}
             >
               {domToReact((element.children ?? []) as DOMNode[])}
             </ParagraphCommentWidget>
@@ -93,7 +96,7 @@ export default function PostContentClient({
         return undefined;
       },
     });
-  }, [coAuthorUserId, htmlContent, paragraphCommentsEnabled, postId]);
+  }, [coAuthorUserId, htmlContent, isAdmin, paragraphCommentsEnabled, postId]);
 
   return (
     <article className="flex flex-col gap-2">
