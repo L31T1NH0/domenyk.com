@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { clientPromise } from "../../../../lib/mongo";
-import { remark } from "remark";
-import html from "remark-html";
 import { resolveAdminStatus } from "../../../../lib/admin";
 
 async function resolveIsAdminFromRequest(): Promise<boolean> {
@@ -44,12 +42,6 @@ export async function GET(
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
 
-    let htmlContent = post.htmlContent;
-    if (htmlContent) {
-      const processedContent = await remark().use(html).process(htmlContent);
-      htmlContent = processedContent.toString();
-    }
-
     // Increment views and set cookie, similar to Pages Router implementation
     const cookieName = `viewed_${id}`;
     const viewedCookie = req.headers
@@ -63,17 +55,7 @@ export async function GET(
       views += 1;
 
       const response = NextResponse.json(
-        {
-          postId: post.postId,
-          date: post.date,
-          title: post.title,
-          htmlContent,
-          views,
-          audioUrl: post.audioUrl,
-          cape: post.cape,
-          friendImage: post.friendImage,
-          coAuthorUserId: (post as any).coAuthorUserId ?? null,
-        },
+        { postId: post.postId, views },
         { status: 200 }
       );
       response.headers.set(
@@ -83,17 +65,7 @@ export async function GET(
       return response;
     }
 
-    const postData = {
-      postId: post.postId,
-      date: post.date,
-      title: post.title,
-      htmlContent,
-      views,
-      audioUrl: post.audioUrl,
-      cape: post.cape,
-      friendImage: post.friendImage,
-      coAuthorUserId: (post as any).coAuthorUserId ?? null,
-    };
+    const postData = { postId: post.postId, views };
 
     console.log("Post data from API for postId:", id, postData);
 

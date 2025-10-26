@@ -80,9 +80,9 @@ export default function PostContentClient({
         if (!response.ok) {
           return;
         }
-        const data = await response.json();
-        if (!canceled && typeof data.views === "number") {
-          setViews(data.views);
+        const { views } = await response.json();
+        if (!canceled && typeof views === "number") {
+          setViews(views);
         }
       } catch (error) {
         console.error("Failed to refresh post views", error);
