@@ -3,10 +3,15 @@
 import { SignInButton, useAuth } from "@clerk/nextjs";
 import { ChatBubbleLeftRightIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import LimitedTextarea from "@components/comments/LimitedTextarea";
+import {
+  PARAGRAPH_COMMENT_MAX_LENGTH,
+  buildLengthErrorMessage,
+  useCommentLength,
+} from "@components/comments/lengthUtils";
 import { sanitizeCommentHtml } from "@components/comments/utils";
 import type { ParagraphComment } from "../../types/paragraph-comments";
 
-const MAX_COMMENT_LENGTH = 480;
 const LOGIN_PROMPT_TIMEOUT_MS = 5000;
 
 function formatDateLabel(isoDate: string): string {
@@ -70,6 +75,8 @@ export default function ParagraphCommentWidget({
   const [loginPromptProgress, setLoginPromptProgress] = useState(0);
   const [loginPromptCycle, setLoginPromptCycle] = useState(0);
   const loginPromptTitleId = useId();
+
+  const draftLength = useCommentLength(draft, PARAGRAPH_COMMENT_MAX_LENGTH);
 
   const openLoginPrompt = useCallback(() => {
     setLoginPromptProgress(0);
@@ -217,9 +224,9 @@ export default function ParagraphCommentWidget({
       return;
     }
 
-    if (trimmed.length > MAX_COMMENT_LENGTH) {
+    if (draftLength.isOverLimit) {
       setErrorMessage(
-        `O comentário deve ter no máximo ${MAX_COMMENT_LENGTH} caracteres.`
+        buildLengthErrorMessage(PARAGRAPH_COMMENT_MAX_LENGTH, "comentário")
       );
       return;
     }
@@ -517,7 +524,7 @@ export default function ParagraphCommentWidget({
           )}
 
           <form className="flex flex-col gap-2" onSubmit={handleSubmit}>
-            <textarea
+            <LimitedTextarea
               name="paragraph-comment"
               value={draft}
               onChange={(event) => {
@@ -527,18 +534,27 @@ export default function ParagraphCommentWidget({
                 }
               }}
               placeholder="Escreva seu comentário"
-              maxLength={MAX_COMMENT_LENGTH}
               rows={3}
               className="w-full resize-none rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm text-zinc-800 shadow-inner outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-700"
+              maxLength={PARAGRAPH_COMMENT_MAX_LENGTH}
+              lengthState={draftLength}
               disabled={isFeatureBlocked}
             />
             <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
-              <span>
-                {draft.length}/{MAX_COMMENT_LENGTH}
+              <span
+                className={
+                  draftLength.isOverLimit
+                    ? "font-medium text-red-500 dark:text-red-400"
+                    : undefined
+                }
+              >
+                {draftLength.message}
               </span>
               <button
                 type="submit"
-                disabled={isSubmitting || isFeatureBlocked}
+                disabled={
+                  isSubmitting || isFeatureBlocked || draftLength.isOverLimit
+                }
                 className="inline-flex items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 py-1 text-sm font-medium text-zinc-700 transition-colors hover:border-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700"
               >
                 {isSubmitting ? "Enviando..." : "Publicar"}

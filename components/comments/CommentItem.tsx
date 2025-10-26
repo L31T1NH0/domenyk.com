@@ -2,6 +2,7 @@
 import { CheckBadgeIcon, TrashIcon } from "@heroicons/react/24/solid";
 
 import ReplyForm from "./ReplyForm";
+import { STANDARD_COMMENT_MAX_LENGTH } from "./lengthUtils";
 import {
   CommentDraft,
   CommentEntity,
@@ -196,7 +197,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
               onSubmit={(_, draft) => handleSubmitWrapper(handleSubmit, draft)}
               onCancel={onReplyCancel}
               requiresName={requiresName}
-              maxLength={120}
+              maxLength={STANDARD_COMMENT_MAX_LENGTH}
               status={replyStatus}
               errorMessage={replyError}
             />
