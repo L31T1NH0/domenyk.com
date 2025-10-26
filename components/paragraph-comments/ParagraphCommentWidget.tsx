@@ -62,6 +62,21 @@ export default function ParagraphCommentWidget({
   const [isFeatureBlocked, setIsFeatureBlocked] = useState(false);
   const [queuedExpand, setQueuedExpand] = useState<boolean | null>(null);
 
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkIsMobile = () => {
+      if (typeof window === "undefined") {
+        setIsMobile(false);
+        return;
+      }
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkIsMobile();
+    window.addEventListener("resize", checkIsMobile);
+    return () => window.removeEventListener("resize", checkIsMobile);
+  }, []);
+
   const loadComments = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -123,6 +138,26 @@ export default function ParagraphCommentWidget({
 
     setIsExpanded(next);
   }, [hasLoaded, isExpanded, isLoaded, loadComments, userId]);
+
+  const openComments = useCallback(async () => {
+    const next = true;
+
+    if (!isLoaded) {
+      setQueuedExpand(next);
+      return;
+    }
+
+    if (!userId) {
+      window.location.href = buildRedirectUrl();
+      return;
+    }
+
+    if (next && !hasLoaded) {
+      await loadComments();
+    }
+
+    setIsExpanded(next);
+  }, [hasLoaded, isLoaded, loadComments, userId]);
 
   useEffect(() => {
     if (!isLoaded || queuedExpand === null) {
@@ -318,7 +353,13 @@ export default function ParagraphCommentWidget({
     [comments]
   );
 
-  const { className: incomingClassName, ...restParagraphProps } = paragraphProps ?? {};
+  const {
+    className: incomingClassName,
+    onClick: incomingOnClick,
+    onFocus: incomingOnFocus,
+    onKeyDown: incomingOnKeyDown,
+    ...restParagraphProps
+  } = paragraphProps ?? {};
 
   const paragraphClassName = useMemo(() => {
     const baseClass = "prose prose-zinc dark:prose-invert max-w-none";
@@ -329,14 +370,37 @@ export default function ParagraphCommentWidget({
   return (
     <section className="flex flex-col gap-3" data-paragraph-id={paragraphId}>
       <div className="relative group">
-        <p {...restParagraphProps} className={`${paragraphClassName} peer`}>
+        <p
+          {...restParagraphProps}
+          tabIndex={0}
+          onClick={(e) => {
+            incomingOnClick?.(e);
+            if ((e as React.MouseEvent<HTMLParagraphElement>).defaultPrevented) return;
+            if (isMobile) void openComments();
+          }}
+          onFocus={(e) => {
+            incomingOnFocus?.(e);
+            if ((e as React.FocusEvent<HTMLParagraphElement>).defaultPrevented) return;
+            if (isMobile && !isExpanded) void openComments();
+          }}
+          onKeyDown={(e) => {
+            incomingOnKeyDown?.(e);
+            if (e.defaultPrevented) return;
+            if (!isMobile) return;
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              void openComments();
+            }
+          }}
+          className={`${paragraphClassName} peer`}
+        >
           {children}
         </p>
-        <span aria-hidden="true" className="absolute right-[-2rem] top-0 h-full w-8" />
+        <span aria-hidden="true" className="hidden md:block absolute right-[-2rem] top-0 h-full w-8 pointer-events-none" />
         <button
           type="button"
           onClick={toggleComments}
-          className="pointer-events-none absolute right-[-2rem] top-1/2 z-10 -translate-y-1/2 opacity-0 transition-opacity peer-hover:opacity-100 group-hover:opacity-100 hover:opacity-100 focus:opacity-100 peer-hover:pointer-events-auto group-hover:pointer-events-auto hover:pointer-events-auto focus:pointer-events-auto inline-flex shrink-0 items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 py-1 text-sm font-medium text-zinc-600 shadow-sm hover:border-zinc-400 hover:text-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:text-white"
+          className="hidden md:inline-flex pointer-events-none absolute right-[-2rem] top-1/2 z-10 -translate-y-1/2 opacity-0 transition-opacity peer-hover:opacity-100 group-hover:opacity-100 hover:opacity-100 focus:opacity-100 peer-hover:pointer-events-auto group-hover:pointer-events-auto hover:pointer-events-auto focus:pointer-events-auto inline-flex shrink-0 items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 py-1 text-sm font-medium text-zinc-600 shadow-sm hover:border-zinc-400 hover:text-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:text-white"
           aria-label="Comentar parágrafo"
         >
           <ChatBubbleLeftRightIcon className="h-4 w-4" />
