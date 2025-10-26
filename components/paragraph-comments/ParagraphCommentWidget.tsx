@@ -610,7 +610,7 @@ export default function ParagraphCommentWidget({
       {showLoginPrompt && (
         <div className="fixed inset-0 z-50 flex items-end justify-end p-4 sm:p-8">
           <div
-            className="absolute inset-0 bg-black/20 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/20"
             aria-hidden="true"
             onClick={() => closeLoginPrompt({ clearQueuedExpand: true })}
           />
