@@ -12,16 +12,23 @@ type PostHeaderProps = {
 };
 
 export function PostHeader({ cape, title, friendImage, coAuthorImageUrl }: PostHeaderProps) {
-  console.log("Cape value in PostHeader:", cape); // Debug para verificar o valor de cape
-  
   const secondaryImage = coAuthorImageUrl || friendImage || undefined;
 
   return (
     <div className="w-full relative">
       {cape && (
-        <div className="w-full relative">
-          <img src={cape} alt="Banner Principal" className="banner w-full h-auto" />
-          <div className="absolute inset-0">
+        <div className="w-full relative overflow-hidden">
+          <div className="relative w-full min-h-[220px] sm:min-h-[320px] lg:min-h-[420px]">
+            <Image
+              src={cape}
+              alt="Banner Principal"
+              fill
+              priority
+              sizes="100vw"
+              className="banner object-cover"
+            />
+          </div>
+          <div className="pointer-events-none absolute inset-0">
             <div className="absolute top-0 left-0 w-full h-[50%] bg-gradient-to-b from-[#040404] via-[#040404]/80 to-transparent"></div>
             <div className="absolute bottom-0 left-0 w-full h-[50%] bg-gradient-to-t from-[#040404] via-[#040404]/80 to-transparent"></div>
           </div>
@@ -40,7 +47,6 @@ export function PostHeader({ cape, title, friendImage, coAuthorImageUrl }: PostH
               {secondaryImage && (
                 <Link href="/">
                   <Image
-                    priority
                     src={secondaryImage}
                     className="foto-post hover:z-30 transition-all"
                     height={56}
@@ -70,7 +76,6 @@ export function PostHeader({ cape, title, friendImage, coAuthorImageUrl }: PostH
             {secondaryImage && (
               <Link href="/">
                 <Image
-                  priority
                   src={secondaryImage}
                   className="rounded-full brightness-125 foto"
                   height={148}
