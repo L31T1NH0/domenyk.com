@@ -9,6 +9,12 @@ import html from "remark-html";
 import { resolveAdminStatus } from "../../../../lib/admin";
 import { deriveRateLimitIdentifier } from "./rate-limit";
 
+type NextRequestWithOptionalIp = NextRequest & { ip?: string | null };
+
+function getRequestIp(req: NextRequest): string | null {
+  return (req as NextRequestWithOptionalIp).ip ?? null;
+}
+
 // Configuração do Redis Upstash
 const redis = Redis.fromEnv();
 
@@ -255,7 +261,7 @@ export async function POST(
   // Rate Limiting
   const userAgent = req.headers.get("user-agent") || null;
   const rateLimitIdentifier = deriveRateLimitIdentifier({
-    ip: req.ip,
+    ip: getRequestIp(req),
     userId,
     userAgent,
   });
