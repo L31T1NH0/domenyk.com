@@ -1,12 +1,13 @@
 ﻿"use client";
 
-import { useAuth } from "@clerk/nextjs";
+import { SignInButton, useAuth } from "@clerk/nextjs";
 import { ChatBubbleLeftRightIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { sanitizeCommentHtml } from "@components/comments/utils";
 import type { ParagraphComment } from "../../types/paragraph-comments";
 
 const MAX_COMMENT_LENGTH = 480;
+const LOGIN_PROMPT_TIMEOUT_MS = 5000;
 
 function formatDateLabel(isoDate: string): string {
   const date = new Date(isoDate);
@@ -65,6 +66,27 @@ export default function ParagraphCommentWidget({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isFeatureBlocked, setIsFeatureBlocked] = useState(false);
   const [queuedExpand, setQueuedExpand] = useState<boolean | null>(null);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [loginPromptProgress, setLoginPromptProgress] = useState(0);
+  const [loginPromptCycle, setLoginPromptCycle] = useState(0);
+  const loginPromptTitleId = useId();
+
+  const openLoginPrompt = useCallback(() => {
+    setLoginPromptProgress(0);
+    setLoginPromptCycle((previous) => previous + 1);
+    setShowLoginPrompt(true);
+  }, []);
+
+  const closeLoginPrompt = useCallback(
+    (options?: { clearQueuedExpand?: boolean }) => {
+      setShowLoginPrompt(false);
+      setLoginPromptProgress(0);
+      if (options?.clearQueuedExpand) {
+        setQueuedExpand(null);
+      }
+    },
+    [setQueuedExpand]
+  );
 
   const loadComments = useCallback(async () => {
     try {
@@ -102,7 +124,7 @@ export default function ParagraphCommentWidget({
       setIsFeatureBlocked(false);
     } catch (error) {
       console.error("Failed to load paragraph comments", error);
-  setErrorMessage("Não foi possível carregar os comentários agora.");
+      setErrorMessage("Não foi possível carregar os comentários agora.");
     } finally {
       setIsLoading(false);
     }
@@ -117,7 +139,8 @@ export default function ParagraphCommentWidget({
     }
 
     if (!userId) {
-      window.location.href = buildRedirectUrl();
+      setQueuedExpand(next);
+      openLoginPrompt();
       return;
     }
 
@@ -132,7 +155,7 @@ export default function ParagraphCommentWidget({
     }
 
     setIsExpanded(next);
-  }, [hasLoaded, isExpanded, isLoaded, loadComments, userId]);
+  }, [hasLoaded, isExpanded, isLoaded, loadComments, openLoginPrompt, paragraphId, userId]);
 
   const openComments = useCallback(async () => {
     const next = true;
@@ -143,7 +166,8 @@ export default function ParagraphCommentWidget({
     }
 
     if (!userId) {
-      window.location.href = buildRedirectUrl();
+      setQueuedExpand(next);
+      openLoginPrompt();
       return;
     }
 
@@ -156,20 +180,20 @@ export default function ParagraphCommentWidget({
     }
 
     setIsExpanded(next);
-  }, [hasLoaded, isLoaded, loadComments, userId]);
+  }, [hasLoaded, isLoaded, loadComments, openLoginPrompt, paragraphId, userId]);
 
   useEffect(() => {
     if (!isLoaded || queuedExpand === null) {
       return;
     }
 
-    const next = queuedExpand;
-    setQueuedExpand(null);
-
     if (!userId) {
-      window.location.href = buildRedirectUrl();
+      openLoginPrompt();
       return;
     }
+
+    const next = queuedExpand;
+    setQueuedExpand(null);
 
     const applyToggle = async () => {
       if (next && !hasLoaded) {
@@ -184,7 +208,7 @@ export default function ParagraphCommentWidget({
     };
 
     void applyToggle();
-  }, [hasLoaded, isLoaded, loadComments, queuedExpand, userId]);
+  }, [hasLoaded, isLoaded, loadComments, openLoginPrompt, paragraphId, queuedExpand, userId]);
 
   const submitComment = useCallback(async () => {
     const trimmed = draft.trim();
@@ -236,7 +260,7 @@ export default function ParagraphCommentWidget({
       }
     } catch (error) {
       console.error("Failed to submit paragraph comment", error);
-  setErrorMessage("Não foi possível enviar seu comentário.");
+      setErrorMessage("Não foi possível enviar seu comentário.");
     } finally {
       setIsSubmitting(false);
     }
@@ -247,11 +271,15 @@ export default function ParagraphCommentWidget({
     if (isFeatureBlocked) {
       return;
     }
-    if (!isLoaded || !userId || isSubmitting) {
-      if (!isLoaded) return;
-      if (!userId) {
-        window.location.href = buildRedirectUrl();
-      }
+    if (!isLoaded) {
+      return;
+    }
+    if (isSubmitting) {
+      return;
+    }
+    if (!userId) {
+      setQueuedExpand((prev) => (prev === null ? true : prev));
+      openLoginPrompt();
       return;
     }
     await submitComment();
@@ -301,7 +329,7 @@ export default function ParagraphCommentWidget({
         setIsFeatureBlocked(false);
       } catch (error) {
         console.error("Failed to delete paragraph comment", error);
-  setErrorMessage("Não foi possível remover o comentário.");
+        setErrorMessage("Não foi possível remover o comentário.");
       } finally {
         setDeletingId(null);
       }
@@ -355,6 +383,47 @@ export default function ParagraphCommentWidget({
   }, [isExpanded]);
 
   useEffect(() => {
+    if (!showLoginPrompt) {
+      return;
+    }
+    if (userId) {
+      closeLoginPrompt();
+    }
+  }, [closeLoginPrompt, showLoginPrompt, userId]);
+
+  useEffect(() => {
+    if (!showLoginPrompt || userId) {
+      return;
+    }
+
+    setLoginPromptProgress(0);
+
+    let animationFrame: number | null = null;
+    const startedAt = performance.now();
+
+    const updateProgress = () => {
+      const elapsed = performance.now() - startedAt;
+      const nextProgress = Math.min(elapsed / LOGIN_PROMPT_TIMEOUT_MS, 1);
+      setLoginPromptProgress(nextProgress);
+
+      if (nextProgress >= 1) {
+        closeLoginPrompt();
+        return;
+      }
+
+      animationFrame = requestAnimationFrame(updateProgress);
+    };
+
+    animationFrame = requestAnimationFrame(updateProgress);
+
+    return () => {
+      if (animationFrame !== null) {
+        cancelAnimationFrame(animationFrame);
+      }
+    };
+  }, [closeLoginPrompt, loginPromptCycle, showLoginPrompt, userId]);
+
+  useEffect(() => {
     const onOtherParagraphOpen = (e: Event) => {
       try {
         const ce = e as CustomEvent<{ paragraphId: string }>;
@@ -377,12 +446,13 @@ export default function ParagraphCommentWidget({
   }, [paragraphId]);
 
   return (
-    <section ref={sectionRef} className="flex flex-col gap-3" data-paragraph-id={paragraphId}>
-      <div className="relative group">
-        <p
-          {...restParagraphProps}
-          tabIndex={0}
-          onClick={(e) => {
+    <>
+      <section ref={sectionRef} className="flex flex-col gap-3" data-paragraph-id={paragraphId}>
+        <div className="relative group">
+          <p
+            {...restParagraphProps}
+            tabIndex={0}
+            onClick={(e) => {
             incomingOnClick?.(e);
             if ((e as React.MouseEvent<HTMLParagraphElement>).defaultPrevented) return;
             if (isMobile) void openComments();
@@ -533,7 +603,52 @@ export default function ParagraphCommentWidget({
           </div>
         </div>
       )}
-    </section>
+      </section>
+
+      {showLoginPrompt && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-end px-4 sm:px-8">
+          <div
+            role="dialog"
+            aria-modal="false"
+            aria-labelledby={loginPromptTitleId}
+            className="pointer-events-auto relative w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-4 text-sm shadow-xl transition dark:border-zinc-700 dark:bg-zinc-900"
+          >
+            <button
+              type="button"
+              aria-label="Fechar aviso de login"
+              onClick={() => closeLoginPrompt({ clearQueuedExpand: true })}
+              className="absolute right-3 top-3 inline-flex h-6 w-6 items-center justify-center rounded-full text-zinc-500 transition hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 dark:text-zinc-400 dark:hover:text-zinc-200"
+            >
+              <XMarkIcon className="h-4 w-4" />
+            </button>
+            <h2 id={loginPromptTitleId} className="pr-6 text-sm font-semibold text-zinc-800 dark:text-zinc-100">
+              Quer participar?
+            </h2>
+            <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
+              Faça login para comentar neste parágrafo e acompanhar a conversa.
+            </p>
+            <div className="mt-4 flex justify-end">
+              {/* Clerk typings omit afterSignInUrl for modal buttons, but runtime supports it. */}
+              {/* @ts-expect-error -- afterSignInUrl is accepted at runtime for modal mode. */}
+              <SignInButton mode="modal" afterSignInUrl={buildRedirectUrl()}>
+                <button
+                  type="button"
+                  className="rounded-full bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 dark:bg-purple-500 dark:hover:bg-purple-400"
+                >
+                  Fazer login
+                </button>
+              </SignInButton>
+            </div>
+            <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
+              <div
+                className="h-full rounded-full bg-purple-500 transition-[width] duration-150 ease-linear dark:bg-purple-400"
+                style={{ width: `${Math.min(loginPromptProgress * 100, 100)}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
