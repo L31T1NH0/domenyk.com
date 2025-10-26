@@ -63,9 +63,11 @@ const LimitedTextarea = forwardRef<HTMLTextAreaElement, LimitedTextareaProps>(
       }
     };
 
+    const { style: inlineStyle, ...textareaProps } = rest;
+
     const textareaClasses = combine(
       className,
-      "relative z-10 text-transparent caret-zinc-800 dark:caret-zinc-100"
+      "relative z-10 text-transparent dark:text-transparent caret-zinc-800 dark:caret-zinc-100"
     );
 
     const overlayClasses = combine(
@@ -81,11 +83,12 @@ const LimitedTextarea = forwardRef<HTMLTextAreaElement, LimitedTextareaProps>(
     return (
       <div className="relative">
         <textarea
-          {...rest}
+          {...textareaProps}
           ref={ref}
           value={value}
           onScroll={handleScroll}
           className={textareaClasses}
+          style={{ ...inlineStyle, color: "transparent" }}
           disabled={disabled}
         />
         <div
