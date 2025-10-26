@@ -70,6 +70,186 @@ export default function ParagraphCommentWidget({
   const [loginPromptProgress, setLoginPromptProgress] = useState(0);
   const [loginPromptCycle, setLoginPromptCycle] = useState(0);
   const loginPromptTitleId = useId();
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const pendingDeleteTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const deleteButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [undoToast, setUndoToast] = useState<{ comment: ParagraphComment } | null>(
+    null
+  );
+  const [undoCountdown, setUndoCountdown] = useState(0);
+  const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const undoIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [isUndoingDelete, setIsUndoingDelete] = useState(false);
+
+  const clearPendingDeleteTimeout = useCallback(() => {
+    if (pendingDeleteTimeoutRef.current) {
+      clearTimeout(pendingDeleteTimeoutRef.current);
+      pendingDeleteTimeoutRef.current = null;
+    }
+  }, []);
+
+  const resetPendingDelete = useCallback(() => {
+    clearPendingDeleteTimeout();
+    setPendingDeleteId(null);
+  }, [clearPendingDeleteTimeout]);
+
+  const schedulePendingDeleteTimeout = useCallback(
+    (commentId: string) => {
+      clearPendingDeleteTimeout();
+      pendingDeleteTimeoutRef.current = setTimeout(() => {
+        setPendingDeleteId((current) => (current === commentId ? null : current));
+      }, 6000);
+    },
+    [clearPendingDeleteTimeout]
+  );
+
+  const clearUndoTimers = useCallback(() => {
+    if (undoTimeoutRef.current) {
+      clearTimeout(undoTimeoutRef.current);
+      undoTimeoutRef.current = null;
+    }
+    if (undoIntervalRef.current) {
+      clearInterval(undoIntervalRef.current);
+      undoIntervalRef.current = null;
+    }
+  }, []);
+
+  const showUndoToast = useCallback(
+    (comment: ParagraphComment) => {
+      clearUndoTimers();
+      setUndoCountdown(5);
+      setUndoToast({ comment });
+      undoTimeoutRef.current = setTimeout(() => {
+        setUndoToast(null);
+        setUndoCountdown(0);
+        if (undoIntervalRef.current) {
+          clearInterval(undoIntervalRef.current);
+          undoIntervalRef.current = null;
+        }
+        undoTimeoutRef.current = null;
+      }, 5000);
+      undoIntervalRef.current = setInterval(() => {
+        setUndoCountdown((previous) => {
+          if (previous <= 1) {
+            if (undoIntervalRef.current) {
+              clearInterval(undoIntervalRef.current);
+              undoIntervalRef.current = null;
+            }
+            return 0;
+          }
+          return previous - 1;
+        });
+      }, 1000);
+    },
+    [clearUndoTimers]
+  );
+
+  useEffect(() => {
+    return () => {
+      clearPendingDeleteTimeout();
+      clearUndoTimers();
+    };
+  }, [clearPendingDeleteTimeout, clearUndoTimers]);
+
+  useEffect(() => {
+    if (!pendingDeleteId) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      const button = deleteButtonRefs.current[pendingDeleteId];
+      if (
+        button &&
+        (button === event.target || button.contains(event.target as Node))
+      ) {
+        return;
+      }
+      resetPendingDelete();
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        resetPendingDelete();
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [pendingDeleteId, resetPendingDelete]);
+
+  useEffect(() => {
+    const ids = new Set(comments.map((comment) => comment._id));
+    Object.keys(deleteButtonRefs.current).forEach((key) => {
+      if (!ids.has(key)) {
+        delete deleteButtonRefs.current[key];
+      }
+    });
+  }, [comments]);
+
+  const handleUndoDelete = useCallback(async () => {
+    if (!undoToast || isUndoingDelete) {
+      return;
+    }
+
+    clearUndoTimers();
+    setIsUndoingDelete(true);
+
+    try {
+      const response = await fetch(`/api/posts/${postId}/paragraph-comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paragraphId: undoToast.comment.paragraphId,
+          content: undoToast.comment.content,
+        }),
+      });
+
+      if (response.status === 403) {
+        const data = (await response.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+        setErrorMessage(
+          data?.error ?? "Comentários por parágrafo desativados para este post."
+        );
+        setIsFeatureBlocked(true);
+        setUndoToast(null);
+        setUndoCountdown(0);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      const data = (await response.json()) as { comment: ParagraphComment };
+      setComments((prev) => [...prev, data.comment]);
+      setUndoToast(null);
+      setUndoCountdown(0);
+      setIsFeatureBlocked(false);
+    } catch (error) {
+      console.error("Failed to undo paragraph comment deletion", error);
+      setErrorMessage("Não foi possível desfazer a exclusão.");
+      setUndoToast(null);
+      setUndoCountdown(0);
+    } finally {
+      setIsUndoingDelete(false);
+    }
+  }, [
+    clearUndoTimers,
+    isUndoingDelete,
+    postId,
+    setComments,
+    setErrorMessage,
+    setIsFeatureBlocked,
+    undoToast,
+  ]);
 
   const openLoginPrompt = useCallback(() => {
     setLoginPromptProgress(0);
@@ -291,14 +471,25 @@ export default function ParagraphCommentWidget({
         return;
       }
 
-      if (!isAdmin && !comments.some((comment) => comment._id === commentId && comment.userId === userId)) {
+      if (
+        !isAdmin &&
+        !comments.some((comment) => comment._id === commentId && comment.userId === userId)
+      ) {
         return;
       }
 
-      const confirmed = window.confirm("Remover este comentário?");
-      if (!confirmed) {
+      const commentToDelete = comments.find((comment) => comment._id === commentId);
+      if (!commentToDelete) {
         return;
       }
+
+      if (pendingDeleteId !== commentId) {
+        setPendingDeleteId(commentId);
+        schedulePendingDeleteTimeout(commentId);
+        return;
+      }
+
+      resetPendingDelete();
 
       try {
         setDeletingId(commentId);
@@ -327,6 +518,7 @@ export default function ParagraphCommentWidget({
 
         setComments((prev) => prev.filter((comment) => comment._id !== commentId));
         setIsFeatureBlocked(false);
+        showUndoToast(commentToDelete);
       } catch (error) {
         console.error("Failed to delete paragraph comment", error);
         setErrorMessage("Não foi possível remover o comentário.");
@@ -334,7 +526,18 @@ export default function ParagraphCommentWidget({
         setDeletingId(null);
       }
     },
-    [comments, isAdmin, isFeatureBlocked, isLoaded, postId, userId]
+    [
+      comments,
+      isAdmin,
+      isFeatureBlocked,
+      isLoaded,
+      pendingDeleteId,
+      postId,
+      resetPendingDelete,
+      schedulePendingDeleteTimeout,
+      showUndoToast,
+      userId,
+    ]
   );
 
   const formattedComments = useMemo(
@@ -585,11 +788,20 @@ export default function ParagraphCommentWidget({
                         {(isAdmin || comment.userId === userId) && (
                           <button
                             type="button"
+                            ref={(element) => {
+                              deleteButtonRefs.current[comment._id] = element;
+                            }}
                             onClick={() => handleDelete(comment._id)}
                             disabled={deletingId === comment._id}
-                            className="rounded-full text-xs font-medium text-red-500 transition-colors hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 disabled:cursor-not-allowed disabled:text-red-300"
+                            className={`rounded-full text-xs font-medium text-red-500 transition-colors hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 disabled:cursor-not-allowed disabled:text-red-300 ${
+                              pendingDeleteId === comment._id ? "text-red-600 font-semibold" : ""
+                            }`}
                           >
-                            {deletingId === comment._id ? "Removendo..." : "Remover"}
+                            {deletingId === comment._id
+                              ? "Removendo..."
+                              : pendingDeleteId === comment._id
+                              ? "Confirmar exclusão?"
+                              : "Remover"}
                           </button>
                         )}
                       </div>
@@ -603,6 +815,27 @@ export default function ParagraphCommentWidget({
               ))
             )}
           </div>
+          {undoToast && (
+            <div className="mt-4">
+              <div
+                role="status"
+                aria-live="polite"
+                className="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-sm sm:flex-row sm:items-center sm:justify-between dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+              >
+                <span>Comentário excluído.</span>
+                <button
+                  type="button"
+                  onClick={handleUndoDelete}
+                  disabled={isUndoingDelete || undoCountdown <= 0}
+                  className="inline-flex items-center justify-center rounded-full border border-purple-500 px-3 py-1 text-xs font-semibold text-purple-600 transition-colors hover:bg-purple-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-purple-400 dark:text-purple-300 dark:hover:bg-purple-400/10"
+                >
+                  {isUndoingDelete
+                    ? "Restaurando..."
+                    : `Desfazer (${Math.max(undoCountdown, 0)}s)`}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
       </section>
