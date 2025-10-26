@@ -39,6 +39,7 @@ type ParagraphCommentWidgetProps = {
   paragraphProps?: React.HTMLAttributes<HTMLParagraphElement>;
   children: React.ReactNode;
   isAdmin: boolean;
+  isMobile: boolean;
 };
 
 export default function ParagraphCommentWidget({
@@ -49,6 +50,7 @@ export default function ParagraphCommentWidget({
   paragraphProps,
   children,
   isAdmin,
+  isMobile,
 }: ParagraphCommentWidgetProps) {
   const { isLoaded, userId } = useAuth();
   const OPEN_EVENT = "paragraph-comments:open";
@@ -63,21 +65,6 @@ export default function ParagraphCommentWidget({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isFeatureBlocked, setIsFeatureBlocked] = useState(false);
   const [queuedExpand, setQueuedExpand] = useState<boolean | null>(null);
-
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkIsMobile = () => {
-      if (typeof window === "undefined") {
-        setIsMobile(false);
-        return;
-      }
-      setIsMobile(window.innerWidth < 768);
-    };
-    checkIsMobile();
-    window.addEventListener("resize", checkIsMobile);
-    return () => window.removeEventListener("resize", checkIsMobile);
-  }, []);
 
   const loadComments = useCallback(async () => {
     try {
