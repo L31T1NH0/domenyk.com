@@ -16,6 +16,7 @@ import {
 type CommentProps = {
   postId: string;
   coAuthorUserId?: string;
+  isAdmin: boolean;
 };
 
 const COMMENT_MAX_LENGTH = 120;
@@ -23,7 +24,7 @@ const COOLDOWN_MS = 2500;
 
 const emptyDraft: CommentDraft = { nome: "", comentario: "" };
 
-const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId }) => {
+const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) => {
   const { userId, isLoaded } = useAuth();
   const { user } = useUser();
 
@@ -37,7 +38,6 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId }) => {
   const [replyDrafts, setReplyDrafts] = useState<Record<string, CommentDraft>>({});
   const [replyStatuses, setReplyStatuses] = useState<Record<string, SubmissionStatus>>({});
   const [replyErrors, setReplyErrors] = useState<Record<string, string | null>>({});
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isClient, setIsClient] = useState(false);
 
   const pendingRequestRef = useRef<AbortController | null>(null);
@@ -62,20 +62,6 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId }) => {
       }
     }
   }, [isClient, isLoaded, postId, userId]);
-
-  useEffect(() => {
-    const checkAdminStatus = async () => {
-      try {
-        const response = await fetch("/admin/api/check", { method: "GET", headers: { "Content-Type": "application/json" } });
-        if (!response.ok) throw new Error(await response.text());
-        const data = await response.json();
-        setIsAdmin(Boolean(data.isAdmin));
-      } catch {
-        setIsAdmin(false);
-      }
-    };
-    if (isLoaded) checkAdminStatus();
-  }, [isLoaded]);
 
   const fetchComments = useCallback(async () => {
     try {

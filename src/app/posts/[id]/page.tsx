@@ -185,11 +185,10 @@ export default async function PostPage({ params }: PostPageProps) {
     notFound();
   }
 
-  if ((post as any).hidden === true) {
-    const isAdmin = await resolveIsAdmin();
-    if (!isAdmin) {
-      notFound();
-    }
+  const isAdmin = await resolveIsAdmin();
+
+  if ((post as any).hidden === true && !isAdmin) {
+    notFound();
   }
 
   const title = post.title ?? "";
@@ -254,9 +253,14 @@ export default async function PostPage({ params }: PostPageProps) {
         readingTime={readingTime}
         coAuthorUserId={post.coAuthorUserId ?? null}
         paragraphCommentsEnabled={paragraphCommentsEnabled}
+        isAdmin={isAdmin}
       />
       <BackHome />
-      <Comment postId={post.postId} coAuthorUserId={post.coAuthorUserId ?? undefined} />
+      <Comment
+        postId={post.postId}
+        coAuthorUserId={post.coAuthorUserId ?? undefined}
+        isAdmin={isAdmin}
+      />
     </Layout>
   );
 }

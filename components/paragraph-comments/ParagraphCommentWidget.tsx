@@ -38,6 +38,7 @@ type ParagraphCommentWidgetProps = {
   coAuthorUserId?: string | null;
   paragraphProps?: React.HTMLAttributes<HTMLParagraphElement>;
   children: React.ReactNode;
+  isAdmin: boolean;
 };
 
 export default function ParagraphCommentWidget({
@@ -47,6 +48,7 @@ export default function ParagraphCommentWidget({
   coAuthorUserId,
   paragraphProps,
   children,
+  isAdmin,
 }: ParagraphCommentWidgetProps) {
   const { isLoaded, userId } = useAuth();
   const OPEN_EVENT = "paragraph-comments:open";
@@ -59,7 +61,6 @@ export default function ParagraphCommentWidget({
   const [hasLoaded, setHasLoaded] = useState(false);
   const [draft, setDraft] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [isFeatureBlocked, setIsFeatureBlocked] = useState(false);
   const [queuedExpand, setQueuedExpand] = useState<boolean | null>(null);
 
@@ -197,42 +198,6 @@ export default function ParagraphCommentWidget({
 
     void applyToggle();
   }, [hasLoaded, isLoaded, loadComments, queuedExpand, userId]);
-
-  useEffect(() => {
-    if (!isLoaded || !userId) {
-      setIsAdmin(false);
-      return;
-    }
-
-    let isCancelled = false;
-
-    const checkAdmin = async () => {
-      try {
-        const response = await fetch("/admin/api/check", {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
-        if (!response.ok) {
-          throw new Error(await response.text());
-        }
-        const data = (await response.json()) as { isAdmin?: boolean };
-        if (!isCancelled) {
-          setIsAdmin(Boolean(data.isAdmin));
-        }
-      } catch (error) {
-        console.error("Failed to check admin status", error);
-        if (!isCancelled) {
-          setIsAdmin(false);
-        }
-      }
-    };
-
-    checkAdmin();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [isLoaded, userId]);
 
   const submitComment = useCallback(async () => {
     const trimmed = draft.trim();
