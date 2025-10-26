@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { getMongoDb } from "../../../../lib/mongo";
 import { Redis } from "@upstash/redis";
@@ -7,6 +7,7 @@ import { ObjectId } from "mongodb";
 import { remark } from "remark";
 import html from "remark-html";
 import { resolveAdminStatus } from "../../../../lib/admin";
+import { deriveRateLimitIdentifier } from "./rate-limit";
 
 // Configuração do Redis Upstash
 const redis = Redis.fromEnv();
@@ -180,7 +181,7 @@ function maskIp(ip: string): string {
 }
 
 export async function POST(
-  req: Request,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const paramsData = await params;
@@ -252,9 +253,15 @@ export async function POST(
   const htmlComentario = processedContent.toString();
 
   // Rate Limiting
-  const ip = req.headers.get("x-forwarded-for") || "unknown";
-  const rateLimitKeyComments = `rate_limit:${ip}:${postId}:comments`;
-  const rateLimitKeyReplies = `rate_limit:${ip}:${postId}:replies`;
+  const userAgent = req.headers.get("user-agent") || null;
+  const rateLimitIdentifier = deriveRateLimitIdentifier({
+    ip: req.ip,
+    userId,
+    userAgent,
+  });
+  const rateLimitKeyBase = `rate_limit:${rateLimitIdentifier}:${postId}`;
+  const rateLimitKeyComments = `${rateLimitKeyBase}:comments`;
+  const rateLimitKeyReplies = `${rateLimitKeyBase}:replies`;
   const multi = redis.multi();
   if (!parentId) {
     multi.incr(rateLimitKeyComments);
