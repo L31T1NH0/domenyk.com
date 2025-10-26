@@ -295,7 +295,7 @@ export default function ParagraphCommentWidget({
         return;
       }
 
-  const confirmed = window.confirm("Remover este comentário?");
+      const confirmed = window.confirm("Remover este comentário?");
       if (!confirmed) {
         return;
       }
@@ -445,6 +445,8 @@ export default function ParagraphCommentWidget({
     };
   }, [paragraphId]);
 
+  const loginPromptProgressPercent = Math.min(Math.max(loginPromptProgress, 0), 1) * 100;
+
   return (
     <>
       <section ref={sectionRef} className="flex flex-col gap-3" data-paragraph-id={paragraphId}>
@@ -583,4 +585,78 @@ export default function ParagraphCommentWidget({
                         {(isAdmin || comment.userId === userId) && (
                           <button
                             type="button"
-                            onClick={() => handleDelete(com
+                            onClick={() => handleDelete(comment._id)}
+                            disabled={deletingId === comment._id}
+                            className="rounded-full text-xs font-medium text-red-500 transition-colors hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 disabled:cursor-not-allowed disabled:text-red-300"
+                          >
+                            {deletingId === comment._id ? "Removendo..." : "Remover"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div
+                      className="mt-2 leading-relaxed"
+                      dangerouslySetInnerHTML={{ __html: comment.safeHtml }}
+                    />
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+      </section>
+
+      {showLoginPrompt && (
+        <div className="fixed inset-0 z-50 flex items-end justify-end p-4 sm:p-8">
+          <div
+            className="absolute inset-0 bg-black/20 backdrop-blur-sm"
+            aria-hidden="true"
+            onClick={() => closeLoginPrompt({ clearQueuedExpand: true })}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={loginPromptTitleId}
+            className="relative z-10 w-full max-w-xs rounded-2xl border border-zinc-200 bg-white/95 px-4 pb-4 pt-6 text-sm shadow-xl transition dark:border-zinc-700 dark:bg-zinc-900/95"
+          >
+            <div
+              className="absolute inset-x-4 top-4 h-1 overflow-hidden rounded-full bg-zinc-200/70 dark:bg-zinc-700/70"
+              aria-hidden="true"
+            >
+              <div
+                className="h-full bg-purple-500 transition-[width] duration-75 ease-linear dark:bg-purple-400"
+                style={{ width: `${loginPromptProgressPercent}%` }}
+              />
+            </div>
+            <h2 id={loginPromptTitleId} className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">
+              Quer participar?
+            </h2>
+            <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
+              Faça login para comentar neste parágrafo e acompanhar a conversa.
+            </p>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+              <button
+                type="button"
+                onClick={() => closeLoginPrompt({ clearQueuedExpand: true })}
+                className="rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:border-zinc-400 hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 dark:border-zinc-700 dark:text-zinc-200 dark:hover:border-zinc-500 dark:hover:text-white"
+              >
+                Cancelar
+              </button>
+              {/* Clerk typings omit afterSignInUrl for modal buttons, but runtime supports it. */}
+              {/* @ts-expect-error -- afterSignInUrl is accepted at runtime for modal mode. */}
+              <SignInButton mode="modal" afterSignInUrl={buildRedirectUrl()}>
+                <button
+                  type="button"
+                  className="rounded-full bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 dark:bg-purple-500 dark:hover:bg-purple-400"
+                >
+                  Fazer login
+                </button>
+              </SignInButton>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
