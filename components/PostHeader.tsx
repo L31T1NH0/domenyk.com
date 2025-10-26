@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import Image from "next/image";
- 
 
 type PostHeaderProps = {
   cape?: string; // Link opcional para a imagem principal (capa)
@@ -17,46 +16,46 @@ export function PostHeader({ cape, title, friendImage, coAuthorImageUrl }: PostH
   return (
     <div className="w-full relative">
       {cape && (
-        <div className="w-full relative overflow-hidden">
-          <div className="relative w-full min-h-[220px] sm:min-h-[320px] lg:min-h-[420px]">
-            <Image
-              src={cape}
-              alt="Banner Principal"
-              fill
-              priority
-              sizes="100vw"
-              className="banner object-cover"
-            />
-          </div>
-          <div className="pointer-events-none absolute inset-0">
-            <div className="absolute top-0 left-0 w-full h-[50%] bg-gradient-to-b from-[#040404] via-[#040404]/80 to-transparent"></div>
-            <div className="absolute bottom-0 left-0 w-full h-[50%] bg-gradient-to-t from-[#040404] via-[#040404]/80 to-transparent"></div>
-          </div>
-          <div className="absolute bottom-1 left-2 lg:bottom-3 flex gap-2">
-            <div className="flex -space-x-5">
-              <Link href="/">
-                <Image
-                  priority
-                  src="/images/profile.jpg"
-                  className="foto-post hover:z-30 transition-all"
-                  height={56}
-                  width={56}
-                  alt="Domenyk"
-                />
-              </Link>
-              {secondaryImage && (
+        <div className="w-full relative">
+          <Image
+            src={cape}
+            alt="Banner Principal"
+            width={1920}
+            height={1080}
+            className="banner w-full h-auto object-cover"
+            priority
+          />
+          <div className="absolute inset-0">
+            <div className="pointer-events-none absolute inset-0">
+              <div className="absolute top-0 left-0 w-full h-[50%] bg-gradient-to-b from-[#040404] via-[#040404]/80 to-transparent"></div>
+              <div className="absolute bottom-0 left-0 w-full h-[50%] bg-gradient-to-t from-[#040404] via-[#040404]/80 to-transparent"></div>
+            </div>
+            <div className="absolute bottom-1 left-2 lg:bottom-3 flex gap-2">
+              <div className="flex -space-x-5">
                 <Link href="/">
                   <Image
-                    src={secondaryImage}
+                    priority
+                    src="/images/profile.jpg"
                     className="foto-post hover:z-30 transition-all"
                     height={56}
                     width={56}
-                    alt="Amigo"
+                    alt="Domenyk"
                   />
                 </Link>
-              )}
+                {secondaryImage && (
+                  <Link href="/">
+                    <Image
+                      src={secondaryImage}
+                      className="foto-post hover:z-30 transition-all"
+                      height={56}
+                      width={56}
+                      alt="Amigo"
+                    />
+                  </Link>
+                )}
+              </div>
+              <h1 className="text-xl text-white flex-1">{title}</h1>
             </div>
-            <h1 className="text-xl text-white flex-1">{title}</h1>
           </div>
         </div>
       )}
