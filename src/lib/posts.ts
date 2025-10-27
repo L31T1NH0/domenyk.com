@@ -39,6 +39,18 @@ function normalizeDate(d: unknown): string {
   return "";
 }
 
+async function hasAnyTextIndex(collection: any): Promise<boolean> {
+  try {
+    const indexes = await collection.indexes();
+    return indexes.some((idx: any) => {
+      const key = idx?.key ?? {};
+      return Object.values(key).some((v: any) => String(v).toLowerCase() === "text");
+    });
+  } catch (_e) {
+    return false;
+  }
+}
+
 export async function getPosts({
   page,
   pageSize,
@@ -51,18 +63,22 @@ export async function getPosts({
   const db = await getMongoDb();
   const collection = db.collection("posts");
 
-  const filter: Record<string, unknown> = { ...(filters ?? {}) };
+  const baseFilter: Record<string, unknown> = { ...(filters ?? {}) };
   const shouldIncludeHidden = Boolean(includeHidden);
-  if (!shouldIncludeHidden && typeof filter.hidden === "undefined") {
-    (filter as any).hidden = { $ne: true };
+  if (!shouldIncludeHidden && typeof (baseFilter as any).hidden === "undefined") {
+    (baseFilter as any).hidden = { $ne: true };
   }
 
+  let filter: Record<string, unknown> = baseFilter;
+
   if (query && query.trim() !== "") {
-    // Prefer full-text search if an index exists; fallback to case-insensitive regex
-    (filter as any).$or = [
-      { $text: { $search: query } },
-      { title: { $regex: query, $options: "i" } },
-    ];
+    const hasText = await hasAnyTextIndex(collection);
+    const searchFilter = hasText
+      ? ({ $text: { $search: query, $language: "portuguese" } } as Record<string, unknown>)
+      : ({ title: { $regex: query, $options: "i" } } as Record<string, unknown>);
+
+    // Combine with baseFilter using $and to avoid $text under $or issues
+    filter = { $and: [baseFilter, searchFilter] } as any;
   }
 
   const sortField = sort === "views" ? "views" : "date";
