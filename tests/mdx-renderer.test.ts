@@ -60,3 +60,80 @@ test("sanitizes disallowed tags while preserving formatting", async () => {
   assert.match(htmlOutput, /<p>Safe text<\/p>/);
   assert.match(htmlOutput, /<p>Second<\/p>/);
 });
+
+test("injects post reference placeholders when the feature flag is enabled", async () => {
+  const original = process.env.FEATURE_POST_REFERENCES;
+  process.env.FEATURE_POST_REFERENCES = "true";
+
+  try {
+    const markdown = "Veja também @post(meu-post)!";
+    const htmlOutput = await renderPostMdx(markdown);
+
+    assert.match(
+      htmlOutput,
+      /<p>Veja também <span[^>]*data-role=\"post-reference\"[^>]*data-slug=\"meu-post\"><\/span>!<\/p>/
+    );
+  } finally {
+    if (typeof original === "undefined") {
+      delete process.env.FEATURE_POST_REFERENCES;
+    } else {
+      process.env.FEATURE_POST_REFERENCES = original;
+    }
+  }
+});
+
+test("renders post reference markers as literal text when disabled", async () => {
+  const original = process.env.FEATURE_POST_REFERENCES;
+  process.env.FEATURE_POST_REFERENCES = "false";
+
+  try {
+    const markdown = "Veja também @post(meu-post)!";
+    const htmlOutput = await renderPostMdx(markdown);
+
+    assert.match(htmlOutput, /@post\(meu-post\)/);
+  } finally {
+    if (typeof original === "undefined") {
+      delete process.env.FEATURE_POST_REFERENCES;
+    } else {
+      process.env.FEATURE_POST_REFERENCES = original;
+    }
+  }
+});
+
+test("allows PostReference JSX nodes when the feature flag is on", async () => {
+  const original = process.env.FEATURE_POST_REFERENCES;
+  process.env.FEATURE_POST_REFERENCES = "true";
+
+  try {
+    const markdown = "Antes <PostReference slug=\"referencia\" /> depois";
+    const htmlOutput = await renderPostMdx(markdown);
+
+    assert.match(
+      htmlOutput,
+      /<span[^>]*data-role=\"post-reference\"[^>]*data-slug=\"referencia\"\s*><\/span>/
+    );
+  } finally {
+    if (typeof original === "undefined") {
+      delete process.env.FEATURE_POST_REFERENCES;
+    } else {
+      process.env.FEATURE_POST_REFERENCES = original;
+    }
+  }
+});
+
+test("still rejects other MDX component names", async () => {
+  const original = process.env.FEATURE_POST_REFERENCES;
+  process.env.FEATURE_POST_REFERENCES = "true";
+
+  try {
+    await assert.rejects(() => renderPostMdx("<CustomComponent />"), {
+      message: /MDX components are not supported/,
+    });
+  } finally {
+    if (typeof original === "undefined") {
+      delete process.env.FEATURE_POST_REFERENCES;
+    } else {
+      process.env.FEATURE_POST_REFERENCES = original;
+    }
+  }
+});

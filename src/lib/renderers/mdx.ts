@@ -12,6 +12,8 @@ import rehypeStringify from "rehype-stringify";
 import { find, html as htmlSchema } from "property-information";
 import { visit } from "unist-util-visit";
 
+import postReferencePlugin from "../remark/post-reference";
+
 type MdxJsxAttribute = {
   type: string;
   name?: string;
@@ -50,6 +52,7 @@ const sanitizerSchema = (() => {
     "th",
     "td",
     "span",
+    "time",
   ].forEach((tag) => tagNames.add(tag));
   schema.tagNames = Array.from(tagNames);
 
@@ -98,6 +101,10 @@ const sanitizerSchema = (() => {
       "dataRole",
       "data*",
     ],
+    time: [
+      ...((schema.attributes?.time as Array<PropertyDefinition>) ?? []),
+      "dateTime",
+    ],
   };
 
   schema.strip = Array.from(new Set([...(schema.strip ?? []), "script", "style"]));
@@ -122,9 +129,56 @@ function disallowMdxImports() {
   };
 }
 
+function isPostReferencesFeatureEnabled() {
+  return process.env.FEATURE_POST_REFERENCES === "true";
+}
+
 function mdxJsxElementHandler(state: any, node: MdastNode) {
   if (!node.name) {
     return state.all(node);
+  }
+
+  const featureEnabled = isPostReferencesFeatureEnabled();
+
+  if (node.name === "PostReference") {
+    if (!featureEnabled) {
+      throw new Error("MDX components are not supported in blog posts.");
+    }
+
+    let slug: string | undefined;
+
+    for (const attribute of node.attributes ?? []) {
+      if (attribute.type !== "mdxJsxAttribute" || !attribute.name) {
+        throw new Error("MDX attribute expressions are not supported in blog posts.");
+      }
+
+      if (attribute.name !== "slug") {
+        throw new Error("PostReference only supports the slug attribute.");
+      }
+
+      if (typeof attribute.value !== "string" || attribute.value.trim() === "") {
+        throw new Error("PostReference slug must be a non-empty string.");
+      }
+
+      slug = attribute.value;
+    }
+
+    if (!slug) {
+      throw new Error("PostReference slug attribute is required.");
+    }
+
+    const result = {
+      type: "element",
+      tagName: "span",
+      properties: {
+        "data-role": "post-reference",
+        "data-slug": slug,
+      },
+      children: [],
+    };
+
+    state.patch(node, result);
+    return state.applyData(node, result);
   }
 
   if (!/^[a-z][\w:-]*$/.test(node.name)) {
@@ -166,9 +220,15 @@ function mdxJsxElementHandler(state: any, node: MdastNode) {
 }
 
 export async function renderPostMdx(markdown: string): Promise<string> {
-  const file = await unified()
-    .use(remarkParse)
-    .use(remarkMdx)
+  const enablePostReferences = isPostReferencesFeatureEnabled();
+
+  const processor = unified().use(remarkParse).use(remarkMdx);
+
+  if (enablePostReferences) {
+    processor.use(postReferencePlugin);
+  }
+
+  processor
     .use(disallowMdxImports)
     .use(remarkGfm)
     .use(remarkRehype, {
@@ -182,8 +242,9 @@ export async function renderPostMdx(markdown: string): Promise<string> {
     .use(rehypeSlug)
     .use(rehypeAutolinkHeadings, { behavior: "wrap" })
     .use(rehypeSanitize, sanitizerSchema)
-    .use(rehypeStringify)
-    .process(markdown);
+    .use(rehypeStringify);
+
+  const file = await processor.process(markdown);
 
   return String(file.value);
 }
