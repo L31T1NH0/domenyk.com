@@ -15,8 +15,10 @@ import parse, {
   Element,
   attributesToProps,
   domToReact,
+  type HTMLReactParserOptions,
 } from "html-react-parser";
 import ParagraphCommentWidget from "@components/paragraph-comments/ParagraphCommentWidget";
+import PostReference from "@components/PostReference";
 
 const IsMobileContext = createContext<boolean | null>(null);
 
@@ -103,34 +105,48 @@ export default function PostContentClient({
 
     let paragraphIndex = 0;
 
-    return parse(htmlContent, {
-      replace: (node: DOMNode) => {
-        if (node.type === "tag" && node.name === "p" && paragraphCommentsEnabled) {
-          const element = node as Element;
-          const paragraphId = `${postId}-paragraph-${paragraphIndex}`;
-          const currentIndex = paragraphIndex;
-          paragraphIndex += 1;
+    const parserOptions: HTMLReactParserOptions = {};
 
-          const paragraphProps = attributesToProps(element.attribs ?? {});
-
-          return (
-            <ParagraphCommentWidget
-              key={paragraphId}
-              postId={postId}
-              paragraphId={paragraphId}
-              paragraphIndex={currentIndex}
-              coAuthorUserId={coAuthorUserId}
-              paragraphProps={paragraphProps}
-              isAdmin={isAdmin}
-              isMobile={isMobile}
-            >
-              {domToReact((element.children ?? []) as DOMNode[])}
-            </ParagraphCommentWidget>
-          );
+    parserOptions.replace = (node: DOMNode) => {
+      if (node.type === "tag" && node.name === "span") {
+        const element = node as Element;
+        const role = element.attribs?.["data-role"] ?? element.attribs?.dataRole;
+        if (role === "post-reference") {
+          const slug = element.attribs?.["data-slug"] ?? element.attribs?.dataSlug;
+          if (typeof slug === "string" && slug.trim() !== "") {
+            return <PostReference slug={slug} />;
+          }
         }
-        return undefined;
-      },
-    });
+      }
+
+      if (node.type === "tag" && node.name === "p" && paragraphCommentsEnabled) {
+        const element = node as Element;
+        const paragraphId = `${postId}-paragraph-${paragraphIndex}`;
+        const currentIndex = paragraphIndex;
+        paragraphIndex += 1;
+
+        const paragraphProps = attributesToProps(element.attribs ?? {});
+
+        return (
+          <ParagraphCommentWidget
+            key={paragraphId}
+            postId={postId}
+            paragraphId={paragraphId}
+            paragraphIndex={currentIndex}
+            coAuthorUserId={coAuthorUserId}
+            paragraphProps={paragraphProps}
+            isAdmin={isAdmin}
+            isMobile={isMobile}
+          >
+            {domToReact((element.children ?? []) as DOMNode[], parserOptions)}
+          </ParagraphCommentWidget>
+        );
+      }
+
+      return undefined;
+    };
+
+    return parse(htmlContent, parserOptions);
   }, [
     coAuthorUserId,
     htmlContent,

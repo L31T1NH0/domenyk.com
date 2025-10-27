@@ -25,6 +25,13 @@ export type FetchPostsResult = {
   total?: number;
 };
 
+export type PostReferenceMetadata = {
+  postId: string;
+  title: string;
+  date: string;
+  thumbnailUrl: string | null;
+};
+
 function normalizeDate(d: unknown): string {
   if (typeof d === "string") return d;
   if (d instanceof Date) return d.toISOString();
@@ -101,4 +108,55 @@ export const getPostsCached = unstable_cache(
   ["home-posts"],
   { revalidate: 60 }
 );
+
+export async function getPostReferenceMetadata(
+  slug: string
+): Promise<PostReferenceMetadata | null> {
+  if (!slug) {
+    return null;
+  }
+
+  const db = await getMongoDb();
+  const collection = db.collection("posts");
+
+  const record = await collection.findOne(
+    { postId: slug },
+    {
+      projection: {
+        _id: 0,
+        postId: 1,
+        title: 1,
+        date: 1,
+        cape: 1,
+        friendImage: 1,
+      },
+    }
+  );
+
+  if (!record) {
+    return null;
+  }
+
+  const title = record.title ? String(record.title) : "";
+  const postId = record.postId ? String(record.postId) : slug;
+  const date = normalizeDate(record.date);
+
+  let thumbnailUrl: string | null = null;
+
+  if (typeof (record as any).cape === "string" && (record as any).cape.trim() !== "") {
+    thumbnailUrl = String((record as any).cape);
+  } else if (
+    typeof (record as any).friendImage === "string" &&
+    (record as any).friendImage.trim() !== ""
+  ) {
+    thumbnailUrl = String((record as any).friendImage);
+  }
+
+  return {
+    postId,
+    title,
+    date,
+    thumbnailUrl,
+  };
+}
 
