@@ -5,13 +5,25 @@ import { remark } from "remark";
 import html from "remark-html";
 
 // Configura o cliente da xAI usando o OpenAI SDK
-const client = new OpenAI({
+/* const client = new OpenAI({
   apiKey: process.env.XAI_API_KEY, // Fornecido pela integração com a Vercel
   baseURL: "https://api.x.ai/v1", // Endpoint da xAI
-});
+}); */
 
 export async function POST(req: NextRequest) {
   try {
+    const apiKey = process.env.XAI_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "XAI_API_KEY não configurada no ambiente." },
+        { status: 500 }
+      );
+    }
+
+    const client = new OpenAI({
+      apiKey,
+      baseURL: "https://api.x.ai/v1",
+    });
     // Verifica se o usuário está autenticado
     const user = await currentUser();
     if (!user) {
