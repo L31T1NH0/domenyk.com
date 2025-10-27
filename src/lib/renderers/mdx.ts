@@ -7,6 +7,7 @@ import rehypeRaw from "rehype-raw";
 import rehypeSlug from "rehype-slug";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
+import type { PropertyDefinition, Schema } from "hast-util-sanitize/lib/index.js";
 import rehypeStringify from "rehype-stringify";
 import { find, html as htmlSchema } from "property-information";
 import { visit } from "unist-util-visit";
@@ -31,7 +32,7 @@ type MdastNode = {
 };
 
 const sanitizerSchema = (() => {
-  const schema = structuredClone(defaultSchema);
+  const schema: Schema = structuredClone(defaultSchema) as Schema;
 
   schema.clobberPrefix = "";
 
@@ -55,16 +56,17 @@ const sanitizerSchema = (() => {
   schema.attributes = {
     ...schema.attributes,
     "*": [
-      ...((schema.attributes?.["*"] as Array<string | RegExp>) ?? []),
+      ...((schema.attributes?.["*"] as Array<PropertyDefinition>) ?? []),
       "className",
       "id",
-      /^data-[\w:-]+$/,
+      "data*",
       "data-role",
       "dataRole",
-      /^aria-[\w-]+$/,
+      "aria-label",
+      "ariaLabel",
     ],
     a: [
-      ...((schema.attributes?.a as Array<string | RegExp>) ?? []),
+      ...((schema.attributes?.a as Array<PropertyDefinition>) ?? []),
       "href",
       "target",
       "rel",
@@ -72,15 +74,15 @@ const sanitizerSchema = (() => {
       "className",
     ],
     code: [
-      ...((schema.attributes?.code as Array<string | RegExp>) ?? []),
+      ...((schema.attributes?.code as Array<PropertyDefinition>) ?? []),
       "className",
     ],
     pre: [
-      ...((schema.attributes?.pre as Array<string | RegExp>) ?? []),
+      ...((schema.attributes?.pre as Array<PropertyDefinition>) ?? []),
       "className",
     ],
     img: [
-      ...((schema.attributes?.img as Array<string | RegExp>) ?? []),
+      ...((schema.attributes?.img as Array<PropertyDefinition>) ?? []),
       "src",
       "srcSet",
       "alt",
@@ -91,10 +93,10 @@ const sanitizerSchema = (() => {
       "decoding",
     ],
     span: [
-      ...((schema.attributes?.span as Array<string | RegExp>) ?? []),
+      ...((schema.attributes?.span as Array<PropertyDefinition>) ?? []),
       "className",
       "dataRole",
-      /^data-[\w:-]+$/,
+      "data*",
     ],
   };
 
