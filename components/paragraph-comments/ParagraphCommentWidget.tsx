@@ -3,10 +3,15 @@
 import { SignInButton, useAuth } from "@clerk/nextjs";
 import { ChatBubbleLeftRightIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  PARAGRAPH_COMMENT_MAX_LENGTH,
+  buildLengthErrorMessage,
+  useCommentLength,
+} from "@components/comments/lengthUtils";
 import { sanitizeCommentHtml } from "@components/comments/utils";
+import { UPPERCASE_MAX_RATIO, getUppercaseState, buildUppercaseErrorMessage } from "@components/comments/uppercaseUtils";
 import type { ParagraphComment } from "../../types/paragraph-comments";
 
-const MAX_COMMENT_LENGTH = 480;
 const LOGIN_PROMPT_TIMEOUT_MS = 5000;
 
 function formatDateLabel(isoDate: string): string {
@@ -233,7 +238,7 @@ export default function ParagraphCommentWidget({
       setUndoToast(null);
       setUndoCountdown(0);
       setIsFeatureBlocked(false);
-    } catch (error) {
+      } catch (error) {
       console.error("Failed to undo paragraph comment deletion", error);
       setErrorMessage("Não foi possível desfazer a exclusão.");
       setUndoToast(null);
@@ -250,6 +255,8 @@ export default function ParagraphCommentWidget({
     setIsFeatureBlocked,
     undoToast,
   ]);
+
+  const draftLength = useCommentLength(draft, PARAGRAPH_COMMENT_MAX_LENGTH);
 
   const openLoginPrompt = useCallback(() => {
     setLoginPromptProgress(0);
@@ -397,11 +404,20 @@ export default function ParagraphCommentWidget({
       return;
     }
 
-    if (trimmed.length > MAX_COMMENT_LENGTH) {
+    if (draftLength.isOverLimit) {
       setErrorMessage(
-        `O comentário deve ter no máximo ${MAX_COMMENT_LENGTH} caracteres.`
+        buildLengthErrorMessage(PARAGRAPH_COMMENT_MAX_LENGTH, "comentário")
       );
       return;
+    }
+
+    // Limite de letras maiúsculas: máximo 45% do total
+    {
+      const upperState = getUppercaseState(trimmed, UPPERCASE_MAX_RATIO);
+      if (upperState.isOverLimit) {
+        setErrorMessage(buildUppercaseErrorMessage(trimmed, UPPERCASE_MAX_RATIO));
+        return;
+      }
     }
 
     try {
@@ -440,7 +456,7 @@ export default function ParagraphCommentWidget({
       }
     } catch (error) {
       console.error("Failed to submit paragraph comment", error);
-      setErrorMessage("Não foi possível enviar seu comentário.");
+  setErrorMessage("Não foi possível enviar seu comentário.");
     } finally {
       setIsSubmitting(false);
     }
@@ -505,9 +521,9 @@ export default function ParagraphCommentWidget({
           const data = (await response.json().catch(() => null)) as
             | { error?: string }
             | null;
-          setErrorMessage(
-            data?.error ?? "Comentários por parágrafo desativados para este post."
-          );
+      setErrorMessage(
+        data?.error ?? "Comentários por parágrafo desativados para este post."
+      );
           setIsFeatureBlocked(true);
           return;
         }
@@ -706,7 +722,7 @@ export default function ParagraphCommentWidget({
             <button
               type="button"
               onClick={() => setIsExpanded(false)}
-              aria-label="Fechar comentarios deste paragrafo"
+              aria-label="Fechar comentários deste parágrafo"
               className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-zinc-300 text-zinc-500 hover:text-zinc-700 hover:border-zinc-400 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 dark:border-zinc-700 dark:text-zinc-400 dark:hover:text-white dark:hover:border-zinc-500"
             >
               <XMarkIcon className="h-4 w-4" />
@@ -730,18 +746,25 @@ export default function ParagraphCommentWidget({
                 }
               }}
               placeholder="Escreva seu comentário"
-              maxLength={MAX_COMMENT_LENGTH}
               rows={3}
-              className="w-full resize-none rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm text-zinc-800 shadow-inner outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-700"
+              className="w-full resize-none rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm text-zinc-800 shadow-inner outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-700 whitespace-pre-wrap break-words"
               disabled={isFeatureBlocked}
             />
             <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
-              <span>
-                {draft.length}/{MAX_COMMENT_LENGTH}
+              <span
+                className={
+                  draftLength.isOverLimit
+                    ? "font-medium text-red-500 dark:text-red-400"
+                    : undefined
+                }
+              >
+                {draftLength.message}
               </span>
               <button
                 type="submit"
-                disabled={isSubmitting || isFeatureBlocked}
+                disabled={
+                  isSubmitting || isFeatureBlocked || draftLength.isOverLimit
+                }
                 className="inline-flex items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 py-1 text-sm font-medium text-zinc-700 transition-colors hover:border-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700"
               >
                 {isSubmitting ? "Enviando..." : "Publicar"}
@@ -771,7 +794,7 @@ export default function ParagraphCommentWidget({
                       {comment.authorName.charAt(0).toUpperCase()}
                     </div>
                   )}
-                  <div className="flex-1 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-700 shadow-sm dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-100">
+                  <div className="flex-1 min-w-0 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-700 shadow-sm dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-100">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-zinc-800 dark:text-white">
@@ -807,7 +830,7 @@ export default function ParagraphCommentWidget({
                       </div>
                     </div>
                     <div
-                      className="mt-2 leading-relaxed"
+                      className="mt-2 leading-relaxed break-words break-all"
                       dangerouslySetInnerHTML={{ __html: comment.safeHtml }}
                     />
                   </div>
@@ -893,3 +916,5 @@ export default function ParagraphCommentWidget({
     </>
   );
 }
+
+

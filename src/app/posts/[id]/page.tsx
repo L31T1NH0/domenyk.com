@@ -36,39 +36,43 @@ type PostPageProps = {
   params: Promise<{ id: string }>;
 };
 
-const loadPostById = unstable_cache(
-  async (id: string) => {
-    try {
-      const { getMongoDb } = await import("../../../lib/mongo");
-      const db = await getMongoDb();
-      return db.collection<PostDocument>("posts").findOne(
-        { postId: id },
-        {
-          projection: {
-            _id: 0,
-            postId: 1,
-            date: 1,
-            title: 1,
-            htmlContent: 1,
-            content: 1,
-            views: 1,
-            audioUrl: 1,
-            cape: 1,
-            friendImage: 1,
-            coAuthorUserId: 1,
-            hidden: 1,
-            paragraphCommentsEnabled: 1,
-          },
-        }
-      );
-    } catch (error) {
-      console.error(`Failed to fetch post ${id}:`, error);
-      return null;
-    }
-  },
-  ["post-by-id"],
-  { revalidate: 60 }
-);
+// Cache per post-id to avoid cross-post cache pollution
+async function fetchPostById(id: string) {
+  try {
+    const { getMongoDb } = await import("../../../lib/mongo");
+    const db = await getMongoDb();
+    return db.collection<PostDocument>("posts").findOne(
+      { postId: id },
+      {
+        projection: {
+          _id: 0,
+          postId: 1,
+          date: 1,
+          title: 1,
+          htmlContent: 1,
+          content: 1,
+          views: 1,
+          audioUrl: 1,
+          cape: 1,
+          friendImage: 1,
+          coAuthorUserId: 1,
+          hidden: 1,
+          paragraphCommentsEnabled: 1,
+        },
+      }
+    );
+  } catch (error) {
+    console.error(`Failed to fetch post ${id}:`, error);
+    return null;
+  }
+}
+
+const loadPostById = (id: string) =>
+  unstable_cache(
+    () => fetchPostById(id),
+    ["post-by-id", id],
+    { revalidate: 60 }
+  )();
 
 function normalizeDate(date?: string | Date): string {
   if (typeof date === "string") {
@@ -267,6 +271,7 @@ export default async function PostPage({ params }: PostPageProps) {
         audioUrl={post.audioUrl}
         readingTime={readingTime}
         coAuthorUserId={post.coAuthorUserId ?? null}
+        coAuthorImageUrl={coAuthorImageUrl || post.friendImage || null}
         paragraphCommentsEnabled={paragraphCommentsEnabled}
         isAdmin={isAdmin}
       />

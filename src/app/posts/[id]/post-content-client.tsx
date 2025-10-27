@@ -19,6 +19,7 @@ import parse, {
 } from "html-react-parser";
 import ParagraphCommentWidget from "@components/paragraph-comments/ParagraphCommentWidget";
 import PostReference from "@components/PostReference";
+import AutorReference from "@components/AutorReference";
 
 const IsMobileContext = createContext<boolean | null>(null);
 
@@ -38,6 +39,7 @@ type PostContentClientProps = {
   audioUrl?: string;
   readingTime: string;
   coAuthorUserId?: string | null;
+  coAuthorImageUrl?: string | null;
   paragraphCommentsEnabled: boolean;
   isAdmin: boolean;
 };
@@ -50,6 +52,7 @@ export default function PostContentClient({
   audioUrl,
   readingTime,
   coAuthorUserId,
+  coAuthorImageUrl,
   paragraphCommentsEnabled,
   isAdmin,
 }: PostContentClientProps) {
@@ -115,6 +118,15 @@ export default function PostContentClient({
           const slug = element.attribs?.["data-slug"] ?? element.attribs?.dataSlug;
           if (typeof slug === "string" && slug.trim() !== "") {
             return <PostReference slug={slug} />;
+          }
+        }
+        if (role === "author-reference") {
+          const kind = (element.attribs?.["data-kind"] ?? element.attribs?.dataKind) as string | undefined;
+          if (kind === "author") {
+            return <AutorReference kind="author" />;
+          }
+          if (kind === "co-author") {
+            return <AutorReference kind="co-author" coAuthorImageUrl={coAuthorImageUrl ?? null} />;
           }
         }
       }

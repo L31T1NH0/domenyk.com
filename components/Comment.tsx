@@ -1,8 +1,14 @@
-﻿"use client";
+"use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth, useUser } from "@clerk/nextjs";
 import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/solid";
+
+import {
+  STANDARD_COMMENT_MAX_LENGTH,
+  buildLengthErrorMessage,
+  useCommentLength,
+} from "@components/comments/lengthUtils";
 
 import CommentThread from "./comments/CommentThread";
 import { CommentDraft, CommentEntity, SubmissionStatus } from "./comments/types";
@@ -12,6 +18,11 @@ import {
   normalizeServerComment,
   sanitizeCommentHtml,
 } from "./comments/utils";
+import {
+  UPPERCASE_MAX_RATIO,
+  buildUppercaseErrorMessage,
+  getUppercaseState,
+} from "./comments/uppercaseUtils";
 
 type CommentProps = {
   postId: string;
@@ -19,7 +30,6 @@ type CommentProps = {
   isAdmin: boolean;
 };
 
-const COMMENT_MAX_LENGTH = 120;
 const COOLDOWN_MS = 2500;
 
 const emptyDraft: CommentDraft = { nome: "", comentario: "" };
@@ -108,6 +118,11 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
   const commentLookup = useMemo(() => buildCommentLookup(comments), [comments]);
   const totalComments = comments.length;
 
+  const commentLength = useCommentLength(
+    commentDraft.comentario,
+    STANDARD_COMMENT_MAX_LENGTH
+  );
+
   const canDeleteComment = useCallback(
     (comment: CommentEntity) => {
       if (!isLoaded) return false;
@@ -172,8 +187,19 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
       return;
     }
 
-    if (trimmedComment.length > COMMENT_MAX_LENGTH) {
-  setErrorMessage(`O comentário deve ter no máximo ${COMMENT_MAX_LENGTH} caracteres.`);
+    // Limite de letras maiúsculas: máximo 45% do total
+    {
+      const upperState = getUppercaseState(trimmedComment, UPPERCASE_MAX_RATIO);
+      if (upperState.isOverLimit) {
+        setErrorMessage(buildUppercaseErrorMessage(trimmedComment, UPPERCASE_MAX_RATIO));
+        return;
+      }
+    }
+
+    if (commentLength.isOverLimit) {
+      setErrorMessage(
+        buildLengthErrorMessage(STANDARD_COMMENT_MAX_LENGTH, "comentário")
+      );
       return;
     }
 
@@ -310,9 +336,28 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
       return;
     }
 
-    if (trimmedComment.length > COMMENT_MAX_LENGTH) {
-  setReplyErrors((prev) => ({ ...prev, [commentId]: `A resposta deve ter até ${COMMENT_MAX_LENGTH} caracteres.` }));
+    if (draft.comentario.length > STANDARD_COMMENT_MAX_LENGTH) {
+      setReplyErrors((prev) => ({
+        ...prev,
+        [commentId]: buildLengthErrorMessage(
+          STANDARD_COMMENT_MAX_LENGTH,
+          "resposta",
+          "f"
+        ),
+      }));
       return;
+    }
+
+    // Limite de letras maiúsculas nas respostas
+    {
+      const upperState = getUppercaseState(trimmedComment, UPPERCASE_MAX_RATIO);
+      if (upperState.isOverLimit) {
+        setReplyErrors((prev) => ({
+          ...prev,
+          [commentId]: buildUppercaseErrorMessage(trimmedComment, UPPERCASE_MAX_RATIO),
+        }));
+        return;
+      }
     }
 
     const controller = new AbortController();
@@ -475,22 +520,31 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
             )}
 
             <textarea
-              maxLength={COMMENT_MAX_LENGTH}
               placeholder="Escreva seu comentário"
               value={commentDraft.comentario}
-              onChange={(event) => handleCommentDraftChange("comentario", event.target.value)}
-              className="h-20 sm:h-24 w-full resize-none rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm text-zinc-800 shadow-inner outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-700"
+              onChange={(event) =>
+                handleCommentDraftChange("comentario", event.target.value)
+              }
+              className="h-20 sm:h-24 w-full resize-none rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm text-zinc-800 shadow-inner outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-700 whitespace-pre-wrap break-words"
               disabled={submissionStatus === "sending"}
             />
           </div>
 
           <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
-            <div className="text-xs text-zinc-500">
-              {commentDraft.comentario.length}/{COMMENT_MAX_LENGTH}
-            </div>
+            <span
+              className={
+                commentLength.isOverLimit
+                  ? "font-medium text-red-500 dark:text-red-400"
+                  : undefined
+              }
+            >
+              {commentLength.message}
+            </span>
             <button
               type="submit"
-              disabled={submissionStatus === "sending"}
+              disabled={
+                submissionStatus === "sending" || commentLength.isOverLimit
+              }
               className="inline-flex items-center my-2 gap-1 rounded-full border border-zinc-300 bg-white px-3 py-1 text-sm font-medium text-zinc-700 transition-colors hover:border-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700"
             >
               {submissionStatus === "sending" ? "Enviando..." : "Publicar"}
@@ -542,6 +596,8 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
 };
 
 export default Comment;
+
+
 
 
 

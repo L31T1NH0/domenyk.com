@@ -2,6 +2,7 @@
 import { CheckBadgeIcon, TrashIcon } from "@heroicons/react/24/solid";
 
 import ReplyForm from "./ReplyForm";
+import { STANDARD_COMMENT_MAX_LENGTH } from "./lengthUtils";
 import {
   CommentDraft,
   CommentEntity,
@@ -80,7 +81,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
           alt={`${displayName} avatar`}
           className="h-8 w-8 rounded-full max-sm:w-6 object-cover icon"
         />
-        <div className="flex-1 space-y-3">
+        <div className="flex-1 min-w-0 space-y-3">
           <div className="flex flex-wrap items-center gap-3 text-sm">
             <span className="font-semibold text-zinc-800 dark:text-white flex items-center gap-2">
               {displayName}
@@ -122,7 +123,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
           </div>
 
           <div
-            className="prose prose-zinc dark:prose-invert max-w-none text-sm leading-relaxed text-zinc-700 dark:text-zinc-100"
+            className="prose prose-zinc dark:prose-invert max-w-none text-sm leading-relaxed text-zinc-700 dark:text-zinc-100 break-words break-all"
             dangerouslySetInnerHTML={{
               __html: sanitizeCommentHtml(comment.comentario),
             }}
@@ -196,7 +197,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
               onSubmit={(_, draft) => handleSubmitWrapper(handleSubmit, draft)}
               onCancel={onReplyCancel}
               requiresName={requiresName}
-              maxLength={120}
+              maxLength={STANDARD_COMMENT_MAX_LENGTH}
               status={replyStatus}
               errorMessage={replyError}
             />

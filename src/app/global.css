@@ -76,6 +76,9 @@ ul {
 .svg-icon {
   @apply w-8 h-8;
 }
+.reference {
+  @apply grayscale-0 object-position: 100% 90%;;
+}
 img {
   @apply rounded-md grayscale-100 w-full h-full;
 }
@@ -88,3 +91,5 @@ h6 {
 h1 {
   @apply sm:text-sm md:text-lg;
 }
+
+

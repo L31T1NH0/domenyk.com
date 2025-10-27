@@ -100,6 +100,14 @@ export default function PostReference({ slug }: PostReferenceProps) {
     return formatDate(state.data.date);
   }, [state]);
 
+  const truncatedTitle = useMemo(() => {
+    if (state.status !== "loaded") return null;
+    const title = state.data.title ?? "";
+    const limit = 30;
+    if (title.length <= limit) return title;
+    return title.slice(0, limit - 1) + "…";
+  }, [state]);
+
   const commonProps = {
     "data-role": "post-reference",
     "data-slug": slug,
@@ -132,12 +140,14 @@ export default function PostReference({ slug }: PostReferenceProps) {
               src={data.thumbnailUrl}
               alt=""
               loading="lazy"
-              className="h-full w-full object-cover"
+              className="h-full w-full object-cover reference grayscale-0"
             />
           </span>
         ) : null}
         <span className="flex flex-col leading-tight">
-          <span className="font-medium">{data.title}</span>
+          <span className="font-medium" title={data.title}>
+            {truncatedTitle}
+          </span>
           {formattedDate ? (
             <time dateTime={data.date} className="text-xs text-zinc-400">
               {formattedDate}

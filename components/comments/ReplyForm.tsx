@@ -1,5 +1,7 @@
 ﻿import React from "react";
 
+import { useCommentLength } from "./lengthUtils";
+
 import { CommentDraft, SubmissionStatus } from "./types";
 
 type ReplyFormProps = {
@@ -26,6 +28,7 @@ const ReplyForm: React.FC<ReplyFormProps> = ({
   errorMessage,
 }) => {
   const isSending = status === "sending";
+  const lengthState = useCommentLength(draft.comentario, maxLength);
 
   return (
     <form
@@ -51,7 +54,6 @@ const ReplyForm: React.FC<ReplyFormProps> = ({
         />
       )}
       <textarea
-        maxLength={maxLength}
         placeholder="Sua resposta"
         value={draft.comentario}
         onChange={(event) =>
@@ -60,13 +62,24 @@ const ReplyForm: React.FC<ReplyFormProps> = ({
             comentario: event.target.value,
           })
         }
-        className="h-20 sm:h-24 w-full resize-none rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm text-zinc-800 shadow-inner outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-700"
+        className="h-20 sm:h-24 w-full resize-none rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm text-zinc-800 shadow-inner outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-700 whitespace-pre-wrap break-words"
         disabled={isSending}
       />
-      <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
-        {errorMessage && (
-          <span className="text-xs font-medium text-red-400">{errorMessage}</span>
-        )}
+      <div className="flex flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-1">
+          {errorMessage && (
+            <span className="text-xs font-medium text-red-400">{errorMessage}</span>
+          )}
+          <span
+            className={
+              lengthState.isOverLimit
+                ? "font-medium text-red-500 dark:text-red-400"
+                : undefined
+            }
+          >
+            {lengthState.message}
+          </span>
+        </div>
         <div className="flex gap-2">
           <button
             type="button"
@@ -79,7 +92,7 @@ const ReplyForm: React.FC<ReplyFormProps> = ({
           <button
             type="submit"
             className="inline-flex items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 py-1 text-xs font-medium text-zinc-700 transition-colors hover:border-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700"
-            disabled={isSending}
+            disabled={isSending || lengthState.isOverLimit}
           >
             {isSending ? "Enviando..." : "Responder"}
           </button>
