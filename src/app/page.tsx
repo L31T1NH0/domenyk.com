@@ -81,10 +81,16 @@ export default async function HomePage({
   const sort = (sp.sort as "date" | "views" | undefined) ?? undefined;
   const order = (sp.order as "asc" | "desc" | undefined) ?? undefined;
 
-  const [{ posts, hasNext, total }, isAdmin] = await Promise.all([
-    getPostsCached({ page, pageSize: PAGE_SIZE, query, sort, order }),
-    resolveIsAdmin(),
-  ]);
+  const isAdmin = await resolveIsAdmin();
+
+  const { posts, hasNext, total } = await getPostsCached({
+    page,
+    pageSize: PAGE_SIZE,
+    query,
+    sort,
+    order,
+    includeHidden: isAdmin,
+  });
 
   if (typeof total === "number" && total >= 0) {
     const maxPage = Math.max(1, Math.ceil(total / PAGE_SIZE));

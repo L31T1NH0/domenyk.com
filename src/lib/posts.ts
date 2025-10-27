@@ -17,6 +17,7 @@ export type FetchPostsArgs = {
   order?: "asc" | "desc";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   filters?: Record<string, any>;
+  includeHidden?: boolean;
 };
 
 export type FetchPostsResult = {
@@ -45,12 +46,14 @@ export async function getPosts({
   sort,
   order,
   filters,
+  includeHidden,
 }: FetchPostsArgs): Promise<FetchPostsResult> {
   const db = await getMongoDb();
   const collection = db.collection("posts");
 
   const filter: Record<string, unknown> = { ...(filters ?? {}) };
-  if (!filters || typeof filters.hidden === "undefined") {
+  const shouldIncludeHidden = Boolean(includeHidden);
+  if (!shouldIncludeHidden && typeof filter.hidden === "undefined") {
     (filter as any).hidden = { $ne: true };
   }
 
@@ -103,11 +106,26 @@ export async function getPosts({
   return { posts, hasNext, total };
 }
 
-export const getPostsCached = unstable_cache(
-  async (args: FetchPostsArgs) => getPosts(args),
-  ["home-posts"],
-  { revalidate: 60 }
-);
+export async function getPostsCached(args: FetchPostsArgs) {
+  const cacheKey = [
+    "home-posts",
+    args.includeHidden ? "with-hidden" : "public",
+    JSON.stringify({
+      page: args.page,
+      pageSize: args.pageSize,
+      query: args.query ?? "",
+      sort: args.sort ?? "",
+      order: args.order ?? "",
+      filters: args.filters ?? null,
+    }),
+  ];
+
+  const cachedFetcher = unstable_cache(() => getPosts(args), cacheKey, {
+    revalidate: 60,
+  });
+
+  return cachedFetcher();
+}
 
 export async function getPostReferenceMetadata(
   slug: string
