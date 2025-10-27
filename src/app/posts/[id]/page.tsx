@@ -8,6 +8,7 @@ import { PostHeader } from "@components/PostHeader";
 import PostContentClient from "./post-content-client";
 import { remark } from "remark";
 import html from "remark-html";
+import { renderPostMdx } from "../../../lib/renderers/mdx";
 import { resolveAdminStatus } from "../../../lib/admin";
 
 function isStaticGenerationEnvironment(): boolean {
@@ -193,8 +194,22 @@ export default async function PostPage({ params }: PostPageProps) {
 
   const title = post.title ?? "";
   const markdownSource = post.htmlContent ?? post.content ?? "";
-  const processedContent = await remark().use(html).process(markdownSource);
-  const htmlContent = processedContent.toString();
+  const shouldUseMdxRenderer = process.env.FEATURE_MDX_RENDERER === "true";
+
+  let htmlContent: string;
+
+  if (shouldUseMdxRenderer) {
+    try {
+      htmlContent = await renderPostMdx(markdownSource);
+    } catch (error) {
+      console.error(`MDX renderer failed for post ${post.postId}:`, error);
+      const processedContent = await remark().use(html).process(markdownSource);
+      htmlContent = processedContent.toString();
+    }
+  } else {
+    const processedContent = await remark().use(html).process(markdownSource);
+    htmlContent = processedContent.toString();
+  }
   const readingTime = calculateReadingTime(htmlContent);
   const dateString = normalizeDate(post.date);
   const views = typeof post.views === "number" ? post.views : 0;
