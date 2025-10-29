@@ -8,6 +8,7 @@ import {
   buildLengthErrorMessage,
   useCommentLength,
 } from "@components/comments/lengthUtils";
+import CommentAvatar from "@components/CommentAvatar";
 import { sanitizeCommentHtml } from "@components/comments/utils";
 import { UPPERCASE_MAX_RATIO, getUppercaseState, buildUppercaseErrorMessage } from "@components/comments/uppercaseUtils";
 import type { ParagraphComment } from "../../types/paragraph-comments";
@@ -782,18 +783,12 @@ export default function ParagraphCommentWidget({
             ) : (
               formattedComments.map((comment) => (
                 <div key={comment._id} className="flex items-start gap-3">
-                  {comment.authorImageUrl ? (
-                    <img
-                      src={comment.authorImageUrl}
-                      alt={comment.authorName}
-                      className="h-8 w-8 rounded-full object-cover icon"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200 text-sm font-semibold text-zinc-600 dark:bg-zinc-700 dark:text-zinc-200">
-                      {comment.authorName.charAt(0).toUpperCase()}
-                    </div>
-                  )}
+                  <CommentAvatar
+                    imageUrl={comment.authorImageUrl}
+                    name={comment.authorName}
+                    size={32}
+                    className="h-8 w-8 icon"
+                  />
                   <div className="flex-1 min-w-0 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-700 shadow-sm dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-100">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
