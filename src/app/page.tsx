@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 10;
 const BASE_URL = "https://domenyk.com";
+const DEFAULT_SOCIAL_IMAGE = `${BASE_URL}/images/profile.jpg`;
 
 function parsePage(p: unknown): number {
   const num = typeof p === "string" ? parseInt(p, 10) : 1;
@@ -49,12 +50,22 @@ export async function generateMetadata({
       title,
       description,
       url: canonical,
+      type: "website",
+      siteName: "Domenyk",
+      locale: "pt_BR",
+      images: [
+        {
+          url: DEFAULT_SOCIAL_IMAGE,
+          alt: "Retrato de Domenyk",
+        },
+      ],
     },
     twitter: {
       site: "@l31t1",
       card: "summary_large_image",
       title,
       description,
+      images: [DEFAULT_SOCIAL_IMAGE],
     },
     // Note: Next Metadata API does not natively support link rel=prev/next.
   };
