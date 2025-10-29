@@ -31,6 +31,7 @@ type PostDocument = {
   coAuthorUserId?: string | null;
   hidden?: boolean;
   paragraphCommentsEnabled?: boolean;
+  updatedAt?: string | Date;
 };
 
 type PostPageProps = {
@@ -130,7 +131,15 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
 
   const title = post.title ?? "";
   const date = normalizeDate(post.date);
-  const url = `https://domenyk.com/posts/${id}`;
+  const BASE_URL = "https://domenyk.com";
+  const FALLBACK_IMAGE_PATH = "/images/profile.jpg";
+  const cape = typeof post.cape === "string" ? post.cape.trim() : "";
+  const imageSource = cape || FALLBACK_IMAGE_PATH;
+  const imageUrl = new URL(imageSource, BASE_URL).toString();
+  const url = `${BASE_URL}/posts/${id}`;
+  const updatedAt = normalizeDate(post.updatedAt);
+  const publishedTime = date || undefined;
+  const modifiedTime = updatedAt || undefined;
 
   return {
     title: `${title} - Blog`,
@@ -139,14 +148,24 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
       title,
       description: title,
       url,
+      type: "article",
+      images: [
+        {
+          url: imageUrl,
+          alt: title,
+        },
+      ],
+      publishedTime,
+      modifiedTime,
     },
     twitter: {
       site: "@l31t1",
       card: "summary_large_image",
+      images: [imageUrl],
     },
     other: {
-      "article:published_time": date,
-      "article:modified_time": date,
+      "article:published_time": publishedTime,
+      "article:modified_time": modifiedTime ?? publishedTime,
     },
   };
 }
