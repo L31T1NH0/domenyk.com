@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useIsMobile } from "src/app/posts/[id]/post-content-client";
 import { useHeadingsMap } from "@components/useHeadingsMap";
 
@@ -10,6 +11,28 @@ export default function PostMinimap() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [clickedId, setClickedId] = useState<string | null>(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    if (isMobile) {
+      setPortalTarget(null);
+      return;
+    }
+
+    const container = document.createElement("div");
+    container.dataset.postMinimap = "true";
+    document.body.appendChild(container);
+    setPortalTarget(container);
+
+    return () => {
+      setPortalTarget((current) => (current === container ? null : current));
+      document.body.removeChild(container);
+    };
+  }, [isMobile]);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -115,11 +138,11 @@ export default function PostMinimap() {
     [prefersReducedMotion],
   );
 
-  if (isMobile || headings.length === 0) {
+  if (isMobile || headings.length === 0 || portalTarget === null) {
     return null;
   }
 
-  return (
+  return createPortal(
     <aside
       className="hidden md:flex md:flex-col fixed top-24 right-4 w-60 max-h-[calc(100vh-6rem)] overflow-y-auto rounded-lg border border-zinc-200/80 bg-white/70 p-3 text-sm text-zinc-600 shadow-lg shadow-zinc-900/5 backdrop-blur dark:border-zinc-700/60 dark:bg-zinc-900/60 dark:text-zinc-400"
     >
@@ -168,6 +191,7 @@ export default function PostMinimap() {
           );
         })}
       </nav>
-    </aside>
+    </aside>,
+    portalTarget,
   );
 }

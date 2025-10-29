@@ -171,7 +171,7 @@ export default function PostContentClient({
 
   return (
     <IsMobileContext.Provider value={isMobile}>
-      <div className="relative flex flex-col gap-6 md:pr-64 lg:pr-72">
+      <div className="relative flex flex-col gap-6">
         <article className="flex flex-col gap-6">
           <div className="flex flex-col gap-2">
             <div className="flex gap-2 items-center">
@@ -194,8 +194,8 @@ export default function PostContentClient({
 
           {/* <Chatbot htmlContent={htmlContent} /> */}
         </article>
-        <PostMinimap />
       </div>
+      <PostMinimap />
     </IsMobileContext.Provider>
   );
 }
