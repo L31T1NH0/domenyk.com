@@ -15,7 +15,7 @@ export default function AutorReference({ kind, coAuthorImageUrl }: AutorReferenc
       <span
         data-role="author-reference"
         data-kind={kind}
-        className="inline-flex items-center justify-center rounded-full bg-zinc-800/60"
+        className="inline-flex items-center justify-center bg-zinc-800/60"
       />
     );
   }
@@ -27,7 +27,7 @@ export default function AutorReference({ kind, coAuthorImageUrl }: AutorReferenc
         alt=""
         height={56}
         width={56}
-        className="svg-icon rounded-full"
+        className="svg-icon"
         priority={false}
       />
     </span>

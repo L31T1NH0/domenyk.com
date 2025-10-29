@@ -74,7 +74,7 @@ ul {
   @apply w-10 h-10 grayscale-0 rounded-full;
 }
 .svg-icon {
-  @apply w-8 h-8;
+  @apply w-8 h-8 rounded-full;
 }
 .reference {
   @apply grayscale-0;

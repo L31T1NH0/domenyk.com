@@ -16,6 +16,7 @@ function isStaticGenerationEnvironment(): boolean {
 }
 
 export const revalidate = 60;
+export const runtime = "nodejs";
 
 type PostDocument = {
   postId: string;
@@ -211,8 +212,13 @@ export default async function PostPage({ params }: PostPageProps) {
       htmlContent = processedContent.toString();
     }
   } else {
-    const processedContent = await remark().use(html).process(markdownSource);
-    htmlContent = processedContent.toString();
+    try {
+      const processedContent = await remark().use(html).process(markdownSource);
+      htmlContent = processedContent.toString();
+    } catch (error) {
+      console.error(`Markdown renderer failed for post ${post.postId}:`, error);
+      htmlContent = "";
+    }
   }
   const readingTime = calculateReadingTime(htmlContent);
   const dateString = normalizeDate(post.date);
