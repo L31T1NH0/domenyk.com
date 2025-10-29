@@ -20,6 +20,7 @@ import parse, {
 import ParagraphCommentWidget from "@components/paragraph-comments/ParagraphCommentWidget";
 import PostReference from "@components/PostReference";
 import AutorReference from "@components/AutorReference";
+import PostMinimap from "@components/PostMinimap";
 
 const IsMobileContext = createContext<boolean | null>(null);
 
@@ -170,28 +171,31 @@ export default function PostContentClient({
 
   return (
     <IsMobileContext.Provider value={isMobile}>
-      <article className="flex flex-col gap-2">
-        <div className="mb-2 flex-1">
-          <div className="flex gap-2 items-center">
-            <Date dateString={date} />
-            <div className="flex gap-2 text-sm text-zinc-500">
-              <span>• {readingTime}</span>
-              <span>{views} views</span>
+      <div className="relative flex flex-col gap-6">
+        <article className="flex flex-col gap-6">
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2 items-center">
+              <Date dateString={date} />
+              <div className="flex gap-2 text-sm text-zinc-500">
+                <span>• {readingTime}</span>
+                <span>{views} views</span>
+              </div>
+            </div>
+            <div>
+              <ShareButton id={postId} />
             </div>
           </div>
-          <div className="">
-            <ShareButton id={postId} />
+
+          {audioUrl && <AudioPlayer audioUrl={audioUrl} />}
+
+          <div className="flex flex-col gap-4 lg:text-lg sm:text-sm max-sm:text-xs">
+            {parsedContent}
           </div>
-        </div>
 
-        {audioUrl && <AudioPlayer audioUrl={audioUrl} />}
-
-        <div className="flex flex-col gap-4 lg:text-lg sm:text-sm max-sm:text-xs">
-          {parsedContent}
-        </div>
-
-        {/* <Chatbot htmlContent={htmlContent} /> */}
-      </article>
+          {/* <Chatbot htmlContent={htmlContent} /> */}
+        </article>
+      </div>
+      <PostMinimap />
     </IsMobileContext.Provider>
   );
 }
