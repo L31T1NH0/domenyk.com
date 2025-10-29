@@ -141,32 +141,48 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
   const publishedTime = date || undefined;
   const modifiedTime = updatedAt || undefined;
 
+  const openGraph: Metadata["openGraph"] = {
+    title,
+    description: title,
+    url,
+    type: "article",
+    images: [
+      {
+        url: imageUrl,
+        alt: title,
+      },
+    ],
+  };
+
+  if (publishedTime) {
+    openGraph.publishedTime = publishedTime;
+  }
+
+  if (modifiedTime) {
+    openGraph.modifiedTime = modifiedTime;
+  }
+
+  const other: NonNullable<Metadata["other"]> = {};
+
+  if (publishedTime) {
+    other["article:published_time"] = publishedTime;
+  }
+
+  const modifiedTimeForOther = modifiedTime ?? publishedTime;
+  if (modifiedTimeForOther) {
+    other["article:modified_time"] = modifiedTimeForOther;
+  }
+
   return {
     title: `${title} - Blog`,
     description: title,
-    openGraph: {
-      title,
-      description: title,
-      url,
-      type: "article",
-      images: [
-        {
-          url: imageUrl,
-          alt: title,
-        },
-      ],
-      publishedTime,
-      modifiedTime,
-    },
+    openGraph,
     twitter: {
       site: "@l31t1",
       card: "summary_large_image",
       images: [imageUrl],
     },
-    other: {
-      "article:published_time": publishedTime,
-      "article:modified_time": modifiedTime ?? publishedTime,
-    },
+    ...(Object.keys(other).length ? { other } : {}),
   };
 }
 
