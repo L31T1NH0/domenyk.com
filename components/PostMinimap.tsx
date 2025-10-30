@@ -58,56 +58,50 @@ export default function PostMinimap() {
       return;
     }
 
-    if (headings.length === 0 || typeof IntersectionObserver === "undefined") {
+    if (headings.length === 0 || typeof window === "undefined") {
       return;
     }
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort(
-            (a, b) =>
-              a.target.getBoundingClientRect().top - b.target.getBoundingClientRect().top,
-          );
+    let frame: number | null = null;
 
-        if (visible.length > 0) {
-          const target = visible[0].target as HTMLHeadingElement;
-          const matched = headings.find((heading) => heading.element === target);
-          if (matched) {
-            setActiveId((current) => (current === matched.id ? current : matched.id));
-          }
-          return;
-        }
+    const updateActiveHeading = () => {
+      frame = null;
 
-        let fallbackId: string | null = null;
-        for (const heading of headings) {
-          const top = heading.element.getBoundingClientRect().top;
-          if (top <= 24) {
-            fallbackId = heading.id;
-            continue;
-          }
-          if (fallbackId === null) {
-            fallbackId = heading.id;
-          }
+      const focusLine = window.scrollY + window.innerHeight * 0.4;
+      let nextActiveId: string | null = headings[0]?.id ?? null;
+
+      for (const heading of headings) {
+        const offsetTop = heading.element.offsetTop;
+        if (offsetTop <= focusLine) {
+          nextActiveId = heading.id;
+        } else {
           break;
         }
+      }
 
-        if (fallbackId) {
-          setActiveId((current) => (current === fallbackId ? current : fallbackId));
-        }
-      },
-      {
-        rootMargin: "-30% 0px -60% 0px",
-        threshold: [0, 0.25, 1],
-      },
-    );
+      if (nextActiveId !== null) {
+        setActiveId((current) => (current === nextActiveId ? current : nextActiveId));
+      }
+    };
 
-    headings.forEach((heading) => observer.observe(heading.element));
+    const requestUpdate = () => {
+      if (frame !== null) {
+        return;
+      }
+      frame = window.requestAnimationFrame(updateActiveHeading);
+    };
+
+    requestUpdate();
+
+    window.addEventListener("scroll", requestUpdate, { passive: true });
+    window.addEventListener("resize", requestUpdate);
 
     return () => {
-      headings.forEach((heading) => observer.unobserve(heading.element));
-      observer.disconnect();
+      if (frame !== null) {
+        window.cancelAnimationFrame(frame);
+      }
+      window.removeEventListener("scroll", requestUpdate);
+      window.removeEventListener("resize", requestUpdate);
     };
   }, [headings, isMobile]);
 
