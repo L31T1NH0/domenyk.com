@@ -94,6 +94,45 @@ function calculateReadingTime(htmlContent: string): string {
   return `${minutes} min`;
 }
 
+function extractPlainText(value: string): string {
+  return value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function extractDescription(post: PostDocument): string {
+  const htmlContent = typeof post.htmlContent === "string" ? post.htmlContent : "";
+  if (htmlContent) {
+    const paragraphMatch = htmlContent.match(/<p[^>]*>([\s\S]*?)<\/p>/i);
+    const htmlSnippet = paragraphMatch ? paragraphMatch[1] : htmlContent;
+    const plain = extractPlainText(htmlSnippet);
+    if (plain) {
+      return plain;
+    }
+  }
+
+  const markdownContent = typeof post.content === "string" ? post.content : "";
+  if (markdownContent) {
+    const paragraphs = markdownContent.split(/\n\s*\n/);
+    for (const paragraph of paragraphs) {
+      const trimmed = paragraph.trim();
+      if (!trimmed) {
+        continue;
+      }
+      const withoutLinks = trimmed
+        .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+        .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1");
+      const withoutFormatting = withoutLinks
+        .replace(/[*_`>#~]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (withoutFormatting) {
+        return withoutFormatting;
+      }
+    }
+  }
+
+  return post.title ?? "";
+}
+
 async function resolveIsAdmin(): Promise<boolean> {
   try {
     const { isAdmin } = await resolveAdminStatus();
@@ -140,10 +179,11 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
   const updatedAt = normalizeDate(post.updatedAt);
   const publishedTime = date || undefined;
   const modifiedTime = updatedAt || undefined;
+  const description = extractDescription(post);
 
   const openGraph: Metadata["openGraph"] = {
     title,
-    description: title,
+    description,
     url,
     type: "article",
     images: [
@@ -152,6 +192,8 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
         alt: title,
       },
     ],
+    siteName: "Domenyk",
+    locale: "pt_BR",
   };
 
   if (publishedTime) {
@@ -175,11 +217,13 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
 
   return {
     title: `${title} - Blog`,
-    description: title,
+    description,
     openGraph,
     twitter: {
       site: "@l31t1",
       card: "summary_large_image",
+      title,
+      description,
       images: [imageUrl],
     },
     ...(Object.keys(other).length ? { other } : {}),
