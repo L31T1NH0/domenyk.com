@@ -3,7 +3,8 @@ import { defaultDependencies, resolvePostResponse } from "./handler";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const params = await context.params;
   return resolvePostResponse(req, params, defaultDependencies);
 }
