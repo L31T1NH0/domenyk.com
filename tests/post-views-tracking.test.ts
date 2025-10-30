@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { GetPostDependencies } from "../src/app/api/posts/[id]/route";
+import type { GetPostDependencies } from "../src/app/api/posts/[id]/handler";
 
 const routeModulePromise = (async () => {
   process.env.MONGODB_URI =
@@ -19,7 +19,7 @@ const routeModulePromise = (async () => {
     });
   }
 
-  return import("../src/app/api/posts/[id]/route");
+  return import("../src/app/api/posts/[id]/handler");
 })();
 
 type ViewerRecord = {
