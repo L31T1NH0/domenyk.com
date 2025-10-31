@@ -347,6 +347,10 @@ export default async function PostPage({ params }: PostPageProps) {
         title={title}
         friendImage={post.friendImage}
         coAuthorImageUrl={coAuthorImageUrl}
+        date={dateString}
+        readingTime={readingTime}
+        postId={post.postId}
+        views={views}
       />
       <PostContentClient
         postId={post.postId}

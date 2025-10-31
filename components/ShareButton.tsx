@@ -1,52 +1,38 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 
 interface ShareButtonProps {
   id: string;
 }
 
 const ShareButton: React.FC<ShareButtonProps> = ({ id }) => {
-  const [shortUrl, setShortUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {}, []);
 
   const copyToClipboard = async () => {
     if (typeof window === "undefined") return;
 
     const url = `https://domenyk.com/posts/${id}`;
-    console.log(`URL original: ${url}`);
 
     const savedShortUrl = localStorage.getItem(`shortUrl-${id}`);
     if (savedShortUrl) {
-      console.log(`URL encurtada recuperada do localStorage: ${savedShortUrl}`);
-      setShortUrl(savedShortUrl);
       await navigator.clipboard.writeText(savedShortUrl);
-      console.log("Link copiado para a área de transferência!");
       return;
     }
 
     try {
-      const response = await fetch(
-        `/api/posts/shorten-url?url=${encodeURIComponent(url)}`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      console.log(`Status da resposta: ${response.status}`);
+      const response = await fetch(`/api/posts/shorten-url?url=${encodeURIComponent(url)}`, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
       if (!response.ok) {
         throw new Error(`Falha na requisição da API: ${response.status}`);
       }
       const shortUrl = await response.text();
-      console.log(`Resposta recebida: ${shortUrl}`);
       if (shortUrl.startsWith("http")) {
-        setShortUrl(shortUrl);
         localStorage.setItem(`shortUrl-${id}`, shortUrl);
         await navigator.clipboard.writeText(shortUrl);
-        console.log("Link copiado para a área de transferência!");
       } else {
         throw new Error("URL encurtada inválida");
       }
@@ -57,14 +43,14 @@ const ShareButton: React.FC<ShareButtonProps> = ({ id }) => {
   };
 
   return (
-    <div>
+    <div className="flex flex-col items-center gap-1 text-[0.68rem]">
       <button
         onClick={copyToClipboard}
-        className="ml-0 text-sm text-cyan-600 active:text-cyan-700 focus:text-cyan-600 hover:text-cyan-700"
+        className="motion-scale inline-flex items-center gap-2 rounded-full border border-[rgba(255,75,139,0.4)] bg-[rgba(255,75,139,0.15)] px-4 py-1.5 text-[0.68rem] uppercase tracking-[0.32em] text-white transition hover:bg-[rgba(255,75,139,0.28)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
       >
         Compartilhar
       </button>
-      {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+      {error && <p className="text-[0.6rem] text-[var(--color-muted)]">{error}</p>}
     </div>
   );
 };

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useRef, useState, useEffect } from "react";
 import Link from "next/link";
@@ -7,6 +7,8 @@ import { TrashIcon, ChevronDownIcon } from "@heroicons/react/24/solid";
 import SearchBar from "@components/SearchBar";
 import Pagination from "@components/Pagination";
 import { Date } from "@components/date";
+import { layoutClasses } from "@components/layout";
+import { useReveal } from "@lib/useReveal";
 import { buildUrl } from "../lib/url";
 
 export type PostData = {
@@ -24,12 +26,82 @@ type HomeClientProps = {
   hasNext: boolean;
 };
 
-const SORT_OPTIONS = [
-  { label: "Data (mais antigo)", value: { sort: "date" as const, order: "asc" as const } },
-  { label: "Data (mais recente)", value: { sort: "date" as const, order: "desc" as const } },
-  { label: "Views (menor → maior)", value: { sort: "views" as const, order: "asc" as const } },
-  { label: "Views (maior → menor)", value: { sort: "views" as const, order: "desc" as const } },
+type SortOption = {
+  label: string;
+  value: { sort: "date" | "views"; order: "asc" | "desc" };
+};
+
+const SORT_OPTIONS: SortOption[] = [
+  { label: "Data (mais antigo)", value: { sort: "date", order: "asc" } },
+  { label: "Data (mais recente)", value: { sort: "date", order: "desc" } },
+  { label: "Views (menor → maior)", value: { sort: "views", order: "asc" } },
+  { label: "Views (maior → menor)", value: { sort: "views", order: "desc" } },
 ];
+
+type SortKey = `${"date" | "views"}:${"asc" | "desc"}` | ":";
+
+function buildSortKey(sort?: "date" | "views", order?: "asc" | "desc"): SortKey {
+  return `${sort ?? ""}:${order ?? ""}` as SortKey;
+}
+
+type PostCardProps = {
+  post: PostData;
+  isAdmin: boolean;
+  onDeleteRequest: (postId: string) => void;
+};
+
+function PostCard({ post, isAdmin, onDeleteRequest }: PostCardProps) {
+  const cardRef = useReveal<HTMLLIElement>({ threshold: 0.2, rootMargin: "0px 0px -10%" });
+
+  return (
+    <li ref={cardRef} className="reveal-init">
+      <article className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-[var(--color-border)] bg-[rgba(22,22,22,0.7)] px-0 py-0 shadow-[0_24px_44px_rgba(0,0,0,0.38)] transition duration-300 hover:border-[rgba(255,75,139,0.35)] hover:shadow-[0_30px_54px_rgba(0,0,0,0.45)]">
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onDeleteRequest(post.postId);
+            }}
+            className="motion-scale absolute right-4 top-4 inline-flex size-9 items-center justify-center rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(13,13,13,0.8)] text-[var(--color-muted)] opacity-0 shadow-[0_10px_25px_rgba(0,0,0,0.35)] transition duration-200 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+            aria-label="Apagar post"
+          >
+            <TrashIcon className="size-4" />
+          </button>
+        )}
+
+        <Link
+          href={`/posts/${post.postId}`}
+          className="flex flex-1 flex-col gap-4 rounded-3xl p-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgba(13,13,13,0.92)]"
+        >
+          <div className="flex items-center justify-between text-[0.7rem] uppercase tracking-[0.28em] text-[var(--color-muted)]">
+            <Date dateString={post.date} />
+            <span className="opacity-80">{post.views ?? 0} leituras</span>
+          </div>
+
+          <h2 className="text-xl sm:text-[1.35rem] font-normal tracking-[0.2em] text-white transition-colors duration-300 group-hover:text-[var(--color-accent)]">
+            {post.title}
+          </h2>
+
+          {post.tags?.length ? (
+            <div className="flex flex-wrap gap-2 pt-1">
+              {post.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] px-3 py-1 text-[0.65rem] uppercase tracking-[0.22em] text-[var(--color-muted)]"
+                >
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </Link>
+      </article>
+    </li>
+  );
+}
+
 export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClientProps) {
   const [error, setError] = useState<string | null>(null);
   const [postToDelete, setPostToDelete] = useState<string | null>(null);
@@ -61,15 +133,13 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
     };
   }, []);
 
-  const currentSortKey = `${sort ?? ""}:${order ?? ""}`;
+  const currentSortKey = buildSortKey(sort, order);
   const currentSortLabel = (() => {
-    const match = SORT_OPTIONS.find(
-      (opt) => `${opt.value.sort ?? ""}:${opt.value.order ?? ""}` === currentSortKey
-    );
+    const match = SORT_OPTIONS.find((opt) => buildSortKey(opt.value.sort, opt.value.order) === currentSortKey);
     return match?.label ?? "Data (mais recente)";
   })();
 
-  const onSelectSort = (key: string) => {
+  const onSelectSort = (key: SortKey) => {
     const [s, o] = key.split(":");
     const next = buildUrl(
       pathname,
@@ -117,127 +187,119 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
   };
 
   const onSearch = (newQuery: string) => {
-    const next = buildUrl(
-      pathname,
-      sp,
-      { query: newQuery },
-      { resetPage: true }
-    );
+    const next = buildUrl(pathname, sp, { query: newQuery }, { resetPage: true });
     router.push(next);
   };
 
+  const sectionRef = useReveal<HTMLDivElement>({ threshold: 0.2 });
+
   return (
-    <section className="flex-1 gap-6">
-      <div className="flex items-center flex-wrap mb-6 gap-4">
-        <h1 className="font-bold text-2xl">Blog</h1>
-        <div className="ml-2 sm:ml-4">
-          <SearchBar
-            onSearch={onSearch}
-            initialQuery={query}
-            rightSlot={
-              <div className="relative" ref={sortRef}>
-                <button
-                  type="button" aria-label="Ordenar"
-                  aria-haspopup="listbox"
-                  aria-expanded={openSort}
-                  onClick={() => setOpenSort((v) => !v)}
-                  className="inline-flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-zinc-700 transition-colors"
-                >
-                  <span className="hidden sm:inline whitespace-nowrap">{currentSortLabel}</span>
-                  <ChevronDownIcon className={`h-4 w-4 transition-transform duration-200 ${openSort ? "rotate-180" : "rotate-0"}`} />
-                </button>
-                {openSort && (
-                  <div
-                    role="listbox"
-                    className="absolute right-0 z-20 mt-2 w-64 rounded-lg border border-zinc-700 bg-zinc-900 p-2 max-h-[200px] overflow-auto shadow-lg"
-                  >
-                    {SORT_OPTIONS.map((opt) => {
-                      const key = `${opt.value.sort ?? ""}:${opt.value.order ?? ""}`;
-                      const selected = key === currentSortKey;
-                      return (
-                        <button
-                          key={key}
-                          type="button"
-                          role="option"
-                          aria-selected={selected}
-                          onClick={() => onSelectSort(key)}
-                          className={`w-full text-left px-4 py-2 rounded-md text-sm transition-colors hover:bg-zinc-700 ${
-                            selected ? "font-medium text-zinc-100" : "text-zinc-300"
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+    <section className={layoutClasses.section}>
+      <div ref={sectionRef} className={`reveal-init ${layoutClasses.grid}`}>
+        <div className={layoutClasses.columns.full}>
+          <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div className="space-y-2">
+                <span className="text-xs uppercase tracking-[0.35em] text-[var(--color-muted)]">Explorar</span>
+                <h2 className="text-[clamp(1.6rem,3vw,2.2rem)] leading-tight">Últimos manifestos</h2>
               </div>
-            }
-          />
+              <div className="flex flex-col gap-3 sm:w-auto">
+                <SearchBar
+                  onSearch={onSearch}
+                  initialQuery={query}
+                  className="w-full sm:w-[320px]"
+                />
+                <div className="relative" ref={sortRef}>
+                  <button
+                    type="button"
+                    aria-label="Ordenar"
+                    aria-haspopup="listbox"
+                    aria-expanded={openSort}
+                    onClick={() => setOpenSort((v) => !v)}
+                    className="motion-scale inline-flex items-center gap-2 rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(22,22,22,0.6)] px-4 py-2 text-xs uppercase tracking-[0.28em] text-[var(--color-muted)] transition hover:text-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+                  >
+                    <span className="whitespace-nowrap">{currentSortLabel}</span>
+                    <ChevronDownIcon className={`size-4 transition-transform duration-200 ${openSort ? "rotate-180" : "rotate-0"}`} />
+                  </button>
+                  {openSort && (
+                    <div
+                      role="listbox"
+                      className="absolute right-0 z-20 mt-3 w-64 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[rgba(18,18,18,0.95)] p-2 shadow-[0_18px_40px_rgba(0,0,0,0.45)] backdrop-blur-md"
+                    >
+                      {SORT_OPTIONS.map((opt) => {
+                        const key = buildSortKey(opt.value.sort, opt.value.order);
+                        const selected = key === currentSortKey;
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            role="option"
+                            aria-selected={selected}
+                            onClick={() => onSelectSort(key)}
+                            className={`w-full rounded-xl px-4 py-3 text-left text-sm transition hover:bg-[rgba(255,255,255,0.05)] ${
+                              selected ? "text-white" : "text-[var(--color-muted)]"
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {error && (
+              <div className="rounded-2xl border border-[rgba(255,75,139,0.45)] bg-[rgba(255,75,139,0.1)] px-4 py-3 text-sm text-[var(--color-text)]">
+                {error}
+              </div>
+            )}
+
+            {posts.length === 0 ? (
+              <div className="rounded-3xl border border-[var(--color-border)] bg-[rgba(20,20,20,0.6)] p-8 text-sm text-[var(--color-muted)]">
+                <p className="mb-2 font-medium text-[var(--color-text)]">Nenhum post encontrado.</p>
+                <p>Ajuste a busca ou tente outros filtros.</p>
+              </div>
+            ) : (
+              <ul className="grid grid-cols-1 gap-6 sm:gap-7 lg:grid-cols-2">
+                {posts.map((post) => (
+                  <PostCard key={post.postId} post={post} isAdmin={isAdmin} onDeleteRequest={openDeleteModal} />
+                ))}
+              </ul>
+            )}
+
+            <Pagination
+              page={page}
+              hasNext={hasNext}
+              pathname={pathname}
+              searchParams={Object.fromEntries(sp.entries())}
+            />
+          </div>
         </div>
       </div>
-      {error ? (
-        <p className="text-red-500">{error}</p>
-      ) : posts.length === 0 ? (
-        <div className="text-sm text-zinc-400 space-y-2">
-          <p>Nenhum post encontrado.</p>
-          <p>Tente ajustar a busca ou filtros.</p>
-        </div>
-      ) : (
-        <ul className="text-xl ml-0 flex flex-col gap-4">
-          {posts.map((post) => (
-            <li key={post.postId} className="flex flex-col mb-2 group relative">
-              <Link
-                href={`/posts/${post.postId}`}
-                className="text-xl hover:underline"
-              >
-                {post.title}
-              </Link>
-              <small className="text-zinc-400">
-                <Date dateString={post.date} /> <span aria-hidden className="mx-2">&middot;</span>
-                <span className="inline-flex items-center rounded px-2 py-1 text-sm text-zinc-500">
-                  {post.views ?? 0} views
-                </span>
-              </small>
-              {isAdmin && (
-                <button
-                  onClick={() => openDeleteModal(post.postId)}
-                  className="absolute right-0 top-0 text-red-500 hover:text-red-700 text-sm opacity-0 group-hover:opacity-100 max-sm:opacity-100 transition-opacity duration-200"
-                >
-                  <TrashIcon className="size-4" />
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <Pagination page={page} hasNext={hasNext} pathname={pathname} searchParams={Object.fromEntries(sp.entries())} />
 
       {showDeleteModal && postToDelete && isAdmin && (
-        <div className="fixed inset-0 bg-zinc-900/90 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full border border-gray-200">
-            <h2 className="text-lg font-bold mb-4 text-gray-900">
-              Confirmar Exclusão
-            </h2>
-            <p className="mb-6 text-gray-700">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-10 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl border border-[var(--color-border)] bg-[rgba(15,15,15,0.92)] p-6 shadow-[0_30px_60px_rgba(0,0,0,0.55)]">
+            <h2 className="text-lg font-normal tracking-[0.3em] text-white">Confirmar exclusão</h2>
+            <p className="mt-3 text-sm text-[var(--color-muted)]">
               Tem certeza que deseja apagar o post "
-              <span className="font-semibold text-gray-900">
-                {posts.find((p) => p.postId === postToDelete)?.title ||
-                  "Este post"}
+              <span className="text-[var(--color-text)]">
+                {posts.find((p) => p.postId === postToDelete)?.title ?? "Este post"}
               </span>
               "?
             </p>
-            <div className="flex justify-end gap-4">
+            <div className="mt-6 flex flex-wrap justify-end gap-3">
               <button
                 onClick={closeDeleteModal}
-                className="px-4 py-2 bg-gray-100 text-gray-800 rounded hover:bg-gray-200 border border-gray-300 transition-colors duration-200"
+                className="motion-scale inline-flex items-center justify-center rounded-full border border-[rgba(255,255,255,0.12)] px-5 py-2 text-xs uppercase tracking-[0.2em] text-[var(--color-muted)] transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
               >
                 Cancelar
               </button>
               <button
                 onClick={() => handleDeletePost(postToDelete)}
-                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 border border-red-700 transition-colors duration-200"
+                className="motion-scale inline-flex items-center justify-center rounded-full bg-[var(--color-accent)] px-5 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-black transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgba(15,15,15,0.92)]"
               >
                 Apagar
               </button>
@@ -248,21 +310,3 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
     </section>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

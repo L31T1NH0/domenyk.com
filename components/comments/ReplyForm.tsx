@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 
 import { useCommentLength } from "./lengthUtils";
 
@@ -36,62 +36,69 @@ const ReplyForm: React.FC<ReplyFormProps> = ({
         event.preventDefault();
         onSubmit(commentId, draft);
       }}
-      className="mt-3 space-y-2 rounded-xl border border-zinc-200 bg-white p-3 shadow-sm text-sm dark:border-zinc-700 dark:bg-zinc-900/70"
+      className="comment-form mt-4 flex flex-col gap-4 border border-[rgba(255,255,255,0.12)] bg-[rgba(16,16,16,0.65)] p-5"
     >
-      {requiresName && (
-        <input
-          type="text"
-          placeholder="Seu nome"
-          value={draft.nome}
-          onChange={(event) =>
-            onDraftChange(commentId, {
-              ...draft,
-              nome: event.target.value,
-            })
-          }
-          className="w-full rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm text-zinc-800 shadow-inner outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-700"
-          disabled={isSending}
-        />
-      )}
-      <textarea
-        placeholder="Sua resposta"
-        value={draft.comentario}
-        onChange={(event) =>
-          onDraftChange(commentId, {
-            ...draft,
-            comentario: event.target.value,
-          })
-        }
-        className="h-20 sm:h-24 w-full resize-none rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm text-zinc-800 shadow-inner outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-700 whitespace-pre-wrap break-words"
-        disabled={isSending}
-      />
-      <div className="flex flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 text-left">
+        {requiresName && (
+          <div className="flex flex-col gap-1">
+            <label htmlFor={`reply-name-${commentId}`} className="text-[0.6rem] uppercase tracking-[0.24em] text-[var(--color-muted)]">
+              Nome
+            </label>
+            <input
+              id={`reply-name-${commentId}`}
+              type="text"
+              placeholder="Seu nome"
+              value={draft.nome}
+              onChange={(event) =>
+                onDraftChange(commentId, {
+                  ...draft,
+                  nome: event.target.value,
+                })
+              }
+              className="w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-transparent px-3 py-2 text-sm text-[var(--color-text)] placeholder:text-[var(--color-muted)] transition focus:border-[var(--color-accent)] focus:outline-none"
+              disabled={isSending}
+            />
+          </div>
+        )}
         <div className="flex flex-col gap-1">
-          {errorMessage && (
-            <span className="text-xs font-medium text-red-400">{errorMessage}</span>
-          )}
-          <span
-            className={
-              lengthState.isOverLimit
-                ? "font-medium text-red-500 dark:text-red-400"
-                : undefined
+          <label htmlFor={`reply-message-${commentId}`} className="text-[0.6rem] uppercase tracking-[0.24em] text-[var(--color-muted)]">
+            Resposta
+          </label>
+          <textarea
+            id={`reply-message-${commentId}`}
+            placeholder="Sua resposta"
+            value={draft.comentario}
+            onChange={(event) =>
+              onDraftChange(commentId, {
+                ...draft,
+                comentario: event.target.value,
+              })
             }
-          >
-            {lengthState.message}
-          </span>
+            className="min-h-[110px] w-full resize-none rounded-xl border border-[rgba(255,255,255,0.12)] bg-transparent px-3 py-2 text-sm text-[var(--color-text)] placeholder:text-[var(--color-muted)] transition focus:border-[var(--color-accent)] focus:outline-none"
+            disabled={isSending}
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-3 text-[0.62rem] uppercase tracking-[0.24em] text-[var(--color-muted)] sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2">
+          {errorMessage && (
+            <span className="text-[var(--color-accent)]">{errorMessage}</span>
+          )}
+          <span className={lengthState.isOverLimit ? "text-[var(--color-accent)]" : undefined}>{lengthState.message}</span>
         </div>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-full border border-zinc-300 px-4 py-1 text-xs font-medium text-zinc-700 transition hover:border-zinc-400 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-200"
+            className="motion-scale inline-flex items-center justify-center rounded-full border border-[rgba(255,255,255,0.12)] px-4 py-1.5 text-[0.62rem] uppercase tracking-[0.24em] text-[var(--color-muted)] transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
             disabled={isSending}
           >
             Cancelar
           </button>
           <button
             type="submit"
-            className="inline-flex items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 py-1 text-xs font-medium text-zinc-700 transition-colors hover:border-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700"
+            className="comment-button motion-scale px-5 py-1.5 text-[0.62rem] disabled:cursor-not-allowed disabled:opacity-60"
             disabled={isSending || lengthState.isOverLimit}
           >
             {isSending ? "Enviando..." : "Responder"}
@@ -103,11 +110,3 @@ const ReplyForm: React.FC<ReplyFormProps> = ({
 };
 
 export default ReplyForm;
-
-
-
-
-
-
-
-
