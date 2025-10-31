@@ -2,13 +2,14 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth, useUser } from "@clerk/nextjs";
-import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/solid";
 
 import {
   STANDARD_COMMENT_MAX_LENGTH,
   buildLengthErrorMessage,
   useCommentLength,
 } from "@components/comments/lengthUtils";
+import { layoutClasses } from "@components/layout";
+import { useReveal } from "@lib/useReveal";
 
 import CommentThread from "./comments/CommentThread";
 import { CommentDraft, CommentEntity, SubmissionStatus } from "./comments/types";
@@ -444,6 +445,9 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
     }
   };
 
+  const sectionRef = useReveal<HTMLDivElement>({ threshold: 0.2 });
+  const headingRef = useReveal<HTMLDivElement>({ threshold: 0.25 });
+
   const removeBranch = useCallback((targetId: string) => {
     setComments((prev) => {
       const idsToRemove = new Set<string>([targetId]);
@@ -492,103 +496,111 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
   );
 
   return (
-  <section className="space-y-4" aria-label="Seção de comentários">
-      <div className="mx-auto w-full">
-        <header className="flex items-center gap-2 text-xl font-semibold text-zinc-100">
-          <ChatBubbleLeftRightIcon className="h-5 w-5" />
-          Comentários ({totalComments})
-        </header>
+    <section className={layoutClasses.section} aria-label="Seção de comentários">
+      <div ref={sectionRef} className={`reveal-init ${layoutClasses.grid}`}>
+        <div className={layoutClasses.columns.main}>
+          <div className="flex flex-col gap-10">
+            <div ref={headingRef} className="reveal-init comment-heading">
+              <span className="text-xs uppercase tracking-[0.5em] text-[var(--color-muted)]">Leitura coletiva</span>
+              <h2 className="text-[clamp(1.9rem,3vw,2.4rem)] leading-tight text-white">
+                Readers’ Reflections
+              </h2>
+              <span className="text-[var(--color-muted)] text-xs tracking-[0.35em]">
+                ({totalComments})
+              </span>
+            </div>
 
-        <form
-          onSubmit={handleCommentSubmit}
-          className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/70"
-        >
-          <div className="flex flex-col gap-2">
-            {!userId && (
-              <div className="space-y-2">
-                <input
-                  id="comment-name"
-                  type="text"
-                  placeholder="Digite seu nome"
-                  value={commentDraft.nome}
-                  onChange={(event) => handleCommentDraftChange("nome", event.target.value)}
-                  className="w-full rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm text-zinc-800 shadow-inner outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-700"
-                  disabled={submissionStatus === "sending"}
-                />
-                <p className="text-xs text-zinc-500">Esse nome aparecerá junto ao seu comentário.</p>
+            <form onSubmit={handleCommentSubmit} className="comment-form flex flex-col gap-6 p-6 sm:p-8">
+              <div className="flex flex-col gap-4 text-left">
+                {!userId && (
+                  <div className="flex flex-col gap-2">
+                    <label htmlFor="comment-name" className="text-xs uppercase tracking-[0.24em] text-[var(--color-muted)]">
+                      Identifique-se
+                    </label>
+                    <input
+                      id="comment-name"
+                      type="text"
+                      placeholder="Digite seu nome"
+                      value={commentDraft.nome}
+                      onChange={(event) => handleCommentDraftChange("nome", event.target.value)}
+                      className="w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-transparent px-4 py-3 text-sm text-[var(--color-text)] placeholder:text-[var(--color-muted)] transition focus:border-[var(--color-accent)] focus:outline-none"
+                      disabled={submissionStatus === "sending"}
+                    />
+                  </div>
+                )}
+
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="comment-message" className="text-xs uppercase tracking-[0.24em] text-[var(--color-muted)]">
+                    Compartilhe sua visão
+                  </label>
+                  <textarea
+                    id="comment-message"
+                    placeholder="Escreva seu comentário"
+                    value={commentDraft.comentario}
+                    onChange={(event) => handleCommentDraftChange("comentario", event.target.value)}
+                    className="min-h-[140px] w-full resize-none rounded-xl border border-[rgba(255,255,255,0.12)] bg-transparent px-4 py-3 text-sm text-[var(--color-text)] placeholder:text-[var(--color-muted)] transition focus:border-[var(--color-accent)] focus:outline-none"
+                    disabled={submissionStatus === "sending"}
+                  />
+                </div>
               </div>
-            )}
 
-            <textarea
-              placeholder="Escreva seu comentário"
-              value={commentDraft.comentario}
-              onChange={(event) =>
-                handleCommentDraftChange("comentario", event.target.value)
-              }
-              className="h-20 sm:h-24 w-full resize-none rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm text-zinc-800 shadow-inner outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-700 whitespace-pre-wrap break-words"
-              disabled={submissionStatus === "sending"}
-            />
+              <div className="flex flex-col gap-3 text-xs uppercase tracking-[0.24em] text-[var(--color-muted)] sm:flex-row sm:items-center sm:justify-between">
+                <span className={commentLength.isOverLimit ? "text-[var(--color-accent)]" : undefined}>
+                  {commentLength.message}
+                </span>
+                <button
+                  type="submit"
+                  disabled={submissionStatus === "sending" || commentLength.isOverLimit}
+                  className="comment-button motion-scale disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {submissionStatus === "sending" ? "Enviando..." : "Publicar"}
+                </button>
+              </div>
+
+              {submissionStatus === "success" && statusMessage && (
+                <p className="rounded-full border border-emerald-400/40 bg-emerald-400/10 px-4 py-2 text-xs uppercase tracking-[0.2em] text-emerald-200">
+                  {statusMessage}
+                </p>
+              )}
+
+              {errorMessage && (
+                <p className="rounded-full border border-[rgba(255,75,139,0.45)] bg-[rgba(255,75,139,0.12)] px-4 py-2 text-xs uppercase tracking-[0.2em] text-[var(--color-text)]">
+                  {errorMessage}
+                </p>
+              )}
+
+              {submissionStatus === "typing" && (
+                <p className="text-[0.6rem] uppercase tracking-[0.28em] text-[var(--color-muted)]">
+                  Pronto para enviar quando quiser.
+                </p>
+              )}
+            </form>
+
+            <div className="space-y-6">
+              <CommentThread
+                parentId={null}
+                lookup={commentLookup}
+                onReplyRequest={handleReplyRequest}
+                onReplyCancel={handleReplyCancel}
+                onReplySubmit={handleReplySubmit}
+                onReplyDraftChange={handleReplyDraftChange}
+                getReplyDraft={(commentId) => replyDrafts[commentId] ?? { nome: commentDraft.nome, comentario: "" }}
+                getReplyStatus={(commentId) => replyStatuses[commentId] ?? "idle"}
+                getReplyError={(commentId) => replyErrors[commentId] ?? null}
+                isReplying={(commentId) => activeReplyId === commentId}
+                canDelete={canDeleteComment}
+                onDelete={handleDelete}
+                requiresName={!userId}
+                coAuthorUserId={coAuthorUserId}
+              />
+
+              {totalComments === 0 && (
+                <p className="rounded-3xl border border-[var(--color-border)] bg-[rgba(22,22,22,0.7)] px-6 py-5 text-sm text-[var(--color-muted)]">
+                  Nenhum comentário ainda. Seja o primeiro!
+                </p>
+              )}
+            </div>
           </div>
-
-          <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
-            <span
-              className={
-                commentLength.isOverLimit
-                  ? "font-medium text-red-500 dark:text-red-400"
-                  : undefined
-              }
-            >
-              {commentLength.message}
-            </span>
-            <button
-              type="submit"
-              disabled={
-                submissionStatus === "sending" || commentLength.isOverLimit
-              }
-              className="inline-flex items-center my-2 gap-1 rounded-full border border-zinc-300 bg-white px-3 py-1 text-sm font-medium text-zinc-700 transition-colors hover:border-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700"
-            >
-              {submissionStatus === "sending" ? "Enviando..." : "Publicar"}
-            </button>
-          </div>
-
-          {submissionStatus === "success" && statusMessage && (
-            <p className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-300">{statusMessage}</p>
-          )}
-
-          {submissionStatus === "error" && errorMessage && (
-            <p className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-300">{errorMessage}</p>
-          )}
-
-          {submissionStatus === "typing" && (
-            <p className="text-xs text-zinc-500">Pronto para enviar quando quiser.</p>
-          )}
-        </form>
-
-        {submissionStatus !== "success" && errorMessage && submissionStatus !== "error" && (
-          <p className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-300">{errorMessage}</p>
-        )}
-
-        <div className="mt-4 space-y-4">
-          <CommentThread
-            parentId={null}
-            lookup={commentLookup}
-            onReplyRequest={handleReplyRequest}
-            onReplyCancel={handleReplyCancel}
-            onReplySubmit={handleReplySubmit}
-            onReplyDraftChange={handleReplyDraftChange}
-            getReplyDraft={(commentId) => replyDrafts[commentId] ?? { nome: commentDraft.nome, comentario: "" }}
-            getReplyStatus={(commentId) => replyStatuses[commentId] ?? "idle"}
-            getReplyError={(commentId) => replyErrors[commentId] ?? null}
-            isReplying={(commentId) => activeReplyId === commentId}
-            canDelete={canDeleteComment}
-            onDelete={handleDelete}
-            requiresName={!userId}
-            coAuthorUserId={coAuthorUserId}
-          />
-
-          {totalComments === 0 && (
-            <p className="rounded-2xl border border-zinc-800/80 bg-zinc-950/60 px-4 py-2 sm:px-6 sm:py-4 text-sm text-zinc-400">Nenhum comentário ainda. Seja o primeiro!</p>
-          )}
         </div>
       </div>
     </section>

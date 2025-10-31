@@ -23,6 +23,7 @@ type CommentThreadProps = {
   onDelete: (comment: CommentEntity) => void;
   requiresName: boolean;
   coAuthorUserId?: string;
+  depth?: number;
 };
 
 const CommentThread: React.FC<CommentThreadProps> = ({
@@ -40,6 +41,7 @@ const CommentThread: React.FC<CommentThreadProps> = ({
   onDelete,
   requiresName,
   coAuthorUserId,
+  depth = 0,
 }) => {
   const siblings = lookup.get(parentId ?? null) ?? [];
 
@@ -48,41 +50,44 @@ const CommentThread: React.FC<CommentThreadProps> = ({
   }
 
   return (
-    <div className={parentId ? "space-y-3" : "space-y-4"}>
+    <div className={depth > 0 ? "space-y-4" : "space-y-6"}>
       {siblings.map((comment) => (
-        <CommentItem
-          key={comment._id}
-          comment={comment}
-          onReplyRequest={() => onReplyRequest(comment._id)}
-          onReplyCancel={() => onReplyCancel(comment._id)}
-          onReplySubmit={(draft) => onReplySubmit(comment._id, draft)}
-          onReplyDraftChange={(draft) => onReplyDraftChange(comment._id, draft)}
-          replyDraft={getReplyDraft(comment._id)}
-          replyStatus={getReplyStatus(comment._id)}
-          replyError={getReplyError(comment._id)}
-          isReplying={isReplying(comment._id)}
-          canDelete={canDelete(comment)}
-          onDelete={() => onDelete(comment)}
-          requiresName={requiresName}
-          coAuthorUserId={coAuthorUserId}
-        >
-          <CommentThread
-            parentId={comment._id}
-            lookup={lookup}
-            onReplyRequest={onReplyRequest}
-            onReplyCancel={onReplyCancel}
-            onReplySubmit={onReplySubmit}
-            onReplyDraftChange={onReplyDraftChange}
-            getReplyDraft={getReplyDraft}
-            getReplyStatus={getReplyStatus}
-            getReplyError={getReplyError}
-            isReplying={isReplying}
-            canDelete={canDelete}
-            onDelete={onDelete}
+        <div key={comment._id} className={depth > 0 ? "comment-reply" : undefined}>
+          <CommentItem
+            comment={comment}
+            onReplyRequest={() => onReplyRequest(comment._id)}
+            onReplyCancel={() => onReplyCancel(comment._id)}
+            onReplySubmit={(draft) => onReplySubmit(comment._id, draft)}
+            onReplyDraftChange={(draft) => onReplyDraftChange(comment._id, draft)}
+            replyDraft={getReplyDraft(comment._id)}
+            replyStatus={getReplyStatus(comment._id)}
+            replyError={getReplyError(comment._id)}
+            isReplying={isReplying(comment._id)}
+            canDelete={canDelete(comment)}
+            onDelete={() => onDelete(comment)}
             requiresName={requiresName}
             coAuthorUserId={coAuthorUserId}
-          />
-        </CommentItem>
+            depth={depth}
+          >
+            <CommentThread
+              parentId={comment._id}
+              lookup={lookup}
+              onReplyRequest={onReplyRequest}
+              onReplyCancel={onReplyCancel}
+              onReplySubmit={onReplySubmit}
+              onReplyDraftChange={onReplyDraftChange}
+              getReplyDraft={getReplyDraft}
+              getReplyStatus={getReplyStatus}
+              getReplyError={getReplyError}
+              isReplying={isReplying}
+              canDelete={canDelete}
+              onDelete={onDelete}
+              requiresName={requiresName}
+              coAuthorUserId={coAuthorUserId}
+              depth={depth + 1}
+            />
+          </CommentItem>
+        </div>
       ))}
     </div>
   );

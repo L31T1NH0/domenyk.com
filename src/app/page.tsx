@@ -118,9 +118,6 @@ export default async function HomePage({
   return (
     <Layout home>
       <Header home={true} />
-      <section className="text-xl flex flex-col gap-2 py-4 text-primary items-center">
-        <h1>Dou minhas opiniões aqui</h1>
-      </section>
       <HomeClient posts={posts} isAdmin={isAdmin} page={page} hasNext={hasNext} />
     </Layout>
   );

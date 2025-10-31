@@ -5,9 +5,10 @@ import { JSX } from "react/jsx-runtime";
 
 type DateProps = {
   dateString: string;
+  className?: string;
 };
 
-export function Date({ dateString }: DateProps): JSX.Element {
+export function Date({ dateString, className }: DateProps): JSX.Element {
   if (!dateString) {
     return <span>Data inválida</span>;
   }
@@ -17,7 +18,7 @@ export function Date({ dateString }: DateProps): JSX.Element {
 
   return (
     <time
-      className="text-secondary text-lg text-zinc-500"
+      className={className ?? "text-[0.65rem] uppercase tracking-[0.28em] text-[var(--color-muted)]"}
       dateTime={dateString}
     >
       {formattedDate}

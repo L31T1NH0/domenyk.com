@@ -6,9 +6,9 @@ import {
   useEffect,
   useMemo,
   useState,
+  type HTMLAttributes,
 } from "react";
 import { Date } from "@components/date";
-import ShareButton from "@components/ShareButton";
 import AudioPlayer from "@components/AudioPlayer";
 import parse, {
   DOMNode,
@@ -21,6 +21,8 @@ import ParagraphCommentWidget from "@components/paragraph-comments/ParagraphComm
 import PostReference from "@components/PostReference";
 import AutorReference from "@components/AutorReference";
 import PostMinimap from "@components/PostMinimap";
+import { layoutClasses } from "@components/layout";
+import { useReveal } from "@lib/useReveal";
 
 const IsMobileContext = createContext<boolean | null>(null);
 
@@ -138,7 +140,8 @@ export default function PostContentClient({
         const currentIndex = paragraphIndex;
         paragraphIndex += 1;
 
-        const paragraphProps = attributesToProps(element.attribs ?? {});
+        const paragraphProps = attributesToProps(element.attribs ?? {}) as HTMLAttributes<HTMLParagraphElement>;
+        const paragraphClassName = [paragraphProps.className, "article-paragraph"].filter(Boolean).join(" ");
 
         return (
           <ParagraphCommentWidget
@@ -147,7 +150,7 @@ export default function PostContentClient({
             paragraphId={paragraphId}
             paragraphIndex={currentIndex}
             coAuthorUserId={coAuthorUserId}
-            paragraphProps={paragraphProps}
+            paragraphProps={{ ...paragraphProps, className: paragraphClassName }}
             isAdmin={isAdmin}
             isMobile={isMobile}
           >
@@ -169,32 +172,51 @@ export default function PostContentClient({
     postId,
   ]);
 
+  const sectionRef = useReveal<HTMLDivElement>({ threshold: 0.15 });
+
   return (
     <IsMobileContext.Provider value={isMobile}>
-      <div className="relative flex flex-col gap-6">
-        <article className="flex flex-col gap-6">
-          <div className="flex flex-col gap-2">
-            <div className="flex gap-2 items-center">
-              <Date dateString={date} />
-              <div className="flex gap-2 text-sm text-zinc-500">
-                <span>• {readingTime}</span>
-                <span>{views} views</span>
+      <section className={layoutClasses.section}>
+        <div ref={sectionRef} className={`reveal-init ${layoutClasses.grid}`}>
+          <article
+            className={`${layoutClasses.columns.main} relative mx-auto flex flex-col gap-10 overflow-hidden rounded-[2rem] border border-[var(--color-border)] bg-[rgba(18,18,18,0.72)] px-6 py-10 shadow-[0_34px_60px_rgba(0,0,0,0.5)] sm:px-10 sm:py-12`}
+          >
+            <div
+              className="pointer-events-none absolute inset-0 opacity-60"
+              aria-hidden
+              style={{
+                backgroundImage:
+                  "radial-gradient(circle at top, rgba(255,75,139,0.18), transparent 65%), linear-gradient(180deg, rgba(8,8,8,0.35), rgba(8,8,8,0.85))",
+              }}
+            />
+
+            <div className="relative flex flex-col gap-6 text-[0.75rem] uppercase tracking-[0.28em] text-[var(--color-muted)]">
+              <div className="flex flex-wrap items-center gap-3">
+                <Date dateString={date} className="text-[0.75rem] uppercase tracking-[0.28em] text-[var(--color-muted)]" />
+                <span aria-hidden className="hidden sm:inline text-[var(--color-muted)]">
+                  •
+                </span>
+                <span>{readingTime}</span>
+                <span aria-hidden className="hidden sm:inline text-[var(--color-muted)]">
+                  •
+                </span>
+                <span>{views.toLocaleString("pt-BR")} leituras</span>
               </div>
+              <div className="h-px bg-[rgba(255,255,255,0.12)]" />
             </div>
-            <div>
-              <ShareButton id={postId} />
+
+            {audioUrl && (
+              <div className="relative rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(12,12,12,0.85)] p-4">
+                <AudioPlayer audioUrl={audioUrl} />
+              </div>
+            )}
+
+            <div className="relative mx-auto flex w-full max-w-[68ch] flex-col gap-6 text-base leading-[1.7] text-[var(--color-text)]">
+              {parsedContent}
             </div>
-          </div>
-
-          {audioUrl && <AudioPlayer audioUrl={audioUrl} />}
-
-          <div className="flex flex-col gap-4 lg:text-lg sm:text-sm max-sm:text-xs">
-            {parsedContent}
-          </div>
-
-          {/* <Chatbot htmlContent={htmlContent} /> */}
-        </article>
-      </div>
+          </article>
+        </div>
+      </section>
       <PostMinimap />
     </IsMobileContext.Provider>
   );

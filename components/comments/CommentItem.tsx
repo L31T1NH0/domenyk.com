@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { CheckBadgeIcon, TrashIcon } from "@heroicons/react/24/solid";
 
 import CommentAvatar from "../CommentAvatar";
@@ -15,6 +15,7 @@ import {
   sanitizeCommentHtml,
   formatDate,
 } from "./utils";
+import { cn } from "@lib/cn";
 
 type CommentItemProps = {
   comment: CommentEntity;
@@ -31,6 +32,7 @@ type CommentItemProps = {
   requiresName: boolean;
   children?: React.ReactNode;
   coAuthorUserId?: string;
+  depth?: number;
 };
 
 const CommentItem: React.FC<CommentItemProps> = ({
@@ -48,8 +50,10 @@ const CommentItem: React.FC<CommentItemProps> = ({
   requiresName,
   children,
   coAuthorUserId,
+  depth = 0,
 }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+
   useEffect(() => {
     if (!showDeleteModal) return;
     const onKey = (e: KeyboardEvent) => {
@@ -58,134 +62,126 @@ const CommentItem: React.FC<CommentItemProps> = ({
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [showDeleteModal]);
+
   const displayName = extractDisplayName(comment);
 
   const handleSubmit = () => {
     onReplySubmit(replyDraft);
   };
 
+  const badges: Array<{ key: string; label: string }> = [];
+  if (isAuthComment(comment)) {
+    if (comment.role === "admin") {
+      badges.push({ key: "admin", label: "Autor" });
+    } else if (comment.role === "moderator") {
+      badges.push({ key: "moderator", label: "Colaborador" });
+    }
+    if (coAuthorUserId && comment.userId === coAuthorUserId) {
+      badges.push({ key: "co-author", label: "Co-autor" });
+    }
+  }
+  if (comment.optimistic) {
+    badges.push({ key: "pending", label: "Enviando" });
+  }
+
+  const metadataText = formatDate(comment.createdAt);
+
   return (
     <article
-      className={`rounded-lg border p-3 shadow-sm transition-all bg-white dark:bg-zinc-900/70 ${
-        comment.optimistic
-          ? "border-purple-500/60 shadow-purple-300/30"
-          : "border-zinc-200 dark:border-zinc-700"
-      }`}
+      className={cn(
+        "comment-card group relative",
+        depth > 0 ? "mt-4" : undefined,
+        comment.optimistic && "border-[rgba(255,75,139,0.45)]"
+      )}
     >
-      <div className="flex items-start gap-3">
+      {canDelete && (
+        <>
+          <button
+            type="button"
+            onClick={() => setShowDeleteModal(true)}
+            className="motion-scale absolute right-4 top-4 inline-flex size-9 items-center justify-center rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(10,10,10,0.85)] text-[var(--color-muted)] opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+            aria-label="Remover comentário"
+          >
+            <TrashIcon className="size-4" />
+          </button>
+          {showDeleteModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-10 backdrop-blur-sm">
+              <div className="w-full max-w-md rounded-3xl border border-[var(--color-border)] bg-[rgba(12,12,12,0.96)] p-6 shadow-[0_30px_60px_rgba(0,0,0,0.55)]">
+                <h3 className="text-sm uppercase tracking-[0.28em] text-white">Confirmar remoção</h3>
+                <p className="mt-3 text-sm text-[var(--color-muted)]">
+                  Tem certeza que deseja remover este comentário? Esta ação não pode ser desfeita.
+                </p>
+                <div className="mt-6 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteModal(false)}
+                    className="motion-scale inline-flex items-center justify-center rounded-full border border-[rgba(255,255,255,0.12)] px-5 py-2 text-xs uppercase tracking-[0.2em] text-[var(--color-muted)] transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDeleteModal(false);
+                      onDelete();
+                    }}
+                    className="motion-scale inline-flex items-center justify-center rounded-full bg-[var(--color-accent)] px-5 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-black transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgba(12,12,12,0.96)]"
+                  >
+                    Remover
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      <div className="flex items-start gap-4">
         <CommentAvatar
           imageUrl={isAuthComment(comment) && comment.hasImage ? comment.imageURL : null}
           name={displayName}
           ipHash={comment.ip}
-          size={32}
-          className="h-8 w-8 max-sm:h-6 max-sm:w-6 icon"
+          size={44}
+          className="h-11 w-11"
         />
-        <div className="flex-1 min-w-0 space-y-3">
-          <div className="flex flex-wrap items-center gap-3 text-sm">
-            <span className="font-semibold text-zinc-800 dark:text-white flex items-center gap-2">
-              {displayName}
-              {isAuthComment(comment) && (
-                <CheckBadgeIcon
-                  className={`h-4 w-4 transition-transform transform duration-150 ease-in-out hover:scale-110 ${
-                    comment.role === "admin"
-                      ? "text-yellow-500 hover:text-yellow-600"
-                      : comment.role === "moderator"
-                      ? "text-red-500 hover:text-red-600"
-                      : "text-blue-500 hover:text-blue-600"
-                  }`}
-                />
-              )}
-            </span>
-            <span className="text-xs text-zinc-500">
-              {formatDate(comment.createdAt)}
-            </span>
-            {isAuthComment(comment) && comment.role === "admin" && (
-              <span className="rounded-full border border-yellow-500/40 px-3 py-1 text-[10px] uppercase tracking-wide text-yellow-300">
-                Autor
-              </span>
-            )}
-            {isAuthComment(comment) && comment.role === "moderator" && (
-              <span className="rounded-full border border-red-500/40 px-3 py-1 text-[10px] uppercase tracking-wide text-red-300">
-                Colaborador
-              </span>
-            )}
-            {isAuthComment(comment) && coAuthorUserId && comment.userId === coAuthorUserId && (
-              <span className="rounded-full border uppercase border-blue-500/40 px-2 py-0.5 text-[10px] tracking-wide text-blue-300">
-                co-autor
-              </span>
-            )}
-            {comment.optimistic && (
-              <span className="rounded-full border border-purple-500/60 px-3 py-1 text-[10px] uppercase tracking-wide text-purple-300">
-                Enviando...
-              </span>
-            )}
+        <div className="flex-1 min-w-0 space-y-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                {displayName}
+                {isAuthComment(comment) && (
+                  <CheckBadgeIcon className="size-4 text-[var(--color-accent)]" />
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-[0.62rem] uppercase tracking-[0.28em] text-[var(--color-muted)]">
+                <span>{metadataText}</span>
+                {badges.map((badge) => (
+                  <span
+                    key={badge.key}
+                    className="rounded-full border border-[rgba(255,255,255,0.14)] px-3 py-1 text-[0.58rem] uppercase tracking-[0.3em] text-[var(--color-muted)]"
+                  >
+                    {badge.label}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div
-            className="prose prose-zinc dark:prose-invert max-w-none text-sm leading-relaxed text-zinc-700 dark:text-zinc-100 break-words break-all"
+            className="comment-body"
             dangerouslySetInnerHTML={{
               __html: sanitizeCommentHtml(comment.comentario),
             }}
           />
 
-          <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500 dark:text-zinc-400">
+          <div className="flex flex-wrap items-center gap-3 text-[0.68rem] uppercase tracking-[0.28em] text-[var(--color-muted)]">
             <button
               type="button"
               onClick={onReplyRequest}
-              className="inline-flex items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 py-1 text-sm font-medium text-zinc-700 transition-colors hover:border-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700"
+              className="motion-scale inline-flex items-center gap-2 rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(22,22,22,0.6)] px-4 py-1.5 text-[0.68rem] uppercase tracking-[0.28em] text-[var(--color-muted)] transition hover:text-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
             >
               Responder
             </button>
-            {canDelete && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setShowDeleteModal(true)}
-                  className="flex items-center gap-2 text-xs font-medium text-red-500 transition-colors hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded-full"
-                >
-                  <TrashIcon className="h-3.5 w-3.5" /> Remover
-                </button>
-
-                {showDeleteModal && (
-                  <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    <div
-                      className="fixed inset-0 bg-black/70"
-                      aria-hidden="true"
-                      onClick={() => setShowDeleteModal(false)}
-                    />
-
-                    <div
-                      role="dialog"
-                      aria-modal="true"
-                      aria-labelledby={`delete-modal-${comment._id}`}
-                      className="z-50 mx-4 max-w-md w-full rounded-2xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-800/90 dark:bg-zinc-950"
-                    >
-                      <h3 id={`delete-modal-${comment._id}`} className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">Confirmar remoção</h3>
-                      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Tem certeza que deseja remover este comentário? Esta ação não pode ser desfeita.</p>
-                      <div className="mt-3 flex justify-end gap-3">
-                        <button
-                          type="button"
-                          onClick={() => setShowDeleteModal(false)}
-                          className="rounded-full border border-zinc-300 px-4 py-2 text-sm text-zinc-700 dark:border-zinc-700 dark:text-zinc-200"
-                        >
-                          Cancelar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowDeleteModal(false);
-                            onDelete();
-                          }}
-                          className="rounded-full bg-red-600 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-                        >
-                          Remover
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
           </div>
 
           {isReplying && (
@@ -202,9 +198,9 @@ const CommentItem: React.FC<CommentItemProps> = ({
             />
           )}
 
-          {children && <div className="space-y-3 sm:space-y-4 border-l border-zinc-200 dark:border-zinc-700 pl-3 sm:pl-4">{children}</div>}
+          {children && <div className="space-y-6">{children}</div>}
         </div>
-  </div>
+      </div>
     </article>
   );
 };
@@ -220,16 +216,3 @@ const handleSubmitWrapper = (
 };
 
 export default CommentItem;
-
-
-
-
-
-
-
-
-
-
-
-
-

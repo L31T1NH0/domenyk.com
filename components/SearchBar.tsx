@@ -1,15 +1,17 @@
-﻿"use client";
+"use client";
 
-import { useState, useEffect, useRef, type ReactNode } from "react";
-import { MagnifyingGlassIcon } from "@heroicons/react/16/solid";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+import { cn } from "@lib/cn";
 
-interface SearchBarProps {
+type SearchBarProps = {
   onSearch: (query: string) => void;
   initialQuery?: string;
   rightSlot?: ReactNode;
-}
+  className?: string;
+};
 
-export default function SearchBar({ onSearch, initialQuery = "", rightSlot }: SearchBarProps) {
+export default function SearchBar({ onSearch, initialQuery = "", rightSlot, className }: SearchBarProps) {
   const [query, setQuery] = useState(initialQuery);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -17,10 +19,9 @@ export default function SearchBar({ onSearch, initialQuery = "", rightSlot }: Se
     setQuery(initialQuery);
   }, [initialQuery]);
 
-  // Foco no input ao pressionar Command + K
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.metaKey && e.key === "k") {
+      if (e.metaKey && e.key.toLowerCase() === "k") {
         e.preventDefault();
         inputRef.current?.focus();
       }
@@ -36,31 +37,19 @@ export default function SearchBar({ onSearch, initialQuery = "", rightSlot }: Se
   };
 
   return (
-    <form onSubmit={handleSubmit} className="relative">
-      <div className="flex items-center gap-2 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 w-[30vw] min-w-[220px] sm:w-1/3 md:w-[360px]">
-        <MagnifyingGlassIcon className="w-4 h-4" />
+    <form onSubmit={handleSubmit} className={cn("w-full", className)}>
+      <div className="group flex w-full items-center gap-3 rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(22,22,22,0.65)] px-4 py-2 text-sm text-[var(--color-text)] transition focus-within:border-[rgba(255,75,139,0.4)] focus-within:shadow-[0_12px_28px_rgba(0,0,0,0.35)]">
+        <MagnifyingGlassIcon className="size-4 text-[var(--color-muted)]" />
         <input
           ref={inputRef}
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Pesquisar posts"
-          className="bg-transparent outline-none placeholder-zinc-400 flex-1 min-w-0"
+          placeholder="Pesquisar manifestos"
+          className="flex-1 min-w-0 bg-transparent text-sm text-[var(--color-text)] placeholder:text-[var(--color-muted)] focus:outline-none"
         />
-        {rightSlot && (
-          <>
-            <span className="h-4 w-px bg-zinc-500/20" aria-hidden />
-            <div className="flex items-center">{rightSlot}</div>
-          </>
-        )}
+        {rightSlot ? <div className="flex items-center gap-2 text-xs text-[var(--color-muted)]">{rightSlot}</div> : null}
       </div>
     </form>
   );
 }
-
-
-
-
-
-
-
