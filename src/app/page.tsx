@@ -117,10 +117,20 @@ export default async function HomePage({
 
   return (
     <Layout home>
-      <Header home={true} />
-      <section className="text-xl flex flex-col gap-2 py-4 text-primary items-center">
-        <h1>Dou minhas opiniões aqui</h1>
-      </section>
+      <div className="flex flex-col gap-12">
+        <Header home={true} />
+        <section className="flex flex-col gap-5 text-sm leading-6 text-neutral-500">
+          <p>
+            Este espaço reúne posicionamentos, contrapontos e notas de leitura. Tudo segue a mesma
+            cadência: bloco direto, linguagem clara, ausência de ornamentos.
+          </p>
+          <div className="grid gap-3 text-[11px] uppercase tracking-[0.35em] text-neutral-600">
+            <span>Atualizações publicadas sem periodicidade fixa.</span>
+            <span>Contexto completo dentro de cada post, nada fragmentado.</span>
+            <span>Comentários externos não são agregados aqui.</span>
+          </div>
+        </section>
+      </div>
       <HomeClient posts={posts} isAdmin={isAdmin} page={page} hasNext={hasNext} />
     </Layout>
   );

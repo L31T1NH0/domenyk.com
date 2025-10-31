@@ -45,11 +45,15 @@ export default function ThemeSwitcher() {
   };
 
   return (
-    <button className="" onClick={toggleDarkMode}>
+    <button
+      onClick={toggleDarkMode}
+      aria-label="Alternar modo de cor"
+      className="border border-neutral-800 p-2 transition-colors hover:border-neutral-500 hover:text-neutral-100"
+    >
       {darkMode ? (
-        <SunIcon className="svg-icon" width={24} height={24} />
+        <SunIcon className="svg-icon" width={20} height={20} />
       ) : (
-        <MoonIcon className="svg-icon" width={24} height={24} />
+        <MoonIcon className="svg-icon" width={20} height={20} />
       )}
     </button>
   );

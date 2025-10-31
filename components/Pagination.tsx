@@ -1,5 +1,4 @@
-﻿import Link from "next/link";
-import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/solid";
+import Link from "next/link";
 import { buildUrl } from "../src/lib/url";
 
 export default function Pagination({
@@ -23,31 +22,32 @@ export default function Pagination({
     ? buildUrl(pathname, searchParams, { page: page + 1 })
     : undefined;
 
-  const nextNumber = nextEnabled ? page + 1 : undefined;
-
   return (
-    <div className="flex items-center justify-center gap-3 mt-8">
-      <Link aria-disabled={!prevEnabled} className={`rounded-full px-4 py-2 border shadow-sm hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 ease-in-out ${!prevEnabled ? "pointer-events-none" : ""}`} href={prevHref || "#"} prefetch={false} tabIndex={prevEnabled ? 0 : -1}><ChevronLeftIcon className="h-4 w-4" /></Link>
-      <span className="text-sm md:text-base font-medium">
-        {page} / {nextEnabled ? page + 1 : "—"}
-      </span>
-      <Link aria-disabled={!nextEnabled} className={`rounded-full px-4 py-2 border shadow-sm hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 ease-in-out ${!nextEnabled ? "pointer-events-none" : ""}`} href={nextHref || "#"} prefetch={false} tabIndex={nextEnabled ? 0 : -1}><ChevronRightIcon className="h-4 w-4" /></Link>
-    </div>
+    <nav className="mt-12 flex items-center justify-between border-t border-neutral-900 pt-6 text-[11px] uppercase tracking-[0.35em] text-neutral-600">
+      <Link
+        aria-disabled={!prevEnabled}
+        className={`border border-neutral-800 px-3 py-2 transition-colors hover:border-neutral-500 hover:text-neutral-100 ${
+          prevEnabled ? "" : "pointer-events-none opacity-30"
+        }`}
+        href={prevHref || "#"}
+        prefetch={false}
+        tabIndex={prevEnabled ? 0 : -1}
+      >
+        anterior
+      </Link>
+      <span className="text-neutral-400">página {page.toString().padStart(2, "0")}</span>
+      <Link
+        aria-disabled={!nextEnabled}
+        className={`border border-neutral-800 px-3 py-2 transition-colors hover:border-neutral-500 hover:text-neutral-100 ${
+          nextEnabled ? "" : "pointer-events-none opacity-30"
+        }`}
+        href={nextHref || "#"}
+        prefetch={false}
+        tabIndex={nextEnabled ? 0 : -1}
+      >
+        próxima
+      </Link>
+    </nav>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

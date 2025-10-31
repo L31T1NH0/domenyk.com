@@ -17,7 +17,7 @@ export function Date({ dateString }: DateProps): JSX.Element {
 
   return (
     <time
-      className="text-secondary text-lg text-zinc-500"
+      className="text-[11px] uppercase tracking-[0.35em] text-neutral-500"
       dateTime={dateString}
     >
       {formattedDate}
