@@ -1,6 +1,7 @@
 ﻿import React, { useState, useEffect } from "react";
 import { CheckBadgeIcon, TrashIcon } from "@heroicons/react/24/solid";
 
+import CommentAvatar from "../CommentAvatar";
 import ReplyForm from "./ReplyForm";
 import { STANDARD_COMMENT_MAX_LENGTH } from "./lengthUtils";
 import {
@@ -11,7 +12,6 @@ import {
 } from "./types";
 import {
   extractDisplayName,
-  generateIdenticon,
   sanitizeCommentHtml,
   formatDate,
 } from "./utils";
@@ -59,9 +59,6 @@ const CommentItem: React.FC<CommentItemProps> = ({
     return () => document.removeEventListener("keydown", onKey);
   }, [showDeleteModal]);
   const displayName = extractDisplayName(comment);
-  const avatarUrl = isAuthComment(comment) && comment.hasImage
-    ? comment.imageURL
-    : generateIdenticon(displayName, comment.ip);
 
   const handleSubmit = () => {
     onReplySubmit(replyDraft);
@@ -76,10 +73,12 @@ const CommentItem: React.FC<CommentItemProps> = ({
       }`}
     >
       <div className="flex items-start gap-3">
-        <img
-          src={avatarUrl}
-          alt={`${displayName} avatar`}
-          className="h-8 w-8 rounded-full max-sm:w-6 object-cover icon"
+        <CommentAvatar
+          imageUrl={isAuthComment(comment) && comment.hasImage ? comment.imageURL : null}
+          name={displayName}
+          ipHash={comment.ip}
+          size={32}
+          className="h-8 w-8 max-sm:h-6 max-sm:w-6 icon"
         />
         <div className="flex-1 min-w-0 space-y-3">
           <div className="flex flex-wrap items-center gap-3 text-sm">

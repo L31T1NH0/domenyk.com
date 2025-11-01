@@ -31,6 +31,7 @@ type PostDocument = {
   coAuthorUserId?: string | null;
   hidden?: boolean;
   paragraphCommentsEnabled?: boolean;
+  updatedAt?: string | Date;
 };
 
 type PostPageProps = {
@@ -93,6 +94,45 @@ function calculateReadingTime(htmlContent: string): string {
   return `${minutes} min`;
 }
 
+function extractPlainText(value: string): string {
+  return value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function extractDescription(post: PostDocument): string {
+  const htmlContent = typeof post.htmlContent === "string" ? post.htmlContent : "";
+  if (htmlContent) {
+    const paragraphMatch = htmlContent.match(/<p[^>]*>([\s\S]*?)<\/p>/i);
+    const htmlSnippet = paragraphMatch ? paragraphMatch[1] : htmlContent;
+    const plain = extractPlainText(htmlSnippet);
+    if (plain) {
+      return plain;
+    }
+  }
+
+  const markdownContent = typeof post.content === "string" ? post.content : "";
+  if (markdownContent) {
+    const paragraphs = markdownContent.split(/\n\s*\n/);
+    for (const paragraph of paragraphs) {
+      const trimmed = paragraph.trim();
+      if (!trimmed) {
+        continue;
+      }
+      const withoutLinks = trimmed
+        .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+        .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1");
+      const withoutFormatting = withoutLinks
+        .replace(/[*_`>#~]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (withoutFormatting) {
+        return withoutFormatting;
+      }
+    }
+  }
+
+  return post.title ?? "";
+}
+
 async function resolveIsAdmin(): Promise<boolean> {
   try {
     const { isAdmin } = await resolveAdminStatus();
@@ -130,24 +170,63 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
 
   const title = post.title ?? "";
   const date = normalizeDate(post.date);
-  const url = `https://domenyk.com/posts/${id}`;
+  const BASE_URL = "https://domenyk.com";
+  const FALLBACK_IMAGE_PATH = "/images/profile.jpg";
+  const cape = typeof post.cape === "string" ? post.cape.trim() : "";
+  const imageSource = cape || FALLBACK_IMAGE_PATH;
+  const imageUrl = new URL(imageSource, BASE_URL).toString();
+  const url = `${BASE_URL}/posts/${id}`;
+  const updatedAt = normalizeDate(post.updatedAt);
+  const publishedTime = date || undefined;
+  const modifiedTime = updatedAt || undefined;
+  const description = extractDescription(post);
+
+  const openGraph: Metadata["openGraph"] = {
+    title,
+    description,
+    url,
+    type: "article",
+    images: [
+      {
+        url: imageUrl,
+        alt: title,
+      },
+    ],
+    siteName: "Domenyk",
+    locale: "pt_BR",
+  };
+
+  if (publishedTime) {
+    openGraph.publishedTime = publishedTime;
+  }
+
+  if (modifiedTime) {
+    openGraph.modifiedTime = modifiedTime;
+  }
+
+  const other: NonNullable<Metadata["other"]> = {};
+
+  if (publishedTime) {
+    other["article:published_time"] = publishedTime;
+  }
+
+  const modifiedTimeForOther = modifiedTime ?? publishedTime;
+  if (modifiedTimeForOther) {
+    other["article:modified_time"] = modifiedTimeForOther;
+  }
 
   return {
     title: `${title} - Blog`,
-    description: title,
-    openGraph: {
-      title,
-      description: title,
-      url,
-    },
+    description,
+    openGraph,
     twitter: {
       site: "@l31t1",
       card: "summary_large_image",
+      title,
+      description,
+      images: [imageUrl],
     },
-    other: {
-      "article:published_time": date,
-      "article:modified_time": date,
-    },
+    ...(Object.keys(other).length ? { other } : {}),
   };
 }
 
