@@ -9,62 +9,60 @@ interface ShareButtonProps {
 const ShareButton: React.FC<ShareButtonProps> = ({ id }) => {
   const [shortUrl, setShortUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {}, []);
 
-  const copyToClipboard = async () => {
+  const share = async () => {
     if (typeof window === "undefined") return;
 
+    setError(null);
     const url = `https://domenyk.com/posts/${id}`;
-    console.log(`URL original: ${url}`);
-
-    const savedShortUrl = localStorage.getItem(`shortUrl-${id}`);
-    if (savedShortUrl) {
-      console.log(`URL encurtada recuperada do localStorage: ${savedShortUrl}`);
-      setShortUrl(savedShortUrl);
-      await navigator.clipboard.writeText(savedShortUrl);
-      console.log("Link copiado para a área de transferência!");
-      return;
-    }
 
     try {
-      const response = await fetch(
-        `/api/posts/shorten-url?url=${encodeURIComponent(url)}`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
+      let finalUrl = localStorage.getItem(`shortUrl-${id}`) || "";
+      if (!finalUrl) {
+        const response = await fetch(
+          `/api/posts/shorten-url?url=${encodeURIComponent(url)}`,
+          { headers: { "Content-Type": "application/json" } }
+        );
+        if (!response.ok) {
+          throw new Error(`Falha na requisição da API: ${response.status}`);
         }
-      );
-      console.log(`Status da resposta: ${response.status}`);
-      if (!response.ok) {
-        throw new Error(`Falha na requisição da API: ${response.status}`);
+        finalUrl = await response.text();
+        if (!finalUrl || !finalUrl.startsWith("http")) {
+          throw new Error("URL encurtada inválida");
+        }
+        localStorage.setItem(`shortUrl-${id}`, finalUrl);
       }
-      const shortUrl = await response.text();
-      console.log(`Resposta recebida: ${shortUrl}`);
-      if (shortUrl.startsWith("http")) {
-        setShortUrl(shortUrl);
-        localStorage.setItem(`shortUrl-${id}`, shortUrl);
-        await navigator.clipboard.writeText(shortUrl);
-        console.log("Link copiado para a área de transferência!");
-      } else {
-        throw new Error("URL encurtada inválida");
-      }
-    } catch (error) {
-      console.error("Erro ao encurtar a URL:", error);
-      setError("Não foi possível encurtar o link. Tente novamente.");
+
+      setShortUrl(finalUrl);
+      await navigator.clipboard.writeText(finalUrl);
+      setNotice("Link copiado!");
+      setTimeout(() => setNotice(null), 2000);
+    } catch (e) {
+      console.error("Erro ao encurtar/copiar a URL:", e);
+      setError("Não foi possível encurtar/copiar o link. Tente novamente.");
     }
   };
 
   return (
     <div>
       <button
-        onClick={copyToClipboard}
-        className="ml-0 text-sm text-cyan-600 active:text-cyan-700 focus:text-cyan-600 hover:text-cyan-700"
+        onClick={share}
+        className="ml-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-cyan-600 hover:text-cyan-700 active:text-cyan-700 rounded-full border border-transparent hover:border-cyan-200/60 dark:hover:border-cyan-800/60 hover:bg-cyan-50 dark:hover:bg-cyan-950/40 transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
       >
         Compartilhar
       </button>
       {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+      {notice && (
+        <div
+          role="status"
+          className="fixed left-1/2 -translate-x-1/2 bottom-4 z-50 inline-flex items-center rounded-full border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 shadow-md dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+        >
+          {notice}
+        </div>
+      )}
     </div>
   );
 };

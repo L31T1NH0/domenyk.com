@@ -221,16 +221,3 @@ const handleSubmitWrapper = (
 };
 
 export default CommentItem;
-
-
-
-
-
-
-
-
-
-
-
-
-

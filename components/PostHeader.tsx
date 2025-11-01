@@ -30,7 +30,7 @@ export function PostHeader({ cape, title, friendImage, coAuthorImageUrl }: PostH
               <div className="absolute top-0 left-0 w-full h-[50%] bg-gradient-to-b from-[#040404] via-[#040404]/80 to-transparent"></div>
               <div className="absolute bottom-0 left-0 w-full h-[50%] bg-gradient-to-t from-[#040404] via-[#040404]/80 to-transparent"></div>
             </div>
-            <div className="absolute bottom-1 left-2 lg:bottom-3 flex gap-2">
+            <div className="absolute bottom-1 left-2 lg:bottom-3 flex flex-col gap-2">
               <div className="flex -space-x-5">
                 <Link href="/">
                   <Image
@@ -54,7 +54,7 @@ export function PostHeader({ cape, title, friendImage, coAuthorImageUrl }: PostH
                   </Link>
                 )}
               </div>
-              <h1 className="text-xl text-white flex-1">{title}</h1>
+              <h1 className="text-xl text-white">{title}</h1>
             </div>
           </div>
         </div>

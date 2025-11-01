@@ -138,6 +138,15 @@ export default function PostContentClient({
         paragraphIndex += 1;
 
         const paragraphProps = attributesToProps(element.attribs ?? {});
+        const enhancedParagraphProps = {
+          ...paragraphProps,
+          className: [
+            (paragraphProps as any)?.className,
+            "transition-colors rounded-md -mx-2 px-2 py-0.5 hover:bg-zinc-100/60 dark:hover:bg-zinc-800/40",
+          ]
+            .filter(Boolean)
+            .join(" "),
+        } as typeof paragraphProps;
 
         return (
           <ParagraphCommentWidget
@@ -146,12 +155,28 @@ export default function PostContentClient({
             paragraphId={paragraphId}
             paragraphIndex={currentIndex}
             coAuthorUserId={coAuthorUserId}
-            paragraphProps={paragraphProps}
+            paragraphProps={enhancedParagraphProps}
             isAdmin={isAdmin}
             isMobile={isMobile}
           >
             {domToReact((element.children ?? []) as DOMNode[], parserOptions)}
           </ParagraphCommentWidget>
+        );
+      }
+
+      if (node.type === "tag" && node.name === "p" && !paragraphCommentsEnabled) {
+        const element = node as Element;
+        const paragraphProps = attributesToProps(element.attribs ?? {});
+        const className = [
+          (paragraphProps as any)?.className,
+          "transition-colors rounded-md -mx-2 px-2 py-0.5 hover:bg-zinc-100/60 dark:hover:bg-zinc-800/40",
+        ]
+          .filter(Boolean)
+          .join(" ");
+        return (
+          <p {...paragraphProps} className={className}>
+            {domToReact((element.children ?? []) as DOMNode[], parserOptions)}
+          </p>
         );
       }
 
@@ -170,18 +195,14 @@ export default function PostContentClient({
 
   return (
     <IsMobileContext.Provider value={isMobile}>
-      <article className="flex flex-col gap-2">
-        <div className="mb-2 flex-1">
-          <div className="flex gap-2 items-center">
+      <article className="flex flex-col gap-4 mt-4">
+        <div className="flex items-center justify-between text-sm text-zinc-500 border-b border-zinc-200 dark:border-zinc-700 pb-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <Date dateString={date} />
-            <div className="flex gap-2 text-sm text-zinc-500">
-              <span>• {readingTime}</span>
-              <span>{views} views</span>
-            </div>
+            <span>| {readingTime}</span>
+            <span>{views} views</span>
           </div>
-          <div className="">
-            <ShareButton id={postId} />
-          </div>
+          <ShareButton id={postId} />
         </div>
 
         {audioUrl && <AudioPlayer audioUrl={audioUrl} />}
