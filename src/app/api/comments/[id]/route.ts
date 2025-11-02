@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { getMongoDb } from "../../../../lib/mongo";
 import { Redis } from "@upstash/redis";
-import axios from "axios";
 import { ObjectId } from "mongodb";
-import { remark } from "remark";
-import html from "remark-html";
 import { resolveAdminStatus } from "../../../../lib/admin";
 import { deriveRateLimitIdentifier } from "./rate-limit";
+import {
+  renderMarkdownToSafeHtml,
+  sanitizeHtmlFragment,
+} from "../../../../lib/comments/sanitization";
 
 type NextRequestWithOptionalIp = NextRequest & { ip?: string | null };
 
@@ -24,7 +25,7 @@ type CommentInsert = {
   postId: string;
   nome?: string;
   comentario: string;
-  ip: string;
+  comentarioOriginal?: string;
   createdAt: string;
   parentId: string | null;
 };
@@ -38,7 +39,7 @@ type AuthCommentInsert = {
   imageURL: string;
   hasImage: boolean;
   comentario: string;
-  ip: string;
+  comentarioOriginal?: string;
   createdAt: string;
   parentId: string | null;
 };
@@ -49,7 +50,7 @@ type Comment = {
   postId: string;
   nome?: string;
   comentario: string;
-  ip: string;
+  comentarioOriginal?: string;
   createdAt: string;
   parentId: string | null;
   replies?: Comment[];
@@ -64,11 +65,32 @@ type AuthComment = {
   imageURL: string;
   hasImage: boolean;
   comentario: string;
-  ip: string;
+  comentarioOriginal?: string;
   createdAt: string;
   parentId: string | null;
   replies?: (Comment | AuthComment)[];
 };
+
+type CommentLike =
+  | (Comment & { ip?: string | null })
+  | (AuthComment & { ip?: string | null })
+  | (CommentInsert & { ip?: string | null })
+  | (AuthCommentInsert & { ip?: string | null });
+
+async function sanitizeForResponse<T extends CommentLike>(
+  comment: T
+): Promise<Omit<T, "ip" | "comentarioOriginal"> & { comentario: string }> {
+  const sanitizedHtml = await sanitizeHtmlFragment(comment.comentario ?? "");
+  const { comentarioOriginal: _original, ip: _ip, ...rest } = comment as T & {
+    comentarioOriginal?: string;
+    ip?: string | null;
+  };
+
+  return {
+    ...rest,
+    comentario: sanitizedHtml,
+  };
+}
 
 export async function GET(
   req: Request,
@@ -107,16 +129,11 @@ export async function GET(
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
-    // Mascaramento do IP no retorno
-    allComments = allComments.map((comment) => ({
-      ...comment,
-      ip: maskIp(comment.ip),
-    }));
-
     // Busca respostas no Redis para cada comentário
     const commentsWithReplies = await Promise.all(
       allComments.map(async (comment) => {
         const commentId = comment._id.toString();
+        const safeComment = await sanitizeForResponse(comment as CommentLike);
         const replies = await redis.zrange(
           `${postId}:${commentId}:replies`,
           0,
@@ -151,15 +168,15 @@ export async function GET(
             }
           })
           .filter((reply): reply is Comment | AuthComment => reply !== null)
-          .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-          .map((reply) => ({
-            ...reply,
-            ip: maskIp(reply.ip),
-          }));
+          .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+
+        const safeReplies = await Promise.all(
+          parsedReplies.map((reply) => sanitizeForResponse(reply))
+        );
 
         return {
-          ...comment,
-          replies: parsedReplies.length > 0 ? parsedReplies : undefined,
+          ...safeComment,
+          replies: safeReplies.length > 0 ? safeReplies : undefined,
         };
       })
     );
@@ -175,15 +192,6 @@ export async function GET(
       { status: 500 }
     );
   }
-}
-
-// Função para mascarar o IP
-function maskIp(ip: string): string {
-  const parts = ip.split(".");
-  if (parts.length === 4) {
-    return `${parts[0]}.${parts[1]}.***.**`;
-  }
-  return ip; // Retorna o IP original se não for um formato válido
 }
 
 export async function POST(
@@ -252,11 +260,7 @@ export async function POST(
     );
   }
 
-  // Processar o comentário com remark-html
-  const processedContent = await remark()
-    .use(html)
-    .process(comentario);
-  const htmlComentario = processedContent.toString();
+  const htmlComentario = await renderMarkdownToSafeHtml(comentario);
 
   // Rate Limiting
   const userAgent = req.headers.get("user-agent") || null;
@@ -284,7 +288,7 @@ export async function POST(
       {
         error: `Too many ${
           parentId ? "replies" : "comments"
-        }. Limit is 25 per day per IP.`,
+        }. Limit is 25 per day per requester.`,
       },
       { status: 429 }
     );
@@ -293,19 +297,6 @@ export async function POST(
   const user = await currentUser();
 
   try {
-    let ipValue = "Unknown";
-    try {
-      const ipResponse = await axios.get("https://api.ipify.org?format=json", {
-        timeout: 1000,
-      });
-      ipValue = ipResponse.data.ip;
-    } catch (ipError) {
-      console.warn(
-        "Failed to fetch IP, using 'Unknown':",
-        (ipError as any).message
-      );
-    }
-
     const db = await getMongoDb();
 
     if (userId && user) {
@@ -334,7 +325,7 @@ export async function POST(
         imageURL: user.imageUrl,
         hasImage: user.hasImage,
         comentario: htmlComentario, // Salvar como HTML
-        ip: ipValue,
+        comentarioOriginal: comentario,
         createdAt: new Date().toISOString().split("T")[0],
         parentId: parentId || null,
       };
@@ -343,7 +334,10 @@ export async function POST(
         await authCommentsCollection.insertOne(newComment);
         console.log("Comment inserted into auth-comments:", newComment);
         return NextResponse.json(
-          { message: "Comment added successfully", comment: newComment },
+          {
+            message: "Comment added successfully",
+            comment: await sanitizeForResponse(newComment),
+          },
           { status: 201 }
         );
       } else {
@@ -352,7 +346,10 @@ export async function POST(
           ...newComment,
           _id: replyId,
         };
-        const replyString = JSON.stringify(replyData);
+        const replyString = JSON.stringify({
+          ...replyData,
+          comentarioOriginal: undefined,
+        });
         console.log("Saving reply to Redis:", replyString); // Log para confirmar o formato
         await redis.zadd(`${postId}:${parentId}:replies`, {
           score: Date.now(),
@@ -360,7 +357,10 @@ export async function POST(
         });
         console.log("Reply added to Redis:", replyData);
         return NextResponse.json(
-          { message: "Reply added successfully", reply: replyData },
+          {
+            message: "Reply added successfully",
+            reply: await sanitizeForResponse(replyData),
+          },
           { status: 201 }
         );
       }
@@ -373,7 +373,7 @@ export async function POST(
         postId,
         nome: userProvidedName || "Anonymous",
         comentario: htmlComentario, // Salvar como HTML
-        ip: ipValue,
+        comentarioOriginal: comentario,
         createdAt: new Date().toISOString().split("T")[0],
         parentId: parentId || null,
       };
@@ -382,7 +382,10 @@ export async function POST(
         await commentsCollection.insertOne(newComment);
         console.log("Comment inserted into comments:", newComment);
         return NextResponse.json(
-          { message: "Comment added successfully", comment: newComment },
+          {
+            message: "Comment added successfully",
+            comment: await sanitizeForResponse(newComment),
+          },
           { status: 201 }
         );
       } else {
@@ -391,7 +394,10 @@ export async function POST(
           ...newComment,
           _id: replyId,
         };
-        const replyString = JSON.stringify(replyData);
+        const replyString = JSON.stringify({
+          ...replyData,
+          comentarioOriginal: undefined,
+        });
         console.log("Saving reply to Redis:", replyString); // Log para confirmar o formato
         await redis.zadd(`${postId}:${parentId}:replies`, {
           score: Date.now(),
@@ -399,7 +405,10 @@ export async function POST(
         });
         console.log("Reply added to Redis:", replyData);
         return NextResponse.json(
-          { message: "Reply added successfully", reply: replyData },
+          {
+            message: "Reply added successfully",
+            reply: await sanitizeForResponse(replyData),
+          },
           { status: 201 }
         );
       }

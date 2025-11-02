@@ -76,7 +76,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
         <CommentAvatar
           imageUrl={isAuthComment(comment) && comment.hasImage ? comment.imageURL : null}
           name={displayName}
-          ipHash={comment.ip}
+          seed={comment._id}
           size={32}
           className="h-8 w-8 max-sm:h-6 max-sm:w-6 icon"
         />

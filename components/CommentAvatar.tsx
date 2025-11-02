@@ -8,7 +8,7 @@ import { generateIdenticon } from "./comments/utils";
 type CommentAvatarProps = {
   imageUrl?: string | null;
   name: string;
-  ipHash?: string;
+  seed?: string;
   size?: number;
   className?: string;
 };
@@ -19,13 +19,13 @@ const DEFAULT_BLUR_DATA_URL =
 export default function CommentAvatar({
   imageUrl,
   name,
-  ipHash,
+  seed,
   size = 40,
   className,
 }: CommentAvatarProps) {
   const fallbackSrc = useMemo(
-    () => generateIdenticon(name, ipHash ?? ""),
-    [name, ipHash]
+    () => generateIdenticon(name, seed ?? ""),
+    [name, seed]
   );
 
   const [hasError, setHasError] = useState(false);
@@ -53,7 +53,7 @@ export default function CommentAvatar({
         }
         console.debug("CommentAvatar: fallback to identicon", {
           name,
-          ipHash,
+          seed,
           imageUrl,
         });
         setHasError(true);
