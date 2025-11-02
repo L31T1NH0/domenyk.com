@@ -15,13 +15,17 @@ export default function AutorReference({ kind, coAuthorImageUrl }: AutorReferenc
       <span
         data-role="author-reference"
         data-kind={kind}
-        className="inline-flex items-center justify-center bg-zinc-800/60"
+        className="inline-flex items-center justify-center align-middle mr-2 bg-zinc-800/60"
       />
     );
   }
 
   return (
-    <span data-role="author-reference" data-kind={kind} className="inline-flex items-center">
+    <span
+      data-role="author-reference"
+      data-kind={kind}
+      className="inline-flex items-center align-middle mr-2"
+    >
       <Image
         src={src}
         alt=""
