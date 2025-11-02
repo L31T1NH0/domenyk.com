@@ -28,7 +28,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                   href="/admin/users"
                   className="block rounded-md px-3 py-2 text-sm hover:bg-zinc-800/60"
                 >
-                  Usuários
+                  UsuÃ¡rios
                 </Link>
               </li>
               <li>
@@ -84,3 +84,5 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
+
+

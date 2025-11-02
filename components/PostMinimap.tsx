@@ -138,9 +138,9 @@ export default function PostMinimap() {
 
   return createPortal(
     <aside
-      className="hidden md:flex md:flex-col fixed top-24 right-4 w-60 max-h-[calc(100vh-6rem)] overflow-y-auto rounded-lg border border-zinc-200/80 bg-white/70 p-3 text-sm text-zinc-600 shadow-lg shadow-zinc-900/5 backdrop-blur dark:border-zinc-700/60 dark:bg-zinc-900/60 dark:text-zinc-400"
+      className="hidden md:flex md:flex-col fixed top-24 right-4 w-60 max-h-[calc(100vh-6rem)] overflow-y-auto rounded-lg border border-zinc-200/80 bg-white/70 p-3 text-sm text-zinc-700 shadow-lg shadow-zinc-900/5 backdrop-blur dark:border-zinc-700/60 dark:bg-zinc-900/60 dark:text-zinc-300"
     >
-      <span className="text-xs uppercase tracking-wide text-zinc-400 dark:text-zinc-500 mb-3">
+      <span className="text-xs uppercase tracking-wide text-zinc-700 dark:text-zinc-300 mb-3">
         Neste artigo
       </span>
       <nav className="flex flex-col gap-1.5" aria-label="Mapa do post">

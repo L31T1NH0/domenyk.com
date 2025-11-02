@@ -69,18 +69,18 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
       {/* Botão de play/pause */}
       <button
         onClick={togglePlayPause}
-        className="text-zinc-400 hover:text-zinc-300 rounded p-2"
+        className="text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white rounded p-2"
         aria-label={isPlaying ? "Pausar" : "Tocar"}
       >
         {isPlaying ? (
-          <PauseIcon className="w-5 h-5" />
+          <PauseIcon className="w-5 h-5" aria-hidden="true" />
         ) : (
-          <PlayIcon className="w-5 h-5" />
+          <PlayIcon className="w-5 h-5" aria-hidden="true" />
         )}
       </button>
 
       {/* Contador de tempo */}
-      <small className="text-zinc-700">
+      <small className="text-zinc-700 dark:text-zinc-300">
         {formatTime(currentTime)} / {formatTime(duration)}
       </small>
 

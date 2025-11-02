@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useRef, useState, useEffect } from "react";
 import Link from "next/link";
@@ -27,8 +27,8 @@ type HomeClientProps = {
 const SORT_OPTIONS = [
   { label: "Data (mais antigo)", value: { sort: "date" as const, order: "asc" as const } },
   { label: "Data (mais recente)", value: { sort: "date" as const, order: "desc" as const } },
-  { label: "Views (menor → maior)", value: { sort: "views" as const, order: "asc" as const } },
-  { label: "Views (maior → menor)", value: { sort: "views" as const, order: "desc" as const } },
+  { label: "Views (menor a maior)", value: { sort: "views" as const, order: "asc" as const } },
+  { label: "Views (maior a menor)", value: { sort: "views" as const, order: "desc" as const } },
 ];
 export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClientProps) {
   const [error, setError] = useState<string | null>(null);
@@ -193,7 +193,7 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
               >
                 {post.title}
               </Link>
-              <small className="text-zinc-400">
+              <small className="text-zinc-600 dark:text-zinc-300">
                 <Date dateString={post.date} /> <span aria-hidden className="mx-2">&middot;</span>
                 <span className="inline-flex items-center rounded px-2 py-1 text-sm text-zinc-600 dark:text-zinc-300">
                   {post.views ?? 0} views
@@ -202,9 +202,11 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
               {isAdmin && (
                 <button
                   onClick={() => openDeleteModal(post.postId)}
-                  className="absolute right-0 top-0 text-red-500 hover:text-red-700 text-sm opacity-0 group-hover:opacity-100 max-sm:opacity-100 transition-opacity duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/40"
+                  aria-label={`Apagar ${post.title}`}
+                  title={`Apagar ${post.title}`}
+                  className="absolute right-0 top-0 text-red-600 hover:text-red-700 text-sm opacity-0 group-hover:opacity-100 max-sm:opacity-100 transition-opacity duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/40"
                 >
-                  <TrashIcon className="size-4" />
+                  <TrashIcon className="size-4" aria-hidden="true" />
                 </button>
               )}
             </li>
@@ -218,7 +220,7 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
         <div className="fixed inset-0 bg-zinc-900/90 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full border border-gray-200">
             <h2 className="text-lg font-bold mb-4 text-gray-900">
-              Confirmar Exclusão
+            Confirmar Exclusão
             </h2>
             <p className="mb-6 text-gray-700">
               Tem certeza que deseja apagar o post "
@@ -248,6 +250,7 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
     </section>
   );
 }
+
 
 
 

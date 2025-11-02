@@ -29,8 +29,8 @@ export default async function UsersAdmin() {
     <div className="space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Usuarios</h1>
-          <p className="text-sm text-zinc-400">Gerencie papeis e permissoes.</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Usuários</h1>
+          <p className="text-sm text-zinc-400">Gerencie papéis e permissões.</p>
         </div>
       </div>
 
@@ -42,7 +42,7 @@ export default async function UsersAdmin() {
               <th className="px-4 py-2 font-medium">Email</th>
               <th className="px-4 py-2 font-medium">Papel</th>
               <th className="px-4 py-2 font-medium">Contribuições</th>
-              <th className="px-4 py-2 text-right font-medium">Acoes</th>
+              <th className="px-4 py-2 text-right font-medium">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -75,7 +75,7 @@ export default async function UsersAdmin() {
                             Total: {total}
                           </span>
                           <span className="text-xs text-zinc-400">
-                            Comentários: {comments} • Posts: 0 • Sugestões: 0
+                            ComentÃ¡rios: {comments} â€¢ Posts: 0 â€¢ SugestÃµes: 0
                           </span>
                         </div>
                       );
@@ -120,7 +120,7 @@ export default async function UsersAdmin() {
             {users.length === 0 && (
               <tr>
                 <td colSpan={4} className="px-4 py-8 text-center text-zinc-400">
-                  Nenhum usuario encontrado.
+                  Nenhum usuário encontrado.
                 </td>
               </tr>
             )}
@@ -130,3 +130,5 @@ export default async function UsersAdmin() {
     </div>
   );
 }
+
+

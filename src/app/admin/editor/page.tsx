@@ -173,7 +173,7 @@ export default function Editor() {
               name="tags"
               className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/40"
               type="text"
-              placeholder="separe por virgulas"
+              placeholder="separe por vírgulas"
               value={tags}
               onChange={(e) => setTags(e.target.value)}
             />
@@ -188,7 +188,7 @@ export default function Editor() {
                 onChange={(e) => setHasAudio(e.target.checked)}
                 className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-zinc-100 focus:ring-zinc-500"
               />
-              Este post possui Audio?
+              Este post possui Áudio?
             </label>
             {hasAudio && (
               <input
