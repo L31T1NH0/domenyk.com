@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { SignInButton, useAuth } from "@clerk/nextjs";
+import { useAuth, useClerk } from "@clerk/nextjs";
 import { ChatBubbleLeftRightIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
@@ -60,6 +60,7 @@ export default function ParagraphCommentWidget({
   isMobile,
 }: ParagraphCommentWidgetProps) {
   const { isLoaded, userId } = useAuth();
+  const { openSignIn } = useClerk();
   const OPEN_EVENT = "paragraph-comments:open";
 
   const [isExpanded, setIsExpanded] = useState(false);
@@ -894,16 +895,13 @@ export default function ParagraphCommentWidget({
               >
                 Cancelar
               </button>
-              {/* Clerk typings omit afterSignInUrl for modal buttons, but runtime supports it. */}
-              {/* @ts-expect-error -- afterSignInUrl is accepted at runtime for modal mode. */}
-              <SignInButton mode="modal" afterSignInUrl={buildRedirectUrl()}>
-                <button
-                  type="button"
-                  className="rounded-full bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 dark:bg-purple-500 dark:hover:bg-purple-400"
-                >
-                  Fazer login
-                </button>
-              </SignInButton>
+              <button
+                type="button"
+                onClick={() => openSignIn({ afterSignInUrl: buildRedirectUrl() })}
+                className="rounded-full bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 dark:bg-purple-500 dark:hover:bg-purple-400"
+              >
+                Fazer login
+              </button>
             </div>
           </div>
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { ShareIcon } from "@heroicons/react/24/outline";
 
 interface ShareButtonProps {
   id: string;
@@ -50,9 +51,13 @@ const ShareButton: React.FC<ShareButtonProps> = ({ id }) => {
     <div>
       <button
         onClick={share}
+        aria-label="Compartilhar"
         className="ml-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-cyan-600 hover:text-cyan-700 active:text-cyan-700 rounded-full border border-transparent hover:border-cyan-200/60 dark:hover:border-cyan-800/60 hover:bg-cyan-50 dark:hover:bg-cyan-950/40 transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
       >
-        Compartilhar
+        {/* Icon only on mobile */}
+        <ShareIcon className="h-5 w-5 block sm:hidden" aria-hidden="true" />
+        {/* Text on sm and up */}
+        <span className="hidden sm:inline">Compartilhar</span>
       </button>
       {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
       {notice && (
