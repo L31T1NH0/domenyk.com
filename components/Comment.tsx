@@ -40,7 +40,6 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
 
   const [comments, setComments] = useState<CommentEntity[]>([]);
   const [commentDraft, setCommentDraft] = useState<CommentDraft>(emptyDraft);
-  const [storedIp, setStoredIp] = useState<string>("");
   const [submissionStatus, setSubmissionStatus] = useState<SubmissionStatus>("idle");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -63,10 +62,9 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
     const storedUser = localStorage.getItem(`user-${postId}`);
     if (storedUser) {
       try {
-        const parsed = JSON.parse(storedUser) as { nome?: string; ip?: string };
-        const { nome, ip } = parsed;
+        const parsed = JSON.parse(storedUser) as { nome?: string };
+        const { nome } = parsed;
         setCommentDraft((prev) => ({ ...prev, nome: nome ?? "" }));
-        if (ip) setStoredIp(ip);
       } catch (error) {
         console.warn("Failed to parse stored user info", error);
       }
@@ -210,21 +208,6 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
     const controller = new AbortController();
     pendingRequestRef.current = controller;
 
-    let ipValue = storedIp;
-    try {
-      if (!ipValue) {
-        const ipResponse = await fetch("https://api.ipify.org?format=json", {
-          method: "GET",
-          signal: controller.signal,
-        });
-        const ipData = await ipResponse.json();
-        ipValue = typeof ipData.ip === "string" ? ipData.ip : "Unknown";
-        setStoredIp(ipValue);
-      }
-    } catch {
-      ipValue = ipValue || "Unknown";
-    }
-
     const tempId = `temp-${Date.now()}`;
     const createdAt = new Date().toISOString();
     const optimisticHtml = sanitizeCommentHtml(commentDraft.comentario.replace(/\n/g, "<br />"));
@@ -234,7 +217,6 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
           _id: tempId,
           postId,
           comentario: optimisticHtml,
-          ip: ipValue,
           createdAt,
           parentId: null,
           firstName: user?.firstName ?? "Você",
@@ -253,7 +235,6 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
           _id: tempId,
           postId,
           comentario: optimisticHtml,
-          ip: ipValue,
           createdAt,
           parentId: null,
           nome: trimmedName || "Anonymous",
@@ -281,7 +262,10 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
       replaceOptimistic(tempId, resolved);
 
       if (!userId && isClient) {
-        localStorage.setItem(`user-${postId}`, JSON.stringify({ nome: trimmedName, ip: ipValue }));
+        localStorage.setItem(
+          `user-${postId}`,
+          JSON.stringify({ nome: trimmedName })
+        );
       }
 
       resetForm();
@@ -374,7 +358,6 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
           _id: tempId,
           postId,
           comentario: htmlContent,
-          ip: storedIp || "Unknown",
           createdAt,
           parentId: commentId,
           firstName: user?.firstName ?? "Você",
@@ -393,7 +376,6 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
           _id: tempId,
           postId,
           comentario: htmlContent,
-          ip: storedIp || "Unknown",
           createdAt,
           parentId: commentId,
           nome: trimmedName || commentDraft.nome || "Anonymous",
@@ -423,7 +405,7 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
       if (!userId && isClient) {
         localStorage.setItem(
           `user-${postId}`,
-          JSON.stringify({ nome: trimmedName || commentDraft.nome, ip: storedIp })
+          JSON.stringify({ nome: trimmedName || commentDraft.nome })
         );
       }
 

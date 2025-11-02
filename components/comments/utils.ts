@@ -54,8 +54,8 @@ export const formatDate = (dateStr: string): string => {
   });
 };
 
-export const generateIdenticon = (name: string, ip: string): string => {
-  const value = `${name}${ip || "Unknown"}`;
+export const generateIdenticon = (name: string, seed?: string): string => {
+  const value = `${name}${seed || ""}`;
   const svg = minidenticon(value, 100, 50);
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 };
@@ -64,7 +64,7 @@ type ServerComment = {
   _id: string | { $oid: string } | { toString(): string };
   postId: string;
   comentario: string;
-  ip: string;
+  comentarioOriginal?: string;
   createdAt: string;
   parentId: string | null;
   nome?: string;
@@ -103,7 +103,6 @@ export const normalizeServerComment = (
     _id: normalizeId(comment._id),
     postId: comment.postId,
     comentario: sanitizeCommentHtml(comment.comentario),
-    ip: comment.ip,
     createdAt: comment.createdAt,
     parentId: comment.parentId ?? null,
     optimistic: false,

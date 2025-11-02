@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { sanitizeCommentHtml } from "@components/comments/utils";
 
 type PostScopedComment = {
   _id: string;
@@ -117,7 +118,12 @@ export default function CommentsModal({
                 {mode === "all" ? (
                   <div className="mb-4 text-xs text-zinc-400">Autor: {c.author || "UsuÃ¡rio"}</div>
                 ) : null}
-                <div className="prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: c.comentário }} />
+                <div
+                  className="prose prose-invert max-w-none"
+                  dangerouslySetInnerHTML={{
+                    __html: sanitizeCommentHtml(c.comentario),
+                  }}
+                />
                 {mode === "post" && Array.isArray(c.replies) && c.replies.length > 0 && (
                   <ul className="mt-4 space-y-4 border-l border-zinc-800 pl-4">
                     {c.replies.map((r: any) => (
@@ -126,7 +132,12 @@ export default function CommentsModal({
                           <span>{r.firstName || r.nome || "UsuÃ¡rio"}</span>
                           <span>{r.createdAt}</span>
                         </div>
-                        <div className="prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: r.comentário }} />
+                        <div
+                          className="prose prose-invert max-w-none"
+                          dangerouslySetInnerHTML={{
+                            __html: sanitizeCommentHtml(r.comentario),
+                          }}
+                        />
                       </li>
                     ))}
                   </ul>

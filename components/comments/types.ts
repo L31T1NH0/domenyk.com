@@ -4,7 +4,6 @@ export type BaseComment = {
   _id: string;
   postId: string;
   comentario: string;
-  ip: string;
   createdAt: string;
   parentId: string | null;
   optimistic?: boolean;
