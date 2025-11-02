@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@auth0/nextjs-auth0": "^4.0.2",
-    "@clerk/nextjs": "^6.12.2",
+    "@clerk/nextjs": "6.34.1",
     "@heroicons/react": "^2.2.0",
     "@mdx-js/mdx": "^3.1.0",
     "@tailwindcss/postcss": "^4.0.0",
