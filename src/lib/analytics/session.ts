@@ -2,8 +2,10 @@ import { hmac } from "@noble/hashes/hmac.js";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex } from "@noble/hashes/utils.js";
 
-export const ANALYTICS_SESSION_COOKIE_NAME = "da_session";
-export const ANALYTICS_SESSION_MAX_AGE = 60 * 60 * 24 * 180; // 180 days
+// Cookie de sessão anônima do analytics
+// Especificação: nome "dy.sid" e validade de algumas horas
+export const ANALYTICS_SESSION_COOKIE_NAME = "dy.sid";
+export const ANALYTICS_SESSION_MAX_AGE = 60 * 60 * 6; // 6 horas
 
 const textEncoder = new TextEncoder();
 

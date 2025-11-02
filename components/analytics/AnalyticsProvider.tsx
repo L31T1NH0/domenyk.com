@@ -21,7 +21,7 @@ type AnalyticsEventPayload = {
   page: {
     path: string;
     search?: string;
-    referrer?: string;
+    referrer?: string; // somente domínio quando presente
     title?: string;
   };
   data?: Record<string, unknown>;
@@ -29,6 +29,7 @@ type AnalyticsEventPayload = {
     width?: number;
     height?: number;
   };
+  device?: "mobile" | "desktop";
   flags?: {
     isSampled?: boolean;
   };
@@ -202,6 +203,18 @@ function getViewport() {
   return Object.keys(viewport).length > 0 ? viewport : undefined;
 }
 
+function getDevice(): "mobile" | "desktop" | undefined {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+  const width = window.innerWidth;
+  if (!Number.isFinite(width) || width <= 0) {
+    return undefined;
+  }
+  // Breakpoint simples: < 768 => mobile; caso contrário => desktop
+  return width < 768 ? "mobile" : "desktop";
+}
+
 export function AnalyticsProvider({ children, isAdmin, config }: AnalyticsProviderProps) {
   const [trackingReady, setTrackingReady] = useState(false);
   const [trackingAllowed, setTrackingAllowed] = useState(false);
@@ -356,7 +369,21 @@ export function AnalyticsProvider({ children, isAdmin, config }: AnalyticsProvid
 
       const path = window.location.pathname.slice(0, 512);
       const search = window.location.search.slice(0, 256);
-      const referrer = document.referrer ? document.referrer.slice(0, 512) : undefined;
+      // Envia apenas o domínio do referrer, nunca a URL completa
+      let referrer: string | undefined = undefined;
+      if (document.referrer) {
+        try {
+          const u = new URL(document.referrer);
+          // Apenas hostname (ex.: instagram.com). Mantém subdomínios.
+          referrer = u.hostname.slice(0, 256);
+        } catch {
+          // Fallback: extrai domínio rudimentarmente
+          const match = document.referrer.match(/^[a-z]+:\/\/(?:www\.)?([^\/]+)/i);
+          if (match && match[1]) {
+            referrer = match[1].slice(0, 256);
+          }
+        }
+      }
       const title = document.title ? document.title.slice(0, 256) : undefined;
 
       const payload: AnalyticsEventPayload = {
@@ -375,6 +402,10 @@ export function AnalyticsProvider({ children, isAdmin, config }: AnalyticsProvid
       const viewport = getViewport();
       if (viewport) {
         payload.viewport = viewport;
+      }
+      const device = getDevice();
+      if (device) {
+        payload.device = device;
       }
 
       queueRef.current.push(payload);

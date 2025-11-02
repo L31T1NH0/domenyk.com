@@ -12,6 +12,7 @@ import CommentAvatar from "@components/CommentAvatar";
 import { sanitizeCommentHtml } from "@components/comments/utils";
 import { UPPERCASE_MAX_RATIO, getUppercaseState, buildUppercaseErrorMessage } from "@components/comments/uppercaseUtils";
 import type { ParagraphComment } from "../../types/paragraph-comments";
+import { useAnalytics } from "@components/analytics/AnalyticsProvider";
 
 const LOGIN_PROMPT_TIMEOUT_MS = 5000;
 
@@ -87,6 +88,7 @@ export default function ParagraphCommentWidget({
   const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const undoIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [isUndoingDelete, setIsUndoingDelete] = useState(false);
+  const { trackEvent, isTrackingEnabled } = useAnalytics();
 
   const clearPendingDeleteTimeout = useCallback(() => {
     if (pendingDeleteTimeoutRef.current) {
@@ -455,6 +457,14 @@ export default function ParagraphCommentWidget({
       setIsFeatureBlocked(false);
       if (!hasLoaded) {
         setHasLoaded(true);
+      }
+      if (isTrackingEnabled) {
+        // Evento de interação: envio de comentário
+        trackEvent(
+          "comment_submit",
+          { slug: postId, paragraphIndex, length: trimmed.length },
+          { immediate: true }
+        );
       }
     } catch (error) {
       console.error("Failed to submit paragraph comment", error);

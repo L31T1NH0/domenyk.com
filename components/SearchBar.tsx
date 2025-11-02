@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useState, useEffect, useRef, type ReactNode } from "react";
+import { useAnalytics } from "@components/analytics/AnalyticsProvider";
 import { MagnifyingGlassIcon } from "@heroicons/react/16/solid";
 
 interface SearchBarProps {
@@ -12,6 +13,7 @@ interface SearchBarProps {
 export default function SearchBar({ onSearch, initialQuery = "", rightSlot }: SearchBarProps) {
   const [query, setQuery] = useState(initialQuery);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { trackEvent, isTrackingEnabled } = useAnalytics();
 
   useEffect(() => {
     setQuery(initialQuery);
@@ -32,7 +34,12 @@ export default function SearchBar({ onSearch, initialQuery = "", rightSlot }: Se
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSearch(query.trim());
+    const q = query.trim();
+    onSearch(q);
+    if (isTrackingEnabled && q) {
+      // Evento opcional: busca executada
+      trackEvent("search_query", { query: q });
+    }
   };
 
   return (

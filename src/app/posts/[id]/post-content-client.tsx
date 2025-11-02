@@ -23,6 +23,7 @@ import PostReference from "@components/PostReference";
 import AutorReference from "@components/AutorReference";
 import PostMinimap from "@components/PostMinimap";
 import { EyeIcon, ClockIcon } from "@heroicons/react/24/solid";
+import { useAnalytics } from "@components/analytics/AnalyticsProvider";
 
 const IsMobileContext = createContext<boolean | null>(null);
 
@@ -61,6 +62,7 @@ export default function PostContentClient({
 }: PostContentClientProps) {
   const [views, setViews] = useState(initialViews);
   const [isMobile, setIsMobile] = useState(false);
+  const { trackEvent, config, isTrackingEnabled } = useAnalytics();
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -103,6 +105,72 @@ export default function PostContentClient({
       canceled = true;
     };
   }, [postId]);
+
+  // Rastreamento de progresso de leitura: 25%, 50%, 75% e 100%
+  useEffect(() => {
+    if (!isTrackingEnabled) {
+      return;
+    }
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const sent = new Set<number>();
+    const milestones = (config.readProgressMilestones?.length
+      ? config.readProgressMilestones
+      : [0.25, 0.5, 0.75, 1.0]
+    )
+      .map((m) => Math.min(1, Math.max(0, m)))
+      .sort((a, b) => a - b);
+
+    const computeRatio = () => {
+      const doc = document.documentElement;
+      const scrollTop = window.scrollY || doc.scrollTop || 0;
+      const scrollHeight = doc.scrollHeight || 1;
+      const clientHeight = window.innerHeight || doc.clientHeight || 1;
+      const total = Math.max(1, scrollHeight - clientHeight);
+      const ratio = Math.max(0, Math.min(1, scrollTop / total));
+      return ratio;
+    };
+
+    let frame: number | null = null;
+
+    const handleScroll = () => {
+      if (frame !== null) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = null;
+        const ratio = computeRatio();
+        for (const m of milestones) {
+          if (!sent.has(m) && ratio >= m) {
+            sent.add(m);
+            if (m >= 1) {
+              trackEvent("read_complete", { slug: postId, progress: 100 }, { immediate: true });
+            } else {
+              trackEvent(
+                "read_progress",
+                { slug: postId, progress: Math.round(m * 100) },
+                { immediate: m >= 0.75 }
+              );
+            }
+          }
+        }
+      });
+    };
+
+    // Dispara no load e a cada scroll/resize
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", handleScroll);
+
+    return () => {
+      if (frame !== null) {
+        window.cancelAnimationFrame(frame);
+      }
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleScroll);
+    };
+  }, [config.readProgressMilestones, isTrackingEnabled, postId, trackEvent]);
 
   const parsedContent = useMemo(() => {
     if (!htmlContent) {

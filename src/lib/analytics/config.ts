@@ -94,7 +94,7 @@ export function getAnalyticsClientConfig(): AnalyticsClientConfig {
         .split(",")
         .map((item) => Number(item.trim()))
         .filter((milestone) => Number.isFinite(milestone) && milestone > 0 && milestone <= 1)
-    : [0.25, 0.5, 0.75, 0.9];
+    : [0.25, 0.5, 0.75, 1.0];
 
   return {
     endpoint: DEFAULT_ENDPOINT,

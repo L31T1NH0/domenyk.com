@@ -40,6 +40,7 @@ type IncomingEvent = {
   data?: unknown;
   viewport?: unknown;
   flags?: unknown;
+  device?: unknown;
 };
 
 type NormalizedEvent = {
@@ -64,6 +65,7 @@ type NormalizedEvent = {
   userAgent?: string;
   origin?: string;
   ipHash?: string | null;
+  device?: "mobile" | "desktop";
   version: number;
 };
 
@@ -133,6 +135,13 @@ function sanitizeFlags(value: unknown) {
     result.isSampled = flags.isSampled;
   }
   return Object.keys(result).length > 0 ? result : undefined;
+}
+
+function sanitizeDevice(value: unknown): "mobile" | "desktop" | undefined {
+  if (value === "mobile" || value === "desktop") {
+    return value;
+  }
+  return undefined;
 }
 
 function sanitizeAdditionalData(
@@ -287,6 +296,7 @@ async function parseEvents(
     const page = sanitizePage(event.page, fallbackPath);
     const viewport = sanitizeViewport(event.viewport);
     const flags = sanitizeFlags(event.flags);
+    const device = sanitizeDevice(event.device);
     const clientTs = clampClientTimestamp(event.clientTs, serverTs.getTime());
     const additionalData = sanitizeAdditionalData(event.data);
 
@@ -299,6 +309,7 @@ async function parseEvents(
       ...(additionalData ? { data: additionalData } : {}),
       ...(viewport ? { viewport } : {}),
       ...(flags ? { flags } : {}),
+      ...(device ? { device } : {}),
       ...(userAgent ? { userAgent: userAgent.slice(0, 256) } : {}),
       ...(origin ? { origin: origin.slice(0, 256) } : {}),
       version: 1,

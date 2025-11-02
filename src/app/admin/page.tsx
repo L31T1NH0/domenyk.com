@@ -69,6 +69,12 @@ export default async function AdminDashboard() {
         >
           Novo post
         </Link>
+        <Link
+          href="/admin/analytics"
+          className="inline-flex items-center justify-center rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-200 shadow-sm hover:bg-zinc-800 hover:text-zinc-100 transition-colors"
+        >
+          Analytics
+        </Link>
       </div>
 
       <section className="grid gap-4 sm:grid-cols-2">

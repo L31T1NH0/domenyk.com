@@ -13,6 +13,7 @@ export type AnalyticsEventName = (typeof ANALYTICS_EVENT_NAMES)[number];
 const DEFAULT_EVENTS: AnalyticsEventName[] = [
   "page_view",
   "read_progress",
+  "read_complete",
   "comment_submit",
 ];
 
