@@ -1,7 +1,11 @@
-import { createHmac, randomUUID } from "crypto";
+import { hmac } from "@noble/hashes/hmac.js";
+import { sha256 } from "@noble/hashes/sha2.js";
+import { bytesToHex } from "@noble/hashes/utils.js";
 
 export const ANALYTICS_SESSION_COOKIE_NAME = "da_session";
 export const ANALYTICS_SESSION_MAX_AGE = 60 * 60 * 24 * 180; // 180 days
+
+const textEncoder = new TextEncoder();
 
 function getSalt(): string {
   const salt = process.env.ANALYTICS_SESSION_SALT;
@@ -19,14 +23,20 @@ function getSalt(): string {
 
 export function generateSessionId(): string {
   try {
-    return randomUUID();
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
   } catch {
-    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   }
+
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 export function hashSessionId(sessionId: string): string {
-  return createHmac("sha256", getSalt()).update(sessionId).digest("hex");
+  const saltBytes = textEncoder.encode(getSalt());
+  const sessionBytes = textEncoder.encode(sessionId);
+  const digest = hmac(sha256, saltBytes, sessionBytes);
+  return bytesToHex(digest);
 }
 
 export function anonymizeNetworkIdentifier(value: string | null | undefined): string | null {
@@ -34,5 +44,8 @@ export function anonymizeNetworkIdentifier(value: string | null | undefined): st
     return null;
   }
 
-  return createHmac("sha256", `${getSalt()}::network`).update(value).digest("hex").slice(0, 32);
+  const saltBytes = textEncoder.encode(`${getSalt()}::network`);
+  const valueBytes = textEncoder.encode(value);
+  const digest = hmac(sha256, saltBytes, valueBytes);
+  return bytesToHex(digest).slice(0, 32);
 }

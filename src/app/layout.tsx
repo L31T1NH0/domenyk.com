@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, Suspense } from "react";
 import "./global.css"; // Mantém o CSS global
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -28,9 +28,11 @@ export default async function RootLayout({ children }: RootLayoutProps) {
     <ClerkProvider>
       <html lang="pt-BR">
         <body className="min-h-screen bg-zinc-900 text-white">
-          <AnalyticsProvider isAdmin={isAdmin} config={analyticsConfig}>
-            {children}
-          </AnalyticsProvider>
+          <Suspense fallback={null}>
+            <AnalyticsProvider isAdmin={isAdmin} config={analyticsConfig}>
+              {children}
+            </AnalyticsProvider>
+          </Suspense>
           <Analytics />
           <SpeedInsights />
         </body>
