@@ -1,30 +1,32 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-// Rotas públicas: não requerem autenticação
+import {
+  ANALYTICS_SESSION_COOKIE_NAME,
+  ANALYTICS_SESSION_MAX_AGE,
+  generateSessionId,
+} from "@lib/analytics/session";
+
 const isPublicRoute = createRouteMatcher([
   "/",
   "/sign-in(.*)",
   "/sign-up(.*)",
-  "/posts(.*)", // Adiciona todas as rotas de posts como públicas
-  "/api(.*)", // Adiciona as rotas da API de posts como públicas
+  "/posts(.*)",
+  "/api(.*)",
 ]);
 
-// Rotas de admin: requerem role "admin"
 const isAdminRoute = createRouteMatcher([
   "/admin",
-  "/admin/editor(.*)", // Protege a página do editor e a API
+  "/admin/editor(.*)",
   "/staff(.*)",
   "/admin/api(.*)",
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
-  const { userId, redirectToSignIn } = await auth();
+  const authState = await auth();
+  const { userId, sessionClaims, redirectToSignIn } = authState;
 
-  if (
-    isAdminRoute(req) &&
-    (await auth()).sessionClaims?.metadata?.role !== "admin"
-  ) {
+  if (isAdminRoute(req) && sessionClaims?.metadata?.role !== "admin") {
     const url = new URL("/", req.url);
     return NextResponse.redirect(url);
   }
@@ -33,8 +35,21 @@ export default clerkMiddleware(async (auth, req) => {
     return redirectToSignIn();
   }
 
-  // Log para debug (remova em produção)
-  console.log("Middleware executed for path:", req.nextUrl.pathname);
+  const response = NextResponse.next();
+
+  if (!req.cookies.get(ANALYTICS_SESSION_COOKIE_NAME)) {
+    response.cookies.set({
+      name: ANALYTICS_SESSION_COOKIE_NAME,
+      value: generateSessionId(),
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: ANALYTICS_SESSION_MAX_AGE,
+    });
+  }
+
+  return response;
 });
 
 export const config = {

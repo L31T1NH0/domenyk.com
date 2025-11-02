@@ -24,7 +24,7 @@
         "components/*"
       ],
       "@lib/*": [
-        "lib/*"
+        "src/lib/*"
       ]
     },
     "plugins": [

@@ -1,30 +1,36 @@
 import { ReactNode } from "react";
 import "./global.css"; // Mantém o CSS global
-import { DefaultSeo } from "next-seo";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { Metadata } from "next";
 
-import {
-  ClerkProvider,
-  SignInButton,
-  SignedIn,
-  SignedOut,
-  UserButton,
-} from "@clerk/nextjs";
+import { ClerkProvider } from "@clerk/nextjs";
 
-import SettingsMenu from "@components/SettingsMenu"; // Importa o novo componente
+import AnalyticsProvider from "@components/analytics/AnalyticsProvider";
+import { getAnalyticsClientConfig } from "@lib/analytics/config";
+import { resolveAdminStatus } from "@lib/admin";
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+type RootLayoutProps = Readonly<{
+  children: ReactNode;
+}>;
+
+export default async function RootLayout({ children }: RootLayoutProps) {
+  const analyticsConfig = getAnalyticsClientConfig();
+
+  let isAdmin = false;
+  try {
+    const status = await resolveAdminStatus();
+    isAdmin = status.isAdmin;
+  } catch {
+    isAdmin = false;
+  }
+
   return (
     <ClerkProvider>
       <html lang="pt-BR">
         <body className="min-h-screen bg-zinc-900 text-white">
-          {children}
+          <AnalyticsProvider isAdmin={isAdmin} config={analyticsConfig}>
+            {children}
+          </AnalyticsProvider>
           <Analytics />
           <SpeedInsights />
         </body>
