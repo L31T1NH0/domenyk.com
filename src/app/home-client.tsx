@@ -141,7 +141,7 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
                   aria-haspopup="listbox"
                   aria-expanded={openSort}
                   onClick={() => setOpenSort((v) => !v)}
-                  className="inline-flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-zinc-700 transition-colors"
+                  className="inline-flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-zinc-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500/50"
                 >
                   <span className="hidden sm:inline whitespace-nowrap">{currentSortLabel}</span>
                   <ChevronDownIcon className={`h-4 w-4 transition-transform duration-200 ${openSort ? "rotate-180" : "rotate-0"}`} />
@@ -149,7 +149,7 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
                 {openSort && (
                   <div
                     role="listbox"
-                    className="absolute right-0 z-20 mt-2 w-64 rounded-lg border border-zinc-700 bg-zinc-900 p-2 max-h-[200px] overflow-auto shadow-lg"
+                    className="absolute right-0 z-20 mt-2 w-64 rounded-lg border border-zinc-600 bg-zinc-900 p-2 max-h-[200px] overflow-auto shadow-lg"
                   >
                     {SORT_OPTIONS.map((opt) => {
                       const key = `${opt.value.sort ?? ""}:${opt.value.order ?? ""}`;
@@ -161,7 +161,7 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
                           role="option"
                           aria-selected={selected}
                           onClick={() => onSelectSort(key)}
-                          className={`w-full text-left px-4 py-2 rounded-md text-sm transition-colors hover:bg-zinc-700 ${
+                          className={`w-full text-left px-4 py-2 rounded-md text-sm transition-colors hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500/50 ${
                             selected ? "font-medium text-zinc-100" : "text-zinc-300"
                           }`}
                         >
@@ -195,14 +195,14 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
               </Link>
               <small className="text-zinc-400">
                 <Date dateString={post.date} /> <span aria-hidden className="mx-2">&middot;</span>
-                <span className="inline-flex items-center rounded px-2 py-1 text-sm text-zinc-500">
+                <span className="inline-flex items-center rounded px-2 py-1 text-sm text-zinc-600 dark:text-zinc-300">
                   {post.views ?? 0} views
                 </span>
               </small>
               {isAdmin && (
                 <button
                   onClick={() => openDeleteModal(post.postId)}
-                  className="absolute right-0 top-0 text-red-500 hover:text-red-700 text-sm opacity-0 group-hover:opacity-100 max-sm:opacity-100 transition-opacity duration-200"
+                  className="absolute right-0 top-0 text-red-500 hover:text-red-700 text-sm opacity-0 group-hover:opacity-100 max-sm:opacity-100 transition-opacity duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/40"
                 >
                   <TrashIcon className="size-4" />
                 </button>

@@ -22,6 +22,7 @@ import ParagraphCommentWidget from "@components/paragraph-comments/ParagraphComm
 import PostReference from "@components/PostReference";
 import AutorReference from "@components/AutorReference";
 import PostMinimap from "@components/PostMinimap";
+import { EyeIcon, ClockIcon } from "@heroicons/react/24/solid";
 
 const IsMobileContext = createContext<boolean | null>(null);
 
@@ -144,7 +145,7 @@ export default function PostContentClient({
           ...paragraphProps,
           className: [
             (paragraphProps as any)?.className,
-            "transition-colors rounded-md -mx-2 px-2 py-0.5 hover:bg-zinc-100/60 dark:hover:bg-zinc-800/40",
+            "transition-colors rounded-md -mx-2 px-2 py-0.5 hover:bg-zinc-100/90 dark:hover:bg-zinc-800/60",
           ]
             .filter(Boolean)
             .join(" "),
@@ -171,7 +172,7 @@ export default function PostContentClient({
         const pProps = attributesToProps(element.attribs ?? {}) as HTMLAttributes<HTMLParagraphElement>;
         const className = [
           (pProps as any)?.className,
-          "transition-colors rounded-md -mx-2 px-2 py-0.5 hover:bg-zinc-100/60 dark:hover:bg-zinc-800/40",
+          "transition-colors rounded-md -mx-2 px-2 py-0.5 hover:bg-zinc-100/90 dark:hover:bg-zinc-800/60",
         ]
           .filter(Boolean)
           .join(" ");
@@ -199,11 +200,20 @@ export default function PostContentClient({
     <IsMobileContext.Provider value={isMobile}>
       <div className="relative flex flex-col gap-6">
         <article className="flex flex-col gap-6 mt-4">
-          <div className="flex items-center justify-between text-sm text-zinc-500 border-b border-zinc-200 dark:border-zinc-700 pb-3">
+          <div className="flex items-center justify-between text-sm text-zinc-600 dark:text-zinc-300 border-b border-zinc-200 dark:border-zinc-700 pb-3">
             <div className="flex items-center gap-3 flex-wrap">
               <Date dateString={date} />
-              <span>| {readingTime}</span>
-              <span>{views} views</span>
+              <span className="inline-flex items-center gap-1">
+                <span aria-hidden>|</span>
+                <ClockIcon className="h-4 w-4" aria-hidden="true" />
+                <span className="sr-only">Tempo de leitura:</span>
+                {readingTime}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <EyeIcon className="h-4 w-4" aria-hidden="true" />
+                <span className="sr-only">Views:</span>
+                {views} views
+              </span>
             </div>
             <ShareButton id={postId} />
           </div>
