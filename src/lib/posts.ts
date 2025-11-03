@@ -33,6 +33,10 @@ export type PostReferenceMetadata = {
   thumbnailUrl: string | null;
 };
 
+function shouldBypassDatabase(): boolean {
+  return process.env.CI === "1" || process.env.NEXT_PHASE === "phase-production-build";
+}
+
 function normalizeDate(d: unknown): string {
   if (typeof d === "string") return d;
   if (d instanceof Date) return d.toISOString();
@@ -60,6 +64,10 @@ export async function getPosts({
   filters,
   includeHidden,
 }: FetchPostsArgs): Promise<FetchPostsResult> {
+  if (shouldBypassDatabase()) {
+    return { posts: [], hasNext: false, total: 0 };
+  }
+
   const db = await getMongoDb();
   const collection = db.collection("posts");
 
@@ -147,6 +155,10 @@ export async function getPostReferenceMetadata(
   slug: string
 ): Promise<PostReferenceMetadata | null> {
   if (!slug) {
+    return null;
+  }
+
+  if (shouldBypassDatabase()) {
     return null;
   }
 

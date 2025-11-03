@@ -2,6 +2,10 @@ export const ANALYTICS_EVENT_NAMES = [
   "page_view",
   "read_progress",
   "read_complete",
+  "page_focus",
+  "page_blur",
+  "page_hide",
+  "page_heartbeat",
   "para_open",
   "comment_submit",
   "search_query",
@@ -14,6 +18,10 @@ const DEFAULT_EVENTS: AnalyticsEventName[] = [
   "page_view",
   "read_progress",
   "read_complete",
+  "page_focus",
+  "page_blur",
+  "page_hide",
+  "page_heartbeat",
   "comment_submit",
 ];
 

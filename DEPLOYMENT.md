@@ -10,3 +10,9 @@ Both flags can be configured per-environment through your deployment provider's 
 ## Privacy Notes
 
 - The comments API no longer stores or exposes raw visitor IP addresses. Sanitized HTML is persisted for every comment and only the cleaned markup is sent back to clients.
+
+## Scheduled jobs
+
+- Configure a cron job (for example, using Vercel Cron) to call `POST https://<your-domain>/api/cron/analytics` at least once per day.
+- Provide the shared secret through `ANALYTICS_CRON_SECRET` (or `CRON_SECRET`/`VERCEL_CRON_SECRET`). The cron request must send `Authorization: Bearer <secret>`.
+- Optionally set `ANALYTICS_CRON_LOOKBACK_DAYS` to control how many trailing days are recomputed on each run (defaults to 3, capped at 30).
