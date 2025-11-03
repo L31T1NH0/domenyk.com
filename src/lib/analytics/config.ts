@@ -9,9 +9,6 @@ const DEFAULT_RATE_LIMIT_MAX_EVENTS = 120;
 const DEFAULT_PROGRESS_SAMPLE_RATE = 1;
 const DEFAULT_MAX_EVENTS_PER_REQUEST = 25;
 const DEFAULT_MAX_EVENT_BYTES = 4096;
-const DEFAULT_PROGRESS_BUCKETS = Array.from({ length: 20 }, (_, index) =>
-  Number(((index + 1) * 0.05).toFixed(2))
-);
 
 function toNumber(
   value: string | null | undefined,
@@ -97,8 +94,7 @@ export function getAnalyticsClientConfig(): AnalyticsClientConfig {
         .split(",")
         .map((item) => Number(item.trim()))
         .filter((milestone) => Number.isFinite(milestone) && milestone > 0 && milestone <= 1)
-        .map((milestone) => Number(milestone.toFixed(2)))
-    : DEFAULT_PROGRESS_BUCKETS;
+    : [0.25, 0.5, 0.75, 1.0];
 
   return {
     endpoint: DEFAULT_ENDPOINT,

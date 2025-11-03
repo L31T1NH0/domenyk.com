@@ -40,10 +40,6 @@ type PostPageProps = {
 
 // Cache per post-id to avoid cross-post cache pollution
 async function fetchPostById(id: string) {
-  if (process.env.CI === "1" || isStaticGenerationEnvironment()) {
-    return null;
-  }
-
   try {
     const { getMongoDb } = await import("../../../lib/mongo");
     const db = await getMongoDb();
@@ -235,10 +231,6 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
 }
 
 export async function generateStaticParams() {
-  if (process.env.CI === "1" || isStaticGenerationEnvironment()) {
-    return [];
-  }
-
   try {
     const { getMongoDb } = await import("../../../lib/mongo");
     const db = await getMongoDb();

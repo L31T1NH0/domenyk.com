@@ -106,7 +106,7 @@ export default function PostContentClient({
     };
   }, [postId]);
 
-  // Rastreamento de progresso de leitura em buckets de 5%
+  // Rastreamento de progresso de leitura: 25%, 50%, 75% e 100%
   useEffect(() => {
     if (!isTrackingEnabled) {
       return;
@@ -116,26 +116,13 @@ export default function PostContentClient({
       return;
     }
 
-    const buckets = (() => {
-      const raw = config.readProgressMilestones?.length
-        ? config.readProgressMilestones
-        : Array.from({ length: 20 }, (_, i) => (i + 1) / 20);
-      const percentBuckets = Array.from(
-        new Set(
-          raw
-            .map((value) => Math.round(Math.min(1, Math.max(0, value)) * 100))
-            .filter((pct) => pct >= 5 && pct <= 100 && pct % 5 === 0)
-        )
-      ).sort((a, b) => a - b);
-      return percentBuckets;
-    })();
-
-    if (buckets.length === 0) {
-      return;
-    }
-
-    let lastBucket = 0;
-    let completionSent = false;
+    const sent = new Set<number>();
+    const milestones = (config.readProgressMilestones?.length
+      ? config.readProgressMilestones
+      : [0.25, 0.5, 0.75, 1.0]
+    )
+      .map((m) => Math.min(1, Math.max(0, m)))
+      .sort((a, b) => a - b);
 
     const computeRatio = () => {
       const doc = document.documentElement;
@@ -154,25 +141,18 @@ export default function PostContentClient({
       frame = window.requestAnimationFrame(() => {
         frame = null;
         const ratio = computeRatio();
-        const currentPercent = Math.max(0, Math.floor(ratio * 100));
-        const emitBuckets = buckets.filter(
-          (bucket) => bucket > lastBucket && bucket <= currentPercent
-        );
-        if (emitBuckets.length === 0 && currentPercent >= 100 && !completionSent) {
-          emitBuckets.push(100);
-        }
-        for (const bucket of emitBuckets) {
-          if (bucket >= 100) {
-            completionSent = true;
-            lastBucket = 100;
-            trackEvent("read_complete", { slug: postId, progress: 100 }, { immediate: true });
-          } else {
-            lastBucket = bucket;
-            trackEvent(
-              "read_progress",
-              { slug: postId, progress: bucket },
-              { immediate: bucket >= 75 }
-            );
+        for (const m of milestones) {
+          if (!sent.has(m) && ratio >= m) {
+            sent.add(m);
+            if (m >= 1) {
+              trackEvent("read_complete", { slug: postId, progress: 100 }, { immediate: true });
+            } else {
+              trackEvent(
+                "read_progress",
+                { slug: postId, progress: Math.round(m * 100) },
+                { immediate: m >= 0.75 }
+              );
+            }
           }
         }
       });

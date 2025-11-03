@@ -4,11 +4,12 @@ import { useState } from "react";
 import { EllipsisVerticalIcon, XMarkIcon } from "@heroicons/react/20/solid";
 import {
   useUser,  
+  ClerkProvider,
   SignInButton,
   SignedIn,
   SignedOut,
   UserButton, 
-} from "@lib/clerk-frontend";	
+} from "@clerk/nextjs";	
 
 export default function SettingsMenu() {
 

@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useAuth, useClerk } from "@lib/clerk-frontend";
+import { useAuth, useClerk } from "@clerk/nextjs";
 import { ChatBubbleLeftRightIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {

@@ -369,22 +369,18 @@ export function AnalyticsProvider({ children, isAdmin, config }: AnalyticsProvid
 
       const path = window.location.pathname.slice(0, 512);
       const search = window.location.search.slice(0, 256);
-      // Envia somente host + path normalizados
+      // Envia apenas o domínio do referrer, nunca a URL completa
       let referrer: string | undefined = undefined;
       if (document.referrer) {
         try {
           const u = new URL(document.referrer);
-          const hostname = u.hostname.slice(0, 192);
-          const pathname = u.pathname.replace(/\/+/g, "/").slice(0, 192);
-          const normalizedPath = pathname === "" ? "/" : pathname;
-          referrer = `${hostname}${normalizedPath}`.slice(0, 256);
+          // Apenas hostname (ex.: instagram.com). Mantém subdomínios.
+          referrer = u.hostname.slice(0, 256);
         } catch {
-          // Fallback rudimentar
-          const match = document.referrer.match(/^[a-z]+:\/\/([^\/?#]+)([^?#]*)/i);
+          // Fallback: extrai domínio rudimentarmente
+          const match = document.referrer.match(/^[a-z]+:\/\/(?:www\.)?([^\/]+)/i);
           if (match && match[1]) {
-            const host = match[1].slice(0, 192);
-            const path = (match[2] || "/").slice(0, 192);
-            referrer = `${host}${path}`.slice(0, 256);
+            referrer = match[1].slice(0, 256);
           }
         }
       }
@@ -436,93 +432,27 @@ export function AnalyticsProvider({ children, isAdmin, config }: AnalyticsProvid
   );
 
   useEffect(() => {
-    if (!trackingAllowed || !trackingReady) {
+    if (!trackingAllowed) {
       return;
     }
-
-    const HEARTBEAT_INTERVAL_MS = 20_000;
-    let heartbeatTimer: number | null = null;
-    let focusState: "focused" | "blurred" = "blurred";
-
-    const startHeartbeat = () => {
-      if (heartbeatTimer !== null) {
-        return;
-      }
-      heartbeatTimer = window.setInterval(() => {
-        trackEvent("page_heartbeat");
-      }, HEARTBEAT_INTERVAL_MS);
-    };
-
-    const stopHeartbeat = () => {
-      if (heartbeatTimer !== null) {
-        window.clearInterval(heartbeatTimer);
-        heartbeatTimer = null;
-      }
-    };
-
-    const emitFocus = (reason: string) => {
-      if (focusState === "focused") {
-        return;
-      }
-      focusState = "focused";
-      trackEvent("page_focus", { reason }, { immediate: true });
-      startHeartbeat();
-    };
-
-    const emitBlur = (reason: string) => {
-      if (focusState === "blurred") {
-        return;
-      }
-      focusState = "blurred";
-      stopHeartbeat();
-      trackEvent("page_blur", { reason }, { immediate: true });
-    };
-
-    const handleFocus = () => {
-      emitFocus("focus");
-    };
-
-    const handleBlur = () => {
-      emitBlur("blur");
-    };
-
     const handleVisibility = () => {
       if (document.visibilityState === "hidden") {
-        emitBlur("hidden");
-        trackEvent("page_hide", { reason: "visibility" }, { immediate: true });
         flushQueue("visibility");
-      } else {
-        emitFocus("visible");
       }
     };
-
     const handlePageHide = () => {
-      emitBlur("pagehide");
-      trackEvent("page_hide", { reason: "pagehide" }, { immediate: true });
       flushQueue("visibility");
     };
-
-    if (document.visibilityState === "visible" && window.document.hasFocus()) {
-      emitFocus("mount");
-    } else if (document.visibilityState === "hidden") {
-      emitBlur("hidden");
-    }
-
-    window.addEventListener("focus", handleFocus);
-    window.addEventListener("blur", handleBlur);
     document.addEventListener("visibilitychange", handleVisibility);
     window.addEventListener("pagehide", handlePageHide);
     window.addEventListener("beforeunload", handlePageHide);
 
     return () => {
-      stopHeartbeat();
-      window.removeEventListener("focus", handleFocus);
-      window.removeEventListener("blur", handleBlur);
       document.removeEventListener("visibilitychange", handleVisibility);
       window.removeEventListener("pagehide", handlePageHide);
       window.removeEventListener("beforeunload", handlePageHide);
     };
-  }, [trackingAllowed, trackingReady, trackEvent, flushQueue]);
+  }, [trackingAllowed, flushQueue]);
 
   useEffect(() => {
     return () => {

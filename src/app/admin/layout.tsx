@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ReactNode } from "react";
-import { SignedIn, SignedOut, SignInButton, UserButton } from "@lib/clerk-frontend";
+import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
