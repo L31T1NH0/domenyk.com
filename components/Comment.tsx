@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useAuth, useUser } from "@clerk/nextjs";
+import { useAuth, useUser } from "@lib/clerk-frontend";
 import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/solid";
 
 import {

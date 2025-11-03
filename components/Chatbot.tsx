@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { ChatBubbleLeftIcon, XMarkIcon } from "@heroicons/react/20/solid";
-import { useUser, SignInButton } from "@clerk/nextjs";
+import { useUser, SignInButton } from "@lib/clerk-frontend";
 
 type ChatMessage = {
   role: "user" | "assistant";

@@ -16,6 +16,22 @@ function isDynamicServerUsageError(error: unknown): boolean {
 
 let fallbackClient: ClerkClient | null = null;
 
+function createStubClient(): ClerkClient {
+  const unavailable = () => {
+    throw new Error(
+      "Clerk client is unavailable porque CLERK_SECRET_KEY não foi configurada."
+    );
+  };
+
+  return {
+    users: {
+      getUser: async () => unavailable(),
+      updateUser: async () => unavailable(),
+      getUserList: async () => unavailable(),
+    },
+  } as unknown as ClerkClient;
+}
+
 async function createFallbackClient(): Promise<ClerkClient> {
   if (fallbackClient) {
     return fallbackClient;
@@ -24,7 +40,20 @@ async function createFallbackClient(): Promise<ClerkClient> {
   const secretKey = process.env.CLERK_SECRET_KEY;
   const publishableKey = process.env.CLERK_PUBLISHABLE_KEY;
 
+  const allowStub =
+    isStaticGenerationEnvironment() || process.env.CI === "1" || process.env.NODE_ENV !== "production";
+
   if (!secretKey) {
+    if (allowStub) {
+      if (process.env.NODE_ENV !== "production") {
+        console.warn(
+          "CLERK_SECRET_KEY ausente; retornando client stub apenas para build/teste. Configure a chave em produção."
+        );
+      }
+      fallbackClient = createStubClient();
+      return fallbackClient;
+    }
+
     throw new Error("CLERK_SECRET_KEY is not configured and Clerk client is unavailable.");
   }
 
