@@ -5,6 +5,8 @@ import VisibilityToggle from "./VisibilityToggle";
 import RecentPostsClient from "./RecentPostsClient";
 import { resolveAdminStatus } from "../../lib/admin";
 
+export const runtime = "nodejs";
+
 type PostRow = {
   _id?: string;
   postId: string;

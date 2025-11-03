@@ -4,6 +4,8 @@ import { getMongoDb } from "../../../lib/mongo";
 import { getClerkServerClient } from "../../../lib/clerk-server";
 import { resolveAdminStatus } from "../../../lib/admin";
 
+export const runtime = "nodejs";
+
 export default async function UsersAdmin() {
   const { isAdmin } = await resolveAdminStatus();
   if (!isAdmin) {
