@@ -72,10 +72,10 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
   return (
     <article
-      className={`rounded-lg border p-3 shadow-sm transition-all bg-white dark:bg-zinc-900/70 ${
+      className={`pt-3 pb-6 first:pt-0 last:border-none border-b transition-colors ${
         comment.optimistic
-          ? "border-purple-500/60 shadow-purple-300/30"
-          : "border-zinc-200 dark:border-zinc-700"
+          ? "border-purple-400/60 dark:border-purple-400/60"
+          : "border-zinc-200 dark:border-zinc-800"
       }`}
     >
       <div className="flex items-start gap-3">
@@ -88,6 +88,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
         />
         <div className="flex-1 min-w-0 space-y-3">
           {replyContextLabel && (
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-purple-600/90 dark:text-purple-300">
             <span className="inline-flex items-center gap-1 text-xs font-medium text-purple-600 dark:text-purple-300">
               {replyContextLabel}
             </span>
@@ -139,11 +140,11 @@ const CommentItem: React.FC<CommentItemProps> = ({
             }}
           />
 
-          <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500 dark:text-zinc-400">
+          <div className="flex flex-wrap items-center gap-4 text-sm text-zinc-500 dark:text-zinc-400">
             <button
               type="button"
               onClick={onReplyRequest}
-              className="inline-flex items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 py-1 text-sm font-medium text-zinc-700 transition-colors hover:border-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700"
+              className="rounded-md px-1.5 py-1 text-sm font-medium text-purple-600 transition-colors hover:text-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50 dark:text-purple-300 dark:hover:text-purple-200"
             >
               Responder
             </button>
@@ -151,7 +152,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
               <button
                 type="button"
                 onClick={onOpenThread}
-                className="inline-flex items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 py-1 text-sm font-medium text-zinc-700 transition-colors hover:border-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700"
+                className="rounded-md px-1.5 py-1 text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-0 dark:text-zinc-300 dark:hover:text-zinc-100"
               >
                 Ver thread ({replyCount})
               </button>
@@ -161,7 +162,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowDeleteModal(true)}
-                  className="flex items-center gap-2 text-xs font-medium text-red-500 transition-colors hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded-full"
+                  className="flex items-center gap-1.5 text-sm font-medium text-red-500 transition-colors hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-0"
                 >
                   <TrashIcon className="h-3.5 w-3.5" /> Remover
                 </button>
