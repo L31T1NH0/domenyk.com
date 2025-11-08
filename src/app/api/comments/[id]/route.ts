@@ -3,6 +3,7 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { getMongoDb } from "../../../../lib/mongo";
 import { Redis } from "@upstash/redis";
 import { ObjectId } from "mongodb";
+import { randomUUID } from "crypto";
 import { resolveAdminStatus } from "../../../../lib/admin";
 import { deriveRateLimitIdentifier } from "./rate-limit";
 import {
@@ -111,77 +112,207 @@ export async function GET(
     const commentsCollection = db.collection("comments");
     const authCommentsCollection = db.collection("auth-comments");
 
-    // Busca comentários de usuários não logados
-    const nonAuthComments = await commentsCollection
-      .find({ postId, parentId: null })
-      .sort({ createdAt: -1 })
-      .toArray();
+    type TreeNode = (Comment | AuthComment) & {
+      _id: string;
+      parentId: string | null;
+      replies?: TreeNode[];
+    };
 
-    // Busca comentários de usuários logados
-    const authComments = await authCommentsCollection
-      .find({ postId, parentId: null })
-      .sort({ createdAt: -1 })
-      .toArray();
+    const toTreeNode = (
+      comment: Comment | AuthComment,
+      fallbackParentId: string | null = null
+    ): TreeNode => {
+      const rawId = comment._id;
+      const normalizedId =
+        typeof rawId === "string"
+          ? rawId
+          : rawId instanceof ObjectId
+          ? rawId.toString()
+          : randomUUID();
 
-    // Combina os comentários
-    let allComments = [...nonAuthComments, ...authComments].sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+      const rawParent =
+        comment.parentId !== undefined && comment.parentId !== null
+          ? comment.parentId
+          : fallbackParentId;
 
-    // Busca respostas no Redis para cada comentário
-    const commentsWithReplies = await Promise.all(
-      allComments.map(async (comment) => {
-        const commentId = comment._id.toString();
-        const safeComment = await sanitizeForResponse(comment as CommentLike);
-        const replies = await redis.zrange(
-          `${postId}:${commentId}:replies`,
-          0,
-          -1
-        );
+      const normalizedParent =
+        rawParent === null || rawParent === undefined
+          ? null
+          : typeof rawParent === "string"
+          ? rawParent
+          : rawParent instanceof ObjectId
+          ? rawParent.toString()
+          : String(rawParent);
 
-        const parsedReplies = replies
-          .map((reply: unknown) => {
-            if (reply === null || reply === undefined) {
-              console.error("Reply is null or undefined, skipping:", reply);
-              return null;
-            }
+      return {
+        ...comment,
+        _id: normalizedId,
+        parentId: normalizedParent,
+        replies: [],
+      };
+    };
 
-            try {
-              if (typeof reply === "string") {
-                return JSON.parse(reply) as Comment | AuthComment;
-              } else if (typeof reply === "object") {
-                return reply as Comment | AuthComment;
-              } else {
-                console.error(
-                  "Reply is neither a string nor an object, skipping:",
-                  reply
-                );
-                return null;
-              }
-            } catch (parseError) {
-              console.error("Invalid JSON in Redis reply:", {
-                reply,
-                error: (parseError as Error).message,
-              });
-              return null;
-            }
-          })
-          .filter((reply): reply is Comment | AuthComment => reply !== null)
-          .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    const [nonAuthComments, authComments] = await Promise.all([
+      commentsCollection.find({ postId }).toArray(),
+      authCommentsCollection.find({ postId }).toArray(),
+    ]);
 
-        const safeReplies = await Promise.all(
-          parsedReplies.map((reply) => sanitizeForResponse(reply))
-        );
-
-        return {
-          ...safeComment,
-          replies: safeReplies.length > 0 ? safeReplies : undefined,
-        };
+    const mongoNodes: TreeNode[] = await Promise.all(
+      [...nonAuthComments, ...authComments].map(async (commentDoc) => {
+        const sanitized = (await sanitizeForResponse(
+          commentDoc as CommentLike
+        )) as Comment | AuthComment;
+        return toTreeNode(sanitized);
       })
     );
 
-    return NextResponse.json(commentsWithReplies, { status: 200 });
+    const legacyNodes: TreeNode[] = [];
+
+    const parseLegacyReplies = async (
+      replies: unknown[],
+      fallbackParentId: string | null
+    ): Promise<TreeNode[]> => {
+      const parsedNodes: TreeNode[] = [];
+
+      for (const reply of replies) {
+        if (reply === null || reply === undefined) {
+          console.error("Reply is null or undefined, skipping:", reply);
+          continue;
+        }
+
+        let parsedReply: Comment | AuthComment | null = null;
+
+        if (typeof reply === "string") {
+          try {
+            parsedReply = JSON.parse(reply) as Comment | AuthComment;
+          } catch (parseError) {
+            console.error("Invalid JSON in Redis reply:", {
+              reply,
+              error: (parseError as Error).message,
+            });
+            continue;
+          }
+        } else if (typeof reply === "object") {
+          parsedReply = reply as Comment | AuthComment;
+        } else {
+          console.error(
+            "Reply is neither a string nor an object, skipping:",
+            reply
+          );
+          continue;
+        }
+
+        const sanitizedReply = (await sanitizeForResponse(
+          parsedReply as CommentLike
+        )) as Comment | AuthComment;
+        const treeNode = toTreeNode(sanitizedReply, fallbackParentId);
+        legacyNodes.push(treeNode);
+        parsedNodes.push(treeNode);
+
+        const nestedReplies = Array.isArray((parsedReply as any)?.replies)
+          ? ((parsedReply as any).replies as unknown[])
+          : [];
+
+        if (nestedReplies.length > 0) {
+          const nestedNodes = await parseLegacyReplies(
+            nestedReplies,
+            treeNode._id
+          );
+          parsedNodes.push(...nestedNodes);
+        }
+      }
+      return parsedNodes;
+    };
+
+    const processedRedisParents = new Set<string>();
+    const redisQueue: TreeNode[] = [...mongoNodes];
+
+    while (redisQueue.length > 0) {
+      const node = redisQueue.shift();
+
+      if (!node || processedRedisParents.has(node._id)) {
+        continue;
+      }
+
+      processedRedisParents.add(node._id);
+
+      const redisReplies = await redis.zrange(
+        `${postId}:${node._id}:replies`,
+        0,
+        -1
+      );
+
+      if (Array.isArray(redisReplies) && redisReplies.length > 0) {
+        const parsed = await parseLegacyReplies(redisReplies, node._id);
+        if (parsed.length > 0) {
+          redisQueue.push(...parsed);
+        }
+      }
+    }
+
+    const allNodes = [...mongoNodes, ...legacyNodes];
+    const nodeMap = new Map<string, TreeNode>();
+
+    for (const node of allNodes) {
+      node.replies = [];
+      nodeMap.set(node._id, node);
+    }
+
+    const roots: TreeNode[] = [];
+    const rootIds = new Set<string>();
+
+    const orderedNodes = [...allNodes].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+
+    for (const node of orderedNodes) {
+      const currentNode = nodeMap.get(node._id);
+
+      if (!currentNode) {
+        continue;
+      }
+
+      if (currentNode.parentId && nodeMap.has(currentNode.parentId)) {
+        const parentNode = nodeMap.get(currentNode.parentId);
+        if (parentNode) {
+          parentNode.replies = parentNode.replies ?? [];
+          parentNode.replies.push(currentNode);
+        }
+      } else if (!rootIds.has(currentNode._id)) {
+        roots.push(currentNode);
+        rootIds.add(currentNode._id);
+      }
+    }
+
+    const sortRepliesRecursively = (nodes: TreeNode[]) => {
+      for (const node of nodes) {
+        if (node.replies && node.replies.length > 0) {
+          node.replies.sort(
+            (a, b) =>
+              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          );
+          sortRepliesRecursively(node.replies);
+        }
+      }
+    };
+
+    sortRepliesRecursively(roots);
+    roots.sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+    const pruneEmptyReplies = (node: TreeNode) => {
+      if (!node.replies || node.replies.length === 0) {
+        delete node.replies;
+        return;
+      }
+
+      node.replies.forEach(pruneEmptyReplies);
+    };
+
+    roots.forEach(pruneEmptyReplies);
+
+    return NextResponse.json(roots, { status: 200 });
   } catch (mongoError) {
     console.error("Error fetching comments:", {
       message: (mongoError as Error).message,
@@ -330,40 +461,30 @@ export async function POST(
         parentId: parentId || null,
       };
 
-      if (!parentId) {
-        await authCommentsCollection.insertOne(newComment);
-        console.log("Comment inserted into auth-comments:", newComment);
-        return NextResponse.json(
-          {
-            message: "Comment added successfully",
-            comment: await sanitizeForResponse(newComment),
-          },
-          { status: 201 }
-        );
-      } else {
-        const replyId = new ObjectId().toString();
-        const replyData: AuthComment = {
-          ...newComment,
-          _id: replyId,
-        };
-        const replyString = JSON.stringify({
-          ...replyData,
-          comentarioOriginal: undefined,
-        });
-        console.log("Saving reply to Redis:", replyString); // Log para confirmar o formato
-        await redis.zadd(`${postId}:${parentId}:replies`, {
-          score: Date.now(),
-          member: replyString,
-        });
-        console.log("Reply added to Redis:", replyData);
-        return NextResponse.json(
-          {
-            message: "Reply added successfully",
-            reply: await sanitizeForResponse(replyData),
-          },
-          { status: 201 }
-        );
-      }
+      const { insertedId } = await authCommentsCollection.insertOne(newComment);
+      const insertedComment: AuthCommentInsert = {
+        ...newComment,
+        _id: insertedId,
+      };
+
+      console.log(
+        `${parentId ? "Reply" : "Comment"} inserted into auth-comments:`,
+        insertedComment
+      );
+
+      const sanitizedComment = await sanitizeForResponse(insertedComment);
+
+      return NextResponse.json(
+        {
+          message: parentId
+            ? "Reply added successfully"
+            : "Comment added successfully",
+          ...(parentId
+            ? { reply: sanitizedComment }
+            : { comment: sanitizedComment }),
+        },
+        { status: 201 }
+      );
     } else {
       const commentsCollection = db.collection("comments");
       const userProvidedName =
@@ -378,40 +499,30 @@ export async function POST(
         parentId: parentId || null,
       };
 
-      if (!parentId) {
-        await commentsCollection.insertOne(newComment);
-        console.log("Comment inserted into comments:", newComment);
-        return NextResponse.json(
-          {
-            message: "Comment added successfully",
-            comment: await sanitizeForResponse(newComment),
-          },
-          { status: 201 }
-        );
-      } else {
-        const replyId = new ObjectId().toString();
-        const replyData: Comment = {
-          ...newComment,
-          _id: replyId,
-        };
-        const replyString = JSON.stringify({
-          ...replyData,
-          comentarioOriginal: undefined,
-        });
-        console.log("Saving reply to Redis:", replyString); // Log para confirmar o formato
-        await redis.zadd(`${postId}:${parentId}:replies`, {
-          score: Date.now(),
-          member: replyString,
-        });
-        console.log("Reply added to Redis:", replyData);
-        return NextResponse.json(
-          {
-            message: "Reply added successfully",
-            reply: await sanitizeForResponse(replyData),
-          },
-          { status: 201 }
-        );
-      }
+      const { insertedId } = await commentsCollection.insertOne(newComment);
+      const insertedComment: CommentInsert = {
+        ...newComment,
+        _id: insertedId,
+      };
+
+      console.log(
+        `${parentId ? "Reply" : "Comment"} inserted into comments:`,
+        insertedComment
+      );
+
+      const sanitizedComment = await sanitizeForResponse(insertedComment);
+
+      return NextResponse.json(
+        {
+          message: parentId
+            ? "Reply added successfully"
+            : "Comment added successfully",
+          ...(parentId
+            ? { reply: sanitizedComment }
+            : { comment: sanitizedComment }),
+        },
+        { status: 201 }
+      );
     }
   } catch (error) {
     console.error("Error adding comment or reply:", {
@@ -459,6 +570,13 @@ export async function DELETE(
       );
     }
 
+    if (!ObjectId.isValid(commentId)) {
+      return NextResponse.json(
+        { error: "Invalid comment ID" },
+        { status: 400 }
+      );
+    }
+
     if (!postId || typeof postId !== "string") {
       return NextResponse.json(
         { error: "Post ID is required and must be a string" },
@@ -473,104 +591,157 @@ export async function DELETE(
       );
     }
 
-    let comment;
-    let collection;
-
     if (isReply) {
-      // Buscar a resposta no Redis
+      const replyFilter = {
+        _id: new ObjectId(commentId),
+        postId,
+        parentId,
+      };
+
+      let replyCollection = authCommentsCollection;
+      let replyDoc = await replyCollection.findOne(replyFilter);
+
+      if (!replyDoc) {
+        replyCollection = commentsCollection;
+        replyDoc = await replyCollection.findOne(replyFilter);
+      }
+
+      if (replyDoc) {
+        const isAuthor = "userId" in replyDoc && replyDoc.userId === userId;
+        if (!isAdmin && !isAuthor) {
+          return NextResponse.json({ error: "Not Authorized" }, { status: 403 });
+        }
+
+        await replyCollection.deleteOne(replyFilter);
+
+        return NextResponse.json(
+          { message: "Comment deleted successfully", commentId },
+          { status: 200 }
+        );
+      }
+
       const replyKey = `${postId}:${parentId}:replies`;
       const replies = await redis.zrange(replyKey, 0, -1);
       console.log("Replies fetched from Redis:", replies); // Log para depurar o formato dos dados
 
-      // Processar as respostas, lidando com diferentes tipos de dados
-      const parsedReplies = replies
-        .map((r: unknown) => {
-          if (r === null || r === undefined) {
-            console.error("Reply is null or undefined, skipping:", r);
-            return null;
-          }
+      let fallbackReply: (Comment | AuthComment) | null = null;
+      let replyToRemove: string | null = null;
 
+      for (const entry of replies) {
+        if (entry === null || entry === undefined) {
+          console.error("Reply is null or undefined, skipping:", entry);
+          continue;
+        }
+
+        let parsed: Comment | AuthComment | null = null;
+        let rawValue: string | null = null;
+
+        if (typeof entry === "string") {
+          rawValue = entry;
           try {
-            if (typeof r === "string") {
-              return JSON.parse(r) as Comment | AuthComment;
-            } else if (typeof r === "object") {
-              return r as Comment | AuthComment; // Já é um objeto, não precisa de parse
-            } else {
-              console.error(
-                "Reply is neither a string nor an object, skipping:",
-                r
-              );
-              return null;
-            }
+            parsed = JSON.parse(entry) as Comment | AuthComment;
           } catch (parseError) {
             console.error("Invalid JSON in Redis reply:", {
-              reply: r,
+              reply: entry,
               error: (parseError as Error).message,
             });
-            return null;
+            continue;
           }
-        })
-        .filter((reply): reply is Comment | AuthComment => reply !== null);
+        } else if (typeof entry === "object") {
+          parsed = entry as Comment | AuthComment;
+          try {
+            rawValue = JSON.stringify(entry);
+          } catch (stringifyError) {
+            console.error("Unable to stringify Redis reply:", {
+              reply: entry,
+              error: (stringifyError as Error).message,
+            });
+          }
+        } else {
+          console.error(
+            "Reply is neither a string nor an object, skipping:",
+            entry
+          );
+          continue;
+        }
 
-      const reply = parsedReplies.find((r) => r._id.toString() === commentId);
+        if (!parsed) {
+          continue;
+        }
 
-      if (!reply) {
+        const parsedId =
+          typeof parsed._id === "string"
+            ? parsed._id
+            : parsed._id && typeof parsed._id === "object" && "toString" in parsed._id
+            ? (parsed._id as { toString: () => string }).toString()
+            : null;
+
+        if (parsedId === commentId) {
+          fallbackReply = parsed;
+          replyToRemove = rawValue ?? JSON.stringify(parsed);
+          break;
+        }
+      }
+
+      if (!fallbackReply || !replyToRemove) {
         return NextResponse.json({ error: "Reply not found" }, { status: 404 });
       }
 
-      comment = reply;
-      const isAuthor = "userId" in comment && comment.userId === userId;
+      const isAuthor = "userId" in fallbackReply && fallbackReply.userId === userId;
       if (!isAdmin && !isAuthor) {
         return NextResponse.json({ error: "Not Authorized" }, { status: 403 });
       }
 
-      // Remover a resposta do Redis
-      // Precisamos serializar o reply de volta para string se necessário
-      const replyToRemove =
-        typeof replies[replies.indexOf(reply)] === "string"
-          ? JSON.stringify(reply)
-          : reply;
       await redis.zrem(replyKey, replyToRemove);
-    } else {
-      // Buscar o comentário no MongoDB
-      comment = await authCommentsCollection.findOne({
-        _id: new ObjectId(commentId),
-      });
-      collection = authCommentsCollection;
 
-      if (!comment) {
-        comment = await commentsCollection.findOne({
-          _id: new ObjectId(commentId),
-        });
-        collection = commentsCollection;
-      }
-
-      if (!comment) {
-        return NextResponse.json({ error: "Comment not found" }, { status: 404 });
-      }
-
-      if (comment.postId !== postId) {
-        return NextResponse.json(
-          { error: "Comment does not belong to the specified post" },
-          { status: 403 }
-        );
-      }
-
-      const isAuthor = "userId" in comment && comment.userId === userId;
-      console.log("Permission check:", {
-        isAdmin,
-        isAuthor,
-        commentUserId: comment.userId,
-      });
-      if (!isAdmin && !isAuthor) {
-        return NextResponse.json({ error: "Not Authorized" }, { status: 403 });
-      }
-
-      // Excluir o comentário do MongoDB e suas respostas do Redis
-      await collection.deleteOne({ _id: new ObjectId(commentId) });
-      const replyKey = `${postId}:${commentId}:replies`;
-      await redis.del(replyKey);
+      return NextResponse.json(
+        { message: "Comment deleted successfully", commentId },
+        { status: 200 }
+      );
     }
+
+    let comment;
+    let collection;
+
+    // Buscar o comentário no MongoDB
+    const commentFilter = {
+      _id: new ObjectId(commentId),
+      postId,
+    };
+
+    comment = await authCommentsCollection.findOne(commentFilter);
+    collection = authCommentsCollection;
+
+    if (!comment) {
+      comment = await commentsCollection.findOne(commentFilter);
+      collection = commentsCollection;
+    }
+
+    if (!comment) {
+      return NextResponse.json({ error: "Comment not found" }, { status: 404 });
+    }
+
+    if (comment.postId !== postId) {
+      return NextResponse.json(
+        { error: "Comment does not belong to the specified post" },
+        { status: 403 }
+      );
+    }
+
+    const isAuthor = "userId" in comment && comment.userId === userId;
+    console.log("Permission check:", {
+      isAdmin,
+      isAuthor,
+      commentUserId: comment.userId,
+    });
+    if (!isAdmin && !isAuthor) {
+      return NextResponse.json({ error: "Not Authorized" }, { status: 403 });
+    }
+
+    // Excluir o comentário do MongoDB e suas respostas do Redis
+    await collection.deleteOne(commentFilter);
+    const replyKey = `${postId}:${commentId}:replies`;
+    await redis.del(replyKey);
 
     return NextResponse.json(
       { message: "Comment deleted successfully", commentId },
