@@ -36,7 +36,7 @@ const ReplyForm: React.FC<ReplyFormProps> = ({
         event.preventDefault();
         onSubmit(commentId, draft);
       }}
-      className="mt-3 space-y-2 rounded-xl border border-zinc-200 bg-white p-3 shadow-sm text-sm dark:border-zinc-700 dark:bg-zinc-900/70"
+      className="mt-4 space-y-3 text-sm"
     >
       {requiresName && (
         <input
@@ -49,7 +49,7 @@ const ReplyForm: React.FC<ReplyFormProps> = ({
               nome: event.target.value,
             })
           }
-          className="w-full rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm text-zinc-800 shadow-inner outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-700"
+          className="w-full rounded-md border border-zinc-300/70 bg-white/80 px-3 py-2 text-sm text-zinc-800 outline-none transition focus:border-purple-400 focus:ring-2 focus:ring-purple-400/30 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-100 dark:focus:border-purple-300"
           disabled={isSending}
         />
       )}
@@ -62,10 +62,10 @@ const ReplyForm: React.FC<ReplyFormProps> = ({
             comentario: event.target.value,
           })
         }
-        className="h-20 sm:h-24 w-full resize-none rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm text-zinc-800 shadow-inner outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-700 whitespace-pre-wrap break-words"
+        className="h-20 sm:h-24 w-full resize-none rounded-md border border-zinc-300/70 bg-white/80 px-3 py-2 text-sm text-zinc-800 outline-none transition focus:border-purple-400 focus:ring-2 focus:ring-purple-400/30 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-100 dark:focus:border-purple-300 whitespace-pre-wrap break-words"
         disabled={isSending}
       />
-      <div className="flex flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-2 text-xs text-zinc-500 dark:text-zinc-400 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-1">
           {errorMessage && (
             <span className="text-xs font-medium text-red-400">{errorMessage}</span>
@@ -80,18 +80,18 @@ const ReplyForm: React.FC<ReplyFormProps> = ({
             {lengthState.message}
           </span>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-3 text-sm">
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-full border border-zinc-300 px-4 py-1 text-xs font-medium text-zinc-700 transition hover:border-zinc-400 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-200"
+            className="px-2 py-1 text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 dark:text-zinc-300 dark:hover:text-zinc-100"
             disabled={isSending}
           >
             Cancelar
           </button>
           <button
             type="submit"
-            className="inline-flex items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 py-1 text-xs font-medium text-zinc-700 transition-colors hover:border-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700"
+            className="inline-flex items-center gap-1 rounded-md bg-purple-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-60 dark:focus-visible:ring-offset-zinc-950"
             disabled={isSending || lengthState.isOverLimit}
           >
             {isSending ? "Enviando..." : "Responder"}
