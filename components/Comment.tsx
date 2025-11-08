@@ -11,6 +11,7 @@ import {
 } from "@components/comments/lengthUtils";
 
 import CommentThread from "./comments/CommentThread";
+import ThreadPanel from "./comments/ThreadPanel";
 import { CommentDraft, CommentEntity, SubmissionStatus } from "./comments/types";
 import {
   buildCommentLookup,
@@ -49,6 +50,8 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
   const [replyStatuses, setReplyStatuses] = useState<Record<string, SubmissionStatus>>({});
   const [replyErrors, setReplyErrors] = useState<Record<string, string | null>>({});
   const [isClient, setIsClient] = useState(false);
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+  const [isThreadPanelOpen, setIsThreadPanelOpen] = useState(false);
 
   const pendingRequestRef = useRef<AbortController | null>(null);
   const replyRequestRefs = useRef<Record<string, AbortController | null>>({});
@@ -115,6 +118,13 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
   }, [submissionStatus]);
 
   const commentLookup = useMemo(() => buildCommentLookup(comments), [comments]);
+  const commentById = useMemo(() => {
+    const map = new Map<string, CommentEntity>();
+    comments.forEach((comment) => {
+      map.set(comment._id, comment);
+    });
+    return map;
+  }, [comments]);
   const replyCounts = useMemo(
     () => countThreadReplies(commentLookup),
     [commentLookup]
@@ -478,10 +488,48 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
     [postId, removeBranch]
   );
 
-  const handleOpenThread = useCallback((_commentId: string) => {
-    // Thread visualization is handled elsewhere. This function ensures
-    // the component API remains stable when the thread viewer is introduced.
+  const getReplyDraftFor = useCallback(
+    (commentId: string) =>
+      replyDrafts[commentId] ?? { nome: commentDraft.nome, comentario: "" },
+    [commentDraft.nome, replyDrafts]
+  );
+
+  const getReplyStatusFor = useCallback(
+    (commentId: string) => replyStatuses[commentId] ?? "idle",
+    [replyStatuses]
+  );
+
+  const getReplyErrorFor = useCallback(
+    (commentId: string) => replyErrors[commentId] ?? null,
+    [replyErrors]
+  );
+
+  const isReplyingTo = useCallback(
+    (commentId: string) => activeReplyId === commentId,
+    [activeReplyId]
+  );
+
+  const handleOpenThread = useCallback(
+    (commentId: string) => {
+      ensureReplyDraft(commentId);
+      setActiveThreadId(commentId);
+      setIsThreadPanelOpen(true);
+    },
+    [ensureReplyDraft]
+  );
+
+  const handleCloseThread = useCallback(() => {
+    setIsThreadPanelOpen(false);
+    setActiveThreadId(null);
   }, []);
+
+  useEffect(() => {
+    if (!activeThreadId) return;
+    if (!commentById.has(activeThreadId)) {
+      setIsThreadPanelOpen(false);
+      setActiveThreadId(null);
+    }
+  }, [activeThreadId, commentById]);
 
   return (
   <section className="space-y-4" aria-label="Seção de comentários">
@@ -568,10 +616,10 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
             onReplyCancel={handleReplyCancel}
             onReplySubmit={handleReplySubmit}
             onReplyDraftChange={handleReplyDraftChange}
-            getReplyDraft={(commentId) => replyDrafts[commentId] ?? { nome: commentDraft.nome, comentario: "" }}
-            getReplyStatus={(commentId) => replyStatuses[commentId] ?? "idle"}
-            getReplyError={(commentId) => replyErrors[commentId] ?? null}
-            isReplying={(commentId) => activeReplyId === commentId}
+            getReplyDraft={getReplyDraftFor}
+            getReplyStatus={getReplyStatusFor}
+            getReplyError={getReplyErrorFor}
+            isReplying={isReplyingTo}
             canDelete={canDeleteComment}
             onDelete={handleDelete}
             requiresName={!userId}
@@ -584,6 +632,27 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
           )}
         </div>
       </div>
+      {activeThreadId && isThreadPanelOpen && (
+        <ThreadPanel
+          rootCommentId={activeThreadId}
+          lookup={commentLookup}
+          replyCounts={replyCounts}
+          commentById={commentById}
+          onClose={handleCloseThread}
+          onReplyRequest={handleReplyRequest}
+          onReplyCancel={handleReplyCancel}
+          onReplySubmit={handleReplySubmit}
+          onReplyDraftChange={handleReplyDraftChange}
+          getReplyDraft={getReplyDraftFor}
+          getReplyStatus={getReplyStatusFor}
+          getReplyError={getReplyErrorFor}
+          isReplying={isReplyingTo}
+          canDelete={canDeleteComment}
+          onDelete={handleDelete}
+          requiresName={!userId}
+          coAuthorUserId={coAuthorUserId}
+        />
+      )}
     </section>
   );
 };
