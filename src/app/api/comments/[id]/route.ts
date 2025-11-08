@@ -130,7 +130,7 @@ export async function GET(
           ? rawId.toString()
           : randomUUID();
 
-      const rawParent =
+      const rawParent: unknown =
         comment.parentId !== undefined && comment.parentId !== null
           ? comment.parentId
           : fallbackParentId;
