@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 
 import CommentItem from "./CommentItem";
 import {
@@ -9,8 +9,8 @@ import {
 } from "./types";
 
 type CommentThreadProps = {
-  parentId: string | null;
   lookup: CommentLookup;
+  replyCounts: Map<string, number>;
   onReplyRequest: (commentId: string) => void;
   onReplyCancel: (commentId: string) => void;
   onReplySubmit: (commentId: string, draft: CommentDraft) => void;
@@ -22,12 +22,13 @@ type CommentThreadProps = {
   canDelete: (comment: CommentEntity) => boolean;
   onDelete: (comment: CommentEntity) => void;
   requiresName: boolean;
+  onOpenThread: (commentId: string) => void;
   coAuthorUserId?: string;
 };
 
 const CommentThread: React.FC<CommentThreadProps> = ({
-  parentId,
   lookup,
+  replyCounts,
   onReplyRequest,
   onReplyCancel,
   onReplySubmit,
@@ -39,20 +40,23 @@ const CommentThread: React.FC<CommentThreadProps> = ({
   canDelete,
   onDelete,
   requiresName,
+  onOpenThread,
   coAuthorUserId,
 }) => {
-  const siblings = lookup.get(parentId ?? null) ?? [];
+  const topLevelComments = lookup.get(null) ?? [];
 
-  if (siblings.length === 0) {
+  if (topLevelComments.length === 0) {
     return null;
   }
 
   return (
-    <div className={parentId ? "space-y-3" : "space-y-4"}>
-      {siblings.map((comment) => (
+    <div className="space-y-4">
+      {topLevelComments.map((comment) => (
         <CommentItem
           key={comment._id}
           comment={comment}
+          replyCount={replyCounts.get(comment._id) ?? 0}
+          onOpenThread={() => onOpenThread(comment._id)}
           onReplyRequest={() => onReplyRequest(comment._id)}
           onReplyCancel={() => onReplyCancel(comment._id)}
           onReplySubmit={(draft) => onReplySubmit(comment._id, draft)}
@@ -65,28 +69,10 @@ const CommentThread: React.FC<CommentThreadProps> = ({
           onDelete={() => onDelete(comment)}
           requiresName={requiresName}
           coAuthorUserId={coAuthorUserId}
-        >
-          <CommentThread
-            parentId={comment._id}
-            lookup={lookup}
-            onReplyRequest={onReplyRequest}
-            onReplyCancel={onReplyCancel}
-            onReplySubmit={onReplySubmit}
-            onReplyDraftChange={onReplyDraftChange}
-            getReplyDraft={getReplyDraft}
-            getReplyStatus={getReplyStatus}
-            getReplyError={getReplyError}
-            isReplying={isReplying}
-            canDelete={canDelete}
-            onDelete={onDelete}
-            requiresName={requiresName}
-            coAuthorUserId={coAuthorUserId}
-          />
-        </CommentItem>
+        />
       ))}
     </div>
   );
 };
 
 export default CommentThread;
-

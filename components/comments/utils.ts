@@ -179,3 +179,27 @@ export const extractDisplayName = (comment: CommentEntity): string => {
 
   return comment.nome || "Anonymous";
 };
+
+export const countThreadReplies = (lookup: CommentLookup): Map<string, number> => {
+  const counts = new Map<string, number>();
+
+  const visit = (comment: CommentEntity): number => {
+    const children = lookup.get(comment._id) ?? [];
+    let total = 0;
+    children.forEach((child) => {
+      total += 1 + visit(child);
+    });
+    counts.set(comment._id, total);
+    return total;
+  };
+
+  lookup.forEach((bucket) => {
+    bucket.forEach((comment) => {
+      if (!counts.has(comment._id)) {
+        visit(comment);
+      }
+    });
+  });
+
+  return counts;
+};

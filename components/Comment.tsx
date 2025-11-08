@@ -14,6 +14,7 @@ import CommentThread from "./comments/CommentThread";
 import { CommentDraft, CommentEntity, SubmissionStatus } from "./comments/types";
 import {
   buildCommentLookup,
+  countThreadReplies,
   flattenServerComments,
   normalizeServerComment,
   sanitizeCommentHtml,
@@ -114,6 +115,10 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
   }, [submissionStatus]);
 
   const commentLookup = useMemo(() => buildCommentLookup(comments), [comments]);
+  const replyCounts = useMemo(
+    () => countThreadReplies(commentLookup),
+    [commentLookup]
+  );
   const totalComments = comments.length;
 
   const commentLength = useCommentLength(
@@ -473,6 +478,11 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
     [postId, removeBranch]
   );
 
+  const handleOpenThread = useCallback((_commentId: string) => {
+    // Thread visualization is handled elsewhere. This function ensures
+    // the component API remains stable when the thread viewer is introduced.
+  }, []);
+
   return (
   <section className="space-y-4" aria-label="Seção de comentários">
       <div className="mx-auto w-full">
@@ -552,8 +562,8 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
 
         <div className="mt-4 space-y-4">
           <CommentThread
-            parentId={null}
             lookup={commentLookup}
+            replyCounts={replyCounts}
             onReplyRequest={handleReplyRequest}
             onReplyCancel={handleReplyCancel}
             onReplySubmit={handleReplySubmit}
@@ -565,6 +575,7 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
             canDelete={canDeleteComment}
             onDelete={handleDelete}
             requiresName={!userId}
+            onOpenThread={handleOpenThread}
             coAuthorUserId={coAuthorUserId}
           />
 

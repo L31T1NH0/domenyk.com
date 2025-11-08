@@ -18,6 +18,8 @@ import {
 
 type CommentItemProps = {
   comment: CommentEntity;
+  replyCount: number;
+  onOpenThread: () => void;
   onReplyRequest: () => void;
   onReplyCancel: () => void;
   onReplySubmit: (draft: CommentDraft) => void;
@@ -29,12 +31,13 @@ type CommentItemProps = {
   canDelete: boolean;
   onDelete: () => void;
   requiresName: boolean;
-  children?: React.ReactNode;
   coAuthorUserId?: string;
 };
 
 const CommentItem: React.FC<CommentItemProps> = ({
   comment,
+  replyCount,
+  onOpenThread,
   onReplyRequest,
   onReplyCancel,
   onReplySubmit,
@@ -46,7 +49,6 @@ const CommentItem: React.FC<CommentItemProps> = ({
   canDelete,
   onDelete,
   requiresName,
-  children,
   coAuthorUserId,
 }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -136,6 +138,15 @@ const CommentItem: React.FC<CommentItemProps> = ({
             >
               Responder
             </button>
+            {replyCount > 0 && (
+              <button
+                type="button"
+                onClick={onOpenThread}
+                className="inline-flex items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 py-1 text-sm font-medium text-zinc-700 transition-colors hover:border-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700"
+              >
+                Ver thread ({replyCount})
+              </button>
+            )}
             {canDelete && (
               <>
                 <button
@@ -201,10 +212,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
               errorMessage={replyError}
             />
           )}
-
-          {children && <div className="space-y-3 sm:space-y-4 border-l border-zinc-200 dark:border-zinc-700 pl-3 sm:pl-4">{children}</div>}
         </div>
-  </div>
+      </div>
     </article>
   );
 };
