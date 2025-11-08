@@ -19,7 +19,7 @@ import {
 type CommentItemProps = {
   comment: CommentEntity;
   replyCount: number;
-  onOpenThread: () => void;
+  onOpenThread?: () => void;
   onReplyRequest: () => void;
   onReplyCancel: () => void;
   onReplySubmit: (draft: CommentDraft) => void;
@@ -32,6 +32,8 @@ type CommentItemProps = {
   onDelete: () => void;
   requiresName: boolean;
   coAuthorUserId?: string;
+  showThreadButton?: boolean;
+  replyContextLabel?: string | null;
 };
 
 const CommentItem: React.FC<CommentItemProps> = ({
@@ -50,6 +52,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
   onDelete,
   requiresName,
   coAuthorUserId,
+  showThreadButton = true,
+  replyContextLabel,
 }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   useEffect(() => {
@@ -83,6 +87,11 @@ const CommentItem: React.FC<CommentItemProps> = ({
           className="h-8 w-8 max-sm:h-6 max-sm:w-6 icon"
         />
         <div className="flex-1 min-w-0 space-y-3">
+          {replyContextLabel && (
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-purple-600 dark:text-purple-300">
+              {replyContextLabel}
+            </span>
+          )}
           <div className="flex flex-wrap items-center gap-3 text-sm">
             <span className="font-semibold text-zinc-800 dark:text-white flex items-center gap-2">
               {displayName}
@@ -138,7 +147,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
             >
               Responder
             </button>
-            {replyCount > 0 && (
+            {showThreadButton && replyCount > 0 && onOpenThread && (
               <button
                 type="button"
                 onClick={onOpenThread}
