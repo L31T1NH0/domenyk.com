@@ -89,6 +89,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
         <div className="flex-1 min-w-0 space-y-3">
           {replyContextLabel && (
             <span className="inline-flex items-center gap-1 text-xs font-medium text-purple-600/90 dark:text-purple-300">
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-purple-600 dark:text-purple-300">
               {replyContextLabel}
             </span>
           )}

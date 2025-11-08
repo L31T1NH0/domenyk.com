@@ -107,7 +107,7 @@ const ThreadPanel: React.FC<ThreadPanelProps> = ({
       />
 
       <aside
-        className="relative z-10 w-full max-w-full rounded-t-3xl bg-white shadow-lg dark:bg-zinc-950 md:ml-auto md:h-full md:w-[420px] md:max-w-[420px] md:rounded-none md:shadow-xl"
+        className="relative z-10 w-full max-w-full rounded-t-3xl border border-zinc-200 bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-950 md:ml-auto md:h-full md:w-[420px] md:max-w-[420px] md:rounded-none md:border-l md:border-t-0"
         role="dialog"
         aria-modal="true"
         aria-labelledby="comment-thread-panel-title"
