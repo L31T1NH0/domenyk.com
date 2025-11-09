@@ -22,6 +22,7 @@ type HomeClientProps = {
   isAdmin: boolean;
   page: number;
   hasNext: boolean;
+  total?: number;
 };
 
 const SORT_OPTIONS = [
@@ -30,13 +31,15 @@ const SORT_OPTIONS = [
   { label: "Views (menor a maior)", value: { sort: "views" as const, order: "asc" as const } },
   { label: "Views (maior a menor)", value: { sort: "views" as const, order: "desc" as const } },
 ];
-export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClientProps) {
+export default function HomeClient({ posts, isAdmin, page, hasNext, total }: HomeClientProps) {
   const [error, setError] = useState<string | null>(null);
   const [postToDelete, setPostToDelete] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
+
+  const totalCount = typeof total === "number" ? total : posts.length;
 
   const query = sp.get("query") ?? "";
   const sort = (sp.get("sort") as "date" | "views" | undefined) ?? undefined;
@@ -128,9 +131,12 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
 
   return (
     <section className="flex-1 gap-6">
-      <div className="flex items-center flex-wrap mb-6 gap-4">
-        <h1 className="font-bold text-2xl">Blog</h1>
-        <div className="ml-2 sm:ml-4">
+      <div className="mb-5 flex flex-col gap-2 sm:mb-6 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+        <h1 className="flex items-center gap-2 text-2xl font-bold">
+          Posts
+          <span>({totalCount})</span>
+        </h1>
+        <div className="w-full sm:w-auto">
           <SearchBar
             onSearch={onSearch}
             initialQuery={query}
