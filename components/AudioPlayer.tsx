@@ -64,6 +64,7 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
         className="hidden"
+        preload="metadata"
       />
 
       {/* Botão de play/pause */}
