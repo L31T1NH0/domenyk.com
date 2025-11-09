@@ -22,7 +22,7 @@ export function BackHome() {
       {/* Desktop: fixo, fora do container */}
       <Link
         href="/"
-        className="hidden md:flex absolute left-0 top-1/2 -translate-x-full -translate-y-1/2 -ml-4 z-40 items-center justify-center p-1.5 rounded-full text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors transition-transform duration-150 hover:scale-110"
+        className="hidden md:flex fixed left-[calc(50%-18rem)] top-1/2 -translate-x-full -translate-y-1/2 -ml-4 z-40 items-center justify-center p-1.5 rounded-full text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors transition-transform duration-150 hover:scale-110"
         aria-label="Voltar para a página inicial"
         title="Voltar para a página inicial"
       >
