@@ -54,8 +54,8 @@ export default function SearchBar({ onSearch, initialQuery = "", rightSlot }: Se
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Pesquisar posts"
-          aria-label="Pesquisar posts"
+          placeholder="Pesquisar"
+          aria-label="Pesquisar"
           className="form-input-plain flex-1 min-w-0 text-sm placeholder-zinc-500 dark:placeholder-zinc-300"
         />
         {rightSlot && (
