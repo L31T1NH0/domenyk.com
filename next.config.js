@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+
+  // Configurações de imagens (mantidas)
   images: {
     remotePatterns: [
       {
@@ -19,6 +21,16 @@ const nextConfig = {
         pathname: '/**',
       },
     ],
+  },
+
+  // Habilita Turbopack de forma explícita
+  turbopack: {
+    // Exemplo: se quiser definir aliases customizados
+    resolveAlias: {
+      '@': './src',
+    },
+    // Permite transpilar libs externas (se necessário)
+    transpilePackages: ['@clerk/nextjs'],
   },
 };
 

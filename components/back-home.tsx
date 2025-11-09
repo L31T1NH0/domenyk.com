@@ -7,7 +7,7 @@ export function BackHome() {
   return (
     <>
       {/* Mobile: inline */}
-      <div className="md:hidden my-6 mx-0">
+      <div className="md:hidden mt-4 mx-0">
         <Link
           href="/"
           className="inline-flex w-fit h-fit items-center gap-2 py-1 text-zinc-600 hover:text-zinc-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:text-zinc-300 dark:hover:text-zinc-100 mx-0"

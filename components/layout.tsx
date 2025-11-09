@@ -13,8 +13,10 @@ export function Layout({ home = false, children }: LayoutProps) {
   return (
     <div className="max-w-xl flex flex-col mx-auto px-4 mb-4" data-layout-container="true">
       <div className="flex justify-between items-center py-1">
-        <ThemeSwitcher />
-        <div className="sticky top-3 z-40">
+        <div className="flex items-center h-8">
+          <ThemeSwitcher />
+        </div>
+        <div className="flex items-center h-8 z-40">
           <SettingsMenu />
         </div>
       </div>
