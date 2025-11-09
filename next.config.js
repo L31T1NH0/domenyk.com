@@ -29,9 +29,10 @@ const nextConfig = {
     resolveAlias: {
       '@': './src',
     },
-    // Permite transpilar libs externas (se necessário)
-    transpilePackages: ['@clerk/nextjs'],
   },
+
+  // 'transpilePackages' deve ficar na raiz do config
+  transpilePackages: ['@clerk/nextjs'],
 };
 
 module.exports = nextConfig;
