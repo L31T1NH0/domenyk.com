@@ -11,26 +11,16 @@ type LayoutProps = {
 
 export function Layout({ home = false, children }: LayoutProps) {
   return (
-    <div className="relative" data-layout-container="true">
-      {/* Botões flutuantes: seguem o usuário ao rolar */}
-      <div className="fixed top-3 left-3 z-40 pointer-events-none">
-        <div className="pointer-events-auto">
+    <div className="max-w-xl flex flex-col mx-auto px-4 mb-4" data-layout-container="true">
+      <div className="flex justify-between items-center py-1">
+        <ThemeSwitcher />
+        <div className="sticky top-3 z-40">
           <SettingsMenu />
         </div>
       </div>
-      <div className="fixed top-3 right-3 z-40 pointer-events-none">
-        <div className="pointer-events-auto">
-          <ThemeSwitcher />
-        </div>
-      </div>
-
-      {/* Conteúdo principal centralizado */}
-      <div className="max-w-xl flex flex-col mx-auto px-4 mb-4">
-        <main className={`${home ? "home" : ""} relative flex flex-col flex-1 pt-10`}>
-          {children}
-        </main>
-      </div>
+      <main className={`${home ? "home" : ""} relative flex flex-col flex-1`}>
+        {children}
+      </main>
     </div>
   );
 }
-
