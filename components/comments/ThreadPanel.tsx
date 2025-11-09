@@ -107,12 +107,12 @@ const ThreadPanel: React.FC<ThreadPanelProps> = ({
       />
 
       <aside
-        className="relative z-10 w-full max-w-full rounded-t-3xl border border-zinc-200 bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-950 md:ml-auto md:h-full md:w-[420px] md:max-w-[420px] md:rounded-none md:border-l md:border-t-0"
+        className="card-surface relative z-10 w-full max-w-full rounded-t-3xl shadow-lg dark:bg-zinc-950/95 md:ml-auto md:h-full md:w-[420px] md:max-w-[420px] md:rounded-none md:border-l md:border-t-0"
         role="dialog"
         aria-modal="true"
         aria-labelledby="comment-thread-panel-title"
       >
-        <header className="flex items-center justify-between gap-4 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
+        <header className="flex items-center justify-between gap-4 border-b border-zinc-200/70 px-4 py-3 dark:border-zinc-800/70">
           <div>
             <h2
               id="comment-thread-panel-title"

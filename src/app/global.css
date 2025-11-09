@@ -2,30 +2,20 @@
 @import "tailwindcss";
 
 @font-face {
-  font-family: 'PolySans';
-  src: url(./PolySans-Slim.woff2) format('woff2');
+  font-family: "PolySans";
+  src: url(./PolySans-Slim.woff2) format("woff2");
   font-weight: normal;
   font-style: normal;
 }
 
-/* Estilo inicial do body (modo escuro por padrão) */
 body {
-  font-family: 'PolySans';
-  background-color: #040404; /* Escuro por padrão */
-  color: #f1f1f1; /* Texto claro por padrão */
-  transition: background-color 0.3s, color 0.3s;
+  font-family: "PolySans";
 }
 
-.light-mode {
-  background-color: #f4f4f4;
-  color: #040404;
-  transition: background-color 0.1s, color 0.1s;
-}
-
-.dark-mode {
-  background-color: #040404;
-  color: #f1f1f1;
-  transition: background-color 0.1s, color 0.1s;
+@layer base {
+  body {
+    @apply bg-zinc-100 text-zinc-900 transition-colors duration-300 dark:bg-zinc-950 dark:text-zinc-100;
+  }
 }
 
 /* Estilo do scrollbar */
@@ -45,6 +35,41 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
+}
+
+@layer components {
+  .card-surface,
+  .card-surface-interactive {
+    @apply rounded-xl border border-zinc-200/80 bg-white/80 text-zinc-800 shadow-sm transition-colors duration-200 supports-[backdrop-filter]:backdrop-blur-md dark:border-zinc-700/80 dark:bg-zinc-900/60 dark:text-zinc-100;
+  }
+
+  .card-surface-interactive {
+    @apply focus-within:border-purple-400 focus-within:ring-2 focus-within:ring-purple-400/30 focus-within:ring-offset-0;
+  }
+
+  .form-input {
+    @apply w-full rounded-md border border-zinc-300/70 bg-white/80 px-3 py-2 text-sm text-zinc-800 outline-none transition focus:border-purple-400 focus:ring-2 focus:ring-purple-400/30 placeholder:text-zinc-500 dark:border-zinc-700/70 dark:bg-zinc-900/40 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-purple-300;
+  }
+
+  .form-textarea {
+    @apply w-full rounded-md border border-zinc-300/70 bg-white/80 px-3 py-2 text-sm text-zinc-800 outline-none transition focus:border-purple-400 focus:ring-2 focus:ring-purple-400/30 placeholder:text-zinc-500 dark:border-zinc-700/70 dark:bg-zinc-900/40 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-purple-300 h-24 resize-none whitespace-pre-wrap break-words;
+  }
+
+  .form-input-plain {
+    @apply w-full rounded-md border border-transparent bg-transparent px-0 py-0 text-sm text-zinc-800 outline-none transition focus:border-transparent focus:ring-0 placeholder:text-zinc-500 dark:border-transparent dark:bg-transparent dark:text-zinc-100 dark:placeholder:text-zinc-400;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-transparent bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-60 dark:focus-visible:ring-offset-zinc-950;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/40 dark:text-zinc-300 dark:hover:text-zinc-100;
+  }
+
+  .btn-rounded {
+    @apply inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-300/80 bg-white/80 text-zinc-700 transition-colors hover:border-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/40 disabled:pointer-events-none disabled:opacity-50 dark:border-zinc-700/80 dark:bg-zinc-900/60 dark:text-zinc-200;
+  }
 }
 
 a {
@@ -92,5 +117,4 @@ h6 {
 h1 {
   @apply sm:text-sm md:text-lg;
 }
-
 

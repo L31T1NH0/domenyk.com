@@ -137,19 +137,26 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
             rightSlot={
               <div className="relative" ref={sortRef}>
                 <button
-                  type="button" aria-label="Ordenar"
+                  type="button"
+                  aria-label="Ordenar"
                   aria-haspopup="listbox"
                   aria-expanded={openSort}
                   onClick={() => setOpenSort((v) => !v)}
-                  className="inline-flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-zinc-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500/50"
+                  className={`card-surface inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-zinc-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/40 dark:text-zinc-200 ${
+                    openSort ? "ring-2 ring-purple-400/40" : ""
+                  }`}
                 >
-                  <span className="hidden sm:inline whitespace-nowrap">{currentSortLabel}</span>
-                  <ChevronDownIcon className={`h-4 w-4 transition-transform duration-200 ${openSort ? "rotate-180" : "rotate-0"}`} />
+                  <span className="hidden whitespace-nowrap sm:inline">{currentSortLabel}</span>
+                  <ChevronDownIcon
+                    className={`h-4 w-4 text-zinc-500 transition-transform duration-200 dark:text-zinc-300 ${
+                      openSort ? "rotate-180" : "rotate-0"
+                    }`}
+                  />
                 </button>
                 {openSort && (
                   <div
                     role="listbox"
-                    className="absolute right-0 z-20 mt-2 w-64 rounded-lg border border-zinc-600 bg-zinc-900 p-2 max-h-[200px] overflow-auto shadow-lg"
+                    className="card-surface absolute right-0 z-20 mt-2 w-64 max-h-[200px] overflow-auto p-2 shadow-lg"
                   >
                     {SORT_OPTIONS.map((opt) => {
                       const key = `${opt.value.sort ?? ""}:${opt.value.order ?? ""}`;
@@ -161,8 +168,10 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
                           role="option"
                           aria-selected={selected}
                           onClick={() => onSelectSort(key)}
-                          className={`w-full text-left px-4 py-2 rounded-md text-sm transition-colors hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500/50 ${
-                            selected ? "font-medium text-zinc-100" : "text-zinc-300"
+                          className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/40 ${
+                            selected
+                              ? "bg-purple-500/10 font-semibold text-purple-600 dark:bg-purple-500/20 dark:text-purple-200"
+                              : "text-zinc-600 hover:bg-zinc-100/70 dark:text-zinc-200 dark:hover:bg-zinc-800/60"
                           }`}
                         >
                           {opt.label}
@@ -177,9 +186,11 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
         </div>
       </div>
       {error ? (
-        <p className="text-red-500">{error}</p>
+        <div className="card-surface border-red-400/40 bg-red-100/40 p-4 text-sm text-red-600 dark:border-red-400/40 dark:bg-red-500/10 dark:text-red-200">
+          {error}
+        </div>
       ) : posts.length === 0 ? (
-        <div className="text-sm text-zinc-400 space-y-2">
+        <div className="card-surface bg-white/60 p-4 text-sm text-zinc-600 dark:bg-zinc-900/50 dark:text-zinc-300">
           <p>Nenhum post encontrado.</p>
           <p>Tente ajustar a busca ou filtros.</p>
         </div>
@@ -217,29 +228,32 @@ export default function HomeClient({ posts, isAdmin, page, hasNext }: HomeClient
       <Pagination page={page} hasNext={hasNext} pathname={pathname} searchParams={Object.fromEntries(sp.entries())} />
 
       {showDeleteModal && postToDelete && isAdmin && (
-        <div className="fixed inset-0 bg-zinc-900/90 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full border border-gray-200">
-            <h2 className="text-lg font-bold mb-4 text-gray-900">
-            Confirmar Exclusão
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/70 px-4"
+          onClick={closeDeleteModal}
+        >
+          <div
+            className="card-surface max-w-sm w-full space-y-6 p-6"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+              Confirmar Exclusão
             </h2>
-            <p className="mb-6 text-gray-700">
+            <p className="text-sm text-zinc-600 dark:text-zinc-300">
               Tem certeza que deseja apagar o post "
-              <span className="font-semibold text-gray-900">
+              <span className="font-semibold text-zinc-900 dark:text-zinc-100">
                 {posts.find((p) => p.postId === postToDelete)?.title ||
                   "Este post"}
               </span>
               "?
             </p>
-            <div className="flex justify-end gap-4">
-              <button
-                onClick={closeDeleteModal}
-                className="px-4 py-2 bg-gray-100 text-gray-800 rounded hover:bg-gray-200 border border-gray-300 transition-colors duration-200"
-              >
+            <div className="flex justify-end gap-3">
+              <button onClick={closeDeleteModal} className="btn-ghost">
                 Cancelar
               </button>
               <button
                 onClick={() => handleDeletePost(postToDelete)}
-                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 border border-red-700 transition-colors duration-200"
+                className="btn-primary bg-red-600 hover:bg-red-500 focus-visible:ring-red-500 focus-visible:ring-offset-2"
               >
                 Apagar
               </button>

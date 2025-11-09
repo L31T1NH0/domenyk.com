@@ -1,56 +1,57 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SunIcon, MoonIcon } from "@heroicons/react/20/solid";
 
-export default function ThemeSwitcher() {
-  const [darkMode, setDarkMode] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      const savedTheme = localStorage.getItem("theme");
-      if (savedTheme) {
-        return savedTheme === "dark";
-      } else {
-        // Prioriza modo escuro como padrão, mas respeita prefers-color-scheme
-        return (
-          (window.matchMedia &&
-            window.matchMedia("(prefers-color-scheme: dark)").matches) ||
-          true
-        ); // Fallback para dark mode
-      }
-    }
-    return true; // Valor padrão para SSR: modo escuro
-  });
+type Theme = "light" | "dark";
 
-  const [isMounted, setIsMounted] = useState(false); // Estado para controlar o primeiro render
+function getInitialTheme(): Theme {
+  if (typeof window === "undefined") {
+    return "dark";
+  }
+  const stored = window.localStorage.getItem("theme");
+  const resolved: Theme =
+    stored === "light" || stored === "dark"
+      ? stored
+      : window.matchMedia?.("(prefers-color-scheme: dark)")?.matches
+        ? "dark"
+        : "light";
+  document.documentElement.classList.toggle("dark", resolved === "dark");
+  return resolved;
+}
+
+export default function ThemeSwitcher() {
+  const [theme, setTheme] = useState<Theme>(() => getInitialTheme());
 
   useEffect(() => {
-    setIsMounted(true); // Marca que o componente está montado
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    window.localStorage.setItem("theme", theme);
+  }, [theme]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handler = (event: MediaQueryListEvent) => {
+      if (window.localStorage.getItem("theme")) return;
+      setTheme(event.matches ? "dark" : "light");
+    };
+    mediaQuery.addEventListener("change", handler);
+    return () => mediaQuery.removeEventListener("change", handler);
   }, []);
 
-  useEffect(() => {
-    if (isMounted && typeof window !== "undefined") {
-      if (darkMode) {
-        document.body.classList.add("dark-mode");
-        document.body.classList.remove("light-mode");
-        localStorage.setItem("theme", "dark");
-      } else {
-        document.body.classList.add("light-mode");
-        document.body.classList.remove("dark-mode");
-        localStorage.setItem("theme", "light");
-      }
-    }
-  }, [darkMode, isMounted]);
+  const isDark = theme === "dark";
 
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-  };
+  const Icon = useMemo(() => (isDark ? SunIcon : MoonIcon), [isDark]);
 
   return (
-    <button className="" onClick={toggleDarkMode}>
-      {darkMode ? (
-        <SunIcon className="svg-icon" width={24} height={24} />
-      ) : (
-        <MoonIcon className="svg-icon" width={24} height={24} />
-      )}
+    <button
+      type="button"
+      className="btn-ghost"
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      aria-pressed={isDark}
+      aria-label={isDark ? "Ativar modo claro" : "Ativar modo escuro"}
+    >
+      <Icon className="h-5 w-5" aria-hidden="true" />
+      <span className="sr-only">Alternar tema</span>
     </button>
   );
 }

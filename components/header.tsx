@@ -14,7 +14,7 @@ export function Header({ home }: HeaderProps) {
   
 
   return (
-    <header className="flex flex-col gap-4 items-center">
+    <header className="flex flex-col items-center gap-4 text-zinc-900 dark:text-zinc-100">
       {home ? (
         <>
           <Image
@@ -25,7 +25,7 @@ export function Header({ home }: HeaderProps) {
             width={148}
             alt={name}
           />
-          <strong className="text-3xl">{name}</strong>
+          <strong className="text-3xl text-inherit">{name}</strong>
         </>
       ) : (
         <>
@@ -39,7 +39,7 @@ export function Header({ home }: HeaderProps) {
               alt={name}
             />
           </Link>
-          <strong className="text-3xl">Domenyk</strong>
+          <strong className="text-3xl text-inherit">Domenyk</strong>
         </>
       )}
     </header>

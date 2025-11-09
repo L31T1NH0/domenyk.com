@@ -8,6 +8,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import AnalyticsProvider from "@components/analytics/AnalyticsProvider";
 import { getAnalyticsClientConfig } from "@lib/analytics/config";
 import { resolveAdminStatus } from "@lib/admin";
+import { cn } from "@lib/cn";
 
 type RootLayoutProps = Readonly<{
   children: ReactNode;
@@ -27,7 +28,12 @@ export default async function RootLayout({ children }: RootLayoutProps) {
   return (
     <ClerkProvider>
       <html lang="pt-BR">
-        <body className="min-h-screen bg-zinc-900 text-white">
+        <body
+          className={cn(
+            "min-h-screen bg-zinc-100 text-zinc-900 transition-colors duration-300",
+            "dark:bg-zinc-950 dark:text-zinc-100"
+          )}
+        >
           <Suspense fallback={null}>
             <AnalyticsProvider isAdmin={isAdmin} config={analyticsConfig}>
               {children}

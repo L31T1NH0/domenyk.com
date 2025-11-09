@@ -532,16 +532,16 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
   }, [activeThreadId, commentById]);
 
   return (
-  <section className="space-y-4" aria-label="Seção de comentários">
+    <section className="space-y-4" aria-label="Seção de comentários">
       <div className="mx-auto w-full">
-        <header className="flex items-center gap-2 text-xl font-semibold text-zinc-100">
-          <ChatBubbleLeftRightIcon className="h-5 w-5" />
+        <header className="flex items-center gap-2 text-xl font-semibold text-zinc-900 dark:text-zinc-100">
+          <ChatBubbleLeftRightIcon className="h-5 w-5 text-purple-500 dark:text-purple-300" />
           Comentários ({totalComments})
         </header>
 
         <form
           onSubmit={handleCommentSubmit}
-          className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/70"
+          className="card-surface-interactive space-y-3 p-3 sm:p-4"
         >
           <div className="flex flex-col gap-2">
             {!userId && (
@@ -552,7 +552,7 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
                   placeholder="Digite seu nome"
                   value={commentDraft.nome}
                   onChange={(event) => handleCommentDraftChange("nome", event.target.value)}
-                  className="w-full rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm text-zinc-800 shadow-inner outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-700"
+                  className="form-input"
                   disabled={submissionStatus === "sending"}
                 />
                 <p className="text-xs text-zinc-500">Esse nome aparecerá junto ao seu comentário.</p>
@@ -565,7 +565,7 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
               onChange={(event) =>
                 handleCommentDraftChange("comentario", event.target.value)
               }
-              className="h-20 sm:h-24 w-full resize-none rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm text-zinc-800 shadow-inner outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-700 whitespace-pre-wrap break-words"
+              className="form-textarea h-20 sm:h-24"
               disabled={submissionStatus === "sending"}
             />
           </div>
@@ -585,7 +585,7 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
               disabled={
                 submissionStatus === "sending" || commentLength.isOverLimit
               }
-              className="inline-flex items-center my-2 gap-1 rounded-full border border-zinc-300 bg-white px-3 py-1 text-sm font-medium text-zinc-700 transition-colors hover:border-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700"
+              className="btn-primary my-2"
             >
               {submissionStatus === "sending" ? "Enviando..." : "Publicar"}
             </button>
@@ -628,7 +628,7 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
           />
 
           {totalComments === 0 && (
-            <p className="rounded-2xl border border-zinc-800/80 bg-zinc-950/60 px-4 py-2 sm:px-6 sm:py-4 text-sm text-zinc-400">Nenhum comentário ainda. Seja o primeiro!</p>
+            <p className="card-surface px-4 py-3 text-sm text-zinc-600 dark:text-zinc-300">Nenhum comentário ainda. Seja o primeiro!</p>
           )}
         </div>
       </div>
