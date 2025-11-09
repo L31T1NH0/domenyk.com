@@ -121,7 +121,7 @@ export default async function HomePage({
       <section className="text-xl flex flex-col gap-2 py-4 text-primary items-center">
         <h1>Dou minhas opiniões aqui</h1>
       </section>
-      <HomeClient posts={posts} isAdmin={isAdmin} page={page} hasNext={hasNext} />
+      <HomeClient posts={posts} isAdmin={isAdmin} page={page} hasNext={hasNext} total={total} />
     </Layout>
   );
 }
