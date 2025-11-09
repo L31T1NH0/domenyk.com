@@ -52,10 +52,10 @@ const ShareButton: React.FC<ShareButtonProps> = ({ id }) => {
       <button
         onClick={share}
         aria-label="Compartilhar"
-        className="ml-0 inline-flex shrink-0 items-center gap-1 sm:gap-2 max-sm:px-2 max-sm:py-1 sm:px-3 sm:py-1.5 text-xs sm:text-sm font-medium text-cyan-600 hover:text-cyan-700 active:text-cyan-700 rounded-md sm:rounded-full border border-transparent hover:border-cyan-200/60 dark:hover:border-cyan-800/60 hover:bg-cyan-50 dark:hover:bg-cyan-950/40 transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
+        className="ml-0 inline-flex shrink-0 items-center justify-center gap-1 sm:gap-2 h-7 w-7 p-0 sm:h-auto sm:w-auto sm:px-2 sm:py-1.5 text-xs sm:text-sm font-medium text-cyan-600 hover:text-cyan-700 active:text-cyan-700 rounded-full border border-transparent hover:border-cyan-200/60 dark:hover:border-cyan-800/60 hover:bg-cyan-50 dark:hover:bg-cyan-950/40 transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
       >
         {/* Icon only on mobile */}
-        <ShareIcon className="block h-4 w-4 sm:hidden" aria-hidden="true" />
+        <ShareIcon className="block h-3 w-3 sm:hidden" aria-hidden="true" />
         {/* Text on sm and up */}
         <span className="hidden sm:inline">Compartilhar</span>
       </button>

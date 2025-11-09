@@ -44,9 +44,9 @@ export default function SearchBar({ onSearch, initialQuery = "", rightSlot }: Se
 
   return (
     <form onSubmit={handleSubmit} className="relative">
-      <div className="card-surface-interactive flex items-center gap-3 px-3 py-2 w-full max-w-xs sm:max-w-sm sm:w-auto">
+      <div className="card-surface-interactive flex items-center gap-3 px-2 py-1 w-[14rem] sm:w-[18rem]">
         <MagnifyingGlassIcon
-          className="h-5 w-5 text-zinc-500 dark:text-zinc-400"
+          className="h-4 w-4 text-zinc-500 dark:text-zinc-400"
           aria-hidden="true"
         />
         <input
@@ -56,11 +56,11 @@ export default function SearchBar({ onSearch, initialQuery = "", rightSlot }: Se
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Pesquisar"
           aria-label="Pesquisar"
-          className="form-input-plain flex-1 min-w-0 text-sm placeholder-zinc-500 dark:placeholder-zinc-300"
+          className="form-input-plain flex-1 min-w-0 text-xs placeholder-zinc-500 dark:placeholder-zinc-300"
         />
         {rightSlot && (
-          <div className="flex items-center gap-3">
-            <span className="h-5 w-px bg-zinc-200 dark:bg-zinc-700" aria-hidden />
+          <div className="ml-2 flex items-center gap-3">
+            <span className="h-4 w-px bg-zinc-200 dark:bg-zinc-700" aria-hidden />
             <div className="flex items-center text-sm text-zinc-600 dark:text-zinc-300">
               {rightSlot}
             </div>

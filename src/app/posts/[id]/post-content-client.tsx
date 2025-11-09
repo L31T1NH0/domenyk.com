@@ -266,25 +266,35 @@ export default function PostContentClient({
 
   return (
     <IsMobileContext.Provider value={isMobile}>
-      <div className="relative flex flex-col gap-6">
-        <article className="flex flex-col gap-6 mt-4">
-          <div className="flex items-center justify-between text-sm text-zinc-600 dark:text-zinc-300 border-b border-zinc-200 dark:border-zinc-700 pb-3">
-            <div className="flex items-center gap-3 flex-wrap">
-              <Date dateString={date} />
-              <span className="inline-flex items-center gap-1">
-                <span aria-hidden>|</span>
-                <ClockIcon className="h-4 w-4" aria-hidden="true" />
-                <span className="sr-only">Tempo de leitura:</span>
-                {readingTime}
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <EyeIcon className="h-4 w-4" aria-hidden="true" />
-                <span className="sr-only">Views:</span>
-                {views} views
-              </span>
-            </div>
-            <ShareButton id={postId} />
+<div className="relative flex flex-col gap-6">
+  <article className="flex flex-col gap-6 mt-4">
+    <div className="flex items-center text-sm text-zinc-600 dark:text-zinc-300 border-b border-zinc-200 dark:border-zinc-700 pb-3">
+      <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2">
+        <div className="flex items-center gap-2 min-w-0 whitespace-normal sm:whitespace-nowrap">
+          <Date dateString={date} />
+          <span aria-hidden className="mx-1 text-zinc-400">|</span>
+          <div className="inline-flex items-center gap-2 whitespace-nowrap">
+            <span className="inline-flex items-center gap-1">
+              <ClockIcon className="h-4 w-4" aria-hidden="true" />
+              <span className="sr-only">Tempo de leitura:</span>
+              {readingTime}
+            </span>
+            <span aria-hidden className="mx-1 text-zinc-400">•</span>
+            <span className="inline-flex items-center gap-1">
+              <EyeIcon className="h-4 w-4" aria-hidden="true" />
+              <span className="sr-only">Views:</span>
+              {views} views
+            </span>
           </div>
+        </div>
+
+        <span className="justify-self-end">
+          <ShareButton id={postId} />
+        </span>
+      </div>
+    </div>
+
+
 
           {audioUrl && <AudioPlayer audioUrl={audioUrl} />}
 

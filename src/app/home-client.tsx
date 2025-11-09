@@ -131,12 +131,12 @@ export default function HomeClient({ posts, isAdmin, page, hasNext, total }: Hom
 
   return (
     <section className="flex-1 gap-6">
-      <div className="mb-5 flex flex-col gap-2 sm:mb-6 sm:flex-row sm:items-center sm:gap-3">
+      <div className="mb-5 flex flex-row flex-wrap items-center gap-2 sm:mb-6 sm:gap-3">
         <h1 className="flex items-center gap-2 text-2xl font-bold">
           Posts
           <span>({totalCount})</span>
         </h1>
-        <div className="w-full max-w-xs sm:w-auto sm:max-w-none">
+        <div className="w-auto">
           <SearchBar
             onSearch={onSearch}
             initialQuery={query}
