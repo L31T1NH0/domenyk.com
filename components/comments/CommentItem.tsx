@@ -178,15 +178,22 @@ const CommentItem: React.FC<CommentItemProps> = ({
                       role="dialog"
                       aria-modal="true"
                       aria-labelledby={`delete-modal-${comment._id}`}
-                      className="z-50 mx-4 max-w-md w-full rounded-2xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-800/90 dark:bg-zinc-950"
+                      className="card-surface z-50 mx-4 w-full max-w-md space-y-4 p-5 shadow-lg"
                     >
-                      <h3 id={`delete-modal-${comment._id}`} className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">Confirmar remoção</h3>
-                      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Tem certeza que deseja remover este comentário? Esta ação não pode ser desfeita.</p>
-                      <div className="mt-3 flex justify-end gap-3">
+                      <h3
+                        id={`delete-modal-${comment._id}`}
+                        className="text-sm font-semibold text-zinc-800 dark:text-zinc-100"
+                      >
+                        Confirmar remoção
+                      </h3>
+                      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                        Tem certeza que deseja remover este comentário? Esta ação não pode ser desfeita.
+                      </p>
+                      <div className="flex justify-end gap-3">
                         <button
                           type="button"
                           onClick={() => setShowDeleteModal(false)}
-                          className="rounded-full border border-zinc-300 px-4 py-2 text-sm text-zinc-700 dark:border-zinc-700 dark:text-zinc-200"
+                          className="btn-ghost"
                         >
                           Cancelar
                         </button>
@@ -196,7 +203,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                             setShowDeleteModal(false);
                             onDelete();
                           }}
-                          className="rounded-full bg-red-600 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                          className="btn-primary bg-red-600 hover:bg-red-500 focus-visible:ring-red-500"
                         >
                           Remover
                         </button>

@@ -49,7 +49,7 @@ const ReplyForm: React.FC<ReplyFormProps> = ({
               nome: event.target.value,
             })
           }
-          className="w-full rounded-md border border-zinc-300/70 bg-white/80 px-3 py-2 text-sm text-zinc-800 outline-none transition focus:border-purple-400 focus:ring-2 focus:ring-purple-400/30 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-100 dark:focus:border-purple-300"
+          className="form-input"
           disabled={isSending}
         />
       )}
@@ -62,7 +62,7 @@ const ReplyForm: React.FC<ReplyFormProps> = ({
             comentario: event.target.value,
           })
         }
-        className="h-20 sm:h-24 w-full resize-none rounded-md border border-zinc-300/70 bg-white/80 px-3 py-2 text-sm text-zinc-800 outline-none transition focus:border-purple-400 focus:ring-2 focus:ring-purple-400/30 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-100 dark:focus:border-purple-300 whitespace-pre-wrap break-words"
+        className="form-textarea h-20 sm:h-24"
         disabled={isSending}
       />
       <div className="flex flex-col gap-2 text-xs text-zinc-500 dark:text-zinc-400 sm:flex-row sm:items-center sm:justify-between">
@@ -84,14 +84,14 @@ const ReplyForm: React.FC<ReplyFormProps> = ({
           <button
             type="button"
             onClick={onCancel}
-            className="px-2 py-1 text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 dark:text-zinc-300 dark:hover:text-zinc-100"
+            className="btn-ghost"
             disabled={isSending}
           >
             Cancelar
           </button>
           <button
             type="submit"
-            className="inline-flex items-center gap-1 rounded-md bg-purple-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-60 dark:focus-visible:ring-offset-zinc-950"
+            className="btn-primary"
             disabled={isSending || lengthState.isOverLimit}
           >
             {isSending ? "Enviando..." : "Responder"}
