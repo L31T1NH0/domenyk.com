@@ -136,7 +136,7 @@ export default function HomeClient({ posts, isAdmin, page, hasNext, total }: Hom
           Posts
           <span>({totalCount})</span>
         </h1>
-        <div className="w-full sm:w-auto">
+        <div className="w-full max-w-xs sm:w-auto sm:max-w-none">
           <SearchBar
             onSearch={onSearch}
             initialQuery={query}

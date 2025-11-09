@@ -44,7 +44,7 @@ export default function SearchBar({ onSearch, initialQuery = "", rightSlot }: Se
 
   return (
     <form onSubmit={handleSubmit} className="relative">
-      <div className="card-surface-interactive flex items-center gap-3 px-3 py-2 w-full sm:w-auto">
+      <div className="card-surface-interactive flex items-center gap-3 px-3 py-2 w-full max-w-xs sm:max-w-sm sm:w-auto">
         <MagnifyingGlassIcon
           className="h-5 w-5 text-zinc-500 dark:text-zinc-400"
           aria-hidden="true"
