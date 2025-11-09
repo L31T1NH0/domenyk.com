@@ -17,7 +17,7 @@ export function Layout({ home = false, children }: LayoutProps) {
       <ThemeSwitcher /> {/* Botão de brilho à direita */}
       <SettingsMenu /> {/* Botão de três pontos à esquerda */}
       </div>
-      <main className={`${home ? "home" : ""} flex flex-col flex-1`}>
+      <main className={`${home ? "home" : ""} relative flex flex-col flex-1`}>
         {children}
       </main>
     </div>
