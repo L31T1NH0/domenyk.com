@@ -94,34 +94,8 @@ export default async function AdminDashboard() {
         <div className="flex items-center justify-between border-b border-zinc-800 p-4">
           <h2 className="text-sm font-medium">Recentes</h2>
         </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="bg-zinc-900/40 text-zinc-400">
-              <tr>
-                <th className="px-4 py-2 font-medium" />
-                <th className="px-4 py-2 font-medium">Titulo</th>
-                <th className="px-4 py-2 font-medium">ID</th>
-                <th className="px-4 py-2 font-medium">Data</th>
-                <th className="px-4 py-2 font-medium text-right">Views</th>
-                <th className="px-4 py-2 font-medium text-right">Comentários</th>
-                <th className="px-4 py-2 font-medium">Tags</th>
-                <th className="px-4 py-2 font-medium">Categorias</th>
-                <th className="px-4 py-2 font-medium">Co-autor</th>
-                <th className="px-4 py-2 font-medium text-right">Parágrafos</th>
-                <th className="px-4 py-2 font-medium text-right">Visibilidade</th>
-              </tr>
-            </thead>
-            <tbody>
-              <RecentPostsClient initial={latest as any} />
-              {latest.length === 0 && (
-                <tr>
-                  <td colSpan={11} className="px-4 py-8 text-center text-zinc-400">
-                    Nenhum post encontrado.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+        <div className="p-4 md:p-0">
+          <RecentPostsClient initial={latest as any} />
         </div>
       </section>
     </div>
