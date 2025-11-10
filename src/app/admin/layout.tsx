@@ -1,8 +1,18 @@
+"use client";
+
 import Link from "next/link";
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
 
+const navItems = [
+  { href: "/admin", label: "Dashboard" },
+  { href: "/admin/users", label: "Usuários" },
+  { href: "/admin/editor", label: "Novo post" },
+];
+
 export default function AdminLayout({ children }: { children: ReactNode }) {
+  const [mobileOpen, setMobileOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="grid min-h-screen grid-cols-1 md:grid-cols-[260px_1fr]">
@@ -15,30 +25,16 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </div>
           <nav className="flex-1 p-3">
             <ul className="space-y-1">
-              <li>
-                <Link
-                  href="/admin"
-                  className="block rounded-md px-3 py-2 text-sm hover:bg-zinc-800/60"
-                >
-                  Dashboard
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/admin/users"
-                  className="block rounded-md px-3 py-2 text-sm hover:bg-zinc-800/60"
-                >
-                  UsuÃ¡rios
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/admin/editor"
-                  className="block rounded-md px-3 py-2 text-sm hover:bg-zinc-800/60"
-                >
-                  Novo post
-                </Link>
-              </li>
+              {navItems.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className="block rounded-md px-3 py-2 text-sm hover:bg-zinc-800/60"
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </nav>
           <div className="p-4 border-t border-zinc-800">
@@ -60,8 +56,37 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <div className="flex flex-col">
           <header className="sticky top-0 z-10 border-b border-zinc-800 bg-zinc-950/70 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/60">
             <div className="flex items-center justify-between gap-4 px-6 py-4 md:px-8">
-              <div className="md:hidden">
+              <div className="flex items-center gap-3 md:hidden">
+                <button
+                  type="button"
+                  onClick={() => setMobileOpen((open) => !open)}
+                  aria-expanded={mobileOpen}
+                  aria-controls="admin-mobile-nav"
+                  className="inline-flex items-center justify-center rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm font-medium text-zinc-100 hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 focus:ring-offset-zinc-950"
+                >
+                  <span className="sr-only">{mobileOpen ? "Fechar menu" : "Abrir menu"}</span>
+                  <svg
+                    aria-hidden="true"
+                    className="h-5 w-5"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                  >
+                    {mobileOpen ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l8 8M6 14L14 6" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h14M3 10h14M3 14h14" />
+                    )}
+                  </svg>
+                </button>
                 <Link href="/admin" className="font-semibold">Admin</Link>
+              </div>
+              <div className="hidden md:block">
+                <Link href="/admin" className="inline-flex items-center gap-2">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-zinc-100 text-zinc-900 font-bold">A</span>
+                  <span className="text-lg font-semibold tracking-tight">Admin</span>
+                </Link>
               </div>
               <div className="flex-1" />
               <div className="flex items-center gap-4">
@@ -77,6 +102,28 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 </SignedOut>
               </div>
             </div>
+            {mobileOpen && (
+              <div
+                id="admin-mobile-nav"
+                className="border-t border-b border-zinc-800 bg-zinc-900/95 px-6 py-4 md:hidden"
+              >
+                <nav>
+                  <ul className="space-y-1">
+                    {navItems.map((item) => (
+                      <li key={item.href}>
+                        <Link
+                          href={item.href}
+                          onClick={() => setMobileOpen(false)}
+                          className="block rounded-md border border-transparent px-3 py-2 text-sm hover:border-zinc-800 hover:bg-zinc-800/60"
+                        >
+                          {item.label}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </nav>
+              </div>
+            )}
           </header>
           <main className="p-6 md:p-8">{children}</main>
         </div>

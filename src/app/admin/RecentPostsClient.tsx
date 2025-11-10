@@ -224,203 +224,289 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
     }
   }
 
+  const headerCells = [
+    { key: "select", label: "", className: "md:w-12" },
+    { key: "title", label: "Título" },
+    { key: "id", label: "ID" },
+    { key: "date", label: "Data" },
+    { key: "views", label: "Views", align: "right" as const },
+    { key: "comments", label: "Comentários", align: "right" as const },
+    { key: "tags", label: "Tags" },
+    { key: "categories", label: "Categorias" },
+    { key: "coAuthor", label: "Co-autor" },
+    { key: "paragraphs", label: "Parágrafos", align: "right" as const },
+    { key: "visibility", label: "Visibilidade", align: "right" as const },
+  ];
+
+  const cellBase = "md:table-cell md:border-t md:border-zinc-800 md:px-4 md:py-2";
+  const headerCellBase = "md:table-cell md:px-4 md:py-2";
+
   return (
     <>
-      {selectedIds.length > 0 && (
-        <tr className="border-t border-zinc-800 bg-zinc-900/60">
-          <td className="px-4 py-2" colSpan={11}>
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="text-sm text-zinc-300">{selectedIds.length} selecionado(s)</div>
-              <div className="flex items-center gap-2">
+      <div className="space-y-4 text-sm md:table md:w-full md:border-separate md:space-y-0 md:[border-spacing:0]">
+        <div className="hidden md:table-header-group bg-zinc-900/40 text-zinc-400">
+          <div className="md:table-row">
+            {headerCells.map((cell) => (
+              <div
+                key={cell.key}
+                className={`${headerCellBase} font-medium ${cell.className ?? ""} ${cell.align === "right" ? "text-right" : ""}`}
+              >
+                {cell.label}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="space-y-4 md:table-row-group md:space-y-0">
+          {selectedIds.length > 0 && (
+            <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-4 md:table-row md:border-0 md:bg-zinc-900/40 md:p-0">
+              <div className={`${cellBase}`}>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="text-sm text-zinc-300">{selectedIds.length} selecionado(s)</div>
+                  <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+                    <button
+                      onClick={() => bulkAction("visibility", { hidden: false })}
+                      disabled={bulkLoading}
+                      className="inline-flex w-full items-center justify-center rounded-md border border-zinc-700 bg-zinc-100 px-3 py-2 text-xs font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-60 sm:w-auto"
+                    >
+                      Tornar visível
+                    </button>
+                    <button
+                      onClick={() => bulkAction("visibility", { hidden: true })}
+                      disabled={bulkLoading}
+                      className="inline-flex w-full items-center justify-center rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:bg-zinc-800 disabled:opacity-60 sm:w-auto"
+                    >
+                      Ocultar
+                    </button>
+                    <button
+                      onClick={() => bulkAction("delete")}
+                      disabled={bulkLoading}
+                      className="inline-flex w-full items-center justify-center rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-red-300 hover:bg-zinc-800 disabled:opacity-60 sm:w-auto"
+                    >
+                      Excluir
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-4 md:table-row md:border-0 md:bg-transparent md:p-0">
+            <div className={`${cellBase}`}>
+              <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-300">
+                <CheckboxBtn
+                  checked={allSelected}
+                  onChange={(next) => {
+                    const map: Record<string, boolean> = {};
+                    posts.forEach((row) => (map[row.postId] = next));
+                    setSelected(map);
+                  }}
+                  label="Selecionar todos"
+                />
+                <span className="text-zinc-400">Ordenar por:</span>
                 <button
-                  onClick={() => bulkAction("visibility", { hidden: false })}
-                  disabled={bulkLoading}
-                  className="rounded-md border border-zinc-700 bg-zinc-100 px-3 py-2 text-xs font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-60"
+                  onClick={() => toggleSort("views")}
+                  className={`rounded border px-3 py-2 ${sortKey === "views" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
                 >
-                  Tornar visível
+                  Views
                 </button>
                 <button
-                  onClick={() => bulkAction("visibility", { hidden: true })}
-                  disabled={bulkLoading}
-                  className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:bg-zinc-800 disabled:opacity-60"
+                  onClick={() => toggleSort("date")}
+                  className={`rounded border px-3 py-2 ${sortKey === "date" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
                 >
-                  Ocultar
+                  Data
                 </button>
                 <button
-                  onClick={() => bulkAction("delete")}
-                  disabled={bulkLoading}
-                  className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-red-300 hover:bg-zinc-800 disabled:opacity-60"
+                  onClick={() => toggleSort("status")}
+                  className={`rounded border px-3 py-2 ${sortKey === "status" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
                 >
-                  Excluir
+                  Visibilidade
+                </button>
+                <div className="ml-2 flex items-center gap-2">
+                  <span className="text-zinc-400">Ordem:</span>
+                  <button
+                    onClick={() => setSortOrder("asc")}
+                    className={`rounded border px-3 py-2 ${sortOrder === "asc" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
+                    title="Crescente"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    onClick={() => setSortOrder("desc")}
+                    className={`rounded border px-3 py-2 ${sortOrder === "desc" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
+                    title="Decrescente"
+                  >
+                    ↓
+                  </button>
+                </div>
+                <span className="mx-2 hidden h-4 w-px bg-zinc-800 md:block" />
+                <button
+                  onClick={() => {
+                    setModalMode("all");
+                    setModalPostId(null);
+                    setModalOpen(true);
+                  }}
+                  className="w-full rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-200 hover:bg-zinc-800 sm:w-auto"
+                >
+                  Ver todos os comentários
                 </button>
               </div>
             </div>
-          </td>
-        </tr>
-      )}
-      <tr className="border-t border-zinc-800">
-        <td className="px-4 py-2" colSpan={11}>
-          <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-300">
-            <CheckboxBtn
-              checked={allSelected}
-              onChange={(next) => {
-                const map: Record<string, boolean> = {};
-                posts.forEach((p) => (map[p.postId] = next));
-                setSelected(map);
-              }}
-              label="Selecionar todos"
-            />
-            <span className="text-zinc-400">Ordenar por:</span>
-            <button
-              onClick={() => toggleSort("views")}
-              className={`rounded border px-3 py-2 ${sortKey === "views" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
+          </div>
+          {posts.map((p) => (
+            <div
+              key={p.postId}
+              className="space-y-4 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4 transition-colors md:table-row md:space-y-0 md:border-0 md:bg-transparent md:p-0 md:hover:bg-zinc-900/40"
             >
-              Views
-            </button>
-            <button
-              onClick={() => toggleSort("date")}
-              className={`rounded border px-3 py-2 ${sortKey === "date" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
-            >
-              Data
-            </button>
-            <button
-              onClick={() => toggleSort("status")}
-              className={`rounded border px-3 py-2 ${sortKey === "status" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
-            >
-              Visibilidade
-            </button>
-            <div className="flex items-center gap-2 ml-2">
-              <span className="text-zinc-400">Ordem:</span>
-              <button
-                onClick={() => setSortOrder("asc")}
-                className={`rounded border px-3 py-2 ${sortOrder === "asc" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
-                title="Crescente"
-              >
-                ↑
-              </button>
-              <button
-                onClick={() => setSortOrder("desc")}
-                className={`rounded border px-3 py-2 ${sortOrder === "desc" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
-                title="Decrescente"
-              >
-                ↓
-              </button>
+              <div className={`${cellBase} md:w-12`}>
+                <div className="flex items-center justify-between md:block">
+                  <span className="text-xs font-medium uppercase text-zinc-500 md:hidden">Seleção</span>
+                  <CheckboxBtn
+                    checked={!!selected[p.postId]}
+                    onChange={(next) => setSelected((s) => ({ ...s, [p.postId]: next }))}
+                  />
+                </div>
+              </div>
+              <div className={`${cellBase} md:max-w-[320px] md:align-top`}>
+                <div className="text-xs font-medium uppercase text-zinc-500 md:hidden">Título</div>
+                <Link
+                  href={`/posts/${p.postId}`}
+                  className="block text-sm font-medium text-zinc-100 hover:underline md:max-w-[320px] md:truncate"
+                >
+                  {p.title}
+                </Link>
+              </div>
+              <div className={`${cellBase}`}>
+                <div className="text-xs font-medium uppercase text-zinc-500 md:hidden">ID</div>
+                <div className="text-sm text-zinc-400 break-all">{p.postId}</div>
+              </div>
+              <div className={`${cellBase}`}>
+                <div className="text-xs font-medium uppercase text-zinc-500 md:hidden">Data</div>
+                <div className="text-sm text-zinc-400">{p.date ?? "-"}</div>
+              </div>
+              <div className={`${cellBase} md:text-right`}>
+                <div className="text-xs font-medium uppercase text-zinc-500 md:hidden">Views</div>
+                <div className="text-sm">{p.views ?? 0}</div>
+              </div>
+              <div className={`${cellBase} md:text-right`}>
+                <div className="text-xs font-medium uppercase text-zinc-500 md:hidden">Comentários</div>
+                <button
+                  onClick={() => {
+                    setModalMode("post");
+                    setModalPostId(p.postId);
+                    setModalOpen(true);
+                  }}
+                  className="inline-flex w-full items-center justify-center rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:bg-zinc-800 md:w-auto"
+                  title="Visualizar comentários"
+                >
+                  {p.commentCount ?? 0} comentários
+                </button>
+              </div>
+              <div className={`${cellBase}`}>
+                <div className="text-xs font-medium uppercase text-zinc-500 md:hidden">Tags</div>
+                <TagListEditor
+                  values={p.tags ?? []}
+                  label="tags"
+                  saving={false}
+                  onSave={async (next) => {
+                    await updateMeta(p.postId, { tags: next });
+                    setPosts((rows) => rows.map((r) => (r.postId === p.postId ? { ...r, tags: next } : r)));
+                  }}
+                />
+              </div>
+              <div className={`${cellBase}`}>
+                <div className="text-xs font-medium uppercase text-zinc-500 md:hidden">Categorias</div>
+                <TagListEditor
+                  values={p.categories ?? []}
+                  label="categorias"
+                  saving={false}
+                  onSave={async (next) => {
+                    await updateMeta(p.postId, { categories: next });
+                    setPosts((rows) => rows.map((r) => (r.postId === p.postId ? { ...r, categories: next } : r)));
+                  }}
+                />
+              </div>
+              <div className={`${cellBase}`}>
+                <div className="text-xs font-medium uppercase text-zinc-500 md:hidden">Co-autor</div>
+                <select
+                  className="w-full rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 md:min-w-[160px] md:w-auto"
+                  value={p.coAuthorUserId ?? ""}
+                  onChange={async (e) => {
+                    const next = e.target.value;
+                    await updateMeta(p.postId, { coAuthorUserId: next || null });
+                    setPosts((rows) => rows.map((r) => (r.postId === p.postId ? { ...r, coAuthorUserId: next || null } : r)));
+                  }}
+                >
+                  <option value="">Nenhum</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className={`${cellBase} md:text-right`}>
+                <div className="text-xs font-medium uppercase text-zinc-500 md:hidden">Parágrafos</div>
+                <div className="mt-2 md:mt-0">
+                  <ParagraphCommentsToggle
+                    postId={p.postId}
+                    enabled={p.paragraphCommentsEnabled !== false}
+                    onToggle={(next) =>
+                      setPosts((rows) =>
+                        rows.map((r) =>
+                          r.postId === p.postId
+                            ? { ...r, paragraphCommentsEnabled: next }
+                            : r
+                        )
+                      )
+                    }
+                  />
+                </div>
+              </div>
+              <div className={`${cellBase} md:text-right`}>
+                <div className="text-xs font-medium uppercase text-zinc-500 md:hidden">Visibilidade</div>
+                <div className="mt-2 md:mt-0">
+                  <VisibilityToggle postId={p.postId} hidden={p.hidden} />
+                </div>
+              </div>
             </div>
-            <span className="mx-2 h-4 w-px bg-zinc-800" />
-            <button
-              onClick={() => { setModalMode("all"); setModalPostId(null); setModalOpen(true); }}
-              className="rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-200 hover:bg-zinc-800"
-            >
-              Ver todos os comentários
-            </button>
+          ))}
+          {posts.length === 0 && !loading && (
+            <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-6 text-center text-zinc-400 md:table-row md:border-0 md:bg-transparent md:p-0">
+              <div className={`${cellBase} text-center md:py-8`}>
+                Nenhum post encontrado.
+              </div>
+            </div>
+          )}
+          <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-4 md:table-row md:border-0 md:bg-transparent md:p-0">
+            <div className={`${cellBase}`}>
+              <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+                {error && <span className="text-sm text-red-500 sm:mr-4">{error}</span>}
+                {hasMore ? (
+                  <button
+                    onClick={() => onLoadMore(false)}
+                    disabled={loading}
+                    className="inline-flex items-center justify-center rounded-md bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-60"
+                  >
+                    {loading ? "Carregando..." : "Mostrar mais"}
+                  </button>
+                ) : (
+                  <span className="text-sm text-zinc-400">Todos os posts carregados</span>
+                )}
+              </div>
+            </div>
           </div>
-        </td>
-      </tr>
-      {posts.map((p) => (
-        <tr key={p.postId} className="border-t border-zinc-800 hover:bg-zinc-900/40">
-          <td className="px-4 py-2">
-            <CheckboxBtn
-              checked={!!selected[p.postId]}
-              onChange={(next) => setSelected((s) => ({ ...s, [p.postId]: next }))}
-            />
-          </td>
-          <td className="px-4 py-2 max-w-[320px] truncate">
-            <Link href={`/posts/${p.postId}`} className="hover:underline">
-              {p.title}
-            </Link>
-          </td>
-          <td className="px-4 py-2 text-zinc-400">{p.postId}</td>
-          <td className="px-4 py-2 text-zinc-400">{p.date ?? "-"}</td>
-          <td className="px-4 py-2 text-right">{p.views ?? 0}</td>
-          <td className="px-4 py-2 text-right">
-            <button
-              onClick={() => {
-                setModalMode("post");
-                setModalPostId(p.postId);
-                setModalOpen(true);
-              }}
-              className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:bg-zinc-800"
-              title="Visualizar comentários"
-            >
-              {p.commentCount ?? 0} comentários
-            </button>
-          </td>
-          <td className="px-4 py-2">
-            <TagListEditor
-              values={p.tags ?? []}
-              label="tags"
-              saving={false}
-              onSave={async (next) => {
-                await updateMeta(p.postId, { tags: next });
-                setPosts((rows) => rows.map((r) => (r.postId === p.postId ? { ...r, tags: next } : r)));
-              }}
-            />
-          </td>
-          <td className="px-4 py-2">
-            <TagListEditor
-              values={p.categories ?? []}
-              label="categorias"
-              saving={false}
-              onSave={async (next) => {
-                await updateMeta(p.postId, { categories: next });
-                setPosts((rows) => rows.map((r) => (r.postId === p.postId ? { ...r, categories: next } : r)));
-              }}
-            />
-          </td>
-          <td className="px-4 py-2">
-            <select
-              className="min-w-[160px] rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-200"
-              value={p.coAuthorUserId ?? ""}
-              onChange={async (e) => {
-                const next = e.target.value;
-                await updateMeta(p.postId, { coAuthorUserId: next || null });
-                setPosts((rows) => rows.map((r) => (r.postId === p.postId ? { ...r, coAuthorUserId: next || null } : r)));
-              }}
-            >
-              <option value="">Nenhum</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>{u.name}</option>
-              ))}
-            </select>
-          </td>
-          <td className="px-4 py-2 text-right">
-            <ParagraphCommentsToggle
-              postId={p.postId}
-              enabled={p.paragraphCommentsEnabled !== false}
-              onToggle={(next) =>
-                setPosts((rows) =>
-                  rows.map((r) =>
-                    r.postId === p.postId
-                      ? { ...r, paragraphCommentsEnabled: next }
-                      : r
-                  )
-                )
-              }
-            />
-          </td>
-          <td className="px-4 py-2 text-right"><VisibilityToggle postId={p.postId} hidden={p.hidden} /></td>
-        </tr>
-      ))}
-      <tr>
-        <td colSpan={11} className="px-4 py-3">
-          <div className="flex items-center justify-center">
-            {error && <span className="text-red-500 text-sm mr-4">{error}</span>}
-            {hasMore ? (
-              <button
-                onClick={() => onLoadMore(false)}
-                disabled={loading}
-                className="inline-flex items-center justify-center rounded-md bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-60"
-              >
-                {loading ? "Carregando..." : "Mostrar mais"}
-              </button>
-            ) : (
-              <span className="text-sm text-zinc-400">Todos os posts carregados</span>
-            )}
-          </div>
-        </td>
-      </tr>
+        </div>
+      </div>
 
-      <CommentsModal mode={modalMode} postId={modalPostId} open={modalOpen} onClose={() => { setModalOpen(false); setModalPostId(null); setModalMode("all"); }} />
+      <CommentsModal
+        mode={modalMode}
+        postId={modalPostId}
+        open={modalOpen}
+        onClose={() => {
+          setModalOpen(false);
+          setModalPostId(null);
+          setModalMode("all");
+        }}
+      />
     </>
   );
 }
