@@ -65,10 +65,14 @@ export async function resolveAdminStatus(
     return { isAdmin: false, userId: null };
   }
 
+  if (options.sessionClaims === null && !options.userId) {
+    return { isAdmin: false, userId: null };
+  }
+
   let providedSessionClaims = options.sessionClaims;
   let providedUserId = options.userId ?? null;
 
-  if (!providedSessionClaims) {
+  if (typeof providedSessionClaims === "undefined") {
     try {
       const { sessionClaims, userId } = await auth();
       providedSessionClaims = sessionClaims;

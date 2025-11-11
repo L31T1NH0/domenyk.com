@@ -1,4 +1,3 @@
-
 import ThemeSwitcher from "./ThemeSwitcher";
 import SettingsMenu from "./SettingsMenu";
 

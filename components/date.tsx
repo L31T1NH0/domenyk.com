@@ -13,7 +13,7 @@ export function Date({ dateString }: DateProps): JSX.Element {
   }
 
   const date = parseISO(dateString);
-  const formattedDate = format(date, "eee, dd MMMM yyyy", { locale: ptBR });
+  const formattedDate = format(date, "dd MMMM yyyy", { locale: ptBR });
 
   return (
     <time

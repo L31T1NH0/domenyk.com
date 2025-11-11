@@ -44,22 +44,27 @@ export default function SearchBar({ onSearch, initialQuery = "", rightSlot }: Se
 
   return (
     <form onSubmit={handleSubmit} className="relative">
-      <div className="flex items-center gap-2 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 w-[30vw] min-w-[220px] sm:w-1/3 md:w-[360px]">
-        <MagnifyingGlassIcon className="w-4 h-4" aria-hidden="true" />
+      <div className="card-surface-interactive flex items-center gap-3 px-2 py-1 w-[14rem] sm:w-[18rem]">
+        <MagnifyingGlassIcon
+          className="h-4 w-4 text-zinc-500 dark:text-zinc-400"
+          aria-hidden="true"
+        />
         <input
           ref={inputRef}
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Pesquisar posts"
-          aria-label="Pesquisar posts"
-          className="bg-transparent outline-none placeholder-zinc-500 dark:placeholder-zinc-300 flex-1 min-w-0"
+          placeholder="Pesquisar"
+          aria-label="Pesquisar"
+          className="form-input-plain flex-1 min-w-0 text-xs placeholder-zinc-500 dark:placeholder-zinc-300"
         />
         {rightSlot && (
-          <>
-            <span className="h-4 w-px bg-zinc-500/20" aria-hidden />
-            <div className="flex items-center">{rightSlot}</div>
-          </>
+          <div className="ml-2 flex items-center gap-3">
+            <span className="h-4 w-px bg-zinc-200 dark:bg-zinc-700" aria-hidden />
+            <div className="flex items-center text-sm text-zinc-600 dark:text-zinc-300">
+              {rightSlot}
+            </div>
+          </div>
         )}
       </div>
     </form>

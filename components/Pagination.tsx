@@ -31,7 +31,7 @@ export default function Pagination({
         aria-label="Página anterior"
         title="Página anterior"
         aria-disabled={!prevEnabled}
-        className={`rounded-full px-4 py-2 border shadow-sm hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 ease-in-out ${!prevEnabled ? "pointer-events-none" : ""}`}
+        className={`btn-rounded ${!prevEnabled ? "pointer-events-none opacity-50" : ""}`}
         href={prevHref || "#"}
         prefetch={false}
         tabIndex={prevEnabled ? 0 : -1}
@@ -45,14 +45,14 @@ export default function Pagination({
         aria-label="Próxima página"
         title="Próxima página"
         aria-disabled={!nextEnabled}
-        className={`rounded-full px-4 py-2 border shadow-sm hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 ease-in-out ${!nextEnabled ? "pointer-events-none" : ""}`}
+        className={`btn-rounded ${!nextEnabled ? "pointer-events-none opacity-50" : ""}`}
         href={nextHref || "#"}
         prefetch={false}
         tabIndex={nextEnabled ? 0 : -1}
       >
         <ChevronRightIcon className="h-4 w-4" aria-hidden="true" />
       </Link>
-      </div>
+    </div>
   );
 }
 
