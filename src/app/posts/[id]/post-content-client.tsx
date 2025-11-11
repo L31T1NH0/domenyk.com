@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type HTMLAttributes,
 } from "react";
@@ -106,6 +107,8 @@ export default function PostContentClient({
     };
   }, [postId]);
 
+  const contentRef = useRef<HTMLDivElement | null>(null);
+
   // Rastreamento de progresso de leitura: 25%, 50%, 75% e 100%
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -122,18 +125,29 @@ export default function PostContentClient({
 
     const updateScrollProgress = () => {
       const doc = document.documentElement;
-      const scrollTop = window.scrollY || doc.scrollTop || 0;
-      const scrollHeight = doc.scrollHeight || 0;
-      const clientHeight = window.innerHeight || doc.clientHeight || 0;
-      const docHeight = scrollHeight - clientHeight;
+      const element = contentRef.current ?? document.querySelector<HTMLElement>("[data-post-content]");
 
-      if (docHeight <= 0) {
+      if (!element) {
         doc.style.setProperty("--scroll-progress", "0%");
         doc.style.setProperty("--scroll-progress-visible", "0");
         return 0;
       }
 
-      const ratio = Math.max(0, Math.min(1, scrollTop / docHeight));
+      const rect = element.getBoundingClientRect();
+      const contentTop = rect.top + window.scrollY;
+      const contentHeight = element.offsetHeight;
+      const rawContentBottom = contentTop + contentHeight - window.innerHeight;
+      const contentBottom = Math.max(contentTop, rawContentBottom);
+      const clampedScroll = Math.min(Math.max(window.scrollY, contentTop), contentBottom);
+      const range = contentBottom - contentTop;
+
+      let ratio = 0;
+      if (range <= 0) {
+        ratio = window.scrollY >= contentTop ? 1 : 0;
+      } else {
+        ratio = (clampedScroll - contentTop) / range;
+      }
+
       const progress = Math.max(0, Math.min(100, parseFloat((ratio * 100).toFixed(2))));
       doc.style.setProperty("--scroll-progress", `${progress}%`);
       doc.style.setProperty("--scroll-progress-visible", "1");
@@ -284,39 +298,41 @@ export default function PostContentClient({
 
   return (
     <IsMobileContext.Provider value={isMobile}>
-<div className="relative flex flex-col gap-6">
-  <article className="flex flex-col gap-6 mt-4">
-    <div className="flex items-center text-sm text-zinc-600 dark:text-zinc-300 border-b border-zinc-200 dark:border-zinc-700 pb-3">
-      <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2">
-        <div className="flex items-center gap-2 min-w-0 whitespace-normal sm:whitespace-nowrap">
-          <Date dateString={date} />
-          <span aria-hidden className="mx-1 text-zinc-400">|</span>
-          <div className="inline-flex items-center gap-2 whitespace-nowrap">
-            <span className="inline-flex items-center gap-1">
-              <ClockIcon className="h-4 w-4" aria-hidden="true" />
-              <span className="sr-only">Tempo de leitura:</span>
-              {readingTime}
-            </span>
-            <span aria-hidden className="mx-1 text-zinc-400">•</span>
-            <span className="inline-flex items-center gap-1">
-              <EyeIcon className="h-4 w-4" aria-hidden="true" />
-              <span className="sr-only">Views:</span>
-              {views} views
-            </span>
+      <div className="relative flex flex-col gap-6">
+        <article className="flex flex-col gap-6 mt-4">
+          <div className="flex items-center text-sm text-zinc-600 dark:text-zinc-300 border-b border-zinc-200 dark:border-zinc-700 pb-3">
+            <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2">
+              <div className="flex items-center gap-2 min-w-0 whitespace-normal sm:whitespace-nowrap">
+                <Date dateString={date} />
+                <span aria-hidden className="mx-1 text-zinc-400">|</span>
+                <div className="inline-flex items-center gap-2 whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1">
+                    <ClockIcon className="h-4 w-4" aria-hidden="true" />
+                    <span className="sr-only">Tempo de leitura:</span>
+                    {readingTime}
+                  </span>
+                  <span aria-hidden className="mx-1 text-zinc-400">•</span>
+                  <span className="inline-flex items-center gap-1">
+                    <EyeIcon className="h-4 w-4" aria-hidden="true" />
+                    <span className="sr-only">Views:</span>
+                    {views} views
+                  </span>
+                </div>
+              </div>
+
+              <span className="justify-self-end">
+                <ShareButton id={postId} />
+              </span>
+            </div>
           </div>
-        </div>
-
-        <span className="justify-self-end">
-          <ShareButton id={postId} />
-        </span>
-      </div>
-    </div>
-
-
 
           {audioUrl && <AudioPlayer audioUrl={audioUrl} />}
 
-          <div className="flex flex-col gap-4 lg:text-lg sm:text-sm max-sm:text-xs">
+          <div
+            ref={contentRef}
+            data-post-content
+            className="flex flex-col gap-4 lg:text-lg sm:text-sm max-sm:text-xs"
+          >
             {parsedContent}
           </div>
 
