@@ -108,10 +108,6 @@ export default function PostContentClient({
 
   // Rastreamento de progresso de leitura: 25%, 50%, 75% e 100%
   useEffect(() => {
-    if (!isTrackingEnabled) {
-      return;
-    }
-
     if (typeof window === "undefined") {
       return;
     }
@@ -124,13 +120,23 @@ export default function PostContentClient({
       .map((m) => Math.min(1, Math.max(0, m)))
       .sort((a, b) => a - b);
 
-    const computeRatio = () => {
+    const updateScrollProgress = () => {
       const doc = document.documentElement;
       const scrollTop = window.scrollY || doc.scrollTop || 0;
-      const scrollHeight = doc.scrollHeight || 1;
-      const clientHeight = window.innerHeight || doc.clientHeight || 1;
-      const total = Math.max(1, scrollHeight - clientHeight);
-      const ratio = Math.max(0, Math.min(1, scrollTop / total));
+      const scrollHeight = doc.scrollHeight || 0;
+      const clientHeight = window.innerHeight || doc.clientHeight || 0;
+      const docHeight = scrollHeight - clientHeight;
+
+      if (docHeight <= 0) {
+        doc.style.setProperty("--scroll-progress", "0%");
+        doc.style.setProperty("--scroll-progress-visible", "0");
+        return 0;
+      }
+
+      const ratio = Math.max(0, Math.min(1, scrollTop / docHeight));
+      const progress = Math.max(0, Math.min(100, parseFloat((ratio * 100).toFixed(2))));
+      doc.style.setProperty("--scroll-progress", `${progress}%`);
+      doc.style.setProperty("--scroll-progress-visible", "1");
       return ratio;
     };
 
@@ -140,7 +146,10 @@ export default function PostContentClient({
       if (frame !== null) return;
       frame = window.requestAnimationFrame(() => {
         frame = null;
-        const ratio = computeRatio();
+        const ratio = updateScrollProgress();
+        if (!isTrackingEnabled) {
+          return;
+        }
         for (const m of milestones) {
           if (!sent.has(m) && ratio >= m) {
             sent.add(m);
@@ -158,17 +167,26 @@ export default function PostContentClient({
       });
     };
 
+    const handleResize = () => {
+      updateScrollProgress();
+      handleScroll();
+    };
+
     // Dispara no load e a cada scroll/resize
+    updateScrollProgress();
     handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("resize", handleScroll);
+    window.addEventListener("resize", handleResize);
 
     return () => {
       if (frame !== null) {
         window.cancelAnimationFrame(frame);
       }
       window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", handleScroll);
+      window.removeEventListener("resize", handleResize);
+      const doc = document.documentElement;
+      doc.style.removeProperty("--scroll-progress");
+      doc.style.removeProperty("--scroll-progress-visible");
     };
   }, [config.readProgressMilestones, isTrackingEnabled, postId, trackEvent]);
 

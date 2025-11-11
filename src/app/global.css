@@ -1,6 +1,11 @@
 /* styles/global.css */
 @import "tailwindcss";
 
+:root {
+  --scroll-progress: 0%;
+  --scroll-progress-visible: 0;
+}
+
 @font-face {
   font-family: 'PolySans';
   src: url(./PolySans-Slim.woff2) format('woff2');
@@ -93,13 +98,23 @@ h1 {
   @apply sm:text-sm md:text-lg;
 }
 
-.form-input-plain:focus,
-.form-input-plain:focus-visible {
-  outline: none;
-  box-shadow: none;
-  border-color: inherit;
-  --tw-ring-offset-shadow: 0 0 #0000;
-  --tw-ring-shadow: 0 0 #0000;
+[data-scroll-progress-bar] {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px));
+  left: 0;
+  height: 3px;
+  background: #E00070;
+  width: var(--scroll-progress);
+  pointer-events: none;
+  z-index: 9999;
+  opacity: var(--scroll-progress-visible);
+  transition: width 0.12s ease-out, opacity 0.12s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-scroll-progress-bar] {
+    transition: none;
+  }
 }
 
 
