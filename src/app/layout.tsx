@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import { ClerkProvider } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 
 import AnalyticsProvider from "@components/analytics/AnalyticsProvider";
 import { getAnalyticsClientConfig } from "@lib/analytics/config";
@@ -17,11 +18,24 @@ export default async function RootLayout({ children }: RootLayoutProps) {
   const analyticsConfig = getAnalyticsClientConfig();
 
   let isAdmin = false;
+  let authState: Awaited<ReturnType<typeof auth>> | null = null;
+
   try {
-    const status = await resolveAdminStatus();
-    isAdmin = status.isAdmin;
+    authState = await auth();
   } catch {
-    isAdmin = false;
+    authState = null;
+  }
+
+  if (authState?.userId) {
+    try {
+      const status = await resolveAdminStatus({
+        sessionClaims: authState.sessionClaims,
+        userId: authState.userId,
+      });
+      isAdmin = status.isAdmin;
+    } catch {
+      isAdmin = false;
+    }
   }
 
   return (

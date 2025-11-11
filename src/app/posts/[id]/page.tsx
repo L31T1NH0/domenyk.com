@@ -361,11 +361,13 @@ export default async function PostPage({ params }: PostPageProps) {
         isAdmin={isAdmin}
       />
       <BackHome />
-      <Comment
-        postId={post.postId}
-        coAuthorUserId={post.coAuthorUserId ?? undefined}
-        isAdmin={isAdmin}
-      />
+      <div className="mt-4 sm:mt-6 mb-6">
+        <Comment
+          postId={post.postId}
+          coAuthorUserId={post.coAuthorUserId ?? undefined}
+          isAdmin={isAdmin}
+        />
+      </div>
     </Layout>
   );
 }

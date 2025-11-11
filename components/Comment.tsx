@@ -532,8 +532,8 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
   }, [activeThreadId, commentById]);
 
   return (
-  <section className="space-y-4" aria-label="Seção de comentários">
-      <div className="mx-auto w-full">
+  <section className="space-y-4 mt-2 mb-2" aria-label="Seção de comentários">
+      <div className="mx-auto w-full space-y-3">
         <header className="flex items-center gap-2 text-xl font-semibold text-zinc-100">
           <ChatBubbleLeftRightIcon className="h-5 w-5" />
           Comentários ({totalComments})

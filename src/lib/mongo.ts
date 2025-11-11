@@ -23,21 +23,81 @@ const options = {
   retryWrites: true,
 } as const;
 
-let globalWithMongo = global as typeof globalThis & {
+type GlobalWithMongo = typeof globalThis & {
   _mongoClientPromise?: Promise<MongoClient>;
+  _mongoClientPromiseLock?: Promise<void>;
 };
 
-if (!globalWithMongo._mongoClientPromise) {
+const globalWithMongo = global as GlobalWithMongo;
+
+let clientPromise: Promise<MongoClient>;
+
+function createTrackedClientPromise(): Promise<MongoClient> {
   const client = new MongoClient(MONGODB_URI, options);
-  globalWithMongo._mongoClientPromise = client.connect();
+  const trackedPromise = client.connect().catch((error) => {
+    if (globalWithMongo._mongoClientPromise === trackedPromise) {
+      delete globalWithMongo._mongoClientPromise;
+    }
+    throw error;
+  });
+
+  globalWithMongo._mongoClientPromise = trackedPromise;
+  clientPromise = trackedPromise;
+
+  return trackedPromise;
 }
 
-export const clientPromise: Promise<MongoClient> =
-  globalWithMongo._mongoClientPromise!;
+function withClientLock<T>(factory: () => T): T {
+  const previousLock = globalWithMongo._mongoClientPromiseLock;
+  let releaseCurrent: (() => void) | undefined;
+
+  const currentLock = new Promise<void>((resolve) => {
+    releaseCurrent = resolve;
+  });
+
+  globalWithMongo._mongoClientPromiseLock = currentLock;
+
+  const run = () => {
+    try {
+      return factory();
+    } finally {
+      releaseCurrent?.();
+      if (globalWithMongo._mongoClientPromiseLock === currentLock) {
+        delete globalWithMongo._mongoClientPromiseLock;
+      }
+    }
+  };
+
+  if (previousLock) {
+    return previousLock.then(run) as unknown as T;
+  }
+
+  return run();
+}
+
+function ensureClientPromise(forceReset = false): Promise<MongoClient> {
+  return withClientLock(() => {
+    if (!forceReset && globalWithMongo._mongoClientPromise) {
+      clientPromise = globalWithMongo._mongoClientPromise;
+      return globalWithMongo._mongoClientPromise;
+    }
+
+    if (forceReset) {
+      delete globalWithMongo._mongoClientPromise;
+    }
+
+    return createTrackedClientPromise();
+  });
+}
+
+clientPromise =
+  globalWithMongo._mongoClientPromise ?? createTrackedClientPromise();
+
+export { clientPromise };
 
 export async function getMongoClient() {
   try {
-    const client = await clientPromise;
+    const client = await ensureClientPromise();
     return client;
   } catch (error) {
     if (
@@ -48,12 +108,24 @@ export async function getMongoClient() {
         "MONGODB_URI aponta para localhost em produção. Verifique as variáveis de ambiente do deploy."
       );
     }
+
     console.error("Erro ao conectar ao MongoDB:", error);
+
+    try {
+      await ensureClientPromise(true);
+    } catch (retryError) {
+      console.error("Erro ao reconectar ao MongoDB:", retryError);
+      if (retryError instanceof Error) {
+        throw new Error("Falha na conexão com o MongoDB: " + retryError.message);
+      } else {
+        throw new Error("Falha na conexão com o MongoDB: " + String(retryError));
+      }
+    }
+
     if (error instanceof Error) {
       throw new Error("Falha na conexão com o MongoDB: " + error.message);
-    } else {
-      throw new Error("Falha na conexão com o MongoDB: " + String(error));
     }
+    throw new Error("Falha na conexão com o MongoDB: " + String(error));
   }
 }
 
