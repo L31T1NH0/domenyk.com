@@ -67,12 +67,23 @@ export default function PostMinimap() {
     const updateActiveHeading = () => {
       frame = null;
 
-      const focusLine = window.scrollY + window.innerHeight * 0.4;
+      const container = document.querySelector<HTMLElement>("[data-post-content]");
+      if (!container) {
+        return;
+      }
+
+      const containerRect = container.getBoundingClientRect();
+      const contentTop = containerRect.top + window.scrollY;
+      const contentBottom = containerRect.bottom + window.scrollY;
+      const focusCandidate = window.scrollY + window.innerHeight * 0.4;
+      const focusLine = Math.min(Math.max(focusCandidate, contentTop), contentBottom);
+
       let nextActiveId: string | null = headings[0]?.id ?? null;
 
       for (const heading of headings) {
-        const offsetTop = heading.element.offsetTop;
-        if (offsetTop <= focusLine) {
+        const headingRect = heading.element.getBoundingClientRect();
+        const headingTop = headingRect.top + window.scrollY;
+        if (headingTop <= focusLine) {
           nextActiveId = heading.id;
         } else {
           break;

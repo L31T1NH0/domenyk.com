@@ -10,6 +10,7 @@ export type HeadingEntry = {
 type UseHeadingsMapOptions = {
   enabled?: boolean;
   dependencies?: ReadonlyArray<unknown>;
+  root?: HTMLElement | null;
 };
 
 function slugifyHeading(text: string): string {
@@ -27,6 +28,7 @@ function slugifyHeading(text: string): string {
 export function useHeadingsMap({
   enabled = true,
   dependencies = [],
+  root = null,
 }: UseHeadingsMapOptions = {}): HeadingEntry[] {
   const [headings, setHeadings] = useState<HeadingEntry[]>([]);
 
@@ -40,7 +42,13 @@ export function useHeadingsMap({
       return;
     }
 
-    const nodes = Array.from(document.querySelectorAll("h4"));
+    const rootNode = root ?? document.querySelector<HTMLElement>("[data-post-content]");
+    if (!rootNode) {
+      setHeadings([]);
+      return;
+    }
+
+    const nodes = Array.from(rootNode.querySelectorAll("h4"));
     const slugCounts = new Map<string, number>();
 
     const nextHeadings = nodes.map((node) => {
@@ -63,8 +71,14 @@ export function useHeadingsMap({
       } satisfies HeadingEntry;
     });
 
+    nextHeadings.forEach((heading) => {
+      if (!heading.element.id) {
+        heading.element.id = heading.id;
+      }
+    });
+
     setHeadings(nextHeadings);
-  }, [enabled, ...dependencies]);
+  }, [enabled, root, ...dependencies]);
 
   return headings;
 }
