@@ -171,10 +171,9 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
   }
 
   const title = post.title ?? "";
-  const subtitle =
-    typeof post.subtitle === "string" && post.subtitle.trim() !== ""
-      ? post.subtitle.trim()
-      : null;
+  const rawSubtitle =
+    typeof post.subtitle === "string" ? post.subtitle.trim() : "";
+  const subtitle = rawSubtitle.length > 0 ? rawSubtitle : undefined;
   const date = normalizeDate(post.date);
   const BASE_URL = "https://domenyk.com";
   const FALLBACK_IMAGE_PATH = "/images/profile.jpg";
@@ -185,11 +184,6 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
   const updatedAt = normalizeDate(post.updatedAt);
   const publishedTime = date || undefined;
   const modifiedTime = updatedAt || undefined;
-  const subtitleCandidate = (post as { subtitle?: string }).subtitle;
-  const subtitle =
-    typeof subtitleCandidate === "string" && subtitleCandidate.trim().length > 0
-      ? subtitleCandidate
-      : undefined;
   const descriptionCandidate = subtitle ?? extractDescription(post);
   const description =
     descriptionCandidate && descriptionCandidate.trim() !== ""
@@ -295,10 +289,9 @@ export default async function PostPage({ params }: PostPageProps) {
   }
 
   const title = post.title ?? "";
-  const subtitle =
-    typeof post.subtitle === "string" && post.subtitle.trim() !== ""
-      ? post.subtitle.trim()
-      : null;
+  const rawSubtitle =
+    typeof post.subtitle === "string" ? post.subtitle.trim() : "";
+  const subtitle = rawSubtitle.length > 0 ? rawSubtitle : undefined;
   const markdownSource = post.htmlContent ?? post.content ?? "";
   const shouldUseMdxRenderer = process.env.FEATURE_MDX_RENDERER === "true";
 
@@ -335,17 +328,6 @@ export default async function PostPage({ params }: PostPageProps) {
   const modifiedTime = updatedAt || "";
   const canonicalUrl = `${BASE_URL}${path}`;
   const dateModified = modifiedTime || dateString || undefined;
-  const subtitleCandidate = (post as { subtitle?: string }).subtitle;
-  const subtitle =
-    typeof subtitleCandidate === "string" && subtitleCandidate.trim().length > 0
-      ? subtitleCandidate
-      : undefined;
-  const descriptionCandidate = subtitle ?? extractDescription(post);
-  const description =
-    descriptionCandidate && descriptionCandidate.trim() !== ""
-      ? descriptionCandidate.trim()
-      : title;
-
   const descriptionCandidate = subtitle ?? extractDescription(post);
   const description =
     descriptionCandidate && descriptionCandidate.trim() !== ""
