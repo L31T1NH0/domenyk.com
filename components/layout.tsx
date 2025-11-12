@@ -1,5 +1,8 @@
+"use client";
+
 import ThemeSwitcher from "./ThemeSwitcher";
 import SettingsMenu from "./SettingsMenu";
+import ScrollProgressEffect from "./ScrollProgressEffect";
 
 type LayoutProps = {
   title?: string;
@@ -11,11 +14,12 @@ type LayoutProps = {
 
 export function Layout({ home = false, children }: LayoutProps) {
   return (
-    <div className="max-w-xl flex flex-col mx-auto px-4 mb-4">
-      <header
-        data-scroll-progress-root
-        className="flex justify-between items-center py-1"
-      >
+    <div
+      data-scroll-progress-root
+      className="max-w-xl flex flex-col mx-auto px-4 mb-4"
+    >
+      <ScrollProgressEffect />
+      <header className="flex justify-between items-center py-1">
         <div aria-hidden="true" data-scroll-progress-bar />
         <ThemeSwitcher /> {/* Botão de brilho à direita */}
         <SettingsMenu /> {/* Botão de três pontos à esquerda */}
