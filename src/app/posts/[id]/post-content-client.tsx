@@ -1,6 +1,21 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState, type HTMLAttributes } from "react";
+import {
+  forwardRef,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FocusEvent as ReactFocusEvent,
+  type HTMLAttributes,
+  type ComponentType,
+  type ReactNode,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { Date } from "@components/date";
 import ShareButton from "@components/ShareButton";
 import AudioPlayer from "@components/AudioPlayer";
@@ -11,11 +26,204 @@ import parse, {
   domToReact,
   type HTMLReactParserOptions,
 } from "html-react-parser";
-import ParagraphCommentWidget from "@components/paragraph-comments/ParagraphCommentWidget";
 import PostReference from "@components/PostReference";
 import AutorReference from "@components/AutorReference";
 import PostMinimap from "@components/PostMinimap";
 import { EyeIcon, ClockIcon } from "@heroicons/react/24/solid";
+
+type ParagraphCommentWidgetProps = {
+  postId: string;
+  paragraphId: string;
+  paragraphIndex: number;
+  coAuthorUserId?: string | null;
+  paragraphProps?: HTMLAttributes<HTMLParagraphElement>;
+  children: ReactNode;
+  isAdmin: boolean;
+  isMobile: boolean;
+};
+
+type ParagraphCommentWidgetComponent = ComponentType<ParagraphCommentWidgetProps>;
+
+type ParagraphContentProps = {
+  paragraphProps?: HTMLAttributes<HTMLParagraphElement>;
+  children: ReactNode;
+  showLoadingIndicator?: boolean;
+  onLoadRequest?: () => void;
+};
+
+const ParagraphContent = forwardRef<HTMLParagraphElement, ParagraphContentProps>(
+  ({ paragraphProps, children, showLoadingIndicator = false, onLoadRequest }, ref) => {
+    const {
+      className,
+      onClick,
+      onFocus,
+      onFocusCapture,
+      onMouseEnter,
+      onPointerDown,
+      ...rest
+    } = paragraphProps ?? {};
+
+    const requestLoad = useCallback(() => {
+      onLoadRequest?.();
+    }, [onLoadRequest]);
+
+    const handleClick = useCallback(
+      (event: ReactMouseEvent<HTMLParagraphElement>) => {
+        onClick?.(event);
+        requestLoad();
+      },
+      [onClick, requestLoad]
+    );
+
+    const handleFocus = useCallback(
+      (event: ReactFocusEvent<HTMLParagraphElement>) => {
+        onFocus?.(event);
+        requestLoad();
+      },
+      [onFocus, requestLoad]
+    );
+
+    const handleFocusCapture = useCallback(
+      (event: ReactFocusEvent<HTMLParagraphElement>) => {
+        onFocusCapture?.(event);
+        requestLoad();
+      },
+      [onFocusCapture, requestLoad]
+    );
+
+    const handleMouseEnter = useCallback(
+      (event: ReactMouseEvent<HTMLParagraphElement>) => {
+        onMouseEnter?.(event);
+        requestLoad();
+      },
+      [onMouseEnter, requestLoad]
+    );
+
+    const handlePointerDown = useCallback(
+      (event: ReactPointerEvent<HTMLParagraphElement>) => {
+        onPointerDown?.(event);
+        requestLoad();
+      },
+      [onPointerDown, requestLoad]
+    );
+
+    const combinedClassName = [
+      className,
+      showLoadingIndicator ? "opacity-80" : null,
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    return (
+      <p
+        {...rest}
+        ref={ref}
+        className={combinedClassName}
+        onClick={handleClick}
+        onFocus={handleFocus}
+        onFocusCapture={handleFocusCapture}
+        onMouseEnter={handleMouseEnter}
+        onPointerDown={handlePointerDown}
+      >
+        {children}
+        {showLoadingIndicator ? (
+          <span className="ml-2 text-xs text-zinc-400">Carregando comentários…</span>
+        ) : null}
+      </p>
+    );
+  }
+);
+
+ParagraphContent.displayName = "ParagraphContent";
+
+function LazyParagraphCommentWidget(props: ParagraphCommentWidgetProps) {
+  const [shouldRenderWidget, setShouldRenderWidget] = useState(false);
+  const [Widget, setWidget] = useState<ParagraphCommentWidgetComponent | null>(null);
+  const placeholderRef = useRef<HTMLParagraphElement | null>(null);
+
+  const ensureWidget = useCallback(() => {
+    setShouldRenderWidget((previous) => (previous ? previous : true));
+  }, []);
+
+  useEffect(() => {
+    if (!shouldRenderWidget || Widget) {
+      return;
+    }
+
+    let isActive = true;
+
+    import("@components/paragraph-comments/ParagraphCommentWidget")
+      .then((module) => {
+        if (isActive) {
+          setWidget(() => module.default as ParagraphCommentWidgetComponent);
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to load paragraph comment widget", error);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [shouldRenderWidget, Widget]);
+
+  useEffect(() => {
+    if (shouldRenderWidget) {
+      return;
+    }
+
+    const element = placeholderRef.current;
+    if (!element || typeof window === "undefined" || !("IntersectionObserver" in window)) {
+      ensureWidget();
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            ensureWidget();
+          }
+        });
+      },
+      {
+        rootMargin: "200px 0px",
+      }
+    );
+
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [ensureWidget, shouldRenderWidget]);
+
+  if (!shouldRenderWidget) {
+    return (
+      <ParagraphContent
+        ref={placeholderRef}
+        paragraphProps={props.paragraphProps}
+        onLoadRequest={ensureWidget}
+      >
+        {props.children}
+      </ParagraphContent>
+    );
+  }
+
+  if (!Widget) {
+    return (
+      <ParagraphContent
+        paragraphProps={props.paragraphProps}
+        showLoadingIndicator
+        onLoadRequest={ensureWidget}
+      >
+        {props.children}
+      </ParagraphContent>
+    );
+  }
+
+  return <Widget {...props} />;
+}
 
 const IsMobileContext = createContext<boolean | null>(null);
 
@@ -144,7 +352,7 @@ export default function PostContentClient({
         };
 
         return (
-          <ParagraphCommentWidget
+          <LazyParagraphCommentWidget
             key={paragraphId}
             postId={postId}
             paragraphId={paragraphId}
@@ -155,7 +363,7 @@ export default function PostContentClient({
             isMobile={isMobile}
           >
             {domToReact((element.children ?? []) as DOMNode[], parserOptions)}
-          </ParagraphCommentWidget>
+          </LazyParagraphCommentWidget>
         );
       }
 

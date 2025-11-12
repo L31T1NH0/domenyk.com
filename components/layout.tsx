@@ -1,8 +1,13 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import ThemeSwitcher from "./ThemeSwitcher";
-import SettingsMenu from "./SettingsMenu";
 import ScrollProgressEffect from "./ScrollProgressEffect";
+
+const SettingsMenu = dynamic(() => import("./SettingsMenu"), {
+  ssr: false,
+  loading: () => <span aria-hidden className="block h-8 w-8" />,
+});
 
 type LayoutProps = {
   title?: string;
