@@ -4,7 +4,10 @@ import { useEffect } from "react";
 
 function setScrollVariables(progress: number, visible: boolean) {
   const root = document.documentElement;
-  root.style.setProperty("--scroll-progress", progress.toString());
+  const progressValue = visible
+    ? `${(progress * 100).toFixed(3)}%`
+    : "0%";
+  root.style.setProperty("--scroll-progress", progressValue);
   root.style.setProperty("--scroll-progress-visible", visible ? "1" : "0");
 }
 
@@ -50,13 +53,18 @@ export default function ScrollProgressEffect() {
     };
 
     update();
+    if (document.readyState === "complete") {
+      requestUpdate();
+    }
 
     window.addEventListener("scroll", requestUpdate, { passive: true });
     window.addEventListener("resize", requestUpdate);
+    window.addEventListener("load", requestUpdate);
 
     return () => {
       window.removeEventListener("scroll", requestUpdate);
       window.removeEventListener("resize", requestUpdate);
+      window.removeEventListener("load", requestUpdate);
       if (animationFrame) {
         cancelAnimationFrame(animationFrame);
       }
