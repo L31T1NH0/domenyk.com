@@ -39,6 +39,7 @@ export async function GET(req: Request) {
       _id: 0,
       postId: 1,
       title: 1,
+      subtitle: 1,
       date: 1,
       views: 1,
       hidden: 1,
@@ -111,6 +112,10 @@ export async function GET(req: Request) {
 
     const enriched = posts.map((p: any) => ({
       ...p,
+      subtitle:
+        typeof p.subtitle === "string" && p.subtitle.trim() !== ""
+          ? p.subtitle.trim()
+          : null,
       commentCount: countMap.get(p.postId) ?? 0,
       tags: Array.isArray(p.tags) ? p.tags : p.tags ? [String(p.tags)] : [],
       categories: Array.isArray((p as any).categories)
@@ -138,11 +143,12 @@ export async function PATCH(req: Request) {
   }
 
   try {
-    const { postId, tags, categories, coAuthorUserId } = (await req.json()) as {
+    const { postId, tags, categories, coAuthorUserId, subtitle } = (await req.json()) as {
       postId?: string;
       tags?: string[] | string;
       categories?: string[] | string;
       coAuthorUserId?: string | null;
+      subtitle?: string | null;
     };
     if (!postId || typeof postId !== "string") {
       return NextResponse.json(
@@ -176,6 +182,18 @@ export async function PATCH(req: Request) {
     }
     if (typeof coAuthorUserId !== "undefined") {
       (updateDoc as any).coAuthorUserId = coAuthorUserId && String(coAuthorUserId).trim() !== "" ? String(coAuthorUserId) : null;
+    }
+
+    if (typeof subtitle !== "undefined") {
+      if (subtitle !== null && typeof subtitle !== "string") {
+        return NextResponse.json(
+          { error: "Subtitle must be a string or null" },
+          { status: 400 }
+        );
+      }
+
+      const normalized = subtitle && subtitle.trim() !== "" ? subtitle.trim() : null;
+      updateDoc.subtitle = normalized;
     }
 
     if (Object.keys(updateDoc).length === 0) {

@@ -14,6 +14,7 @@ export async function POST(req: Request) {
   try {
     const formData = await req.formData();
     const title = formData.get("title");
+    const subtitle = formData.get("subtitle");
     const postId = formData.get("postId");
     const content = formData.get("content");
     const tags = formData.get("tags");
@@ -42,6 +43,13 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
+    if (subtitle && typeof subtitle !== "string") {
+      return NextResponse.json(
+        { error: "Subtitle must be a string" },
+        { status: 400 }
+      );
+    }
+
     if (!content || typeof content !== "string") {
       return NextResponse.json(
         { error: "Content is required and must be a string" },
@@ -67,6 +75,10 @@ export async function POST(req: Request) {
       );
     }
 
+    const normalizedSubtitle =
+      subtitle && typeof subtitle === "string" && subtitle.trim() !== ""
+        ? subtitle.trim()
+        : null;
     const normalizedAudioUrl = audioUrl && typeof audioUrl === "string" ? audioUrl : null;
     const normalizedCape = cape && typeof cape === "string" ? cape : null;
     const normalizedFriendImage =
@@ -93,6 +105,7 @@ export async function POST(req: Request) {
     const newPost = {
       postId,
       title,
+      subtitle: normalizedSubtitle,
       htmlContent: content, // Armazena o conteúdo como Markdown (htmlContent para consistência com o projeto)
       date: new Date().toISOString().split("T")[0], // Formato "YYYY-MM-DD"
       views: 0, // Inicializa as views como 0

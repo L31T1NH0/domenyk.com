@@ -6,11 +6,12 @@ import Image from "next/image";
 type PostHeaderProps = {
   cape?: string; // Link opcional para a imagem principal (capa)
   title: string; // Título do post
+  subtitle?: string; // Subtítulo opcional
   friendImage?: string; // Link opcional para a foto do amigo
   coAuthorImageUrl?: string | null;
 };
 
-export function PostHeader({ cape, title, friendImage, coAuthorImageUrl }: PostHeaderProps) {
+export function PostHeader({ cape, title, subtitle, friendImage, coAuthorImageUrl }: PostHeaderProps) {
   const secondaryImage = coAuthorImageUrl || friendImage || undefined;
 
   return (
@@ -55,6 +56,9 @@ export function PostHeader({ cape, title, friendImage, coAuthorImageUrl }: PostH
                 )}
               </div>
               <h1 className="text-xl text-white">{title}</h1>
+              {subtitle ? (
+                <p className="text-sm text-zinc-200 drop-shadow">{subtitle}</p>
+              ) : null}
             </div>
           </div>
         </div>
@@ -85,6 +89,7 @@ export function PostHeader({ cape, title, friendImage, coAuthorImageUrl }: PostH
             )}
           </div>
           <h1 className=" ">{title}</h1>
+          {subtitle ? <p className="text-sm text-zinc-300 text-center">{subtitle}</p> : null}
         </div>
       )}
     </div>

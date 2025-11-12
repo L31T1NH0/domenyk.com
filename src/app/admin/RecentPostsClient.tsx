@@ -9,6 +9,7 @@ import CommentsModal from "./CommentsModal";
 type PostRow = {
   postId: string;
   title: string;
+  subtitle?: string | null;
   date?: string;
   views?: number;
   hidden?: boolean;
@@ -111,6 +112,91 @@ function TagListEditor({
   );
 }
 
+function SubtitleEditor({
+  value,
+  onSave,
+}: {
+  value: string | null | undefined;
+  onSave: (next: string | null) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(value ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!editing) {
+      setText(value ?? "");
+    }
+  }, [value, editing]);
+
+  const onSubmit = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      const trimmed = text.trim();
+      await onSave(trimmed === "" ? null : trimmed);
+      setEditing(false);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!editing) {
+    return (
+      <div className="flex flex-col gap-2">
+        {value && value.trim() !== "" ? (
+          <span className="text-sm text-zinc-300">{value}</span>
+        ) : (
+          <span className="text-sm text-zinc-500">-</span>
+        )}
+        <button
+          onClick={() => {
+            setEditing(true);
+            setError(null);
+          }}
+          className="self-start rounded border border-zinc-700 bg-zinc-900 px-4 py-2 text-xs text-zinc-200 hover:bg-zinc-800"
+        >
+          Editar
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <input
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        className="min-w-[200px] rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-xs text-zinc-100"
+        placeholder="Subtítulo do post"
+      />
+      {error ? <span className="text-xs text-red-400">{error}</span> : null}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onSubmit}
+          disabled={saving}
+          className="rounded border border-zinc-700 bg-zinc-100 px-4 py-2 text-xs font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-60"
+        >
+          Salvar
+        </button>
+        <button
+          onClick={() => {
+            setEditing(false);
+            setText(value ?? "");
+            setError(null);
+          }}
+          className="rounded border border-zinc-700 bg-zinc-900 px-4 py-2 text-xs text-zinc-200 hover:bg-zinc-800"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
   const [posts, setPosts] = useState<PostRow[]>(initial);
   const [loading, setLoading] = useState(false);
@@ -189,7 +275,10 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
     loadUsers();
   }, []);
 
-  async function updateMeta(postId: string, patch: Partial<Pick<PostRow, "tags" | "categories" | "coAuthorUserId">>) {
+  async function updateMeta(
+    postId: string,
+    patch: Partial<Pick<PostRow, "tags" | "categories" | "coAuthorUserId" | "subtitle">>
+  ) {
     setError(null);
     const res = await fetch(`/admin/api/posts`, {
       method: "PATCH",
@@ -227,6 +316,7 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
   const headerCells = [
     { key: "select", label: "", className: "md:w-12" },
     { key: "title", label: "Título" },
+    { key: "subtitle", label: "Subtítulo" },
     { key: "id", label: "ID" },
     { key: "date", label: "Data" },
     { key: "views", label: "Views", align: "right" as const },
@@ -256,7 +346,7 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
             ))}
           </div>
         </div>
-        <div className="space-y-4 md:table-row-group md:space-y-0">
+          <div className="space-y-4 md:table-row-group md:space-y-0">
           {selectedIds.length > 0 && (
             <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-4 md:table-row md:border-0 md:bg-zinc-900/40 md:p-0">
               <div className={`${cellBase}`}>
@@ -373,6 +463,18 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
                 >
                   {p.title}
                 </Link>
+              </div>
+              <div className={`${cellBase} md:max-w-[320px] md:align-top`}>
+                <div className="text-xs font-medium uppercase text-zinc-500 md:hidden">Subtítulo</div>
+                <SubtitleEditor
+                  value={p.subtitle ?? null}
+                  onSave={async (next) => {
+                    await updateMeta(p.postId, { subtitle: next });
+                    setPosts((rows) =>
+                      rows.map((r) => (r.postId === p.postId ? { ...r, subtitle: next ?? null } : r))
+                    );
+                  }}
+                />
               </div>
               <div className={`${cellBase}`}>
                 <div className="text-xs font-medium uppercase text-zinc-500 md:hidden">ID</div>
