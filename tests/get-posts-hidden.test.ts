@@ -4,6 +4,7 @@ import { test } from "node:test";
 type RawPost = {
   postId: string;
   title: string;
+  subtitle?: string | null;
   date: string;
   views: number;
   tags: string[];
@@ -23,6 +24,7 @@ test("admins can fetch hidden posts while non-admins cannot", async () => {
     {
       postId: "public-post",
       title: "Public",
+      subtitle: "Publicado para todos",
       date: "2024-01-01T00:00:00.000Z",
       views: 100,
       tags: ["general"],
@@ -120,6 +122,9 @@ test("admins can fetch hidden posts while non-admins cannot", async () => {
 
   const visitorSlugs = visitorResult.posts.map((post) => post.postId);
   const adminSlugs = adminResult.posts.map((post) => post.postId);
+  const adminPublicPost = adminResult.posts.find((post) => post.postId === "public-post");
+
+  assert.equal(adminPublicPost?.subtitle, "Publicado para todos");
 
   assert.ok(!visitorSlugs.includes("hidden-post"));
   assert.ok(adminSlugs.includes("hidden-post"));

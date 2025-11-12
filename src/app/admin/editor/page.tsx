@@ -4,6 +4,7 @@ import { useState } from "react";
 
 export default function Editor() {
   const [title, setTitle] = useState("");
+  const [subtitle, setSubtitle] = useState("");
   const [postId, setPostId] = useState("");
   const [cape, setCape] = useState("");
   const [friendImage, setFriendImage] = useState("");
@@ -29,6 +30,7 @@ export default function Editor() {
 
       const formData = new FormData();
       formData.append("title", title);
+      formData.append("subtitle", subtitle);
       formData.append("postId", postId);
       formData.append("content", content);
       formData.append("tags", tags);
@@ -57,6 +59,7 @@ export default function Editor() {
       await response.json();
       setSuccess("Post criado com sucesso!");
       setTitle("");
+      setSubtitle("");
       setPostId("");
       setCape("");
       setFriendImage("");
@@ -98,6 +101,17 @@ export default function Editor() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
+              />
+            </label>
+            <label className="flex flex-col gap-2">
+              <span className="text-sm font-medium text-zinc-300">Subtítulo</span>
+              <input
+                name="subtitle"
+                className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/40"
+                type="text"
+                placeholder="Resumo curto do post"
+                value={subtitle}
+                onChange={(e) => setSubtitle(e.target.value)}
               />
             </label>
             <label className="flex flex-col gap-2">

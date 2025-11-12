@@ -29,6 +29,7 @@ test("renders metadata when lookup succeeds", async () => {
   const metadata = {
     postId: "meu-post",
     title: "Meu Post",
+    subtitle: "Resumo do post",
     date: "2024-01-01T00:00:00.000Z",
     thumbnailUrl: "https://example.com/thumb.jpg",
   };
@@ -57,6 +58,11 @@ test("renders metadata when lookup succeeds", async () => {
     (node) => node.type === "span" && node.props.className?.includes("font-medium")
   );
   assert.equal(titleNode.props.children, metadata.title);
+
+  const subtitleNode = root.find(
+    (node) => node.type === "span" && node.props.title === metadata.subtitle
+  );
+  assert.equal(subtitleNode.props.children, metadata.subtitle);
 
   const timeNode = root.findByType("time");
   assert.equal(timeNode.props.dateTime, metadata.date);
