@@ -185,6 +185,11 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
   const updatedAt = normalizeDate(post.updatedAt);
   const publishedTime = date || undefined;
   const modifiedTime = updatedAt || undefined;
+  const subtitleCandidate = (post as { subtitle?: string }).subtitle;
+  const subtitle =
+    typeof subtitleCandidate === "string" && subtitleCandidate.trim().length > 0
+      ? subtitleCandidate
+      : undefined;
   const descriptionCandidate = subtitle ?? extractDescription(post);
   const description =
     descriptionCandidate && descriptionCandidate.trim() !== ""
@@ -228,6 +233,9 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
   return {
     title: `${title} - Blog`,
     description,
+    alternates: {
+      canonical: url,
+    },
     openGraph,
     twitter: {
       site: "@l31t1",
@@ -318,6 +326,25 @@ export default async function PostPage({ params }: PostPageProps) {
   const views = typeof post.views === "number" ? post.views : 0;
   const path = `/posts/${post.postId}`;
   const paragraphCommentsEnabled = post.paragraphCommentsEnabled !== false;
+  const BASE_URL = "https://domenyk.com";
+  const FALLBACK_IMAGE_PATH = "/images/profile.jpg";
+  const cape = typeof post.cape === "string" ? post.cape.trim() : "";
+  const imageSource = cape || FALLBACK_IMAGE_PATH;
+  const imageUrl = new URL(imageSource, BASE_URL).toString();
+  const updatedAt = normalizeDate(post.updatedAt);
+  const modifiedTime = updatedAt || "";
+  const canonicalUrl = `${BASE_URL}${path}`;
+  const dateModified = modifiedTime || dateString || undefined;
+  const subtitleCandidate = (post as { subtitle?: string }).subtitle;
+  const subtitle =
+    typeof subtitleCandidate === "string" && subtitleCandidate.trim().length > 0
+      ? subtitleCandidate
+      : undefined;
+  const descriptionCandidate = subtitle ?? extractDescription(post);
+  const description =
+    descriptionCandidate && descriptionCandidate.trim() !== ""
+      ? descriptionCandidate.trim()
+      : title;
 
   const descriptionCandidate = subtitle ?? extractDescription(post);
   const description =
@@ -343,17 +370,18 @@ export default async function PostPage({ params }: PostPageProps) {
     '@context': 'https://schema.org',
     '@type': 'BlogPosting',
     headline: title,
-    description: description,
-    datePublished: dateString,
-    dateModified: dateString,
+    ...(dateString ? { datePublished: dateString } : {}),
+    ...(dateModified ? { dateModified } : {}),
     author: {
       '@type': 'Person',
       name: 'Domenyk',
     },
     mainEntityOfPage: {
       '@type': 'WebPage',
-      '@id': `https://domenyk.com${path}`,
+      '@id': canonicalUrl,
     },
+    image: imageUrl,
+    description,
   };
 
   return (
