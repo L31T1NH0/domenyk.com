@@ -26,7 +26,10 @@ export default function ScrollProgressEffect() {
       const containerTop =
         container.getBoundingClientRect().top + window.scrollY;
       const scrollTop = Math.max(0, window.scrollY - containerTop);
-      const totalScrollable = container.scrollHeight - container.clientHeight;
+      const totalScrollable = Math.max(
+        container.scrollHeight - window.innerHeight,
+        0
+      );
 
       if (totalScrollable <= 0) {
         setScrollVariables(0, false);
