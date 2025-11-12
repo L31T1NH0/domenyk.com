@@ -38,12 +38,18 @@ export default async function RootLayout({ children }: RootLayoutProps) {
     }
   }
 
+  const isAuthenticated = Boolean(authState?.userId);
+
   return (
     <ClerkProvider>
       <html lang="pt-BR">
         <body className="min-h-screen bg-zinc-900 text-white">
           <Suspense fallback={null}>
-            <AnalyticsProvider isAdmin={isAdmin} config={analyticsConfig}>
+            <AnalyticsProvider
+              isAdmin={isAdmin}
+              config={analyticsConfig}
+              isAuthenticated={isAuthenticated}
+            >
               {children}
             </AnalyticsProvider>
           </Suspense>
