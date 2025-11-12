@@ -1,7 +1,5 @@
 export const ANALYTICS_EVENT_NAMES = [
   "page_view",
-  "read_progress",
-  "read_complete",
   "para_open",
   "comment_submit",
   "search_query",
@@ -12,8 +10,6 @@ export type AnalyticsEventName = (typeof ANALYTICS_EVENT_NAMES)[number];
 
 const DEFAULT_EVENTS: AnalyticsEventName[] = [
   "page_view",
-  "read_progress",
-  "read_complete",
   "comment_submit",
 ];
 

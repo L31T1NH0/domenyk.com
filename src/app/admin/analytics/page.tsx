@@ -25,31 +25,32 @@ function getFromDate(range: RangeKey): Date {
 }
 
 type DeviceBreakdown = { device: string; count: number }[];
-type TopPagesRow = { path: string; views: number; completions: number; completionRate: number }[];
-type ProgressSummary = {
-  uniqueViews: number;
-  p25: number;
-  p50: number;
-  p75: number;
-  p100: number;
-};
-type PageProgressRow = {
+type TopPageRow = {
   path: string;
-  uniqueViews: number;
-  p25: number;
-  p50: number;
-  p75: number;
-  p100: number;
-  completionRate: number;
+  views: number;
+  authenticatedViews: number;
+  anonymousViews: number;
+  referrer?: string;
 }[];
 
 async function getSummary(from: Date) {
   const db = await getMongoDb();
   const events = db.collection("analytics_events");
 
-  const [pageViews, readCompletions, uniqueSessions] = await Promise.all([
-    events.countDocuments({ name: "page_view", serverTs: { $gte: from } }),
-    events.countDocuments({ name: "read_complete", serverTs: { $gte: from } }),
+  const [pageViewBreakdown, uniqueSessions] = await Promise.all([
+    events
+      .aggregate<{ _id: boolean; count: number }>([
+        { $match: { name: "page_view", serverTs: { $gte: from } } },
+        {
+          $group: {
+            _id: {
+              $cond: [{ $eq: ["$flags.isAuthenticated", true] }, true, false],
+            },
+            count: { $sum: 1 },
+          },
+        },
+      ])
+      .toArray(),
     events
       .aggregate<{ _id: string }>([
         { $match: { serverTs: { $gte: from } } },
@@ -61,7 +62,19 @@ async function getSummary(from: Date) {
       .then((arr) => (arr[0] as any)?.n ?? 0),
   ]);
 
-  return { pageViews, readCompletions, uniqueSessions };
+  let authenticatedPageViews = 0;
+  let anonymousPageViews = 0;
+  for (const row of pageViewBreakdown) {
+    if (row._id === true) {
+      authenticatedPageViews = row.count;
+    } else {
+      anonymousPageViews += row.count;
+    }
+  }
+
+  const pageViews = authenticatedPageViews + anonymousPageViews;
+
+  return { pageViews, authenticatedPageViews, anonymousPageViews, uniqueSessions };
 }
 
 async function getDeviceBreakdown(from: Date): Promise<DeviceBreakdown> {
@@ -77,26 +90,22 @@ async function getDeviceBreakdown(from: Date): Promise<DeviceBreakdown> {
   return rows.map((r) => ({ device: r._id ?? "unknown", count: r.count }));
 }
 
-async function getTopPages(from: Date, limit = 10): Promise<TopPagesRow> {
+async function getTopPages(from: Date, limit = 10): Promise<TopPageRow> {
   const db = await getMongoDb();
   const events = db.collection("analytics_events");
-  const rows = await events
+  const baseRows = await events
     .aggregate<{
       path: string;
       views: number;
-      completions: number;
-      completionRate: number;
+      authenticatedViews: number;
     }>([
-      { $match: { serverTs: { $gte: from }, name: { $in: ["page_view", "read_complete"] } } },
-      { $group: { _id: { path: "$page.path", name: "$name" }, count: { $sum: 1 } } },
+      { $match: { serverTs: { $gte: from }, name: "page_view" } },
       {
         $group: {
-          _id: "$_id.path",
-          views: {
-            $sum: { $cond: [{ $eq: ["$_id.name", "page_view"] }, "$count", 0] },
-          },
-          completions: {
-            $sum: { $cond: [{ $eq: ["$_id.name", "read_complete"] }, "$count", 0] },
+          _id: "$page.path",
+          views: { $sum: 1 },
+          authenticatedViews: {
+            $sum: { $cond: [{ $eq: ["$flags.isAuthenticated", true] }, 1, 0] },
           },
         },
       },
@@ -105,10 +114,7 @@ async function getTopPages(from: Date, limit = 10): Promise<TopPagesRow> {
           _id: 0,
           path: "$_id",
           views: 1,
-          completions: 1,
-          completionRate: {
-            $cond: [{ $gt: ["$views", 0] }, { $divide: ["$completions", "$views"] }, 0],
-          },
+          authenticatedViews: 1,
         },
       },
       { $sort: { views: -1 } },
@@ -116,153 +122,49 @@ async function getTopPages(from: Date, limit = 10): Promise<TopPagesRow> {
     ])
     .toArray();
 
-  return rows.map((r) => ({
-    path: r.path,
-    views: r.views,
-    completions: r.completions,
-    completionRate: r.completionRate,
-  }));
-}
+  const topPaths = baseRows.map((row) => row.path).filter((path): path is string => typeof path === "string");
+  let referrers: Record<string, string | undefined> = {};
 
-async function getProgressSummary(from: Date): Promise<ProgressSummary> {
-  const db = await getMongoDb();
-  const events = db.collection("analytics_events");
-
-  const [res] = await events
-    .aggregate<{
-      views: number;
-      p25: number;
-      p50: number;
-      p75: number;
-      p100: number;
-    }>([
-      { $match: { serverTs: { $gte: from }, name: { $in: ["page_view", "read_progress", "read_complete"] } } },
-      {
-        $project: {
-          page: "$page.path",
-          session: "$session",
-          type: "$name",
-          milestone: {
-            $cond: [
-              { $eq: ["$name", "read_complete"] },
-              100,
-              { $ifNull: ["$data.progress", null] },
-            ],
+  if (topPaths.length > 0) {
+    const refRows = await events
+      .aggregate<{ path: string; referrer: string }>([
+        {
+          $match: {
+            serverTs: { $gte: from },
+            name: "page_view",
+            "page.path": { $in: topPaths },
+            "page.referrer": { $type: "string", $ne: "" },
           },
         },
-      },
-      {
-        $project: {
-          page: 1,
-          session: 1,
-          milestone: {
-            $switch: {
-              branches: [
-                { case: { $eq: ["$type", "page_view"] }, then: 0 },
-                { case: { $eq: ["$milestone", 25] }, then: 25 },
-                { case: { $eq: ["$milestone", 50] }, then: 50 },
-                { case: { $eq: ["$milestone", 75] }, then: 75 },
-                { case: { $eq: ["$milestone", 100] }, then: 100 },
-              ],
-              default: null,
-            },
-          },
-        },
-      },
-      { $match: { milestone: { $in: [0, 25, 50, 75, 100] } } },
-      { $group: { _id: { page: "$page", session: "$session", m: "$milestone" } } },
-      {
-        $group: {
-          _id: null,
-          views: { $sum: { $cond: [{ $eq: ["$_id.m", 0] }, 1, 0] } },
-          p25: { $sum: { $cond: [{ $eq: ["$_id.m", 25] }, 1, 0] } },
-          p50: { $sum: { $cond: [{ $eq: ["$_id.m", 50] }, 1, 0] } },
-          p75: { $sum: { $cond: [{ $eq: ["$_id.m", 75] }, 1, 0] } },
-          p100: { $sum: { $cond: [{ $eq: ["$_id.m", 100] }, 1, 0] } },
-        },
-      },
-      { $project: { _id: 0, views: 1, p25: 1, p50: 1, p75: 1, p100: 1 } },
-    ])
-    .toArray();
+        { $group: { _id: { path: "$page.path", referrer: "$page.referrer" }, count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $group: { _id: "$_id.path", referrer: { $first: "$_id.referrer" } } },
+        { $project: { _id: 0, path: "$_id", referrer: 1 } },
+      ])
+      .toArray();
 
-  return {
-    uniqueViews: res?.views ?? 0,
-    p25: res?.p25 ?? 0,
-    p50: res?.p50 ?? 0,
-    p75: res?.p75 ?? 0,
-    p100: res?.p100 ?? 0,
-  };
+    referrers = Object.fromEntries(refRows.map((row) => [row.path, row.referrer]));
+  }
+
+  return baseRows
+    .filter((row): row is typeof row & { path: string } => typeof row.path === "string" && row.path.length > 0)
+    .map((row) => ({
+      path: row.path,
+      views: row.views,
+      authenticatedViews: row.authenticatedViews,
+      anonymousViews: Math.max(0, row.views - row.authenticatedViews),
+      referrer: referrers[row.path],
+    }));
 }
 
-async function getTopPagesProgress(from: Date, limit = 10): Promise<PageProgressRow> {
-  const db = await getMongoDb();
-  const events = db.collection("analytics_events");
-  const rows = await events
-    .aggregate<{
-      path: string;
-      uniqueViews: number;
-      p25: number;
-      p50: number;
-      p75: number;
-      p100: number;
-      completionRate: number;
-    }>([
-      { $match: { serverTs: { $gte: from }, name: { $in: ["page_view", "read_progress", "read_complete"] } } },
-      {
-        $project: {
-          page: "$page.path",
-          session: "$session",
-          type: "$name",
-          milestone: {
-            $cond: [
-              { $eq: ["$name", "page_view"] },
-              0,
-              { $cond: [{ $eq: ["$name", "read_complete"] }, 100, { $ifNull: ["$data.progress", null] }] },
-            ],
-          },
-        },
-      },
-      { $match: { milestone: { $in: [0, 25, 50, 75, 100] } } },
-      { $group: { _id: { page: "$page", session: "$session", m: "$milestone" } } },
-      {
-        $group: {
-          _id: "$_id.page",
-          uniqueViews: { $sum: { $cond: [{ $eq: ["$_id.m", 0] }, 1, 0] } },
-          p25: { $sum: { $cond: [{ $eq: ["$_id.m", 25] }, 1, 0] } },
-          p50: { $sum: { $cond: [{ $eq: ["$_id.m", 50] }, 1, 0] } },
-          p75: { $sum: { $cond: [{ $eq: ["$_id.m", 75] }, 1, 0] } },
-          p100: { $sum: { $cond: [{ $eq: ["$_id.m", 100] }, 1, 0] } },
-        },
-      },
-      {
-        $project: {
-          _id: 0,
-          path: "$_id",
-          uniqueViews: 1,
-          p25: 1,
-          p50: 1,
-          p75: 1,
-          p100: 1,
-          completionRate: { $cond: [{ $gt: ["$uniqueViews", 0] }, { $divide: ["$p100", "$uniqueViews"] }, 0] },
-        },
-      },
-      { $sort: { uniqueViews: -1 } },
-      { $limit: limit },
-    ])
-    .toArray();
 
-  return rows.map((r) => ({
-    path: r.path,
-    uniqueViews: r.uniqueViews,
-    p25: r.p25,
-    p50: r.p50,
-    p75: r.p75,
-    p100: r.p100,
-    completionRate: r.completionRate,
-  }));
-}
-
-type TimeSeriesPoint = { label: string; views: number; sessions: number; completions: number };
+type TimeSeriesPoint = {
+  label: string;
+  views: number;
+  sessions: number;
+  authenticatedViews: number;
+  anonymousViews: number;
+};
 type TimeUnit = "day" | "hour";
 
 function toKeyString(d: Date, unit: TimeUnit): string {
@@ -309,7 +211,7 @@ async function getTimeSeries(from: Date, unit: TimeUnit): Promise<TimeSeriesPoin
   const [result] = await events
     .aggregate<{
       views: { bucket: Date; count: number }[];
-      completions: { bucket: Date; count: number }[];
+      authenticatedViews: { bucket: Date; count: number }[];
       sessions: { bucket: Date; count: number }[];
     }>([
       { $match: { serverTs: { $gte: from } } },
@@ -321,8 +223,8 @@ async function getTimeSeries(from: Date, unit: TimeUnit): Promise<TimeSeriesPoin
             { $project: { _id: 0, bucket: "$_id", count: 1 } },
             { $sort: { day: 1 } },
           ],
-          completions: [
-            { $match: { name: "read_complete" } },
+          authenticatedViews: [
+            { $match: { name: "page_view", "flags.isAuthenticated": true } },
             { $group: { _id: { $dateTrunc: { date: "$serverTs", unit: unit } }, count: { $sum: 1 } } },
             { $project: { _id: 0, bucket: "$_id", count: 1 } },
             { $sort: { day: 1 } },
@@ -340,14 +242,17 @@ async function getTimeSeries(from: Date, unit: TimeUnit): Promise<TimeSeriesPoin
 
   const keys = buildRange(from, unit);
   const viewsMap = new Map<string, number>((result?.views ?? []).map((r) => [toKeyString(new Date(r.bucket), unit), r.count]));
-  const compsMap = new Map<string, number>((result?.completions ?? []).map((r) => [toKeyString(new Date(r.bucket), unit), r.count]));
+  const authedMap = new Map<string, number>(
+    (result?.authenticatedViews ?? []).map((r) => [toKeyString(new Date(r.bucket), unit), r.count])
+  );
   const sessMap = new Map<string, number>((result?.sessions ?? []).map((r) => [toKeyString(new Date(r.bucket), unit), r.count]));
 
   return keys.map((label) => ({
     label,
     views: viewsMap.get(label) ?? 0,
     sessions: sessMap.get(label) ?? 0,
-    completions: compsMap.get(label) ?? 0,
+    authenticatedViews: authedMap.get(label) ?? 0,
+    anonymousViews: Math.max(0, (viewsMap.get(label) ?? 0) - (authedMap.get(label) ?? 0)),
   }));
 }
 
@@ -402,13 +307,11 @@ export default async function AdminAnalyticsPage({
   const range = parseRange(sp?.range);
   const from = getFromDate(range);
 
-  const [summary, device, topPages, series, progress, topProgress] = await Promise.all([
+  const [summary, device, topPages, series] = await Promise.all([
     getSummary(from),
     getDeviceBreakdown(from),
     getTopPages(from, 10),
     getTimeSeries(from, range === "24h" ? "hour" : "day"),
-    getProgressSummary(from),
-    getTopPagesProgress(from, 8),
   ]);
 
   const rangeTabs: { key: RangeKey; label: string }[] = [
@@ -442,7 +345,7 @@ export default async function AdminAnalyticsPage({
         </div>
       </div>
 
-      <section className="grid gap-4 sm:grid-cols-3">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
           <div className="text-xs text-zinc-400">Page views</div>
           <div className="mt-2 text-3xl font-semibold">{summary.pageViews}</div>
@@ -452,8 +355,12 @@ export default async function AdminAnalyticsPage({
           <div className="mt-2 text-3xl font-semibold">{summary.uniqueSessions}</div>
         </div>
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
-          <div className="text-xs text-zinc-400">Leituras completas</div>
-          <div className="mt-2 text-3xl font-semibold">{summary.readCompletions}</div>
+          <div className="text-xs text-zinc-400">Views autenticadas</div>
+          <div className="mt-2 text-3xl font-semibold">{summary.authenticatedPageViews}</div>
+        </div>
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
+          <div className="text-xs text-zinc-400">Views anônimas</div>
+          <div className="mt-2 text-3xl font-semibold">{summary.anonymousPageViews}</div>
         </div>
       </section>
 
@@ -471,13 +378,14 @@ export default async function AdminAnalyticsPage({
             <h2 className="text-sm font-medium">Top páginas por views</h2>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
+            <table className="min-w-full text-left text-sm min-w-[640px]">
               <thead className="bg-zinc-900/40 text-zinc-400">
                 <tr>
                   <th className="px-4 py-2 font-medium">Página</th>
+                  <th className="px-4 py-2 font-medium">Domínio</th>
                   <th className="px-4 py-2 font-medium text-right">Views</th>
-                  <th className="px-4 py-2 font-medium text-right">Completos</th>
-                  <th className="px-4 py-2 font-medium text-right">%</th>
+                  <th className="px-4 py-2 font-medium text-right">Autenticadas</th>
+                  <th className="px-4 py-2 font-medium text-right">Anônimas</th>
                 </tr>
               </thead>
               <tbody>
@@ -489,16 +397,28 @@ export default async function AdminAnalyticsPage({
                           {row.path}
                         </Link>
                       </td>
-                      <td className="px-4 py-2 text-right tabular-nums">{row.views}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">{row.completions}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">
-                        {Math.round(row.completionRate * 100)}%
+                      <td className="px-4 py-2">
+                        {row.referrer ? (
+                          <Link
+                            href={`https://${row.referrer}/`}
+                            className="text-zinc-200 hover:underline"
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {row.referrer}
+                          </Link>
+                        ) : (
+                          <span className="text-zinc-500">—</span>
+                        )}
                       </td>
+                      <td className="px-4 py-2 text-right tabular-nums">{row.views}</td>
+                      <td className="px-4 py-2 text-right tabular-nums">{row.authenticatedViews}</td>
+                      <td className="px-4 py-2 text-right tabular-nums">{row.anonymousViews}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={4} className="px-4 py-8 text-center text-zinc-400">
+                    <td colSpan={5} className="px-4 py-8 text-center text-zinc-400">
                       Nenhum dado no período.
                     </td>
                   </tr>
@@ -540,77 +460,7 @@ export default async function AdminAnalyticsPage({
         </div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
-          <div className="flex items-center justify-between border-b border-zinc-800 pb-3 mb-3">
-            <h2 className="text-sm font-medium">Funnel de leitura (único sessão+pagina)</h2>
-            <span className="text-xs text-zinc-400">Período: {range}</span>
-          </div>
-          <div className="grid grid-cols-5 gap-3">
-            {[
-              { label: "Views", value: progress.uniqueViews },
-              { label: "25%", value: progress.p25, rate: progress.uniqueViews ? progress.p25 / progress.uniqueViews : 0 },
-              { label: "50%", value: progress.p50, rate: progress.uniqueViews ? progress.p50 / progress.uniqueViews : 0 },
-              { label: "75%", value: progress.p75, rate: progress.uniqueViews ? progress.p75 / progress.uniqueViews : 0 },
-              { label: "100%", value: progress.p100, rate: progress.uniqueViews ? progress.p100 / progress.uniqueViews : 0 },
-            ].map((it, idx) => (
-              <div key={`${it.label}-${idx}`} className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
-                <div className="text-xs text-zinc-400">{it.label}</div>
-                <div className="mt-1 text-xl font-semibold tabular-nums">{it.value}</div>
-                {typeof it.rate === "number" && idx > 0 && (
-                  <div className="text-xs text-zinc-400">{Math.round(it.rate * 100)}%</div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/60">
-          <div className="flex items-center justify-between border-b border-zinc-800 p-4">
-            <h2 className="text-sm font-medium">Top páginas — progresso de leitura</h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-zinc-900/40 text-zinc-400">
-                <tr>
-                  <th className="px-4 py-2 font-medium">Página</th>
-                  <th className="px-4 py-2 font-medium text-right">Views*</th>
-                  <th className="px-4 py-2 font-medium text-right">25%</th>
-                  <th className="px-4 py-2 font-medium text-right">50%</th>
-                  <th className="px-4 py-2 font-medium text-right">75%</th>
-                  <th className="px-4 py-2 font-medium text-right">100%</th>
-                  <th className="px-4 py-2 font-medium text-right">Compl. %</th>
-                </tr>
-              </thead>
-              <tbody>
-                {topProgress.length > 0 ? (
-                  topProgress.map((row) => (
-                    <tr key={`progress-${row.path}`} className="border-t border-zinc-800">
-                      <td className="px-4 py-2">
-                        <Link href={row.path} className="text-zinc-100 hover:underline">
-                          {row.path}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-2 text-right tabular-nums">{row.uniqueViews}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">{row.p25}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">{row.p50}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">{row.p75}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">{row.p100}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">{Math.round((row.completionRate || 0) * 100)}%</td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-zinc-400">
-                      Nenhum dado no período.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-            <div className="px-4 py-2 text-xs text-zinc-500">* Views únicos por sessão e página.</div>
-          </div>
-        </div>
-      </section>
+      {/* Seções de funil e progresso removidas após a descontinuação dos eventos de leitura */}
     </div>
   );
 }

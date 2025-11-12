@@ -61,6 +61,7 @@ type NormalizedEvent = {
   };
   flags?: {
     isSampled?: boolean;
+    isAuthenticated?: boolean;
   };
   userAgent?: string;
   origin?: string;
@@ -130,9 +131,12 @@ function sanitizeFlags(value: unknown) {
     return undefined;
   }
   const flags = value as Record<string, unknown>;
-  const result: { isSampled?: boolean } = {};
+  const result: { isSampled?: boolean; isAuthenticated?: boolean } = {};
   if (typeof flags.isSampled === "boolean") {
     result.isSampled = flags.isSampled;
+  }
+  if (typeof flags.isAuthenticated === "boolean") {
+    result.isAuthenticated = flags.isAuthenticated;
   }
   return Object.keys(result).length > 0 ? result : undefined;
 }
@@ -281,15 +285,6 @@ async function parseEvents(
     const event = eventInput as IncomingEvent;
     const name = typeof event.name === "string" ? event.name.trim() : "";
     if (!isKnownEvent(name) || !serverConfig.enabledEvents.has(name)) {
-      continue;
-    }
-
-    if (
-      name === "read_progress" &&
-      serverConfig.readProgressSampleRate >= 0 &&
-      serverConfig.readProgressSampleRate < 1 &&
-      Math.random() > serverConfig.readProgressSampleRate
-    ) {
       continue;
     }
 

@@ -30,7 +30,8 @@ type AnalyticsEventPayload = {
     height?: number;
   };
   device?: "mobile" | "desktop";
-  flags?: {
+  flags: {
+    isAuthenticated: boolean;
     isSampled?: boolean;
   };
 };
@@ -59,6 +60,7 @@ type AnalyticsProviderProps = {
   children: ReactNode;
   isAdmin: boolean;
   config: AnalyticsClientConfig;
+  isAuthenticated: boolean;
 };
 
 type FlushReason = "scheduled" | "visibility" | "immediate";
@@ -215,7 +217,12 @@ function getDevice(): "mobile" | "desktop" | undefined {
   return width < 768 ? "mobile" : "desktop";
 }
 
-export function AnalyticsProvider({ children, isAdmin, config }: AnalyticsProviderProps) {
+export function AnalyticsProvider({
+  children,
+  isAdmin,
+  config,
+  isAuthenticated,
+}: AnalyticsProviderProps) {
   const [trackingReady, setTrackingReady] = useState(false);
   const [trackingAllowed, setTrackingAllowed] = useState(false);
   const pathname = usePathname();
@@ -351,21 +358,13 @@ export function AnalyticsProvider({ children, isAdmin, config }: AnalyticsProvid
         return;
       }
 
-      if (
-        name === "read_progress" &&
-        config.readProgressSampleRate >= 0 &&
-        config.readProgressSampleRate < 1 &&
-        Math.random() > config.readProgressSampleRate
-      ) {
-        return;
-      }
-
       const sanitizedData = sanitizeClientData(data);
-      const flags = options?.flags;
-      const sanitizedFlags =
-        flags && typeof flags.isSampled === "boolean"
-          ? { isSampled: flags.isSampled }
-          : undefined;
+      const eventFlags: AnalyticsEventPayload["flags"] = {
+        isAuthenticated,
+      };
+      if (typeof options?.flags?.isSampled === "boolean") {
+        eventFlags.isSampled = options.flags.isSampled;
+      }
 
       const path = window.location.pathname.slice(0, 512);
       const search = window.location.search.slice(0, 256);
@@ -396,7 +395,7 @@ export function AnalyticsProvider({ children, isAdmin, config }: AnalyticsProvid
           ...(title ? { title } : {}),
         },
         ...(sanitizedData ? { data: sanitizedData } : {}),
-        ...(sanitizedFlags ? { flags: sanitizedFlags } : {}),
+        flags: eventFlags,
       };
 
       const viewport = getViewport();
@@ -425,7 +424,7 @@ export function AnalyticsProvider({ children, isAdmin, config }: AnalyticsProvid
       enabledEvents,
       config.maxBatchSize,
       config.maxQueueSize,
-      config.readProgressSampleRate,
+      isAuthenticated,
       flushQueue,
       scheduleFlush,
     ]

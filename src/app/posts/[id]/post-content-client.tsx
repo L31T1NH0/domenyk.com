@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type HTMLAttributes,
-} from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type HTMLAttributes } from "react";
 import { Date } from "@components/date";
 import ShareButton from "@components/ShareButton";
 import AudioPlayer from "@components/AudioPlayer";
@@ -24,7 +16,6 @@ import PostReference from "@components/PostReference";
 import AutorReference from "@components/AutorReference";
 import PostMinimap from "@components/PostMinimap";
 import { EyeIcon, ClockIcon } from "@heroicons/react/24/solid";
-import { useAnalytics } from "@components/analytics/AnalyticsProvider";
 
 const IsMobileContext = createContext<boolean | null>(null);
 
@@ -63,8 +54,6 @@ export default function PostContentClient({
 }: PostContentClientProps) {
   const [views, setViews] = useState(initialViews);
   const [isMobile, setIsMobile] = useState(false);
-  const { trackEvent, config, isTrackingEnabled } = useAnalytics();
-
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -106,103 +95,6 @@ export default function PostContentClient({
       canceled = true;
     };
   }, [postId]);
-
-  const contentRef = useRef<HTMLDivElement | null>(null);
-
-  // Rastreamento de progresso de leitura: 25%, 50%, 75% e 100%
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const sent = new Set<number>();
-    const milestones = (config.readProgressMilestones?.length
-      ? config.readProgressMilestones
-      : [0.25, 0.5, 0.75, 1.0]
-    )
-      .map((m) => Math.min(1, Math.max(0, m)))
-      .sort((a, b) => a - b);
-
-    const updateScrollProgress = () => {
-      const doc = document.documentElement;
-      const element = contentRef.current ?? document.querySelector<HTMLElement>("[data-post-content]");
-
-      if (!element) {
-        doc.style.setProperty("--scroll-progress", "0%");
-        doc.style.setProperty("--scroll-progress-visible", "0");
-        return 0;
-      }
-
-      const rect = element.getBoundingClientRect();
-      const contentTop = rect.top + window.scrollY;
-      const contentHeight = element.offsetHeight;
-      const rawContentBottom = contentTop + contentHeight - window.innerHeight;
-      const contentBottom = Math.max(contentTop, rawContentBottom);
-      const clampedScroll = Math.min(Math.max(window.scrollY, contentTop), contentBottom);
-      const range = contentBottom - contentTop;
-
-      let ratio = 0;
-      if (range <= 0) {
-        ratio = window.scrollY >= contentTop ? 1 : 0;
-      } else {
-        ratio = (clampedScroll - contentTop) / range;
-      }
-
-      const progress = Math.max(0, Math.min(100, parseFloat((ratio * 100).toFixed(2))));
-      doc.style.setProperty("--scroll-progress", `${progress}%`);
-      doc.style.setProperty("--scroll-progress-visible", "1");
-      return ratio;
-    };
-
-    let frame: number | null = null;
-
-    const handleScroll = () => {
-      if (frame !== null) return;
-      frame = window.requestAnimationFrame(() => {
-        frame = null;
-        const ratio = updateScrollProgress();
-        if (!isTrackingEnabled) {
-          return;
-        }
-        for (const m of milestones) {
-          if (!sent.has(m) && ratio >= m) {
-            sent.add(m);
-            if (m >= 1) {
-              trackEvent("read_complete", { slug: postId, progress: 100 }, { immediate: true });
-            } else {
-              trackEvent(
-                "read_progress",
-                { slug: postId, progress: Math.round(m * 100) },
-                { immediate: m >= 0.75 }
-              );
-            }
-          }
-        }
-      });
-    };
-
-    const handleResize = () => {
-      updateScrollProgress();
-      handleScroll();
-    };
-
-    // Dispara no load e a cada scroll/resize
-    updateScrollProgress();
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("resize", handleResize);
-
-    return () => {
-      if (frame !== null) {
-        window.cancelAnimationFrame(frame);
-      }
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", handleResize);
-      const doc = document.documentElement;
-      doc.style.removeProperty("--scroll-progress");
-      doc.style.removeProperty("--scroll-progress-visible");
-    };
-  }, [config.readProgressMilestones, isTrackingEnabled, postId, trackEvent]);
 
   const parsedContent = useMemo(() => {
     if (!htmlContent) {
@@ -328,11 +220,7 @@ export default function PostContentClient({
 
           {audioUrl && <AudioPlayer audioUrl={audioUrl} />}
 
-          <div
-            ref={contentRef}
-            data-post-content
-            className="flex flex-col gap-4 lg:text-lg sm:text-sm max-sm:text-xs"
-          >
+          <div data-post-content className="flex flex-col gap-4 lg:text-lg sm:text-sm max-sm:text-xs">
             {parsedContent}
           </div>
 

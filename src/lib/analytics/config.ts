@@ -6,7 +6,6 @@ const DEFAULT_MAX_BATCH_SIZE = 10;
 const DEFAULT_MAX_QUEUE_SIZE = 40;
 const DEFAULT_RATE_LIMIT_WINDOW_SECONDS = 60;
 const DEFAULT_RATE_LIMIT_MAX_EVENTS = 120;
-const DEFAULT_PROGRESS_SAMPLE_RATE = 1;
 const DEFAULT_MAX_EVENTS_PER_REQUEST = 25;
 const DEFAULT_MAX_EVENT_BYTES = 4096;
 
@@ -52,8 +51,6 @@ export type AnalyticsClientConfig = {
   flushIntervalMs: number;
   maxBatchSize: number;
   maxQueueSize: number;
-  readProgressSampleRate: number;
-  readProgressMilestones: number[];
 };
 
 export type AnalyticsServerConfig = {
@@ -66,7 +63,6 @@ export type AnalyticsServerConfig = {
   };
   maxEventsPerRequest: number;
   maxEventBytes: number;
-  readProgressSampleRate: number;
 };
 
 export function getAnalyticsClientConfig(): AnalyticsClientConfig {
@@ -83,27 +79,12 @@ export function getAnalyticsClientConfig(): AnalyticsClientConfig {
     min: 1,
     max: 200,
   });
-  const readProgressSampleRate = toNumber(
-    process.env.ANALYTICS_PROGRESS_SAMPLE_RATE,
-    DEFAULT_PROGRESS_SAMPLE_RATE,
-    { min: 0, max: 1 }
-  );
-
-  const readProgressMilestones = process.env.ANALYTICS_PROGRESS_MILESTONES
-    ? process.env.ANALYTICS_PROGRESS_MILESTONES
-        .split(",")
-        .map((item) => Number(item.trim()))
-        .filter((milestone) => Number.isFinite(milestone) && milestone > 0 && milestone <= 1)
-    : [0.25, 0.5, 0.75, 1.0];
-
   return {
     endpoint: DEFAULT_ENDPOINT,
     enabledEvents,
     flushIntervalMs,
     maxBatchSize,
     maxQueueSize,
-    readProgressSampleRate,
-    readProgressMilestones,
   };
 }
 
@@ -131,12 +112,6 @@ export function getAnalyticsServerConfig(): AnalyticsServerConfig {
     DEFAULT_MAX_EVENT_BYTES,
     { min: 512, max: 16_384 }
   );
-  const readProgressSampleRate = toNumber(
-    process.env.ANALYTICS_PROGRESS_SAMPLE_RATE,
-    DEFAULT_PROGRESS_SAMPLE_RATE,
-    { min: 0, max: 1 }
-  );
-
   return {
     endpoint: DEFAULT_ENDPOINT,
     enabledEvents,
@@ -147,6 +122,5 @@ export function getAnalyticsServerConfig(): AnalyticsServerConfig {
     },
     maxEventsPerRequest,
     maxEventBytes,
-    readProgressSampleRate,
   };
 }
