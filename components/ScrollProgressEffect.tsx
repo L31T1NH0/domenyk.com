@@ -1,0 +1,65 @@
+"use client";
+
+import { useEffect } from "react";
+
+function setScrollVariables(progress: number, visible: boolean) {
+  const root = document.documentElement;
+  root.style.setProperty("--scroll-progress", progress.toString());
+  root.style.setProperty("--scroll-progress-visible", visible ? "1" : "0");
+}
+
+export default function ScrollProgressEffect() {
+  useEffect(() => {
+    const container = document.querySelector<HTMLElement>(
+      "[data-scroll-progress-root]"
+    );
+
+    if (!container) {
+      setScrollVariables(0, false);
+      return;
+    }
+
+    let animationFrame = 0;
+
+    const update = () => {
+      animationFrame = 0;
+      const containerTop =
+        container.getBoundingClientRect().top + window.scrollY;
+      const scrollTop = Math.max(0, window.scrollY - containerTop);
+      const totalScrollable = container.scrollHeight - container.clientHeight;
+
+      if (totalScrollable <= 0) {
+        setScrollVariables(0, false);
+        return;
+      }
+
+      const progress = Math.min(
+        1,
+        Math.max(0, scrollTop / totalScrollable)
+      );
+
+      setScrollVariables(progress, true);
+    };
+
+    const requestUpdate = () => {
+      if (animationFrame) return;
+      animationFrame = window.requestAnimationFrame(update);
+    };
+
+    update();
+
+    window.addEventListener("scroll", requestUpdate, { passive: true });
+    window.addEventListener("resize", requestUpdate);
+
+    return () => {
+      window.removeEventListener("scroll", requestUpdate);
+      window.removeEventListener("resize", requestUpdate);
+      if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+      }
+      setScrollVariables(0, false);
+    };
+  }, []);
+
+  return null;
+}
