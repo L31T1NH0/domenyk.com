@@ -22,6 +22,7 @@ type PostDocument = {
   postId: string;
   date: string | Date;
   title: string;
+  subtitle?: string | null;
   htmlContent?: string;
   content?: string;
   views?: number;
@@ -51,6 +52,7 @@ async function fetchPostById(id: string) {
           postId: 1,
           date: 1,
           title: 1,
+          subtitle: 1,
           htmlContent: 1,
           content: 1,
           views: 1,
@@ -169,6 +171,10 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
   }
 
   const title = post.title ?? "";
+  const subtitle =
+    typeof post.subtitle === "string" && post.subtitle.trim() !== ""
+      ? post.subtitle.trim()
+      : null;
   const date = normalizeDate(post.date);
   const BASE_URL = "https://domenyk.com";
   const FALLBACK_IMAGE_PATH = "/images/profile.jpg";
@@ -289,6 +295,10 @@ export default async function PostPage({ params }: PostPageProps) {
   }
 
   const title = post.title ?? "";
+  const subtitle =
+    typeof post.subtitle === "string" && post.subtitle.trim() !== ""
+      ? post.subtitle.trim()
+      : null;
   const markdownSource = post.htmlContent ?? post.content ?? "";
   const shouldUseMdxRenderer = process.env.FEATURE_MDX_RENDERER === "true";
 
@@ -336,6 +346,12 @@ export default async function PostPage({ params }: PostPageProps) {
       ? descriptionCandidate.trim()
       : title;
 
+  const descriptionCandidate = subtitle ?? extractDescription(post);
+  const description =
+    descriptionCandidate && descriptionCandidate.trim() !== ""
+      ? descriptionCandidate.trim()
+      : title;
+
   let coAuthorImageUrl: string | null = null;
   if (!isStaticGenerationEnvironment()) {
     try {
@@ -369,7 +385,7 @@ export default async function PostPage({ params }: PostPageProps) {
   };
 
   return (
-    <Layout title={title} description={title} url={path}>
+    <Layout title={title} description={description} url={path}>
       <script
         type="application/ld+json"
         suppressHydrationWarning
@@ -378,6 +394,7 @@ export default async function PostPage({ params }: PostPageProps) {
       <PostHeader
         cape={post.cape}
         title={title}
+        subtitle={subtitle ?? undefined}
         friendImage={post.friendImage}
         coAuthorImageUrl={coAuthorImageUrl}
       />

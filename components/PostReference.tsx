@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 type PostReferenceMetadata = {
   postId: string;
   title: string;
+  subtitle: string | null;
   date: string;
   thumbnailUrl: string | null;
 };
@@ -108,6 +109,8 @@ export default function PostReference({ slug }: PostReferenceProps) {
     return title.slice(0, limit - 1) + "…";
   }, [state]);
 
+  const subtitle = state.status === "loaded" ? state.data.subtitle ?? null : null;
+
   const commonProps = {
     "data-role": "post-reference",
     "data-slug": slug,
@@ -148,6 +151,11 @@ export default function PostReference({ slug }: PostReferenceProps) {
           <span className="font-medium" title={data.title}>
             {truncatedTitle}
           </span>
+          {subtitle ? (
+            <span className="text-xs text-zinc-300" title={subtitle}>
+              {subtitle}
+            </span>
+          ) : null}
           {formattedDate ? (
             <time dateTime={data.date} className="text-xs text-zinc-400">
               {formattedDate}

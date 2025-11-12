@@ -11,6 +11,7 @@ type PostRow = {
   _id?: string;
   postId: string;
   title: string;
+  subtitle?: string | null;
   date?: string;
   views?: number;
   hidden?: boolean;
@@ -43,6 +44,7 @@ export default async function AdminDashboard() {
             _id: 0,
             postId: 1,
             title: 1,
+            subtitle: 1,
             date: 1,
             views: 1,
             coAuthorUserId: 1,

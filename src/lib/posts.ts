@@ -4,6 +4,7 @@ import { getMongoDb } from "../lib/mongo";
 export type PostRecord = {
   postId: string;
   title: string;
+  subtitle: string | null;
   date: string; // ISO string
   views: number;
   tags: string[];
@@ -29,6 +30,7 @@ export type FetchPostsResult = {
 export type PostReferenceMetadata = {
   postId: string;
   title: string;
+  subtitle: string | null;
   date: string;
   thumbnailUrl: string | null;
 };
@@ -90,6 +92,7 @@ export async function getPosts({
     _id: 0,
     postId: 1,
     title: 1,
+    subtitle: 1,
     date: 1,
     views: 1,
     tags: 1,
@@ -108,6 +111,10 @@ export async function getPosts({
   const posts: PostRecord[] = items.map((post: any) => ({
     postId: String(post.postId),
     title: String(post.title ?? ""),
+    subtitle:
+      typeof post.subtitle === "string" && post.subtitle.trim() !== ""
+        ? post.subtitle.trim()
+        : null,
     date: normalizeDate(post.date),
     views: typeof post.views === "number" ? post.views : 0,
     tags: Array.isArray(post.tags)
@@ -160,6 +167,7 @@ export async function getPostReferenceMetadata(
         _id: 0,
         postId: 1,
         title: 1,
+        subtitle: 1,
         date: 1,
         cape: 1,
         friendImage: 1,
@@ -173,6 +181,10 @@ export async function getPostReferenceMetadata(
 
   const title = record.title ? String(record.title) : "";
   const postId = record.postId ? String(record.postId) : slug;
+  const subtitle =
+    typeof (record as any).subtitle === "string" && (record as any).subtitle.trim() !== ""
+      ? String((record as any).subtitle).trim()
+      : null;
   const date = normalizeDate(record.date);
 
   let thumbnailUrl: string | null = null;
@@ -189,6 +201,7 @@ export async function getPostReferenceMetadata(
   return {
     postId,
     title,
+    subtitle,
     date,
     thumbnailUrl,
   };
