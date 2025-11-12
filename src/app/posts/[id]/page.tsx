@@ -184,15 +184,11 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
   const updatedAt = normalizeDate(post.updatedAt);
   const publishedTime = date || undefined;
   const modifiedTime = updatedAt || undefined;
-  const descriptionCandidate = subtitle ?? extractDescription(post);
-  const description =
-    descriptionCandidate && descriptionCandidate.trim() !== ""
-      ? descriptionCandidate.trim()
-      : title;
+  const description = subtitle;
 
   const openGraph: Metadata["openGraph"] = {
     title,
-    description,
+    ...(description ? { description } : {}),
     url,
     type: "article",
     images: [
@@ -226,7 +222,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
 
   return {
     title: `${title} - Blog`,
-    description,
+    ...(description ? { description } : {}),
     alternates: {
       canonical: url,
     },
@@ -235,7 +231,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
       site: "@l31t1",
       card: "summary_large_image",
       title,
-      description,
+      ...(description ? { description } : {}),
       images: [imageUrl],
     },
     ...(Object.keys(other).length ? { other } : {}),
