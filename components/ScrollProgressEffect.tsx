@@ -22,27 +22,33 @@ export default function ScrollProgressEffect() {
       return;
     }
 
+    const content = container.querySelector<HTMLElement>(
+      "[data-post-content]"
+    );
+
+    if (!content) {
+      setScrollVariables(0, false);
+      return;
+    }
+
     let animationFrame = 0;
 
     const update = () => {
       animationFrame = 0;
-      const containerTop =
-        container.getBoundingClientRect().top + window.scrollY;
-      const scrollTop = Math.max(0, window.scrollY - containerTop);
-      const totalScrollable = Math.max(
-        container.scrollHeight - window.innerHeight,
-        0
-      );
+      const contentTop = content.getBoundingClientRect().top + window.scrollY;
+      const contentHeight = content.scrollHeight || content.offsetHeight || 0;
+      const totalScrollable = Math.max(contentHeight - window.innerHeight, 0);
 
       if (totalScrollable <= 0) {
         setScrollVariables(0, false);
         return;
       }
 
-      const progress = Math.min(
-        1,
-        Math.max(0, scrollTop / totalScrollable)
+      const scrollProgress = Math.min(
+        totalScrollable,
+        Math.max(0, window.scrollY - contentTop)
       );
+      const progress = scrollProgress / totalScrollable;
 
       setScrollVariables(progress, true);
     };
