@@ -112,8 +112,8 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
         const handle = (window as any).requestIdleCallback(fn);
         return () => (window as any).cancelIdleCallback?.(handle);
       }
-      const timeout = window.setTimeout(fn, 1);
-      return () => window.clearTimeout(timeout);
+      const timeout = globalThis.setTimeout(fn, 1);
+      return () => globalThis.clearTimeout(timeout);
     },
     []
   );
