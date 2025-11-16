@@ -18,12 +18,12 @@ import parse, {
   domToReact,
   type HTMLReactParserOptions,
 } from "html-react-parser";
-import ParagraphCommentWidget from "@components/paragraph-comments/ParagraphCommentWidget";
+import dynamic from "next/dynamic";
 import PostReference from "@components/PostReference";
 import AutorReference from "@components/AutorReference";
-import PostMinimap from "@components/PostMinimap";
 import { EyeIcon, ClockIcon } from "@heroicons/react/24/solid";
 import { useAnalytics } from "@components/analytics/AnalyticsProvider";
+import type ParagraphCommentWidgetType from "@components/paragraph-comments/ParagraphCommentWidget";
 
 const IsMobileContext = createContext<boolean | null>(null);
 
@@ -48,6 +48,33 @@ type PostContentClientProps = {
   isAdmin: boolean;
 };
 
+type ParagraphCommentWidgetProps = React.ComponentProps<typeof ParagraphCommentWidgetType>;
+
+const ParagraphCommentWidget = dynamic<ParagraphCommentWidgetProps>(
+  () => import("@components/paragraph-comments/ParagraphCommentWidget"),
+  {
+    ssr: false,
+    loading: ({ paragraphProps, children }) => (
+      <p
+        {...paragraphProps}
+        className={[
+          paragraphProps?.className,
+          "transition-colors rounded-md -mx-2 px-2 py-0.5 hover:bg-zinc-100/90 dark:hover:bg-zinc-800/60",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        {children}
+      </p>
+    ),
+  }
+);
+
+const PostMinimap = dynamic(() => import("@components/PostMinimap"), {
+  ssr: false,
+  loading: () => null,
+});
+
 export default function PostContentClient({
   postId,
   date,
@@ -63,6 +90,17 @@ export default function PostContentClient({
   const [views, setViews] = useState(initialViews);
   const [isMobile, setIsMobile] = useState(false);
   const { trackEvent, config, isTrackingEnabled } = useAnalytics();
+
+  const runOnIdle = (callback: () => void) => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    if ("requestIdleCallback" in window) {
+      (window as any).requestIdleCallback(callback);
+      return;
+    }
+    window.setTimeout(callback, 0);
+  };
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -99,7 +137,7 @@ export default function PostContentClient({
       }
     };
 
-    trackView();
+    runOnIdle(trackView);
 
     return () => {
       canceled = true;
@@ -158,10 +196,13 @@ export default function PostContentClient({
       });
     };
 
-    // Dispara no load e a cada scroll/resize
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("resize", handleScroll);
+    const registerListeners = () => {
+      handleScroll();
+      window.addEventListener("scroll", handleScroll, { passive: true });
+      window.addEventListener("resize", handleScroll);
+    };
+
+    runOnIdle(registerListeners);
 
     return () => {
       if (frame !== null) {
