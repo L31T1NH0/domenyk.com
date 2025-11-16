@@ -1,6 +1,13 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { useAuth, useUser } from "@clerk/nextjs";
 import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/solid";
 
@@ -39,6 +46,7 @@ const emptyDraft: CommentDraft = { nome: "", comentario: "" };
 const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) => {
   const { userId, isLoaded } = useAuth();
   const { user } = useUser();
+  const [, startTransition] = useTransition();
 
   const [comments, setComments] = useState<CommentEntity[]>([]);
   const [commentDraft, setCommentDraft] = useState<CommentDraft>(emptyDraft);
@@ -80,8 +88,10 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
       const response = await fetch(`/api/comments/${postId}`);
       if (!response.ok) throw new Error(await response.text());
       const data = (await response.json()) as unknown;
-      if (Array.isArray(data)) setComments(flattenServerComments(data as any));
-      else setComments([]);
+      startTransition(() => {
+        if (Array.isArray(data)) setComments(flattenServerComments(data as any));
+        else setComments([]);
+      });
     } catch (error) {
       const raw = error instanceof Error ? error.message : String(error);
       const friendly = /Failed to fetch|NetworkError|TypeError/i.test(raw)
@@ -92,9 +102,26 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
     }
   }, [postId]);
 
+  const scheduleIdle = useCallback(
+    (fn: () => void) => {
+      if (typeof window === "undefined") {
+        fn();
+        return () => {};
+      }
+      if ("requestIdleCallback" in window) {
+        const handle = (window as any).requestIdleCallback(fn);
+        return () => (window as any).cancelIdleCallback?.(handle);
+      }
+      const timeout = window.setTimeout(fn, 1);
+      return () => window.clearTimeout(timeout);
+    },
+    []
+  );
+
   useEffect(() => {
-    fetchComments();
-  }, [fetchComments]);
+    const cancel = scheduleIdle(fetchComments);
+    return cancel;
+  }, [fetchComments, scheduleIdle]);
 
   useEffect(() => () => {
     pendingRequestRef.current?.abort();
