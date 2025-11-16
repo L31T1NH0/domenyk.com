@@ -11,7 +11,7 @@ import PostContentShell, {
   LazyParagraphCommentWidget,
   type ParagraphCommentWidgetProps,
 } from "./post-content-interactive";
-import type { HTMLAttributes, ReactNode } from "react";
+import type { HTMLAttributes } from "react";
 
 function renderParagraphWithComments(
   node: Element,
@@ -90,9 +90,11 @@ export default function PostContentClient({
 }: PostContentClientProps) {
   let paragraphIndex = 0;
 
+  type ReplaceReturn = ReturnType<NonNullable<HTMLReactParserOptions["replace"]>>;
+
   const parserOptions: HTMLReactParserOptions = {};
 
-  parserOptions.replace = (node: DOMNode): ReactNode | undefined => {
+  parserOptions.replace = (node: DOMNode): ReplaceReturn => {
     if (node.type === "tag" && node.name === "span") {
       const element = node as Element;
       const role = element.attribs?.["data-role"] ?? element.attribs?.dataRole;
