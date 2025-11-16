@@ -108,10 +108,6 @@ export default function PostContentClient({
 
   // Rastreamento de progresso de leitura: 25%, 50%, 75% e 100%
   useEffect(() => {
-    if (!isTrackingEnabled) {
-      return;
-    }
-
     if (typeof window === "undefined") {
       return;
     }
@@ -124,13 +120,23 @@ export default function PostContentClient({
       .map((m) => Math.min(1, Math.max(0, m)))
       .sort((a, b) => a - b);
 
-    const computeRatio = () => {
+    const updateScrollProgress = () => {
       const doc = document.documentElement;
       const scrollTop = window.scrollY || doc.scrollTop || 0;
-      const scrollHeight = doc.scrollHeight || 1;
-      const clientHeight = window.innerHeight || doc.clientHeight || 1;
-      const total = Math.max(1, scrollHeight - clientHeight);
-      const ratio = Math.max(0, Math.min(1, scrollTop / total));
+      const scrollHeight = doc.scrollHeight || 0;
+      const clientHeight = window.innerHeight || doc.clientHeight || 0;
+      const docHeight = scrollHeight - clientHeight;
+
+      if (docHeight <= 0) {
+        doc.style.setProperty("--scroll-progress", "0%");
+        doc.style.setProperty("--scroll-progress-visible", "0");
+        return 0;
+      }
+
+      const ratio = Math.max(0, Math.min(1, scrollTop / docHeight));
+      const progress = Math.max(0, Math.min(100, parseFloat((ratio * 100).toFixed(2))));
+      doc.style.setProperty("--scroll-progress", `${progress}%`);
+      doc.style.setProperty("--scroll-progress-visible", "1");
       return ratio;
     };
 
@@ -140,7 +146,10 @@ export default function PostContentClient({
       if (frame !== null) return;
       frame = window.requestAnimationFrame(() => {
         frame = null;
-        const ratio = computeRatio();
+        const ratio = updateScrollProgress();
+        if (!isTrackingEnabled) {
+          return;
+        }
         for (const m of milestones) {
           if (!sent.has(m) && ratio >= m) {
             sent.add(m);
@@ -158,17 +167,26 @@ export default function PostContentClient({
       });
     };
 
+    const handleResize = () => {
+      updateScrollProgress();
+      handleScroll();
+    };
+
     // Dispara no load e a cada scroll/resize
+    updateScrollProgress();
     handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("resize", handleScroll);
+    window.addEventListener("resize", handleResize);
 
     return () => {
       if (frame !== null) {
         window.cancelAnimationFrame(frame);
       }
       window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", handleScroll);
+      window.removeEventListener("resize", handleResize);
+      const doc = document.documentElement;
+      doc.style.removeProperty("--scroll-progress");
+      doc.style.removeProperty("--scroll-progress-visible");
     };
   }, [config.readProgressMilestones, isTrackingEnabled, postId, trackEvent]);
 
@@ -266,25 +284,35 @@ export default function PostContentClient({
 
   return (
     <IsMobileContext.Provider value={isMobile}>
-      <div className="relative flex flex-col gap-6">
-        <article className="flex flex-col gap-6 mt-4">
-          <div className="flex items-center justify-between text-sm text-zinc-600 dark:text-zinc-300 border-b border-zinc-200 dark:border-zinc-700 pb-3">
-            <div className="flex items-center gap-3 flex-wrap">
-              <Date dateString={date} />
-              <span className="inline-flex items-center gap-1">
-                <span aria-hidden>|</span>
-                <ClockIcon className="h-4 w-4" aria-hidden="true" />
-                <span className="sr-only">Tempo de leitura:</span>
-                {readingTime}
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <EyeIcon className="h-4 w-4" aria-hidden="true" />
-                <span className="sr-only">Views:</span>
-                {views} views
-              </span>
-            </div>
-            <ShareButton id={postId} />
+<div className="relative flex flex-col gap-6">
+  <article className="flex flex-col gap-6 mt-4">
+    <div className="flex items-center text-sm text-zinc-600 dark:text-zinc-300 border-b border-zinc-200 dark:border-zinc-700 pb-3">
+      <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2">
+        <div className="flex items-center gap-2 min-w-0 whitespace-normal sm:whitespace-nowrap">
+          <Date dateString={date} />
+          <span aria-hidden className="mx-1 text-zinc-400">|</span>
+          <div className="inline-flex items-center gap-2 whitespace-nowrap">
+            <span className="inline-flex items-center gap-1">
+              <ClockIcon className="h-4 w-4" aria-hidden="true" />
+              <span className="sr-only">Tempo de leitura:</span>
+              {readingTime}
+            </span>
+            <span aria-hidden className="mx-1 text-zinc-400">•</span>
+            <span className="inline-flex items-center gap-1">
+              <EyeIcon className="h-4 w-4" aria-hidden="true" />
+              <span className="sr-only">Views:</span>
+              {views} views
+            </span>
           </div>
+        </div>
+
+        <span className="justify-self-end">
+          <ShareButton id={postId} />
+        </span>
+      </div>
+    </div>
+
+
 
           {audioUrl && <AudioPlayer audioUrl={audioUrl} />}
 

@@ -6,6 +6,7 @@ import {
   ANALYTICS_SESSION_MAX_AGE,
   generateSessionId,
 } from "@lib/analytics/session";
+import { claimsContainAdmin } from "@lib/admin";
 
 const isPublicRoute = createRouteMatcher([
   "/",
@@ -26,7 +27,7 @@ export default clerkMiddleware(async (auth, req) => {
   const authState = await auth();
   const { userId, sessionClaims, redirectToSignIn } = authState;
 
-  if (isAdminRoute(req) && sessionClaims?.metadata?.role !== "admin") {
+  if (isAdminRoute(req) && !claimsContainAdmin(sessionClaims)) {
     const url = new URL("/", req.url);
     return NextResponse.redirect(url);
   }
