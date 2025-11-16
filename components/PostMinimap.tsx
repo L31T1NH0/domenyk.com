@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { useIsMobile } from "src/app/posts/[id]/post-content-client";
+import { useIsMobile } from "src/app/posts/[id]/post-content-interactive";
 import { useHeadingsMap } from "@components/useHeadingsMap";
 
 export default function PostMinimap() {
