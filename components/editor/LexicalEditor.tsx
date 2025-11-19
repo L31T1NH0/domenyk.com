@@ -21,6 +21,7 @@ import {
   CLEAR_EDITOR_COMMAND,
   COMMAND_PRIORITY_LOW,
   EditorState,
+  LexicalEditor as LexicalEditorType,
   FORMAT_TEXT_COMMAND,
   KEY_DOWN_COMMAND,
   SELECTION_CHANGE_COMMAND,
@@ -30,6 +31,8 @@ import {
 } from "lexical";
 import {
   INSERT_UNORDERED_LIST_COMMAND,
+  ListItemNode,
+  ListNode,
 } from "@lexical/list";
 import { TOGGLE_LINK_COMMAND } from "@lexical/link";
 import { LinkNode } from "@lexical/link";
@@ -41,8 +44,6 @@ import {
 import {
   HeadingNode,
   QuoteNode,
-  ListNode,
-  ListItemNode,
   $createHeadingNode,
   $createQuoteNode,
 } from "@lexical/rich-text";
@@ -241,7 +242,7 @@ function SlashMenu({
       editor.registerUpdateListener(({ editorState }) => {
         editorState.read(() => {
           const selection = $getSelection();
-          if (!selection || selection.isCollapsed() === false) return;
+          if (!$isRangeSelection(selection) || selection.isCollapsed() === false) return;
           const anchorNode = selection.anchor.getNode();
           const textContent = anchorNode.getTextContent();
           if (!textContent.endsWith("/")) {
@@ -308,7 +309,7 @@ export default function LexicalEditor({
         console.error(error);
       },
       nodes: [HeadingNode, QuoteNode, ListNode, ListItemNode, CodeNode, LinkNode],
-      editorState: (editor) => {
+      editorState: (editor: LexicalEditorType) => {
         const markdown = initialValueRef.current;
         if (!markdown) return;
         editor.update(() => {
