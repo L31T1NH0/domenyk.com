@@ -151,8 +151,7 @@ export default function Editor() {
                         </span>
                       )}
                       <div
-                        name="content"
-                        className="min-h-[420px] w-full bg-transparent px-5 pb-6 pt-4 text-base leading-relaxed text-zinc-100 caret-emerald-400 focus:outline-none font-[\"IAWriterQuattroV-Italic\",serif]"
+                        className='min-h-[420px] w-full bg-transparent px-5 pb-6 pt-4 text-base leading-relaxed text-zinc-100 caret-emerald-400 focus:outline-none font-["IAWriterQuattroV-Italic",serif]'
                         contentEditable
                         suppressContentEditableWarning
                         spellCheck={false}
