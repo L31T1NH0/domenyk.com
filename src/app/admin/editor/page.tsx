@@ -1,6 +1,9 @@
-﻿"use client";
+"use client";
 
-import { useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
+
+import LexicalEditor from "../../../../components/editor/LexicalEditor";
+import Toggle from "../../../../components/Toggle";
 
 export default function Editor() {
   const [title, setTitle] = useState("");
@@ -19,7 +22,14 @@ export default function Editor() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditorFocused, setIsEditorFocused] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const inputStyle =
+    "w-full rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3 text-sm text-zinc-100 shadow-inner shadow-black/20 transition focus:border-emerald-400/80 focus:outline-none focus:ring-2 focus:ring-emerald-500/25 placeholder:text-zinc-500";
+
+  const labelStyle = "text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500";
+
+  const hintText = "text-sm text-zinc-400";
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (isSubmitting) return;
@@ -77,141 +87,134 @@ export default function Editor() {
     }
   };
 
+  const handleContentChange = (value: string) => {
+    setContent(value);
+  };
+
+  const editorBorder = useMemo(
+    () =>
+      isEditorFocused
+        ? "ring-2 ring-emerald-500/40 border-emerald-500/40"
+        : "border-white/5",
+    [isEditorFocused]
+  );
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-950 to-neutral-900 py-12 text-zinc-100">
+    <div className="min-h-screen bg-gradient-to-b from-[#0c0e14] via-[#0f1118] to-[#0c0f14] py-14 text-zinc-100">
       <div className="mx-auto max-w-6xl px-6">
-        <header className="mb-10 text-center">
-          <p className="text-sm uppercase tracking-[0.2em] text-zinc-500">
-            Painel Editorial
+        <header className="mb-12 space-y-3 text-center">
+          <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">
+            Painel editorial
           </p>
-          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-zinc-50 sm:text-5xl">
+          <h1 className="text-4xl font-semibold leading-tight text-zinc-50 sm:text-5xl">
             Novo post
           </h1>
-          <p className="mt-3 text-base text-zinc-400">
-            Preencha os campos principais e organize os detalhes na barra lateral.
+          <p className="mx-auto max-w-2xl text-base text-zinc-400">
+            Estruture seu artigo, adicione detalhes na barra lateral e publique com um toque.
           </p>
         </header>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-[1.6fr,1fr]">
             <div className="space-y-4">
-              <div className="rounded-2xl border border-zinc-800/70 bg-zinc-900/70 shadow-lg shadow-black/30 backdrop-blur">
-                <div className="border-b border-zinc-800/70 px-6 pb-5 pt-6">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                    Conteúdo principal
-                  </p>
-                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                    <label className="flex flex-col gap-2">
-                      <span className="text-sm font-medium text-zinc-300">Título</span>
-                      <input
-                        name="title"
-                        className="rounded-lg border border-zinc-800 bg-zinc-950/80 px-4 py-2.5 text-sm text-zinc-50 placeholder:text-zinc-600 transition focus:border-emerald-500/70 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-                        type="text"
-                        placeholder="Digite o título do post"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        required
-                      />
-                    </label>
-                    <label className="flex flex-col gap-2">
-                      <span className="text-sm font-medium text-zinc-300">Subtítulo</span>
-                      <input
-                        name="subtitle"
-                        className="rounded-lg border border-zinc-800 bg-zinc-950/80 px-4 py-2.5 text-sm text-zinc-50 placeholder:text-zinc-600 transition focus:border-emerald-500/70 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-                        type="text"
-                        placeholder="Resumo curto do post"
-                        value={subtitle}
-                        onChange={(e) => setSubtitle(e.target.value)}
-                      />
-                    </label>
-                  </div>
+              <div className="rounded-3xl border border-white/5 bg-white/[0.02] p-6 shadow-xl shadow-black/30 backdrop-blur-md">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-zinc-200">Conteúdo</p>
+                  <span className="text-xs uppercase tracking-[0.2em] text-emerald-400/90">
+                    Canvas
+                  </span>
                 </div>
 
-                <div className="px-6 pb-8 pt-5">
-                  <div className="flex items-baseline justify-between gap-4">
-                    <div>
-                      <p className="text-lg font-semibold text-zinc-100">Editor</p>
-                      <p className="text-sm text-zinc-500">
-                        Bloco com estilo obsidiano para manter o foco na escrita.
-                      </p>
-                    </div>
-                    <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-200">
-                      Canvas
-                    </span>
-                  </div>
+                <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                  <label className="flex flex-col gap-2">
+                    <span className={labelStyle}>Título</span>
+                    <input
+                      name="title"
+                      className={inputStyle}
+                      type="text"
+                      placeholder="Um título marcante"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      required
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2">
+                    <span className={labelStyle}>Subtítulo</span>
+                    <input
+                      name="subtitle"
+                      className={inputStyle}
+                      type="text"
+                      placeholder="Complemento do título"
+                      value={subtitle}
+                      onChange={(e) => setSubtitle(e.target.value)}
+                    />
+                  </label>
+                </div>
 
-                  <div className="mt-5 rounded-xl border border-zinc-800/80 bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900 shadow-[0_20px_60px_-35px_rgba(0,0,0,0.8)]">
-                    <label className="block px-4 pb-2 pt-4 text-sm font-medium text-zinc-300">
-                      Conteúdo
-                    </label>
-                    <div className="relative overflow-hidden rounded-b-xl border-t border-zinc-800/80 bg-zinc-950/80">
-                      {!content && !isEditorFocused && (
-                        <span className="pointer-events-none absolute left-5 top-4 text-sm text-zinc-600">
-                          Insira o conteúdo do post...
-                        </span>
-                      )}
-                      <div
-                        className='min-h-[420px] w-full bg-transparent px-5 pb-6 pt-4 text-base leading-relaxed text-zinc-100 caret-emerald-400 focus:outline-none font-["IAWriterQuattroV-Italic",serif]'
-                        contentEditable
-                        suppressContentEditableWarning
-                        spellCheck={false}
-                        onFocus={() => setIsEditorFocused(true)}
-                        onBlur={() => setIsEditorFocused(false)}
-                        onInput={(e) => setContent((e.target as HTMLDivElement).innerHTML)}
-                        dangerouslySetInnerHTML={{ __html: content }}
-                        aria-label="Área principal de conteúdo"
-                      />
-                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/40 to-transparent" />
+                <div className="mt-6 rounded-2xl border border-white/5 bg-gradient-to-b from-white/5 via-white/[0.02] to-white/[0.01] p-2 shadow-inner shadow-black/40 transition-all">
+                  <div
+                    className={`rounded-2xl bg-[#0f1117] ${editorBorder} transition duration-200`}
+                  >
+                    <div className="flex items-center justify-between px-4 pb-3 pt-4">
+                      <div>
+                        <p className="text-sm font-semibold text-zinc-200">Editor</p>
+                        <p className={hintText}>Espaço inspirado no Notion e Obsidian.</p>
+                      </div>
+                      <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-200">
+                        Focus
+                      </span>
                     </div>
+                    <LexicalEditor
+                      value={content}
+                      onChange={handleContentChange}
+                      onFocusChange={setIsEditorFocused}
+                    />
                   </div>
                 </div>
               </div>
             </div>
 
             <aside className="space-y-4 lg:sticky lg:top-8">
-              <div className="rounded-2xl border border-zinc-800/70 bg-zinc-900/70 p-5 shadow-md shadow-black/30">
+              <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-5 shadow-lg shadow-black/30 backdrop-blur-md">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-zinc-200">Visibilidade</p>
-                  <span className="text-xs uppercase tracking-[0.18em] text-zinc-500">Meta</span>
+                  <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">Meta</span>
                 </div>
-                <div className="mt-4 space-y-3 divide-y divide-zinc-800/70">
-                  <label className="flex items-start gap-3 pt-1 text-sm text-zinc-200">
-                    <input
-                      type="checkbox"
-                      id="hidden"
-                      checked={hidden}
-                      onChange={(e) => setHidden(e.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-zinc-700 bg-zinc-950 text-emerald-400 focus:ring-emerald-500"
-                    />
-                    <span className="leading-5">Ocultar post nas listagens públicas</span>
-                  </label>
-                  <label
-                    htmlFor="paragraph-comments"
-                    className="flex items-start gap-3 pt-3 text-sm text-zinc-200"
-                  >
-                    <input
-                      type="checkbox"
-                      id="paragraph-comments"
+                <div className="mt-4 space-y-4">
+                  <div className="flex items-start justify-between gap-3 rounded-xl border border-white/5 bg-white/[0.01] p-4">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-zinc-100">Ocultar post</p>
+                      <p className={hintText}>Mantém o conteúdo fora das listagens públicas.</p>
+                    </div>
+                    <Toggle checked={hidden} onChange={setHidden} ariaLabel="Ocultar post nas listagens públicas" />
+                  </div>
+                  <div className="flex items-start justify-between gap-3 rounded-xl border border-white/5 bg-white/[0.01] p-4">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-zinc-100">
+                        Permitir comentários por parágrafo
+                      </p>
+                      <p className={hintText}>Ativa as anotações nos blocos de texto.</p>
+                    </div>
+                    <Toggle
                       checked={paragraphCommentsEnabled}
-                      onChange={(e) => setParagraphCommentsEnabled(e.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-zinc-700 bg-zinc-950 text-emerald-400 focus:ring-emerald-500"
+                      onChange={setParagraphCommentsEnabled}
+                      ariaLabel="Permitir comentários por parágrafo"
                     />
-                    <span className="leading-5">Permitir comentários por parágrafo</span>
-                  </label>
+                  </div>
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-zinc-800/70 bg-zinc-900/70 p-5 shadow-md shadow-black/30">
+              <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-5 shadow-lg shadow-black/30 backdrop-blur-md">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-zinc-200">Midia & tags</p>
-                  <span className="text-xs uppercase tracking-[0.18em] text-zinc-500">Detalhes</span>
+                  <p className="text-sm font-semibold text-zinc-200">Mídia & tags</p>
+                  <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">Detalhes</span>
                 </div>
-                <div className="mt-4 space-y-4">
+                <div className="mt-5 space-y-4">
                   <label className="flex flex-col gap-2">
-                    <span className="text-xs uppercase tracking-wide text-zinc-500">Capa</span>
+                    <span className={labelStyle}>Capa</span>
                     <input
                       name="cape"
-                      className="rounded-lg border border-zinc-800 bg-zinc-950/80 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-emerald-500/70 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                      className={inputStyle}
                       type="text"
                       placeholder="URL da imagem de capa"
                       value={cape}
@@ -219,10 +222,10 @@ export default function Editor() {
                     />
                   </label>
                   <label className="flex flex-col gap-2">
-                    <span className="text-xs uppercase tracking-wide text-zinc-500">Foto do amigo</span>
+                    <span className={labelStyle}>Foto do amigo</span>
                     <input
                       name="friendImage"
-                      className="rounded-lg border border-zinc-800 bg-zinc-950/80 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-emerald-500/70 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                      className={inputStyle}
                       type="text"
                       placeholder="URL da foto do amigo"
                       value={friendImage}
@@ -230,10 +233,10 @@ export default function Editor() {
                     />
                   </label>
                   <label className="flex flex-col gap-2">
-                    <span className="text-xs uppercase tracking-wide text-zinc-500">Tags</span>
+                    <span className={labelStyle}>Tags</span>
                     <input
                       name="tags"
-                      className="rounded-lg border border-zinc-800 bg-zinc-950/80 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-emerald-500/70 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                      className={inputStyle}
                       type="text"
                       placeholder="separe por vírgulas"
                       value={tags}
@@ -243,28 +246,29 @@ export default function Editor() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-zinc-800/70 bg-zinc-900/70 p-5 shadow-md shadow-black/30">
+              <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-5 shadow-lg shadow-black/30 backdrop-blur-md">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-zinc-200">Áudio</p>
-                  <span className="text-xs uppercase tracking-[0.18em] text-zinc-500">Opcional</span>
+                  <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">Opcional</span>
                 </div>
                 <div className="mt-4 space-y-3">
-                  <label className="flex items-center justify-between gap-3 text-sm text-zinc-200">
-                    <span>Este post possui áudio?</span>
-                    <input
-                      type="checkbox"
-                      id="hasAudio"
+                  <div className="flex items-start justify-between gap-3 rounded-xl border border-white/5 bg-white/[0.01] p-4">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-zinc-100">Este post possui áudio?</p>
+                      <p className={hintText}>Habilite para adicionar uma trilha ou narração.</p>
+                    </div>
+                    <Toggle
                       checked={hasAudio}
-                      onChange={(e) => setHasAudio(e.target.checked)}
-                      className="h-4 w-4 rounded border-zinc-700 bg-zinc-950 text-emerald-400 focus:ring-emerald-500"
+                      onChange={setHasAudio}
+                      ariaLabel="Este post possui áudio"
                     />
-                  </label>
+                  </div>
                   {hasAudio && (
                     <input
                       name="audioUrl"
-                      className="w-full rounded-lg border border-zinc-800 bg-zinc-950/80 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-emerald-500/70 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                      className={inputStyle}
                       type="text"
-                      placeholder="URL do Áudio"
+                      placeholder="URL do áudio"
                       value={audioUrl}
                       onChange={(e) => setAudioUrl(e.target.value)}
                     />
@@ -272,17 +276,17 @@ export default function Editor() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-zinc-800/70 bg-zinc-900/70 p-5 shadow-md shadow-black/30">
+              <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-5 shadow-lg shadow-black/30 backdrop-blur-md">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-zinc-200">Publicação</p>
-                  <span className="text-xs uppercase tracking-[0.18em] text-zinc-500">Controle</span>
+                  <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">Controle</span>
                 </div>
-                <div className="mt-4 space-y-4">
+                <div className="mt-5 space-y-4">
                   <label className="flex flex-col gap-2">
-                    <span className="text-xs uppercase tracking-wide text-zinc-500">Post ID</span>
+                    <span className={labelStyle}>Post ID</span>
                     <input
                       name="postId"
-                      className="rounded-lg border border-zinc-800 bg-zinc-950/80 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-emerald-500/70 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                      className={inputStyle}
                       type="text"
                       placeholder="Identificador único do post"
                       value={postId}
@@ -293,10 +297,12 @@ export default function Editor() {
 
                   <button
                     type="submit"
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-400 px-4 py-3 text-sm font-semibold text-zinc-950 shadow-lg shadow-emerald-500/20 transition hover:from-emerald-400 hover:to-emerald-300 disabled:cursor-not-allowed disabled:opacity-70"
+                    className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-300 px-4 py-3 text-sm font-semibold text-zinc-950 shadow-lg shadow-emerald-500/20 transition duration-200 hover:from-emerald-400 hover:via-emerald-300 hover:to-emerald-200 disabled:cursor-not-allowed disabled:opacity-60"
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? "Publicando..." : "Publicar post"}
+                    <span className="transition group-hover:translate-y-[-1px]">
+                      {isSubmitting ? "Publicando..." : "Publicar post"}
+                    </span>
                   </button>
                 </div>
               </div>
@@ -304,7 +310,7 @@ export default function Editor() {
           </div>
 
           {(success || error) && (
-            <div className="rounded-2xl border border-zinc-800/70 bg-zinc-900/70 p-4 text-center shadow-md shadow-black/30">
+            <div className="rounded-2xl border border-white/10 bg-emerald-500/5 p-4 text-center shadow-md shadow-black/30 backdrop-blur">
               {success && (
                 <p className="text-sm font-medium text-emerald-400">{success}</p>
               )}
