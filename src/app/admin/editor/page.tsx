@@ -1,6 +1,10 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import DOMPurify from "dompurify";
+import { remark } from "remark";
+import remarkGfm from "remark-gfm";
+import remarkHtml from "remark-html";
 
 import LexicalEditor from "../../../../components/editor/LexicalEditor";
 import Toggle from "../../../../components/Toggle";
@@ -17,6 +21,7 @@ export default function Editor() {
   const [hidden, setHidden] = useState(false);
   const [paragraphCommentsEnabled, setParagraphCommentsEnabled] = useState(true);
   const [content, setContent] = useState("");
+  const [previewHtml, setPreviewHtml] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -90,6 +95,19 @@ export default function Editor() {
   const handleContentChange = (value: string) => {
     setContent(value);
   };
+
+  useEffect(() => {
+    const convert = async () => {
+      const processed = await remark()
+        .use(remarkGfm)
+        .use(remarkHtml)
+        .process(content || "");
+
+      setPreviewHtml(DOMPurify.sanitize(String(processed)));
+    };
+
+    convert();
+  }, [content]);
 
   const editorBorder = useMemo(
     () =>
@@ -170,6 +188,26 @@ export default function Editor() {
                       onFocusChange={setIsEditorFocused}
                     />
                   </div>
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-white/5 bg-white/[0.02] p-4 shadow-inner shadow-black/30">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-zinc-200">Preview</p>
+                      <p className={hintText}>Renderização em tempo real em Markdown.</p>
+                    </div>
+                    <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-200">
+                      Live
+                    </span>
+                  </div>
+                  <div
+                    className="min-h-[160px] space-y-3 rounded-xl border border-white/5 bg-black/20 px-4 py-3 text-sm leading-relaxed text-zinc-100"
+                    dangerouslySetInnerHTML={{
+                      __html:
+                        previewHtml ||
+                        "<p class='text-zinc-500'>Nada para pré-visualizar ainda.</p>",
+                    }}
+                  />
                 </div>
               </div>
             </div>
