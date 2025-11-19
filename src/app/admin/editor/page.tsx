@@ -1,6 +1,9 @@
-﻿"use client";
+"use client";
 
-import { useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
+
+import LexicalEditor from "../../../../components/editor/LexicalEditor";
+import Toggle from "../../../../components/Toggle";
 
 export default function Editor() {
   const [title, setTitle] = useState("");
@@ -17,8 +20,16 @@ export default function Editor() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditorFocused, setIsEditorFocused] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const inputStyle =
+    "w-full rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3 text-sm text-zinc-100 shadow-inner shadow-black/20 transition focus:border-emerald-400/80 focus:outline-none focus:ring-2 focus:ring-emerald-500/25 placeholder:text-zinc-500";
+
+  const labelStyle = "text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500";
+
+  const hintText = "text-sm text-zinc-400";
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (isSubmitting) return;
@@ -76,181 +87,240 @@ export default function Editor() {
     }
   };
 
+  const handleContentChange = (value: string) => {
+    setContent(value);
+  };
+
+  const editorBorder = useMemo(
+    () =>
+      isEditorFocused
+        ? "ring-2 ring-emerald-500/40 border-emerald-500/40"
+        : "border-white/5",
+    [isEditorFocused]
+  );
+
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 py-12">
-      <div className="mx-auto max-w-3xl px-6">
-        <header className="mb-8 text-center">
-          <h1 className="text-3xl font-semibold tracking-tight">Novo post</h1>
-          <p className="mt-2 text-sm text-zinc-400">
-            Preencha os campos abaixo para publicar um novo conteÃºdo.
+    <div className="min-h-screen bg-gradient-to-b from-[#0c0e14] via-[#0f1118] to-[#0c0f14] py-14 text-zinc-100">
+      <div className="mx-auto max-w-6xl px-6">
+        <header className="mb-12 space-y-3 text-center">
+          <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">
+            Painel editorial
+          </p>
+          <h1 className="text-4xl font-semibold leading-tight text-zinc-50 sm:text-5xl">
+            Novo post
+          </h1>
+          <p className="mx-auto max-w-2xl text-base text-zinc-400">
+            Estruture seu artigo, adicione detalhes na barra lateral e publique com um toque.
           </p>
         </header>
 
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-6 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-8 shadow-2xl shadow-black/20"
-        >
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="flex flex-col gap-2">
-              <span className="text-sm font-medium text-zinc-300">titulo</span>
-              <input
-                name="title"
-                className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/40"
-                type="text"
-                placeholder="Digite o titulo do post"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-              />
-            </label>
-            <label className="flex flex-col gap-2">
-              <span className="text-sm font-medium text-zinc-300">Subtítulo</span>
-              <input
-                name="subtitle"
-                className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/40"
-                type="text"
-                placeholder="Resumo curto do post"
-                value={subtitle}
-                onChange={(e) => setSubtitle(e.target.value)}
-              />
-            </label>
-            <label className="flex flex-col gap-2">
-              <span className="text-sm font-medium text-zinc-300">Post ID</span>
-              <input
-                name="postId"
-                className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/40"
-                type="text"
-                placeholder="Identificador único do post"
-                value={postId}
-                onChange={(e) => setPostId(e.target.value)}
-                required
-              />
-            </label>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-[1.6fr,1fr]">
+            <div className="space-y-4">
+              <div className="rounded-3xl border border-white/5 bg-white/[0.02] p-6 shadow-xl shadow-black/30 backdrop-blur-md">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-zinc-200">Conteúdo</p>
+                  <span className="text-xs uppercase tracking-[0.2em] text-emerald-400/90">
+                    Canvas
+                  </span>
+                </div>
+
+                <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                  <label className="flex flex-col gap-2">
+                    <span className={labelStyle}>Título</span>
+                    <input
+                      name="title"
+                      className={inputStyle}
+                      type="text"
+                      placeholder="Um título marcante"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      required
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2">
+                    <span className={labelStyle}>Subtítulo</span>
+                    <input
+                      name="subtitle"
+                      className={inputStyle}
+                      type="text"
+                      placeholder="Complemento do título"
+                      value={subtitle}
+                      onChange={(e) => setSubtitle(e.target.value)}
+                    />
+                  </label>
+                </div>
+
+                <div className="mt-6 rounded-2xl border border-white/5 bg-gradient-to-b from-white/5 via-white/[0.02] to-white/[0.01] p-2 shadow-inner shadow-black/40 transition-all">
+                  <div
+                    className={`rounded-2xl bg-[#0f1117] ${editorBorder} transition duration-200`}
+                  >
+                    <div className="flex items-center justify-between px-4 pb-3 pt-4">
+                      <div>
+                        <p className="text-sm font-semibold text-zinc-200">Editor</p>
+                        <p className={hintText}>Espaço inspirado no Notion e Obsidian.</p>
+                      </div>
+                      <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-200">
+                        Focus
+                      </span>
+                    </div>
+                    <LexicalEditor
+                      value={content}
+                      onChange={handleContentChange}
+                      onFocusChange={setIsEditorFocused}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <aside className="space-y-4 lg:sticky lg:top-8">
+              <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-5 shadow-lg shadow-black/30 backdrop-blur-md">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-zinc-200">Visibilidade</p>
+                  <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">Meta</span>
+                </div>
+                <div className="mt-4 space-y-4">
+                  <div className="flex items-start justify-between gap-3 rounded-xl border border-white/5 bg-white/[0.01] p-4">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-zinc-100">Ocultar post</p>
+                      <p className={hintText}>Mantém o conteúdo fora das listagens públicas.</p>
+                    </div>
+                    <Toggle checked={hidden} onChange={setHidden} ariaLabel="Ocultar post nas listagens públicas" />
+                  </div>
+                  <div className="flex items-start justify-between gap-3 rounded-xl border border-white/5 bg-white/[0.01] p-4">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-zinc-100">
+                        Permitir comentários por parágrafo
+                      </p>
+                      <p className={hintText}>Ativa as anotações nos blocos de texto.</p>
+                    </div>
+                    <Toggle
+                      checked={paragraphCommentsEnabled}
+                      onChange={setParagraphCommentsEnabled}
+                      ariaLabel="Permitir comentários por parágrafo"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-5 shadow-lg shadow-black/30 backdrop-blur-md">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-zinc-200">Mídia & tags</p>
+                  <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">Detalhes</span>
+                </div>
+                <div className="mt-5 space-y-4">
+                  <label className="flex flex-col gap-2">
+                    <span className={labelStyle}>Capa</span>
+                    <input
+                      name="cape"
+                      className={inputStyle}
+                      type="text"
+                      placeholder="URL da imagem de capa"
+                      value={cape}
+                      onChange={(e) => setCape(e.target.value)}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2">
+                    <span className={labelStyle}>Foto do amigo</span>
+                    <input
+                      name="friendImage"
+                      className={inputStyle}
+                      type="text"
+                      placeholder="URL da foto do amigo"
+                      value={friendImage}
+                      onChange={(e) => setFriendImage(e.target.value)}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2">
+                    <span className={labelStyle}>Tags</span>
+                    <input
+                      name="tags"
+                      className={inputStyle}
+                      type="text"
+                      placeholder="separe por vírgulas"
+                      value={tags}
+                      onChange={(e) => setTags(e.target.value)}
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-5 shadow-lg shadow-black/30 backdrop-blur-md">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-zinc-200">Áudio</p>
+                  <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">Opcional</span>
+                </div>
+                <div className="mt-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3 rounded-xl border border-white/5 bg-white/[0.01] p-4">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-zinc-100">Este post possui áudio?</p>
+                      <p className={hintText}>Habilite para adicionar uma trilha ou narração.</p>
+                    </div>
+                    <Toggle
+                      checked={hasAudio}
+                      onChange={setHasAudio}
+                      ariaLabel="Este post possui áudio"
+                    />
+                  </div>
+                  {hasAudio && (
+                    <input
+                      name="audioUrl"
+                      className={inputStyle}
+                      type="text"
+                      placeholder="URL do áudio"
+                      value={audioUrl}
+                      onChange={(e) => setAudioUrl(e.target.value)}
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-5 shadow-lg shadow-black/30 backdrop-blur-md">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-zinc-200">Publicação</p>
+                  <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">Controle</span>
+                </div>
+                <div className="mt-5 space-y-4">
+                  <label className="flex flex-col gap-2">
+                    <span className={labelStyle}>Post ID</span>
+                    <input
+                      name="postId"
+                      className={inputStyle}
+                      type="text"
+                      placeholder="Identificador único do post"
+                      value={postId}
+                      onChange={(e) => setPostId(e.target.value)}
+                      required
+                    />
+                  </label>
+
+                  <button
+                    type="submit"
+                    className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-300 px-4 py-3 text-sm font-semibold text-zinc-950 shadow-lg shadow-emerald-500/20 transition duration-200 hover:from-emerald-400 hover:via-emerald-300 hover:to-emerald-200 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={isSubmitting}
+                  >
+                    <span className="transition group-hover:translate-y-[-1px]">
+                      {isSubmitting ? "Publicando..." : "Publicar post"}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </aside>
           </div>
-          <div className="flex items-center rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3">
-            <label htmlFor="hidden" className="flex items-center gap-3 text-sm">
-              <input
-                type="checkbox"
-                id="hidden"
-                checked={hidden}
-                onChange={(e) => setHidden(e.target.checked)}
-                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-zinc-100 focus:ring-zinc-500"
-              />
-              Ocultar post (não aparecer em listagens públicas)
-            </label>
-          </div>
 
-          <div className="flex items-center rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3">
-            <label
-              htmlFor="paragraph-comments"
-              className="flex items-center justify-between gap-3 w-full text-sm"
-            >
-              <span>Permitir comentários por parágrafo</span>
-              <input
-                type="checkbox"
-                id="paragraph-comments"
-                checked={paragraphCommentsEnabled}
-                onChange={(e) => setParagraphCommentsEnabled(e.target.checked)}
-                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-zinc-100 focus:ring-zinc-500"
-              />
-            </label>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="flex flex-col gap-2">
-              <span className="text-sm font-medium text-zinc-300">Capa</span>
-              <input
-                name="cape"
-                className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/40"
-                type="text"
-                placeholder="URL da imagem de capa"
-                value={cape}
-                onChange={(e) => setCape(e.target.value)}
-              />
-            </label>
-            <label className="flex flex-col gap-2">
-              <span className="text-sm font-medium text-zinc-300">Foto do amigo</span>
-              <input
-                name="friendImage"
-                className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/40"
-                type="text"
-                placeholder="URL da foto do amigo"
-                value={friendImage}
-                onChange={(e) => setFriendImage(e.target.value)}
-              />
-            </label>
-          </div>
-
-          <label className="flex flex-col gap-2">
-            <span className="text-sm font-medium text-zinc-300">Tags</span>
-            <input
-              name="tags"
-              className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/40"
-              type="text"
-              placeholder="separe por vírgulas"
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
-            />
-          </label>
-
-          <div className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3">
-            <label htmlFor="hasAudio" className="flex items-center gap-3 text-sm">
-              <input
-                type="checkbox"
-                id="hasAudio"
-                checked={hasAudio}
-                onChange={(e) => setHasAudio(e.target.checked)}
-                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-zinc-100 focus:ring-zinc-500"
-              />
-              Este post possui Áudio?
-            </label>
-            {hasAudio && (
-              <input
-                name="audioUrl"
-                className="w-full max-w-xs rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/40"
-                type="text"
-                placeholder="URL do Audio"
-                value={audioUrl}
-                onChange={(e) => setAudioUrl(e.target.value)}
-              />
-            )}
-          </div>
-
-          <label className="flex flex-col gap-2">
-            <span className="text-sm font-medium text-zinc-300">ConteÃºdo</span>
-            <textarea
-              name="content"
-              className="min-h-[260px] rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-3 text-sm leading-relaxed text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/40"
-              placeholder="Insira o conteudo do Post"
-              spellCheck="false"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              required
-            />
-          </label>
-
-          <button
-            type="submit"
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-100 px-4 py-3 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? "Publicando..." : "Publicar post"}
-          </button>
-
-          {success && (
-            <p className="text-center text-sm font-medium text-green-400">
-              {success}
-            </p>
-          )}
-          {error && (
-            <p className="text-center text-sm font-medium text-red-400">{error}</p>
+          {(success || error) && (
+            <div className="rounded-2xl border border-white/10 bg-emerald-500/5 p-4 text-center shadow-md shadow-black/30 backdrop-blur">
+              {success && (
+                <p className="text-sm font-medium text-emerald-400">{success}</p>
+              )}
+              {error && (
+                <p className="text-sm font-medium text-red-400">{error}</p>
+              )}
+            </div>
           )}
         </form>
       </div>
     </div>
   );
 }
-
-
-
-
