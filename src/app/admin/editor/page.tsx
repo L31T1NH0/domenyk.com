@@ -15,6 +15,11 @@ export default function Editor() {
   const [postId, setPostId] = useState("");
   const [cape, setCape] = useState("");
   const [friendImage, setFriendImage] = useState("");
+  const [coAuthorUserId, setCoAuthorUserId] = useState("");
+  const [coAuthors, setCoAuthors] = useState<
+    { id: string; name: string; imageUrl: string | null }[]
+  >([]);
+  const [isLoadingCoAuthors, setIsLoadingCoAuthors] = useState(false);
   const [tags, setTags] = useState("");
   const [hasAudio, setHasAudio] = useState(false);
   const [audioUrl, setAudioUrl] = useState("");
@@ -22,6 +27,7 @@ export default function Editor() {
   const [paragraphCommentsEnabled, setParagraphCommentsEnabled] = useState(true);
   const [content, setContent] = useState("");
   const [previewHtml, setPreviewHtml] = useState("");
+  const [showPreview, setShowPreview] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,7 +57,12 @@ export default function Editor() {
       formData.append("content", content);
       formData.append("tags", tags);
       formData.append("cape", cape);
-      formData.append("friendImage", friendImage);
+      if (friendImage) {
+        formData.append("friendImage", friendImage);
+      }
+      if (coAuthorUserId) {
+        formData.append("coAuthorUserId", coAuthorUserId);
+      }
       if (hasAudio && audioUrl) {
         formData.append("audioUrl", audioUrl);
       }
@@ -79,6 +90,7 @@ export default function Editor() {
       setPostId("");
       setCape("");
       setFriendImage("");
+      setCoAuthorUserId("");
       setTags("");
       setHasAudio(false);
       setAudioUrl("");
@@ -117,28 +129,72 @@ export default function Editor() {
     [isEditorFocused]
   );
 
+  useEffect(() => {
+    const loadCoAuthors = async () => {
+      try {
+        setIsLoadingCoAuthors(true);
+        const response = await fetch("/admin/api/users");
+        if (!response.ok) return;
+        const data = await response.json();
+        const parsed = (data?.users ?? []).map(
+          (user: { id: string; firstName?: string | null; lastName?: string | null; imageUrl?: string | null }) => ({
+            id: user.id,
+            name: `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || "Usuário sem nome",
+            imageUrl: user.imageUrl ?? null,
+          })
+        );
+        setCoAuthors(parsed);
+      } finally {
+        setIsLoadingCoAuthors(false);
+      }
+    };
+
+    loadCoAuthors();
+  }, []);
+
+  const handleSelectCoAuthor = (userId: string) => {
+    setCoAuthorUserId(userId);
+    const selected = coAuthors.find((user) => user.id === userId);
+    setFriendImage(selected?.imageUrl ?? "");
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0c0e14] via-[#0f1118] to-[#0c0f14] py-14 text-zinc-100">
-      <div className="mx-auto max-w-6xl px-6">
-        <header className="mb-12 space-y-3 text-center">
-          <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">
-            Painel editorial
-          </p>
-          <h1 className="text-4xl font-semibold leading-tight text-zinc-50 sm:text-5xl">
-            Novo post
-          </h1>
-          <p className="mx-auto max-w-2xl text-base text-zinc-400">
-            Estruture seu artigo, adicione detalhes na barra lateral e publique com um toque.
-          </p>
+    <div className="min-h-screen bg-[#0c0e14] py-12 text-zinc-100">
+      <div className="mx-auto max-w-6xl px-5">
+        <header className="mb-10 flex flex-col gap-3 text-center lg:flex-row lg:items-end lg:justify-between lg:text-left">
+          <div className="space-y-2">
+            <p className="text-[11px] uppercase tracking-[0.28em] text-zinc-500">
+              Painel editorial
+            </p>
+            <h1 className="text-4xl font-semibold leading-tight text-zinc-50 sm:text-5xl">
+              Novo post
+            </h1>
+            <p className="max-w-2xl text-base text-zinc-400">
+              Estruture seu artigo e preencha os metadados essenciais de forma direta.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 self-start rounded-2xl border border-white/5 bg-white/5 px-4 py-3 text-sm text-zinc-200 shadow-sm shadow-black/20">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.16em] text-emerald-300/80">
+                Preview
+              </p>
+              <p className="text-xs text-zinc-400">Visualização opcional do conteúdo</p>
+            </div>
+            <Toggle
+              checked={showPreview}
+              onChange={setShowPreview}
+              ariaLabel="Alternar pré-visualização"
+            />
+          </div>
         </header>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid gap-6 lg:grid-cols-[1.6fr,1fr]">
+        <form onSubmit={handleSubmit} className="space-y-8">
+          <div className="grid gap-6 lg:grid-cols-[1.5fr,1fr] xl:grid-cols-[1.6fr,1fr]">
             <div className="space-y-4">
-              <div className="rounded-3xl border border-white/5 bg-white/[0.02] p-6 shadow-xl shadow-black/30 backdrop-blur-md">
+              <div className="rounded-2xl border border-white/5 bg-white/5 p-6 shadow-lg shadow-black/20">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-zinc-200">Conteúdo</p>
-                  <span className="text-xs uppercase tracking-[0.2em] text-emerald-400/90">
+                  <span className="text-xs uppercase tracking-[0.2em] text-emerald-300/90">
                     Canvas
                   </span>
                 </div>
@@ -169,7 +225,7 @@ export default function Editor() {
                   </label>
                 </div>
 
-                <div className="mt-6 rounded-2xl border border-white/5 bg-gradient-to-b from-white/5 via-white/[0.02] to-white/[0.01] p-2 shadow-inner shadow-black/40 transition-all">
+                <div className="mt-6 rounded-2xl border border-white/5 bg-black/30 p-2 shadow-inner shadow-black/30 transition-all">
                   <div
                     className={`rounded-2xl bg-[#0f1117] ${editorBorder} transition duration-200`}
                   >
@@ -178,7 +234,7 @@ export default function Editor() {
                         <p className="text-sm font-semibold text-zinc-200">Editor</p>
                         <p className={hintText}>Espaço inspirado no Notion e Obsidian.</p>
                       </div>
-                      <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-200">
+                      <span className="rounded-full border border-emerald-400/30 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-200">
                         Focus
                       </span>
                     </div>
@@ -189,31 +245,32 @@ export default function Editor() {
                     />
                   </div>
                 </div>
-
-                <div className="mt-4 rounded-2xl border border-white/5 bg-white/[0.02] p-4 shadow-inner shadow-black/30">
-                  <div className="mb-3 flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-zinc-200">Preview</p>
-                      <p className={hintText}>Renderização em tempo real em Markdown.</p>
+                {showPreview && (
+                  <div className="mt-4 rounded-2xl border border-white/5 bg-white/5 p-4 shadow-inner shadow-black/20">
+                    <div className="mb-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-zinc-200">Preview</p>
+                        <p className={hintText}>Renderização em tempo real em Markdown.</p>
+                      </div>
+                      <span className="rounded-full border border-emerald-400/30 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-200">
+                        Live
+                      </span>
                     </div>
-                    <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-200">
-                      Live
-                    </span>
+                    <div
+                      className="min-h-[160px] space-y-3 rounded-xl border border-white/5 bg-black/30 px-4 py-3 text-sm leading-relaxed text-zinc-100"
+                      dangerouslySetInnerHTML={{
+                        __html:
+                          previewHtml ||
+                          "<p class='text-zinc-500'>Nada para pré-visualizar ainda.</p>",
+                      }}
+                    />
                   </div>
-                  <div
-                    className="min-h-[160px] space-y-3 rounded-xl border border-white/5 bg-black/20 px-4 py-3 text-sm leading-relaxed text-zinc-100"
-                    dangerouslySetInnerHTML={{
-                      __html:
-                        previewHtml ||
-                        "<p class='text-zinc-500'>Nada para pré-visualizar ainda.</p>",
-                    }}
-                  />
-                </div>
+                )}
               </div>
             </div>
 
-            <aside className="space-y-4 lg:sticky lg:top-8">
-              <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-5 shadow-lg shadow-black/30 backdrop-blur-md">
+            <aside className="space-y-4 lg:sticky lg:top-4">
+              <div className="rounded-2xl border border-white/5 bg-white/5 p-5 shadow-lg shadow-black/20">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-zinc-200">Visibilidade</p>
                   <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">Meta</span>
@@ -242,7 +299,7 @@ export default function Editor() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-5 shadow-lg shadow-black/30 backdrop-blur-md">
+              <div className="rounded-2xl border border-white/5 bg-white/5 p-5 shadow-lg shadow-black/20">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-zinc-200">Mídia & tags</p>
                   <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">Detalhes</span>
@@ -259,16 +316,41 @@ export default function Editor() {
                       onChange={(e) => setCape(e.target.value)}
                     />
                   </label>
-                  <label className="flex flex-col gap-2">
-                    <span className={labelStyle}>Foto do amigo</span>
-                    <input
-                      name="friendImage"
-                      className={inputStyle}
-                      type="text"
-                      placeholder="URL da foto do amigo"
-                      value={friendImage}
-                      onChange={(e) => setFriendImage(e.target.value)}
-                    />
+                  <label className="flex flex-col gap-3">
+                    <span className={labelStyle}>Co-autor</span>
+                    <div className="rounded-xl border border-white/10 bg-black/30 px-3 py-2">
+                      <select
+                        name="coAuthorUserId"
+                        className="w-full bg-transparent py-2 text-sm text-zinc-100 outline-none"
+                        value={coAuthorUserId}
+                        onChange={(e) => handleSelectCoAuthor(e.target.value)}
+                      >
+                        <option value="" className="bg-[#0c0e14] text-zinc-200">
+                          Selecionar co-autor (opcional)
+                        </option>
+                        {coAuthors.map((user) => (
+                          <option
+                            key={user.id}
+                            value={user.id}
+                            className="bg-[#0c0e14] text-zinc-100"
+                          >
+                            {user.name}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="mt-2 flex items-center justify-between text-xs text-zinc-400">
+                        <span>
+                          {isLoadingCoAuthors
+                            ? "Carregando usuários..."
+                            : coAuthorUserId
+                              ? "Co-autor vinculado"
+                              : "Sem co-autor"}
+                        </span>
+                        {friendImage && (
+                          <span className="text-emerald-300">Foto aplicada</span>
+                        )}
+                      </div>
+                    </div>
                   </label>
                   <label className="flex flex-col gap-2">
                     <span className={labelStyle}>Tags</span>
@@ -284,7 +366,7 @@ export default function Editor() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-5 shadow-lg shadow-black/30 backdrop-blur-md">
+              <div className="rounded-2xl border border-white/5 bg-white/5 p-5 shadow-lg shadow-black/20">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-zinc-200">Áudio</p>
                   <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">Opcional</span>
@@ -314,7 +396,7 @@ export default function Editor() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-5 shadow-lg shadow-black/30 backdrop-blur-md">
+              <div className="rounded-2xl border border-white/5 bg-white/5 p-5 shadow-lg shadow-black/20">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-zinc-200">Publicação</p>
                   <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">Controle</span>
@@ -335,7 +417,7 @@ export default function Editor() {
 
                   <button
                     type="submit"
-                    className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-300 px-4 py-3 text-sm font-semibold text-zinc-950 shadow-lg shadow-emerald-500/20 transition duration-200 hover:from-emerald-400 hover:via-emerald-300 hover:to-emerald-200 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-zinc-950 shadow-lg shadow-emerald-500/25 transition duration-200 hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
                     disabled={isSubmitting}
                   >
                     <span className="transition group-hover:translate-y-[-1px]">
@@ -348,7 +430,7 @@ export default function Editor() {
           </div>
 
           {(success || error) && (
-            <div className="rounded-2xl border border-white/10 bg-emerald-500/5 p-4 text-center shadow-md shadow-black/30 backdrop-blur">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-center shadow-md shadow-black/20">
               {success && (
                 <p className="text-sm font-medium text-emerald-400">{success}</p>
               )}
