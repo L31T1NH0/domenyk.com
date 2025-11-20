@@ -124,7 +124,7 @@ export default async function HomePage({
       <section className="text-xl flex flex-col gap-3 py-6 text-primary items-center text-center">
         <h1 className="text-3xl font-semibold">Domenyk</h1>
         <p className="text-lg text-zinc-200">
-          Comentários rápidos sobre liberdade, economia e política, com análises objetivas e tom direto.
+          Dou minhas opiniões aqui
         </p>
       </section>
       <section aria-label="Lista de posts" className="flex flex-col gap-4">
