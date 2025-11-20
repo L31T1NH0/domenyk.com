@@ -122,7 +122,6 @@ export default async function HomePage({
     <Layout home>
       <Header home={true} />
       <section className="text-xl flex flex-col gap-3 py-6 text-primary items-center text-center">
-        <h1 className="text-3xl font-semibold">Domenyk</h1>
         <p className="text-lg text-zinc-200">
           Dou minhas opiniões aqui
         </p>
