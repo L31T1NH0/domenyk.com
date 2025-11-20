@@ -11,6 +11,8 @@ export const dynamic = "force-dynamic";
 const PAGE_SIZE = 10;
 const BASE_URL = "https://domenyk.com";
 const DEFAULT_SOCIAL_IMAGE = `${BASE_URL}/images/profile.jpg`;
+const HOMEPAGE_DESCRIPTION =
+  "Textos diretos sobre liberdade, economia e política, com análises objetivas e estilo claro sobre o que realmente importa.";
 
 function parsePage(p: unknown): number {
   const num = typeof p === "string" ? parseInt(p, 10) : 1;
@@ -29,7 +31,7 @@ export async function generateMetadata({
 
   const baseTitle = "Domenyk - Blog";
   const title = query ? `${baseTitle} – Busca: ${query}${page > 1 ? ` (página ${page})` : ""}` : `${baseTitle}${page > 1 ? ` – Página ${page}` : ""}`;
-  const description = query ? `Resultados para "${query}"${page > 1 ? ` – página ${page}` : ""}.` : `Leia minhas opiniões${page > 1 ? ` – página ${page}` : ""}.`;
+  const description = HOMEPAGE_DESCRIPTION;
 
   const params = new URLSearchParams();
   if (query) params.set("query", query);
@@ -41,6 +43,7 @@ export async function generateMetadata({
   if (page >= 1) spNext.set("page", String(page + 1));
 
   return {
+    metadataBase: new URL(BASE_URL),
     title,
     description,
     alternates: {
@@ -118,10 +121,21 @@ export default async function HomePage({
   return (
     <Layout home>
       <Header home={true} />
-      <section className="text-xl flex flex-col gap-2 py-4 text-primary items-center">
-        <h1>Dou minhas opiniões aqui</h1>
+      <section className="text-xl flex flex-col gap-3 py-6 text-primary items-center text-center">
+        <h1 className="text-3xl font-semibold">Domenyk</h1>
+        <p className="text-lg text-zinc-200">
+          Dou minhas opiniões aqui
+        </p>
       </section>
-      <HomeClient posts={posts} isAdmin={isAdmin} page={page} hasNext={hasNext} total={total} />
+      <section aria-label="Lista de posts" className="flex flex-col gap-4">
+        <HomeClient
+          posts={posts}
+          isAdmin={isAdmin}
+          page={page}
+          hasNext={hasNext}
+          total={total}
+        />
+      </section>
     </Layout>
   );
 }
