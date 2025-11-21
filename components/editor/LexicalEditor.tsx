@@ -269,7 +269,7 @@ function SlashMenu({
     >
       {options.map((option) => (
         <button
-          key={option}
+          key={option.token}
           type="button"
           onClick={() => {
             insertText(option.token + " ");
