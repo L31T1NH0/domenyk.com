@@ -14,6 +14,7 @@ import { visit } from "unist-util-visit";
 
 import postReferencePlugin from "../remark/post-reference";
 import authorReferencePlugin from "../remark/author-reference";
+import structuredTokensPlugin from "../remark/structured-tokens";
 
 type MdxJsxAttribute = {
   type: string;
@@ -264,15 +265,16 @@ function mdxJsxElementHandler(state: any, node: MdastNode) {
 export async function renderPostMdx(markdown: string): Promise<string> {
   const enablePostReferences = isPostReferencesFeatureEnabled();
 
-  const processor = unified().use(remarkParse).use(remarkMdx);
+  const processor = unified().use(remarkParse).use(remarkMdx).use(remarkGfm);
 
   if (enablePostReferences) {
     processor.use(postReferencePlugin).use(authorReferencePlugin);
+  } else {
+    processor.use(structuredTokensPlugin);
   }
 
   processor
     .use(disallowMdxImports)
-    .use(remarkGfm)
     .use(remarkRehype, {
       allowDangerousHtml: true,
       handlers: {

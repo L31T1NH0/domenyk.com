@@ -1,12 +1,7 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import type { MutableRefObject } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AutoFocusPlugin } from "@lexical/react/LexicalAutoFocusPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
@@ -26,6 +21,7 @@ import {
   KEY_DOWN_COMMAND,
   SELECTION_CHANGE_COMMAND,
   $createParagraphNode,
+  $getRoot,
   $getSelection,
   $isRangeSelection,
 } from "lexical";
@@ -189,6 +185,11 @@ function Toolbar() {
   );
 }
 
+type SlashOption = {
+  label: string;
+  token: string;
+};
+
 function SlashMenu({
   onInsert,
 }: {
@@ -253,7 +254,11 @@ function SlashMenu({
     );
   }, [editor]);
 
-  const options = ["@autor", "@co-autor", "Referência de post"];
+  const options: SlashOption[] = [
+    { label: "@autor", token: "@autor" },
+    { label: "@co-autor", token: "@co-autor" },
+    { label: "Referência de post", token: "@post(slug-do-post)" },
+  ];
 
   if (!isOpen || !anchorRect) return null;
 
@@ -267,13 +272,13 @@ function SlashMenu({
           key={option}
           type="button"
           onClick={() => {
-            insertText(option + " ");
-            onInsert(option);
+            insertText(option.token + " ");
+            onInsert(option.token);
             setIsOpen(false);
           }}
           className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-200 transition hover:bg-white/5 hover:text-emerald-200"
         >
-          <span className="text-emerald-300">/</span> {option}
+          <span className="text-emerald-300">/</span> {option.label}
         </button>
       ))}
     </div>
@@ -292,15 +297,56 @@ function ResetOnEmpty({ value }: { value: string }) {
   return null;
 }
 
+function MarkdownHydrationPlugin({
+  value,
+  lastMarkdownRef,
+  hasUserEditedRef,
+  isApplyingExternalRef,
+}: {
+  value: string;
+  lastMarkdownRef: MutableRefObject<string>;
+  hasUserEditedRef: MutableRefObject<boolean>;
+  isApplyingExternalRef: MutableRefObject<boolean>;
+}) {
+  const [editor] = useLexicalComposerContext();
+
+  useEffect(() => {
+    if (value === lastMarkdownRef.current) return;
+
+    if (value === "") {
+      hasUserEditedRef.current = false;
+    }
+
+    const shouldHydrate = value === "" || !hasUserEditedRef.current;
+
+    if (!shouldHydrate) {
+      return;
+    }
+
+    isApplyingExternalRef.current = true;
+    lastMarkdownRef.current = value;
+
+    editor.update(() => {
+      $getRoot().clear();
+      $convertFromMarkdownString(value, TRANSFORMERS);
+    });
+  }, [editor, hasUserEditedRef, isApplyingExternalRef, lastMarkdownRef, value]);
+
+  return null;
+}
+
 export default function LexicalEditor({
   value,
   onChange,
   onFocusChange,
 }: LexicalEditorProps) {
-  const handleSlashInsert = useCallback((option: string) => {
-    console.info("Slash menu option:", option);
+  const handleSlashInsert = useCallback(() => {
+    // No-op placeholder for future telemetry
   }, []);
   const initialValueRef = useRef(value);
+  const lastMarkdownRef = useRef(value);
+  const isApplyingExternalRef = useRef(false);
+  const hasUserEditedRef = useRef(false);
   const initialConfig = useMemo(
     () => ({
       namespace: "post-editor",
@@ -324,6 +370,14 @@ export default function LexicalEditor({
     (editorState: EditorState) => {
       editorState.read(() => {
         const markdown = $convertToMarkdownString(TRANSFORMERS);
+        lastMarkdownRef.current = markdown;
+
+        if (isApplyingExternalRef.current) {
+          isApplyingExternalRef.current = false;
+          return;
+        }
+
+        hasUserEditedRef.current = true;
         onChange(markdown);
       });
     },
@@ -358,6 +412,12 @@ export default function LexicalEditor({
         <LinkPlugin />
         <OnChangePlugin onChange={handleChange} />
         <ResetOnEmpty value={value} />
+        <MarkdownHydrationPlugin
+          value={value}
+          lastMarkdownRef={lastMarkdownRef}
+          hasUserEditedRef={hasUserEditedRef}
+          isApplyingExternalRef={isApplyingExternalRef}
+        />
       </div>
     </LexicalComposer>
   );
