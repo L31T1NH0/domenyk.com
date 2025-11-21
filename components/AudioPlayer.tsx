@@ -86,6 +86,8 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
       source.connect(gainNode);
       gainNode.connect(context.destination);
 
+      audioRef.current.muted = true;
+
       audioContextRef.current = context;
       gainNodeRef.current = gainNode;
       sourceRef.current = source;
@@ -93,17 +95,18 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
   }, [audioUrl]);
 
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume;
-    }
-
     if (gainNodeRef.current) {
       gainNodeRef.current.gain.value = volume * boostLevels[boostIndex];
+    } else if (audioRef.current) {
+      audioRef.current.volume = volume;
     }
   }, [volume, boostIndex, boostLevels]);
 
   useEffect(() => {
     return () => {
+      if (audioRef.current) {
+        audioRef.current.muted = false;
+      }
       sourceRef.current?.disconnect();
       gainNodeRef.current?.disconnect();
       audioContextRef.current?.close();
