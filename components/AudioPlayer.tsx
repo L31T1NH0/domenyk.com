@@ -1,7 +1,10 @@
 "use client"; // Marca como Client Component
 
-import { useState, useRef, useEffect, useMemo } from "react";
-import { PlayIcon, PauseIcon } from "@heroicons/react/20/solid";
+import { useState, useRef, useEffect } from "react";
+import { PlayIcon, PauseIcon, BoltIcon as BoltSolidIcon } from "@heroicons/react/20/solid";
+import { BoltIcon as BoltOutlineIcon } from "@heroicons/react/20/outline";
+
+const BOOST_MULTIPLIER = 2;
 
 // Props do componente AudioPlayer
 type AudioPlayerProps = {
@@ -25,8 +28,7 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
-  const boostLevels = useMemo(() => [1, 1.5, 2], []);
-  const [boostIndex, setBoostIndex] = useState(0);
+  const [isBoosted, setIsBoosted] = useState(true);
 
   // Funções para controlar o áudio
   const togglePlayPause = () => {
@@ -67,7 +69,7 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
   };
 
   const handleBoostToggle = () => {
-    setBoostIndex((prev) => (prev + 1) % boostLevels.length);
+    setIsBoosted((prev) => !prev);
   };
 
   useEffect(() => {
@@ -98,9 +100,9 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
     }
 
     if (gainNodeRef.current) {
-      gainNodeRef.current.gain.value = volume * boostLevels[boostIndex];
+      gainNodeRef.current.gain.value = volume * (isBoosted ? BOOST_MULTIPLIER : 1);
     }
-  }, [volume, boostIndex, boostLevels]);
+  }, [volume, isBoosted]);
 
   useEffect(() => {
     return () => {
@@ -149,11 +151,11 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
           max={duration || 0}
           value={currentTime}
           onChange={handleSeek}
-          className="w-full h-2 rounded-full appearance-none cursor-pointer progress-thumb"
+          className="w-full h-2 rounded-full appearance-none cursor-pointer bg-zinc-200 dark:bg-zinc-700 progress-thumb"
           style={{
             background: `linear-gradient(to right, #0F0F0F ${
-              (currentTime / duration) * 100
-            }%, #1F1F1F ${(currentTime / duration) * 100}%)`,
+              duration ? (currentTime / duration) * 100 : 0
+            }%, #d4d4d8 ${duration ? (currentTime / duration) * 100 : 0}%)`,
           }}
         />
       </div>
@@ -175,44 +177,43 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
       </div>
 
       <button
-        onClick={handleBoostToggle}
+        type="button"
         className="text-xs font-medium text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white rounded px-2 py-1 border border-zinc-200 dark:border-zinc-700"
+        aria-label={isBoosted ? "Desativar boost de volume 2x" : "Ativar boost de volume 2x"}
+        title={isBoosted ? "Desativar boost de volume 2x" : "Ativar boost de volume 2x"}
+        onClick={handleBoostToggle}
       >
-        Boost x{boostLevels[boostIndex].toFixed(1)}
+        {isBoosted ? (
+          <BoltSolidIcon className="h-4 w-4" aria-hidden="true" />
+        ) : (
+          <BoltOutlineIcon className="h-4 w-4" aria-hidden="true" />
+        )}
       </button>
 
       <style jsx>{`
         .progress-thumb::-webkit-slider-thumb {
           -webkit-appearance: none;
           appearance: none;
-          height: 14px;
-          width: 14px;
+          height: 12px;
+          width: 12px;
           border-radius: 9999px;
-          background: #f4f4f5;
-          border: 2px solid #0f0f0f;
-          box-shadow: 0 0 0 6px rgba(15, 15, 15, 0.08);
+          background: #27272a;
         }
 
         .progress-thumb::-moz-range-thumb {
-          height: 14px;
-          width: 14px;
+          height: 12px;
+          width: 12px;
           border-radius: 9999px;
-          background: #f4f4f5;
-          border: 2px solid #0f0f0f;
-          box-shadow: 0 0 0 6px rgba(15, 15, 15, 0.08);
+          background: #27272a;
         }
 
         @media (prefers-color-scheme: dark) {
           .progress-thumb::-webkit-slider-thumb {
-            background: #0f0f0f;
-            border-color: #e4e4e7;
-            box-shadow: 0 0 0 6px rgba(228, 228, 231, 0.12);
+            background: #e4e4e7;
           }
 
           .progress-thumb::-moz-range-thumb {
-            background: #0f0f0f;
-            border-color: #e4e4e7;
-            box-shadow: 0 0 0 6px rgba(228, 228, 231, 0.12);
+            background: #e4e4e7;
           }
         }
       `}</style>
