@@ -1,7 +1,8 @@
 "use client"; // Marca como Client Component
 
 import { useState, useRef, useEffect } from "react";
-import { PlayIcon, PauseIcon, BoltIcon } from "@heroicons/react/20/solid";
+import { PlayIcon, PauseIcon, BoltIcon as BoltSolidIcon } from "@heroicons/react/20/solid";
+import { BoltIcon as BoltOutlineIcon } from "@heroicons/react/20/outline";
 
 const BOOST_MULTIPLIER = 2;
 
@@ -27,6 +28,7 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
+  const [isBoosted, setIsBoosted] = useState(true);
 
   // Funções para controlar o áudio
   const togglePlayPause = () => {
@@ -66,6 +68,10 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
     setVolume(newVolume);
   };
 
+  const handleBoostToggle = () => {
+    setIsBoosted((prev) => !prev);
+  };
+
   useEffect(() => {
     if (!audioRef.current || typeof window === "undefined") return;
 
@@ -94,9 +100,9 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
     }
 
     if (gainNodeRef.current) {
-      gainNodeRef.current.gain.value = volume * BOOST_MULTIPLIER;
+      gainNodeRef.current.gain.value = volume * (isBoosted ? BOOST_MULTIPLIER : 1);
     }
-  }, [volume]);
+  }, [volume, isBoosted]);
 
   useEffect(() => {
     return () => {
@@ -173,10 +179,15 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
       <button
         type="button"
         className="text-xs font-medium text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white rounded px-2 py-1 border border-zinc-200 dark:border-zinc-700"
-        aria-label="Volume boost at 2x gain"
-        title="Volume boost at 2x gain"
+        aria-label={isBoosted ? "Desativar boost de volume 2x" : "Ativar boost de volume 2x"}
+        title={isBoosted ? "Desativar boost de volume 2x" : "Ativar boost de volume 2x"}
+        onClick={handleBoostToggle}
       >
-        <BoltIcon className="h-4 w-4" aria-hidden="true" />
+        {isBoosted ? (
+          <BoltSolidIcon className="h-4 w-4" aria-hidden="true" />
+        ) : (
+          <BoltOutlineIcon className="h-4 w-4" aria-hidden="true" />
+        )}
       </button>
 
       <style jsx>{`
