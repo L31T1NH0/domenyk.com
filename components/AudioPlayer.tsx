@@ -49,9 +49,12 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
     }
   };
 
-  const handleLoadedMetadata = () => {
-    if (audioRef.current) {
-      setDuration(audioRef.current.duration);
+  const updateDurationFromMetadata = () => {
+    if (!audioRef.current) return;
+
+    const newDuration = audioRef.current.duration;
+    if (Number.isFinite(newDuration)) {
+      setDuration(newDuration);
     }
   };
 
@@ -105,6 +108,12 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
   }, [volume, isBoosted]);
 
   useEffect(() => {
+    setDuration(0);
+    setCurrentTime(0);
+    audioRef.current?.load();
+  }, [audioUrl]);
+
+  useEffect(() => {
     return () => {
       sourceRef.current?.disconnect();
       gainNodeRef.current?.disconnect();
@@ -119,8 +128,10 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
         ref={audioRef}
         src={audioUrl}
         crossOrigin="anonymous"
+        preload="metadata"
         onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={handleLoadedMetadata}
+        onLoadedMetadata={updateDurationFromMetadata}
+        onDurationChange={updateDurationFromMetadata}
         onEnded={() => setIsPlaying(false)}
         className="hidden"
       />
@@ -140,7 +151,7 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
 
       {/* Contador de tempo */}
       <small className="text-zinc-700 dark:text-zinc-300">
-        {formatTime(currentTime)} / {formatTime(duration)}
+        {formatTime(currentTime)} / {formatTime(Number.isFinite(duration) ? duration : 0)}
       </small>
 
       {/* Barra de progresso estilizada como "espectro" */}
@@ -148,14 +159,16 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
         <input
           type="range"
           min="0"
-          max={duration || 0}
+          max={Number.isFinite(duration) ? duration : 0}
           value={currentTime}
           onChange={handleSeek}
           className="w-full h-2 rounded-full appearance-none cursor-pointer bg-zinc-200 dark:bg-zinc-700 progress-thumb"
           style={{
             background: `linear-gradient(to right, #0F0F0F ${
-              duration ? (currentTime / duration) * 100 : 0
-            }%, #d4d4d8 ${duration ? (currentTime / duration) * 100 : 0}%)`,
+              duration && Number.isFinite(duration) ? (currentTime / duration) * 100 : 0
+            }%, #d4d4d8 ${
+              duration && Number.isFinite(duration) ? (currentTime / duration) * 100 : 0
+            }%)`,
           }}
         />
       </div>
@@ -178,7 +191,7 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
 
       <button
         type="button"
-        className="text-xs font-medium text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white rounded px-2 py-1 border border-zinc-200 dark:border-zinc-700"
+        className="text-xs font-medium text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white rounded px-2 py-1 border-none focus:outline-none focus:ring-0"
         aria-label={isBoosted ? "Desativar boost de volume 2x" : "Ativar boost de volume 2x"}
         title={isBoosted ? "Desativar boost de volume 2x" : "Ativar boost de volume 2x"}
         onClick={handleBoostToggle}
