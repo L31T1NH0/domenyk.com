@@ -185,7 +185,7 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
           step="0.01"
           value={volume}
           onChange={handleVolumeChange}
-          className="w-24 h-2 rounded-full appearance-none cursor-pointer"
+          className="w-24 h-2 rounded-full appearance-none cursor-pointer volume-thumb"
         />
       </div>
 
@@ -220,12 +220,36 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
           background: #27272a;
         }
 
+        .volume-thumb::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          height: 12px;
+          width: 12px;
+          border-radius: 9999px;
+          background: #27272a;
+        }
+
+        .volume-thumb::-moz-range-thumb {
+          height: 12px;
+          width: 12px;
+          border-radius: 9999px;
+          background: #27272a;
+        }
+
         @media (prefers-color-scheme: dark) {
           .progress-thumb::-webkit-slider-thumb {
             background: #e4e4e7;
           }
 
           .progress-thumb::-moz-range-thumb {
+            background: #e4e4e7;
+          }
+
+          .volume-thumb::-webkit-slider-thumb {
+            background: #e4e4e7;
+          }
+
+          .volume-thumb::-moz-range-thumb {
             background: #e4e4e7;
           }
         }
