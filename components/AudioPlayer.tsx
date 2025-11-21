@@ -111,8 +111,7 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
   }, []);
 
   return (
-    <div className="w-full max-w-2xl mx-auto rounded-lg shadow-md flex
-                    items-center gap-4">
+    <div className={`w-full max-w-2xl mx-auto rounded-lg shadow-md flex items-center gap-4`}>
       {/* Elemento de áudio oculto para controle */}
       <audio
         ref={audioRef}
