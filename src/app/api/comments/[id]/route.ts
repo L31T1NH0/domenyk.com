@@ -19,6 +19,13 @@ function getRequestIp(req: NextRequest): string | null {
 
 // Configuração do Redis Upstash
 const redis = Redis.fromEnv();
+const isCommentsApiDebugEnabled = process.env.COMMENTS_API_DEBUG === "true";
+
+const debugLog = (...args: unknown[]) => {
+  if (isCommentsApiDebugEnabled) {
+    console.debug(...args);
+  }
+};
 
 // Tipo para documentos que serão inseridos no MongoDB
 type CommentInsert = {
@@ -332,10 +339,9 @@ export async function POST(
   const paramsData = await params;
   const postId = paramsData.id;
 
-  console.log("Received POST request for postId:", postId);
+  debugLog("Received POST request for postId:", postId);
 
   if (!postId || typeof postId !== "string") {
-    console.log("Validation failed: postId is invalid or missing");
     return NextResponse.json(
       { error: "Post ID is required and must be a string" },
       { status: 400 }
@@ -343,7 +349,7 @@ export async function POST(
   }
 
   const body = await req.json();
-  console.log("Request body:", body);
+  debugLog("Request body:", body);
 
   // Validação estrita de campos
   const allowedFieldsLoggedIn = ["comentario", "parentId"];
@@ -384,7 +390,6 @@ export async function POST(
   const { comentario, parentId, nome } = body;
 
   if (!comentario || typeof comentario !== "string") {
-    console.log("Validation failed: comentario is invalid or missing");
     return NextResponse.json(
       { error: "Comment is required and must be a string" },
       { status: 400 }
@@ -440,7 +445,6 @@ export async function POST(
           : null;
 
       if (role === "admin" && !user.firstName) {
-        console.log("Validation failed: Admin must have a firstName");
         return NextResponse.json(
           { error: "Crie um firstName, ou tente mais tarde" },
           { status: 400 }
@@ -467,7 +471,7 @@ export async function POST(
         _id: insertedId,
       };
 
-      console.log(
+      debugLog(
         `${parentId ? "Reply" : "Comment"} inserted into auth-comments:`,
         insertedComment
       );
@@ -505,7 +509,7 @@ export async function POST(
         _id: insertedId,
       };
 
-      console.log(
+      debugLog(
         `${parentId ? "Reply" : "Comment"} inserted into comments:`,
         insertedComment
       );
@@ -525,12 +529,11 @@ export async function POST(
       );
     }
   } catch (error) {
-    console.error("Error adding comment or reply:", {
+    console.error("Error adding comment or reply", {
       message: (error as Error).message,
-      stack: (error as Error).stack,
     });
     return NextResponse.json(
-      { error: "Internal server error: " + (error as Error).message },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
