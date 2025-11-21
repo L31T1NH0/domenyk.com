@@ -48,11 +48,11 @@ export default function Editor() {
   }, []);
 
   const inputStyle =
-    "w-full rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3 text-sm text-zinc-100 shadow-inner shadow-black/20 transition focus:border-emerald-400/80 focus:outline-none focus:ring-2 focus:ring-emerald-500/25 placeholder:text-zinc-500";
+    "w-full rounded-lg border border-white/10 bg-[#0d1017] px-3 py-2.5 text-sm text-zinc-100 transition focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 placeholder:text-zinc-500";
 
-  const labelStyle = "text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500";
+  const labelStyle = "text-xs font-medium uppercase tracking-[0.12em] text-zinc-500";
 
-  const hintText = "text-sm text-zinc-400";
+  const hintText = "text-sm text-zinc-500";
 
   const validateUrl = useCallback((value: string) => {
     if (!value.trim()) return true;
@@ -205,8 +205,8 @@ export default function Editor() {
   const editorBorder = useMemo(
     () =>
       isEditorFocused
-        ? "ring-2 ring-emerald-500/40 border-emerald-500/40"
-        : "border-white/5",
+        ? "border-emerald-400/50 ring-2 ring-emerald-500/20"
+        : "border-white/10",
     [isEditorFocused]
   );
 
@@ -261,26 +261,24 @@ export default function Editor() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0c0e14] py-12 text-zinc-100">
+    <div className="min-h-screen bg-[#0b0d12] py-10 text-zinc-100">
       <div className="mx-auto max-w-6xl px-5">
-        <header className="mb-10 flex flex-col gap-3 text-center lg:flex-row lg:items-end lg:justify-between lg:text-left">
+        <header className="mb-8 flex flex-col gap-3 text-center lg:flex-row lg:items-end lg:justify-between lg:text-left">
           <div className="space-y-2">
-            <p className="text-[11px] uppercase tracking-[0.28em] text-zinc-500">
+            <p className="text-[11px] uppercase tracking-[0.24em] text-zinc-500">
               Painel editorial
             </p>
-            <h1 className="text-4xl font-semibold leading-tight text-zinc-50 sm:text-5xl">
+            <h1 className="text-4xl font-semibold leading-tight text-zinc-50 sm:text-[42px]">
               Novo post
             </h1>
-            <p className="max-w-2xl text-base text-zinc-400">
+            <p className="max-w-2xl text-base text-zinc-500">
               Estruture seu artigo e preencha os metadados essenciais de forma direta.
             </p>
           </div>
-          <div className="flex items-center gap-3 self-start rounded-2xl border border-white/5 bg-white/5 px-4 py-3 text-sm text-zinc-200 shadow-sm shadow-black/20">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.16em] text-emerald-300/80">
-                Preview
-              </p>
-              <p className="text-xs text-zinc-400">Visualização opcional do conteúdo</p>
+          <div className="flex items-center justify-center gap-3 self-start rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-zinc-200">
+            <div className="text-left">
+              <p className="text-[11px] uppercase tracking-[0.14em] text-emerald-200/80">Preview</p>
+              <p className="text-xs text-zinc-500">Visualização opcional do conteúdo</p>
             </div>
             <Toggle
               checked={showPreview}
@@ -290,25 +288,18 @@ export default function Editor() {
           </div>
         </header>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
-          <div className="grid gap-6 lg:grid-cols-[1.5fr,1fr] xl:grid-cols-[1.6fr,1fr]">
-            <div className="space-y-4">
-              <div className="rounded-2xl border border-white/5 bg-white/5 p-6 shadow-lg shadow-black/20">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-zinc-200">Conteúdo</p>
-                  <span className="text-xs uppercase tracking-[0.2em] text-emerald-300/90">
-                    Canvas
-                  </span>
-                </div>
-
-                <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        <form onSubmit={handleSubmit} className="space-y-7">
+          <div className="grid gap-6 lg:grid-cols-[1.6fr,1fr]">
+            <div className="space-y-5">
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-5">
+                <div className="grid gap-3 sm:grid-cols-[1.2fr,0.8fr]">
                   <label className="flex flex-col gap-2">
-                    <span className={labelStyle}>Título</span>
+                    <span className="text-xs font-semibold text-zinc-300">Título</span>
                     <input
                       name="title"
-                      className={inputStyle}
+                      className={`${inputStyle} text-base font-semibold tracking-tight`}
                       type="text"
-                      placeholder="Um título marcante"
+                      placeholder="Digite o título do post"
                       value={title}
                       onChange={(e) => {
                         clearFieldError("title");
@@ -337,19 +328,17 @@ export default function Editor() {
                   </label>
                 </div>
 
-                <div className="mt-6 rounded-2xl border border-white/5 bg-black/30 p-2 shadow-inner shadow-black/30 transition-all">
-                  <div
-                    className={`rounded-2xl bg-[#0f1117] ${editorBorder} transition duration-200`}
-                  >
-                    <div className="flex items-center justify-between px-4 pb-3 pt-4">
-                      <div>
-                        <p className="text-sm font-semibold text-zinc-200">Editor</p>
-                        <p className={hintText}>Espaço inspirado no Notion e Obsidian.</p>
-                      </div>
-                      <span className="rounded-full border border-emerald-400/30 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-200">
-                        Focus
-                      </span>
+                <div className="mt-5 rounded-lg border border-white/10 bg-[#0f1117]">
+                  <div className="flex items-center justify-between px-4 pb-3 pt-4">
+                    <div>
+                      <p className="text-sm font-semibold text-zinc-200">Editor</p>
+                      <p className={hintText}>Espaço fluido para escrever e formatar seu post.</p>
                     </div>
+                    <span className="rounded-full border border-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-300">
+                      Foco
+                    </span>
+                  </div>
+                  <div className={`rounded-b-lg border-t border-white/5 bg-[#0c0e14] ${editorBorder} transition duration-200`}>
                     <LexicalEditor
                       value={content}
                       onChange={handleContentChange}
@@ -361,8 +350,8 @@ export default function Editor() {
                   </div>
                 </div>
                 {showPreview && (
-                  <div className="mt-4 rounded-2xl border border-white/5 bg-white/5 p-4 shadow-inner shadow-black/20">
-                    <div className="mb-3 flex items-center justify-between">
+                  <div className="mt-4 space-y-2 rounded-lg border border-white/10 bg-white/[0.02] p-4">
+                    <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-semibold text-zinc-200">Preview</p>
                         <p className={hintText}>
@@ -373,12 +362,12 @@ export default function Editor() {
                               : "Renderização em tempo real em Markdown."}
                         </p>
                       </div>
-                      <span className="rounded-full border border-emerald-400/30 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-200">
+                      <span className="rounded-full border border-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-300">
                         Live
                       </span>
                     </div>
                     <div
-                      className="min-h-[160px] space-y-3 rounded-xl border border-white/5 bg-black/30 px-4 py-3 text-sm leading-relaxed text-zinc-100"
+                      className="min-h-[160px] space-y-3 rounded-md bg-[#0d1017] px-4 py-3 text-sm leading-relaxed text-zinc-100"
                       dangerouslySetInnerHTML={{
                         __html:
                           previewStatus === "error"
@@ -393,13 +382,13 @@ export default function Editor() {
             </div>
 
             <aside className="space-y-4 lg:sticky lg:top-4">
-              <div className="rounded-2xl border border-white/5 bg-white/5 p-5 shadow-lg shadow-black/20">
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-zinc-200">Visibilidade</p>
-                  <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">Meta</span>
+                  <span className="text-xs uppercase tracking-[0.14em] text-zinc-500">Meta</span>
                 </div>
-                <div className="mt-4 space-y-4">
-                  <div className="flex items-start justify-between gap-3 rounded-xl border border-white/5 bg-white/[0.01] p-4">
+                <div className="mt-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3 rounded-lg bg-white/[0.01] p-3">
                     <div className="space-y-1">
                       <p className="text-sm font-medium text-zinc-100">Ocultar post</p>
                       <p className={hintText}>Mantém o conteúdo fora das listagens públicas.</p>
@@ -413,7 +402,7 @@ export default function Editor() {
                       ariaLabel="Ocultar post nas listagens públicas"
                     />
                   </div>
-                  <div className="flex items-start justify-between gap-3 rounded-xl border border-white/5 bg-white/[0.01] p-4">
+                  <div className="flex items-start justify-between gap-3 rounded-lg bg-white/[0.01] p-3">
                     <div className="space-y-1">
                       <p className="text-sm font-medium text-zinc-100">
                         Permitir comentários por parágrafo
@@ -432,12 +421,12 @@ export default function Editor() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-white/5 bg-white/5 p-5 shadow-lg shadow-black/20">
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-zinc-200">Mídia & tags</p>
-                  <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">Detalhes</span>
+                  <span className="text-xs uppercase tracking-[0.14em] text-zinc-500">Detalhes</span>
                 </div>
-                <div className="mt-5 space-y-4">
+                <div className="mt-4 space-y-3">
                   <label className="flex flex-col gap-2">
                     <span className={labelStyle}>Capa</span>
                     <input
@@ -456,9 +445,9 @@ export default function Editor() {
                       <span className="text-xs text-red-400">{validationErrors.cape}</span>
                     )}
                   </label>
-                  <label className="flex flex-col gap-3">
+                  <label className="flex flex-col gap-2">
                     <span className={labelStyle}>Co-autor</span>
-                    <div className="rounded-xl border border-white/10 bg-black/30 px-3 py-2">
+                    <div className="rounded-lg border border-white/10 bg-[#0d1017] px-3 py-2">
                       <select
                         name="coAuthorUserId"
                         className="w-full bg-transparent py-2 text-sm text-zinc-100 outline-none"
@@ -478,7 +467,7 @@ export default function Editor() {
                           </option>
                         ))}
                       </select>
-                      <div className="mt-2 flex items-center justify-between text-xs text-zinc-400">
+                      <div className="mt-2 flex items-center justify-between text-xs text-zinc-500">
                         <span>
                           {isLoadingCoAuthors
                             ? "Carregando usuários..."
@@ -512,13 +501,13 @@ export default function Editor() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-white/5 bg-white/5 p-5 shadow-lg shadow-black/20">
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-zinc-200">Áudio</p>
-                  <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">Opcional</span>
+                  <span className="text-xs uppercase tracking-[0.14em] text-zinc-500">Opcional</span>
                 </div>
-                <div className="mt-4 space-y-3">
-                  <div className="flex items-start justify-between gap-3 rounded-xl border border-white/5 bg-white/[0.01] p-4">
+                <div className="mt-3 space-y-3">
+                  <div className="flex items-start justify-between gap-3 rounded-lg bg-white/[0.01] p-3">
                     <div className="space-y-1">
                       <p className="text-sm font-medium text-zinc-100">Este post possui áudio?</p>
                       <p className={hintText}>Habilite para adicionar uma trilha ou narração.</p>
@@ -558,12 +547,12 @@ export default function Editor() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-white/5 bg-white/5 p-5 shadow-lg shadow-black/20">
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-zinc-200">Publicação</p>
-                  <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">Controle</span>
+                  <span className="text-xs uppercase tracking-[0.14em] text-zinc-500">Controle</span>
                 </div>
-                <div className="mt-5 space-y-4">
+                <div className="mt-4 space-y-4">
                   <label className="flex flex-col gap-2">
                     <span className={labelStyle}>Post ID</span>
                     <input
@@ -586,12 +575,10 @@ export default function Editor() {
 
                   <button
                     type="submit"
-                    className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-zinc-950 shadow-lg shadow-emerald-500/25 transition duration-200 hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex w-full items-center justify-center rounded-lg bg-emerald-400 px-4 py-3 text-sm font-semibold text-zinc-950 transition duration-150 hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
                     disabled={isSubmitting}
                   >
-                    <span className="transition group-hover:translate-y-[-1px]">
-                      {isSubmitting ? "Publicando..." : "Publicar post"}
-                    </span>
+                    {isSubmitting ? "Publicando..." : "Publicar post"}
                   </button>
                 </div>
               </div>
@@ -599,7 +586,7 @@ export default function Editor() {
           </div>
 
           {(success || error) && (
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-center shadow-md shadow-black/20">
+            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 text-center">
               {success && (
                 <p className="text-sm font-medium text-emerald-400">{success}</p>
               )}
