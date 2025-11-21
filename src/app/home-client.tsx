@@ -195,6 +195,7 @@ export default function HomeClient({ posts, isAdmin, page, hasNext, total }: Hom
             <li key={post.postId} className="flex flex-col mb-2 group relative">
               <Link
                 href={`/posts/${post.postId}`}
+                prefetch={false}
                 className="text-xl hover:underline"
               >
                 {post.title}
