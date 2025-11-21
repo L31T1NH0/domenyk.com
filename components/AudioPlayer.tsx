@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { PlayIcon, PauseIcon, BoltIcon as BoltSolidIcon } from "@heroicons/react/20/solid";
-import { BoltIcon as BoltOutlineIcon } from "@heroicons/react/20/outline";
+import { BoltIcon as BoltOutlineIcon } from "@heroicons/react/24/outline";
 
 const BOOST_MULTIPLIER = 2;
 
