@@ -6,10 +6,9 @@ import { BackHome } from "@components/back-home";
 import Comment from "@components/Comment";
 import { PostHeader } from "@components/PostHeader";
 import PostContentClient from "./post-content-client";
-import { remark } from "remark";
-import html from "remark-html";
 import { renderPostMdx } from "../../../lib/renderers/mdx";
 import { resolveAdminStatus } from "../../../lib/admin";
+import { renderMarkdown } from "../../../lib/renderers/markdown";
 
 function isStaticGenerationEnvironment(): boolean {
   return process.env.NEXT_PHASE === "phase-production-build";
@@ -23,6 +22,7 @@ type PostDocument = {
   date: string | Date;
   title: string;
   subtitle?: string | null;
+  contentMarkdown?: string;
   htmlContent?: string;
   content?: string;
   views?: number;
@@ -53,6 +53,7 @@ async function fetchPostById(id: string) {
           date: 1,
           title: 1,
           subtitle: 1,
+          contentMarkdown: 1,
           htmlContent: 1,
           content: 1,
           views: 1,
@@ -101,17 +102,12 @@ function extractPlainText(value: string): string {
 }
 
 function extractDescription(post: PostDocument): string {
-  const htmlContent = typeof post.htmlContent === "string" ? post.htmlContent : "";
-  if (htmlContent) {
-    const paragraphMatch = htmlContent.match(/<p[^>]*>([\s\S]*?)<\/p>/i);
-    const htmlSnippet = paragraphMatch ? paragraphMatch[1] : htmlContent;
-    const plain = extractPlainText(htmlSnippet);
-    if (plain) {
-      return plain;
-    }
-  }
-
-  const markdownContent = typeof post.content === "string" ? post.content : "";
+  const markdownContent =
+    typeof post.contentMarkdown === "string"
+      ? post.contentMarkdown
+      : typeof post.content === "string"
+        ? post.content
+        : "";
   if (markdownContent) {
     const paragraphs = markdownContent.split(/\n\s*\n/);
     for (const paragraph of paragraphs) {
@@ -129,6 +125,16 @@ function extractDescription(post: PostDocument): string {
       if (withoutFormatting) {
         return withoutFormatting;
       }
+    }
+  }
+
+  const htmlContent = typeof post.htmlContent === "string" ? post.htmlContent : "";
+  if (htmlContent) {
+    const paragraphMatch = htmlContent.match(/<p[^>]*>([\s\S]*?)<\/p>/i);
+    const htmlSnippet = paragraphMatch ? paragraphMatch[1] : htmlContent;
+    const plain = extractPlainText(htmlSnippet);
+    if (plain) {
+      return plain;
     }
   }
 
@@ -288,7 +294,7 @@ export default async function PostPage({ params }: PostPageProps) {
   const rawSubtitle =
     typeof post.subtitle === "string" ? post.subtitle.trim() : "";
   const subtitle = rawSubtitle.length > 0 ? rawSubtitle : undefined;
-  const markdownSource = post.htmlContent ?? post.content ?? "";
+  const markdownSource = post.contentMarkdown ?? post.htmlContent ?? post.content ?? "";
   const shouldUseMdxRenderer = process.env.FEATURE_MDX_RENDERER === "true";
 
   let htmlContent: string;
@@ -298,13 +304,11 @@ export default async function PostPage({ params }: PostPageProps) {
       htmlContent = await renderPostMdx(markdownSource);
     } catch (error) {
       console.error(`MDX renderer failed for post ${post.postId}:`, error);
-      const processedContent = await remark().use(html).process(markdownSource);
-      htmlContent = processedContent.toString();
+      htmlContent = await renderMarkdown(markdownSource);
     }
   } else {
     try {
-      const processedContent = await remark().use(html).process(markdownSource);
-      htmlContent = processedContent.toString();
+      htmlContent = await renderMarkdown(markdownSource);
     } catch (error) {
       console.error(`Markdown renderer failed for post ${post.postId}:`, error);
       htmlContent = "";

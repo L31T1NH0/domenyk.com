@@ -1,13 +1,11 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DOMPurify from "dompurify";
-import { remark } from "remark";
-import remarkGfm from "remark-gfm";
-import remarkHtml from "remark-html";
 
 import LexicalEditor from "../../../../components/editor/LexicalEditor";
 import Toggle from "../../../../components/Toggle";
+import { renderMarkdown } from "../../../lib/renderers/markdown";
 
 export default function Editor() {
   const [title, setTitle] = useState("");
@@ -27,11 +25,27 @@ export default function Editor() {
   const [paragraphCommentsEnabled, setParagraphCommentsEnabled] = useState(true);
   const [content, setContent] = useState("");
   const [previewHtml, setPreviewHtml] = useState("");
+  const [previewStatus, setPreviewStatus] = useState<"idle" | "loading" | "error">(
+    "idle"
+  );
   const [showPreview, setShowPreview] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditorFocused, setIsEditorFocused] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [coAuthorError, setCoAuthorError] = useState<string | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
+  const previewTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const markDirty = useCallback(() => setIsDirty(true), []);
+  const clearFieldError = useCallback((field: string) => {
+    setValidationErrors((prev) => {
+      if (!(field in prev)) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  }, []);
 
   const inputStyle =
     "w-full rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3 text-sm text-zinc-100 shadow-inner shadow-black/20 transition focus:border-emerald-400/80 focus:outline-none focus:ring-2 focus:ring-emerald-500/25 placeholder:text-zinc-500";
@@ -40,21 +54,67 @@ export default function Editor() {
 
   const hintText = "text-sm text-zinc-400";
 
+  const validateUrl = useCallback((value: string) => {
+    if (!value.trim()) return true;
+    try {
+      const parsed = new URL(value.trim());
+      return parsed.protocol === "http:" || parsed.protocol === "https:";
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const validateForm = useCallback(() => {
+    const nextErrors: Record<string, string> = {};
+
+    if (!title.trim()) {
+      nextErrors.title = "Título é obrigatório.";
+    }
+
+    if (!postId.trim()) {
+      nextErrors.postId = "Post ID é obrigatório.";
+    }
+
+    if (!content.trim()) {
+      nextErrors.content = "Escreva algo antes de publicar.";
+    }
+
+    if (cape && !validateUrl(cape)) {
+      nextErrors.cape = "Informe uma URL válida para a capa.";
+    }
+
+    if (hasAudio && !audioUrl.trim()) {
+      nextErrors.audioUrl = "Informe a URL do áudio.";
+    } else if (audioUrl && !validateUrl(audioUrl)) {
+      nextErrors.audioUrl = "URL de áudio inválida.";
+    }
+
+    setValidationErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  }, [audioUrl, cape, content, hasAudio, postId, title, validateUrl]);
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (isSubmitting) return;
 
+    const isValid = validateForm();
+    if (!isValid) {
+      setError("Corrija os campos destacados antes de publicar.");
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       setError(null);
       setSuccess(null);
+      setValidationErrors({});
 
       const formData = new FormData();
       formData.append("title", title);
       formData.append("subtitle", subtitle);
       formData.append("postId", postId);
-      formData.append("content", content);
+      formData.append("contentMarkdown", content);
       formData.append("tags", tags);
       formData.append("cape", cape);
       if (friendImage) {
@@ -97,6 +157,7 @@ export default function Editor() {
       setHidden(false);
       setParagraphCommentsEnabled(true);
       setContent("");
+      setIsDirty(false);
     } catch (error) {
       setError("Falha ao criar o post: " + (error as Error).message);
     } finally {
@@ -105,20 +166,40 @@ export default function Editor() {
   };
 
   const handleContentChange = (value: string) => {
+    clearFieldError("content");
+    markDirty();
     setContent(value);
   };
 
   useEffect(() => {
-    const convert = async () => {
-      const processed = await remark()
-        .use(remarkGfm)
-        .use(remarkHtml)
-        .process(content || "");
+    if (previewTimeoutRef.current) {
+      clearTimeout(previewTimeoutRef.current);
+    }
 
-      setPreviewHtml(DOMPurify.sanitize(String(processed)));
+    if (!content.trim()) {
+      setPreviewHtml("");
+      setPreviewStatus("idle");
+      return;
+    }
+
+    setPreviewStatus("loading");
+
+    previewTimeoutRef.current = setTimeout(async () => {
+      try {
+        const rendered = await renderMarkdown(content);
+        setPreviewHtml(DOMPurify.sanitize(rendered));
+        setPreviewStatus("idle");
+      } catch (previewError) {
+        console.error("Preview render failed", previewError);
+        setPreviewStatus("error");
+      }
+    }, 300);
+
+    return () => {
+      if (previewTimeoutRef.current) {
+        clearTimeout(previewTimeoutRef.current);
+      }
     };
-
-    convert();
   }, [content]);
 
   const editorBorder = useMemo(
@@ -133,8 +214,13 @@ export default function Editor() {
     const loadCoAuthors = async () => {
       try {
         setIsLoadingCoAuthors(true);
+        setCoAuthorError(null);
         const response = await fetch("/admin/api/users");
-        if (!response.ok) return;
+        if (!response.ok) {
+          setCoAuthors([]);
+          setCoAuthorError("Não foi possível carregar os co-autores.");
+          return;
+        }
         const data = await response.json();
         const parsed = (data?.users ?? []).map(
           (user: { id: string; firstName?: string | null; lastName?: string | null; imageUrl?: string | null }) => ({
@@ -144,6 +230,9 @@ export default function Editor() {
           })
         );
         setCoAuthors(parsed);
+      } catch (coAuthorLoadError) {
+        console.error("Failed to fetch co-authors", coAuthorLoadError);
+        setCoAuthorError("Não foi possível carregar os co-autores.");
       } finally {
         setIsLoadingCoAuthors(false);
       }
@@ -152,7 +241,20 @@ export default function Editor() {
     loadCoAuthors();
   }, []);
 
+  useEffect(() => {
+    const handler = (event: BeforeUnloadEvent) => {
+      if (!isDirty || isSubmitting) return;
+      event.preventDefault();
+      // eslint-disable-next-line no-param-reassign
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty, isSubmitting]);
+
   const handleSelectCoAuthor = (userId: string) => {
+    markDirty();
     setCoAuthorUserId(userId);
     const selected = coAuthors.find((user) => user.id === userId);
     setFriendImage(selected?.imageUrl ?? "");
@@ -208,9 +310,16 @@ export default function Editor() {
                       type="text"
                       placeholder="Um título marcante"
                       value={title}
-                      onChange={(e) => setTitle(e.target.value)}
+                      onChange={(e) => {
+                        clearFieldError("title");
+                        markDirty();
+                        setTitle(e.target.value);
+                      }}
                       required
                     />
+                    {validationErrors.title && (
+                      <span className="text-xs text-red-400">{validationErrors.title}</span>
+                    )}
                   </label>
                   <label className="flex flex-col gap-2">
                     <span className={labelStyle}>Subtítulo</span>
@@ -220,7 +329,10 @@ export default function Editor() {
                       type="text"
                       placeholder="Complemento do título"
                       value={subtitle}
-                      onChange={(e) => setSubtitle(e.target.value)}
+                      onChange={(e) => {
+                        markDirty();
+                        setSubtitle(e.target.value);
+                      }}
                     />
                   </label>
                 </div>
@@ -243,6 +355,9 @@ export default function Editor() {
                       onChange={handleContentChange}
                       onFocusChange={setIsEditorFocused}
                     />
+                    {validationErrors.content && (
+                      <p className="px-4 pb-2 text-xs text-red-400">{validationErrors.content}</p>
+                    )}
                   </div>
                 </div>
                 {showPreview && (
@@ -250,7 +365,13 @@ export default function Editor() {
                     <div className="mb-3 flex items-center justify-between">
                       <div>
                         <p className="text-sm font-semibold text-zinc-200">Preview</p>
-                        <p className={hintText}>Renderização em tempo real em Markdown.</p>
+                        <p className={hintText}>
+                          {previewStatus === "loading"
+                            ? "Renderizando preview..."
+                            : previewStatus === "error"
+                              ? "Falha ao gerar preview."
+                              : "Renderização em tempo real em Markdown."}
+                        </p>
                       </div>
                       <span className="rounded-full border border-emerald-400/30 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-200">
                         Live
@@ -260,8 +381,10 @@ export default function Editor() {
                       className="min-h-[160px] space-y-3 rounded-xl border border-white/5 bg-black/30 px-4 py-3 text-sm leading-relaxed text-zinc-100"
                       dangerouslySetInnerHTML={{
                         __html:
-                          previewHtml ||
-                          "<p class='text-zinc-500'>Nada para pré-visualizar ainda.</p>",
+                          previewStatus === "error"
+                            ? "<p class='text-red-400'>Erro ao gerar preview. Verifique o conteúdo.</p>"
+                            : previewHtml ||
+                              "<p class='text-zinc-500'>Nada para pré-visualizar ainda.</p>",
                       }}
                     />
                   </div>
@@ -281,7 +404,14 @@ export default function Editor() {
                       <p className="text-sm font-medium text-zinc-100">Ocultar post</p>
                       <p className={hintText}>Mantém o conteúdo fora das listagens públicas.</p>
                     </div>
-                    <Toggle checked={hidden} onChange={setHidden} ariaLabel="Ocultar post nas listagens públicas" />
+                    <Toggle
+                      checked={hidden}
+                      onChange={(value) => {
+                        markDirty();
+                        setHidden(value);
+                      }}
+                      ariaLabel="Ocultar post nas listagens públicas"
+                    />
                   </div>
                   <div className="flex items-start justify-between gap-3 rounded-xl border border-white/5 bg-white/[0.01] p-4">
                     <div className="space-y-1">
@@ -292,7 +422,10 @@ export default function Editor() {
                     </div>
                     <Toggle
                       checked={paragraphCommentsEnabled}
-                      onChange={setParagraphCommentsEnabled}
+                      onChange={(value) => {
+                        markDirty();
+                        setParagraphCommentsEnabled(value);
+                      }}
                       ariaLabel="Permitir comentários por parágrafo"
                     />
                   </div>
@@ -313,8 +446,15 @@ export default function Editor() {
                       type="text"
                       placeholder="URL da imagem de capa"
                       value={cape}
-                      onChange={(e) => setCape(e.target.value)}
+                      onChange={(e) => {
+                        markDirty();
+                        clearFieldError("cape");
+                        setCape(e.target.value);
+                      }}
                     />
+                    {validationErrors.cape && (
+                      <span className="text-xs text-red-400">{validationErrors.cape}</span>
+                    )}
                   </label>
                   <label className="flex flex-col gap-3">
                     <span className={labelStyle}>Co-autor</span>
@@ -350,6 +490,9 @@ export default function Editor() {
                           <span className="text-emerald-300">Foto aplicada</span>
                         )}
                       </div>
+                      {coAuthorError && (
+                        <p className="mt-2 text-xs text-red-400">{coAuthorError}</p>
+                      )}
                     </div>
                   </label>
                   <label className="flex flex-col gap-2">
@@ -360,7 +503,10 @@ export default function Editor() {
                       type="text"
                       placeholder="separe por vírgulas"
                       value={tags}
-                      onChange={(e) => setTags(e.target.value)}
+                      onChange={(e) => {
+                        markDirty();
+                        setTags(e.target.value);
+                      }}
                     />
                   </label>
                 </div>
@@ -379,19 +525,35 @@ export default function Editor() {
                     </div>
                     <Toggle
                       checked={hasAudio}
-                      onChange={setHasAudio}
+                      onChange={(value) => {
+                        markDirty();
+                        clearFieldError("audioUrl");
+                        setHasAudio(value);
+                        if (!value) {
+                          setAudioUrl("");
+                        }
+                      }}
                       ariaLabel="Este post possui áudio"
                     />
                   </div>
                   {hasAudio && (
-                    <input
-                      name="audioUrl"
-                      className={inputStyle}
-                      type="text"
-                      placeholder="URL do áudio"
-                      value={audioUrl}
-                      onChange={(e) => setAudioUrl(e.target.value)}
-                    />
+                    <div className="space-y-1">
+                      <input
+                        name="audioUrl"
+                        className={inputStyle}
+                        type="text"
+                        placeholder="URL do áudio"
+                        value={audioUrl}
+                        onChange={(e) => {
+                          markDirty();
+                          clearFieldError("audioUrl");
+                          setAudioUrl(e.target.value);
+                        }}
+                      />
+                      {validationErrors.audioUrl && (
+                        <span className="text-xs text-red-400">{validationErrors.audioUrl}</span>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -410,9 +572,16 @@ export default function Editor() {
                       type="text"
                       placeholder="Identificador único do post"
                       value={postId}
-                      onChange={(e) => setPostId(e.target.value)}
+                      onChange={(e) => {
+                        clearFieldError("postId");
+                        markDirty();
+                        setPostId(e.target.value);
+                      }}
                       required
                     />
+                    {validationErrors.postId && (
+                      <span className="text-xs text-red-400">{validationErrors.postId}</span>
+                    )}
                   </label>
 
                   <button
