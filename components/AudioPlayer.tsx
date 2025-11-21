@@ -116,6 +116,7 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
       <audio
         ref={audioRef}
         src={audioUrl}
+        crossOrigin="anonymous"
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
         onEnded={() => setIsPlaying(false)}
