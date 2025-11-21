@@ -155,7 +155,7 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
       </small>
 
       {/* Barra de progresso estilizada como "espectro" */}
-      <div className="flex-1 min-w-[200px]">
+      <div className="flex-1">
         <input
           type="range"
           min="0"
