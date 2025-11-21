@@ -1,7 +1,7 @@
 "use client"; // Marca como Client Component
 
 import { useState, useRef, useEffect } from "react";
-import { PlayIcon, PauseIcon, BoltIcon as BoltSolidIcon } from "@heroicons/react/20/solid";
+import { PlayIcon, PauseIcon, BoltIcon as BoltSolidIcon, SpeakerWaveIcon } from "@heroicons/react/20/solid";
 import { BoltIcon as BoltOutlineIcon } from "@heroicons/react/24/outline";
 
 const BOOST_MULTIPLIER = 2;
@@ -28,7 +28,7 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
-  const [isBoosted, setIsBoosted] = useState(true);
+  const [isBoosted, setIsBoosted] = useState(false);
 
   // Funções para controlar o áudio
   const togglePlayPause = () => {
@@ -122,7 +122,7 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
   }, []);
 
   return (
-    <div className={`w-full max-w-2xl mx-auto rounded-lg shadow-md flex items-center gap-4`}>
+    <div className={`w-full max-w-2xl mx-auto rounded-lg shadow-md flex items-center gap-3`}>
       {/* Elemento de áudio oculto para controle */}
       <audio
         ref={audioRef}
@@ -155,7 +155,7 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
       </small>
 
       {/* Barra de progresso estilizada como "espectro" */}
-      <div className="flex-1">
+      <div className="flex-1 min-w-[200px]">
         <input
           type="range"
           min="0"
@@ -174,8 +174,9 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
       </div>
 
       <div className="flex items-center gap-2">
-        <label className="text-xs text-zinc-600 dark:text-zinc-400" htmlFor="volume-slider">
-          Volume
+        <label className="flex items-center text-xs text-zinc-600 dark:text-zinc-400" htmlFor="volume-slider">
+          <SpeakerWaveIcon className="h-4 w-4" aria-hidden="true" />
+          <span className="sr-only">Volume</span>
         </label>
         <input
           id="volume-slider"
@@ -185,7 +186,10 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
           step="0.01"
           value={volume}
           onChange={handleVolumeChange}
-          className="w-24 h-2 rounded-full appearance-none cursor-pointer volume-thumb"
+          className="w-24 h-2 rounded-full appearance-none cursor-pointer volume-thumb bg-zinc-200 dark:bg-zinc-700"
+          style={{
+            background: `linear-gradient(to right, #0F0F0F ${volume * 100}%, #d4d4d8 ${volume * 100}%)`,
+          }}
         />
       </div>
 
