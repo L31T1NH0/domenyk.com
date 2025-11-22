@@ -1,5 +1,7 @@
-﻿import { NextResponse } from "next/server";
-import { getMongoDb } from "../../../lib/mongo";
+import { NextRequest, NextResponse } from "next/server";
+
+import { getMongoDb } from "@lib/mongo";
+import { consumeRateLimit, getRequestIdentifier } from "@lib/rate-limit";
 
 const PROJECTION = {
   _id: 0,
@@ -8,9 +10,12 @@ const PROJECTION = {
   date: 1,
   views: 1,
   tags: 1,
-};
+} as const;
 
 const SEARCH_COLLATION = { locale: "pt", strength: 2 } as const;
+const DEFAULT_LIMIT = 10;
+const MAX_LIMIT = 25;
+const MAX_QUERY_LENGTH = 120;
 
 type RawPost = {
   postId?: string;
@@ -44,48 +49,50 @@ function normalizePost(post: RawPost): PostResponse {
   };
 }
 
-export async function GET(req: Request) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const query = searchParams.get("query")?.trim() ?? "";
+function parseLimit(searchParams: URLSearchParams) {
+  const raw = parseInt(searchParams.get("limit") || "0", 10);
+  if (Number.isNaN(raw) || raw <= 0) return DEFAULT_LIMIT;
+  return Math.min(raw, MAX_LIMIT);
+}
 
+function escapeRegExp(input: string) {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const rawQuery = searchParams.get("query")?.trim() ?? "";
+  const trimmedQuery = rawQuery.slice(0, MAX_QUERY_LENGTH);
+  const limit = parseLimit(searchParams);
+  const clientIdentifier = getRequestIdentifier(req, "anon-search");
+
+  const rateLimit = await consumeRateLimit({
+    identifier: `search:${clientIdentifier}`,
+    windowSeconds: 60,
+    maxRequests: 50,
+  });
+
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
+  try {
     const db = await getMongoDb();
     const postsCollection = db.collection<RawPost>("posts");
 
-    // Ensure a text index exists to support $text queries.
-    // Mongo allows only one text index per collection, so detect before creating.
-    try {
-      const existing = await postsCollection.indexes();
-      const hasTextIndex = existing.some((idx: any) =>
-        Object.values(idx.key || {}).some((v) => v === "text")
-      );
-      if (!hasTextIndex) {
-        await postsCollection.createIndex(
-          { title: "text", tags: "text" },
-          {
-            name: "posts_text_index",
-            weights: { title: 10, tags: 5 },
-            default_language: "portuguese",
-          }
-        );
-      }
-    } catch (e) {
-      // Non-fatal: if index inspection/creation fails, continue and rely on regex fallback below.
-      // This avoids throwing 500 solely due to missing index.
-    }
-
     let posts: RawPost[] = [];
 
-    if (query === "") {
+    if (trimmedQuery === "") {
       posts = await postsCollection
         .find({ hidden: { $ne: true } }, { projection: PROJECTION })
         .sort({ date: -1 })
-        .limit(10)
+        .limit(limit)
         .toArray();
     } else {
       try {
         posts = await postsCollection
-          .find({ hidden: { $ne: true }, $text: { $search: query } },
+          .find(
+            { hidden: { $ne: true }, $text: { $search: trimmedQuery } },
             {
               projection: {
                 ...PROJECTION,
@@ -95,25 +102,28 @@ export async function GET(req: Request) {
           )
           .collation(SEARCH_COLLATION)
           .sort({ score: { $meta: "textScore" }, date: -1 })
-          .limit(10)
+          .limit(limit)
           .toArray();
       } catch (err) {
-        // If $text fails (e.g., missing index), fall back to regex search.
         posts = [];
       }
 
       if (posts.length === 0) {
+        const safeQuery = escapeRegExp(trimmedQuery);
         posts = await postsCollection
-          .find({ hidden: { $ne: true }, $or: [
-                { title: { $regex: query, $options: "i" } },
-                { tags: { $in: [new RegExp(query, "i")] } },
+          .find(
+            {
+              hidden: { $ne: true },
+              $or: [
+                { title: { $regex: safeQuery, $options: "i" } },
+                { tags: { $in: [new RegExp(safeQuery, "i")] } },
               ],
             },
             { projection: PROJECTION }
           )
           .collation(SEARCH_COLLATION)
           .sort({ date: -1 })
-          .limit(10)
+          .limit(limit)
           .toArray();
       }
     }
@@ -129,12 +139,7 @@ export async function GET(req: Request) {
   } catch (error) {
     console.error("Error searching posts:", {
       error: (error as Error).message,
-      stack: (error as Error).stack,
     });
-    return NextResponse.json(
-      { error: "Internal server error: " + (error as Error).message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
-

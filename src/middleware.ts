@@ -6,14 +6,13 @@ import {
   ANALYTICS_SESSION_MAX_AGE,
   generateSessionId,
 } from "@lib/analytics/session";
-import { claimsContainAdmin } from "@lib/admin";
+import { getRoleFromSessionClaims, roleHasPrivilege } from "@lib/admin";
 
-const isPublicRoute = createRouteMatcher([
+const isPublicPageRoute = createRouteMatcher([
   "/",
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/posts(.*)",
-  "/api(.*)",
 ]);
 
 const isAdminRoute = createRouteMatcher([
@@ -23,17 +22,37 @@ const isAdminRoute = createRouteMatcher([
   "/admin/api(.*)",
 ]);
 
+const isPublicApiRoute = createRouteMatcher([
+  "/api/analytics/collect",
+  "/api/posts",
+  "/api/posts/shorten-url",
+  "/api/posts/(.*)",
+  "/api/search-posts",
+  "/api/comments(.*)",
+  "/api/post-references(.*)",
+]);
+
 export default clerkMiddleware(async (auth, req) => {
   const authState = await auth();
   const { userId, sessionClaims, redirectToSignIn } = authState;
 
-  if (isAdminRoute(req) && !claimsContainAdmin(sessionClaims)) {
+  const resolvedRole = getRoleFromSessionClaims(sessionClaims);
+  const isAdmin = roleHasPrivilege(resolvedRole, "admin");
+  const isApiRoute = req.nextUrl.pathname.startsWith("/api");
+
+  if (isAdminRoute(req) && !isAdmin) {
     const url = new URL("/", req.url);
     return NextResponse.redirect(url);
   }
 
-  if (!userId && !isPublicRoute(req)) {
-    return redirectToSignIn();
+  if (!userId) {
+    if (isApiRoute && !isPublicApiRoute(req)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!isApiRoute && !isPublicPageRoute(req)) {
+      return redirectToSignIn();
+    }
   }
 
   const response = NextResponse.next();
