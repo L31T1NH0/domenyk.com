@@ -4,7 +4,7 @@ import Image from "next/image";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { Layout } from "@components/layout";
-import BackHome from "@components/back-home";
+import { BackHome } from "@components/back-home";
 import LexicalEditor from "../../../../components/editor/LexicalEditor";
 import Toggle from "../../../../components/Toggle";
 import PostContentShell from "../../posts/[id]/post-content-interactive";
