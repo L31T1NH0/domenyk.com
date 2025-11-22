@@ -7,7 +7,9 @@ type DeletePostBody = {
   postId: string;
 };
 
-const STAFF_ACTIONS = {
+type StaffAction = "deletePost";
+
+const STAFF_ACTIONS: Record<StaffAction, (body: unknown) => Promise<NextResponse>> = {
   deletePost: async (body: unknown) => {
     const parsed = body as DeletePostBody;
     if (!parsed || typeof parsed.postId !== "string" || parsed.postId.trim() === "") {
@@ -28,7 +30,11 @@ const STAFF_ACTIONS = {
 
     return NextResponse.json({ message: "Post deleted successfully", postId: parsed.postId.trim() });
   },
-} satisfies Record<string, (body: unknown) => Promise<NextResponse>>;
+};
+
+function isStaffAction(action: string): action is StaffAction {
+  return action === "deletePost";
+}
 
 export async function POST(req: Request, { params }: { params: Promise<{ action: string[] }> }) {
   const resolvedParams = await params;
@@ -40,7 +46,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ action:
     return NextResponse.json({ error: "Not Authorized" }, { status: 403 });
   }
 
-  if (!action || !(action in STAFF_ACTIONS)) {
+  if (!action || !isStaffAction(action)) {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   }
 
