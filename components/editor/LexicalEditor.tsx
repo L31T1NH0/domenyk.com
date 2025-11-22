@@ -77,6 +77,7 @@ interface LexicalEditorProps {
   value: string;
   onChange: (value: string) => void;
   onFocusChange?: (isFocused: boolean) => void;
+  appearance?: "panel" | "inline";
 }
 
 const ToolbarButton = ({
@@ -339,6 +340,7 @@ export default function LexicalEditor({
   value,
   onChange,
   onFocusChange,
+  appearance = "panel",
 }: LexicalEditorProps) {
   const handleSlashInsert = useCallback(() => {
     // No-op placeholder for future telemetry
@@ -386,7 +388,16 @@ export default function LexicalEditor({
 
   return (
     <LexicalComposer initialConfig={initialConfig}>
-      <div className="relative overflow-hidden rounded-2xl border border-white/5 bg-gradient-to-b from-[#0b0d12] via-[#0d1016] to-[#0a0c11] shadow-[0_30px_80px_-60px_rgba(0,0,0,0.9)]">
+      <div
+        className={[
+          "relative overflow-hidden",
+          appearance === "panel"
+            ? "rounded-2xl border border-white/5 bg-gradient-to-b from-[#0b0d12] via-[#0d1016] to-[#0a0c11] shadow-[0_30px_80px_-60px_rgba(0,0,0,0.9)]"
+            : "rounded-xl border border-white/10 bg-transparent backdrop-blur",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
         <div className="border-b border-white/5 px-4 pb-3 pt-4">
           <Toolbar />
         </div>
