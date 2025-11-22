@@ -74,23 +74,23 @@ function MetadataPanel({
 }: MetadataPanelProps) {
   return (
     <div
-      className={`pointer-events-auto fixed right-4 top-20 z-30 w-80 max-h-[calc(100vh-6rem)] overflow-y-auto rounded-2xl border border-white/10 bg-[#0b0d12]/95 p-4 shadow-2xl shadow-black/40 backdrop-blur transition duration-200 ${
+      className={`pointer-events-auto fixed right-6 top-24 z-30 w-80 max-h-[calc(100vh-6rem)] overflow-y-auto rounded-2xl border border-zinc-800/80 bg-zinc-950/90 p-5 shadow-2xl shadow-black/30 backdrop-blur transition duration-200 ${
         isOpen ? "opacity-100 translate-y-0" : "pointer-events-none opacity-0 translate-y-4"
       }`}
     >
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between">
         <p className="text-sm font-semibold text-zinc-100">Metadados do post</p>
         <button
           type="button"
           onClick={onClose}
-          className="rounded-full border border-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-300 hover:border-white/30"
+          className="inline-flex items-center rounded-full border border-zinc-800/80 px-3 py-1 text-xs font-medium text-zinc-200 transition-colors hover:border-zinc-600 hover:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-600/30"
         >
           Fechar
         </button>
       </div>
 
       <div className="space-y-4 text-sm">
-        <div className="flex items-start justify-between gap-3 rounded-lg bg-white/[0.02] p-3">
+        <div className="flex items-start justify-between gap-3 rounded-xl border border-zinc-800/80 bg-zinc-900/60 p-3">
           <div className="space-y-1">
             <p className="text-sm font-medium text-zinc-100">Ocultar post</p>
             <p className={hintText}>Mantém o conteúdo fora das listagens públicas.</p>
@@ -102,7 +102,7 @@ function MetadataPanel({
           />
         </div>
 
-        <div className="flex items-start justify-between gap-3 rounded-lg bg-white/[0.02] p-3">
+        <div className="flex items-start justify-between gap-3 rounded-xl border border-zinc-800/80 bg-zinc-900/60 p-3">
           <div className="space-y-1">
             <p className="text-sm font-medium text-zinc-100">Comentários por parágrafo</p>
             <p className={hintText}>Ativa as anotações nos blocos de texto.</p>
@@ -129,18 +129,18 @@ function MetadataPanel({
 
         <label className="flex flex-col gap-2">
           <span className={labelStyle}>Co-autor</span>
-          <div className="rounded-lg border border-white/10 bg-[#0d1017] px-3 py-2">
+          <div className="rounded-xl border border-zinc-800/80 bg-zinc-950/70 px-3 py-2 shadow-sm shadow-black/10">
             <select
               name="coAuthorUserId"
               className="w-full bg-transparent py-2 text-sm text-zinc-100 outline-none"
               value={coAuthorUserId}
               onChange={(e) => onSelectCoAuthor(e.target.value)}
             >
-              <option value="" className="bg-[#0c0e14] text-zinc-200">
+              <option value="" className="bg-zinc-950 text-zinc-200">
                 Selecionar co-autor (opcional)
               </option>
               {coAuthors.map((user) => (
-                <option key={user.id} value={user.id} className="bg-[#0c0e14] text-zinc-100">
+                <option key={user.id} value={user.id} className="bg-zinc-950 text-zinc-100">
                   {user.name}
                 </option>
               ))}
@@ -165,7 +165,7 @@ function MetadataPanel({
           />
         </label>
 
-        <div className="space-y-3 rounded-lg border border-white/10 bg-white/[0.02] p-3">
+        <div className="space-y-3 rounded-xl border border-zinc-800/80 bg-zinc-900/60 p-3">
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1">
               <p className="text-sm font-medium text-zinc-100">Este post possui áudio?</p>
@@ -245,11 +245,11 @@ export default function Editor() {
   }, []);
 
   const inputStyle =
-    "w-full rounded-lg border border-white/10 bg-[#0d1017] px-3 py-2.5 text-sm text-zinc-100 transition focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 placeholder:text-zinc-500";
+    "w-full rounded-xl border border-zinc-800/80 bg-zinc-950/70 px-3 py-2.5 text-sm text-zinc-100 shadow-inner shadow-black/10 transition focus:border-cyan-500/60 focus:outline-none focus:ring-2 focus:ring-cyan-500/15 placeholder:text-zinc-500";
 
-  const labelStyle = "text-xs font-medium uppercase tracking-[0.12em] text-zinc-500";
+  const labelStyle = "text-xs font-semibold uppercase tracking-[0.08em] text-zinc-400";
 
-  const hintText = "text-sm text-zinc-500";
+  const hintText = "text-xs text-zinc-500";
 
   const validateUrl = useCallback((value: string) => {
     if (!value.trim()) return true;
@@ -376,8 +376,8 @@ export default function Editor() {
   const editorBorder = useMemo(
     () =>
       isEditorFocused
-        ? "border-emerald-400/50 ring-2 ring-emerald-500/20"
-        : "border-white/10",
+        ? "border-cyan-400/50 ring-2 ring-cyan-500/15"
+        : "border-zinc-800/80",
     [isEditorFocused]
   );
 
@@ -489,7 +489,7 @@ export default function Editor() {
                 <button
                   type="button"
                   onClick={() => setIsMetadataOpen(true)}
-                  className="rounded-full border border-white/20 bg-black/40 px-4 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-white backdrop-blur transition hover:border-white/40"
+                  className="inline-flex items-center rounded-full border border-zinc-800/80 bg-zinc-950/70 px-4 py-1.5 text-xs font-medium text-zinc-100 shadow-sm shadow-black/20 transition-colors hover:border-zinc-600 hover:bg-zinc-900/70 focus:outline-none focus:ring-2 focus:ring-zinc-600/30"
                 >
                   Trocar capa
                 </button>
@@ -512,22 +512,22 @@ export default function Editor() {
           secondaryHeaderSlot={
             <div className="flex flex-col gap-2">
               <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-200">
+                <span className="inline-flex items-center rounded-full border border-zinc-800/80 bg-zinc-950/80 px-3 py-1 text-[11px] font-medium text-zinc-100">
                   Modo edição
                 </span>
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-200">
+                <span className="inline-flex items-center rounded-full border border-zinc-800/80 bg-zinc-950/60 px-3 py-1 text-[11px] font-medium text-zinc-200">
                   Prévia
                 </span>
                 <button
                   type="button"
                   onClick={() => setIsMetadataOpen((open) => !open)}
-                  className="rounded-full border border-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-200 transition hover:border-white/30"
+                  className="inline-flex items-center rounded-full border border-zinc-800/80 bg-transparent px-3 py-1 text-[11px] font-medium text-zinc-200 transition-colors hover:border-zinc-600 hover:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-600/30"
                 >
                   Metadados
                 </button>
                 <button
                   type="submit"
-                  className="rounded-full bg-emerald-400 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-70"
+                  className="inline-flex items-center rounded-full border border-zinc-200/80 bg-white px-4 py-1.5 text-xs font-semibold text-zinc-900 shadow-sm transition hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-500/40 disabled:cursor-not-allowed disabled:opacity-70"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? "Publicando..." : "Publicar post"}
@@ -535,7 +535,7 @@ export default function Editor() {
               </div>
               <div className="flex flex-wrap items-center gap-2 text-sm text-zinc-500">
                 <span className="font-medium text-zinc-200">{slugPreview}</span>
-                <span aria-hidden className="text-zinc-600">•</span>
+                <span aria-hidden className="text-zinc-700">•</span>
                 <span>Pré-visualização da URL do post</span>
               </div>
               <div className="text-xs text-zinc-500">
@@ -546,15 +546,15 @@ export default function Editor() {
         >
           <div className="flex flex-col gap-3">
             <div
-              className={`rounded-2xl border bg-white/[0.02] ${editorBorder} transition duration-200`}
+              className={`rounded-2xl border bg-zinc-950/70 ${editorBorder} transition duration-200`}
             >
               <div className="flex flex-wrap items-center justify-between gap-2 px-4 pb-2 pt-4 text-sm text-zinc-400">
-                <p className="text-sm font-semibold text-zinc-200">Conteúdo</p>
+                <p className="text-sm font-semibold text-zinc-100">Conteúdo</p>
                 {validationErrors.content && (
                   <span className="text-xs text-red-400">{validationErrors.content}</span>
                 )}
               </div>
-              <div className="border-t border-white/5">
+              <div className="border-t border-zinc-800/80">
                 <LexicalEditor
                   value={content}
                   onChange={handleContentChange}
@@ -567,7 +567,7 @@ export default function Editor() {
         </PostContentShell>
 
         {(success || error) && (
-          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 text-center">
+          <div className="rounded-xl border border-zinc-800/80 bg-zinc-950/80 p-4 text-center">
             {success && <p className="text-sm font-medium text-emerald-400">{success}</p>}
             {error && <p className="text-sm font-medium text-red-400">{error}</p>}
           </div>
