@@ -7,6 +7,7 @@ import { PostHeader } from "@components/PostHeader";
 import LexicalEditor from "../../../../components/editor/LexicalEditor";
 import Toggle from "../../../../components/Toggle";
 import PostContentShell from "../../posts/[id]/post-content-interactive";
+import { normalizeMarkdownContent } from "../../../lib/markdown-normalize";
 
 function calculateReadingTime(markdown: string): string {
   const wordsPerMinute = 200;
@@ -271,7 +272,9 @@ export default function Editor() {
       nextErrors.postId = "Post ID é obrigatório.";
     }
 
-    if (!content.trim()) {
+    const sanitizedContent = normalizeMarkdownContent(content);
+
+    if (!sanitizedContent.trim()) {
       nextErrors.content = "Escreva algo antes de publicar.";
     }
 
@@ -310,7 +313,9 @@ export default function Editor() {
       formData.append("title", title);
       formData.append("subtitle", subtitle);
       formData.append("postId", postId);
-      formData.append("contentMarkdown", content);
+      const normalizedContent = normalizeMarkdownContent(content);
+
+      formData.append("markdownContent", normalizedContent);
       formData.append("tags", tags);
       formData.append("cape", cape);
       if (friendImage) {
@@ -364,7 +369,8 @@ export default function Editor() {
   const handleContentChange = (value: string) => {
     clearFieldError("content");
     markDirty();
-    setContent(value);
+    const normalizedValue = normalizeMarkdownContent(value);
+    setContent(normalizedValue);
   };
 
   const editorBorder = useMemo(
