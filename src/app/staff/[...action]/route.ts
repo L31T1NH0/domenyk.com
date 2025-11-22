@@ -1,66 +1,63 @@
 import { NextResponse } from "next/server";
-import { clientPromise } from "../../../lib/mongo"; // Conexão com o MongoDB
-import { resolveAdminStatus } from "../../../lib/admin";
 
-// Tipos para os dados de entrada
+import { clientPromise } from "../../../lib/mongo";
+import { assertRole } from "../../../lib/admin";
+
 type DeletePostBody = {
   postId: string;
 };
 
-// Handler para POST requests
-export async function POST(
-  req: Request,
-  { params }: { params: Promise<{ action: string[] }> }
-) {
-  const resolvedParams = await params; // Aguarda a resolução do params
-  const [action] = resolvedParams.action || []; // Captura a primeira parte do wildcard (ex.: "deletePost")
+type StaffAction = "deletePost";
 
-  // Autentica o usuário
-  const { isAdmin } = await resolveAdminStatus();
+const STAFF_ACTIONS: Record<StaffAction, (body: unknown) => Promise<NextResponse>> = {
+  deletePost: async (body: unknown) => {
+    const parsed = body as DeletePostBody;
+    if (!parsed || typeof parsed.postId !== "string" || parsed.postId.trim() === "") {
+      return NextResponse.json(
+        { error: "Post ID is required and must be a non-empty string" },
+        { status: 400 }
+      );
+    }
 
-  // Verifica se o usuário é um admin
-  if (!isAdmin) {
-    return NextResponse.json({ error: "Not Authorized" }, { status: 403 });
-  }
-
-  try {
     const client = await clientPromise;
     const db = client.db("blog");
     const postsCollection = db.collection("posts");
+    const result = await postsCollection.deleteOne({ postId: parsed.postId.trim() });
 
-    if (action === "deletePost") {
-      const { postId } = (await req.json()) as DeletePostBody;
-
-      // Valida os dados de entrada
-      if (!postId || typeof postId !== "string") {
-        return NextResponse.json(
-          { error: "Post ID is required and must be a string" },
-          { status: 400 }
-        );
-      }
-
-      // Deleta o post do MongoDB
-      const result = await postsCollection.deleteOne({ postId });
-      if (result.deletedCount === 0) {
-        return NextResponse.json({ error: "Post not found" }, { status: 404 });
-      }
-
-      return NextResponse.json(
-        { message: "Post deleted successfully", postId },
-        { status: 200 }
-      );
-    } else {
-      return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    if (result.deletedCount === 0) {
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
+
+    return NextResponse.json({ message: "Post deleted successfully", postId: parsed.postId.trim() });
+  },
+};
+
+function isStaffAction(action: string): action is StaffAction {
+  return action === "deletePost";
+}
+
+export async function POST(req: Request, { params }: { params: Promise<{ action: string[] }> }) {
+  const resolvedParams = await params;
+  const [action] = resolvedParams.action || [];
+
+  try {
+    await assertRole("admin");
+  } catch {
+    return NextResponse.json({ error: "Not Authorized" }, { status: 403 });
+  }
+
+  if (!action || !isStaffAction(action)) {
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+  }
+
+  try {
+    const body = await req.json();
+    return await STAFF_ACTIONS[action](body);
   } catch (error) {
     console.error("Error in staff action:", {
       action,
       error: (error as Error).message,
-      stack: (error as Error).stack,
     });
-    return NextResponse.json(
-      { error: "Internal server error: " + (error as Error).message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

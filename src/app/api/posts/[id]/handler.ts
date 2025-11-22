@@ -87,8 +87,6 @@ export async function resolvePostResponse(
 
     const responseData = { postId: post.postId, views };
 
-    console.log("Post data from API for postId:", id, responseData);
-
     const response = NextResponse.json(responseData, { status: 200 });
 
     if (shouldSetCookie) {
