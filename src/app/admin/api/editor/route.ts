@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { clientPromise } from "../../../../lib/mongo"; // Conexão com o MongoDB
 import { resolveAdminStatus } from "../../../../lib/admin";
+import { normalizeMarkdownContent } from "../../../../lib/markdown-normalize";
 
 // Handler para POST requests (publicação de posts)
 export async function POST(req: Request) {
@@ -16,7 +17,10 @@ export async function POST(req: Request) {
     const title = formData.get("title");
     const subtitle = formData.get("subtitle");
     const postId = formData.get("postId");
-    const content = formData.get("contentMarkdown") ?? formData.get("content");
+    const content =
+      formData.get("markdownContent") ??
+      formData.get("contentMarkdown") ??
+      formData.get("content");
     const tags = formData.get("tags");
     const audioUrl = formData.get("audioUrl");
     const cape = formData.get("cape");
@@ -53,6 +57,15 @@ export async function POST(req: Request) {
     if (!content || typeof content !== "string") {
       return NextResponse.json(
         { error: "Content is required and must be a string" },
+        { status: 400 }
+      );
+    }
+
+    const normalizedContent = normalizeMarkdownContent(content);
+
+    if (!normalizedContent.trim()) {
+      return NextResponse.json(
+        { error: "Content is required and must not be empty" },
         { status: 400 }
       );
     }
@@ -106,8 +119,7 @@ export async function POST(req: Request) {
       postId,
       title,
       subtitle: normalizedSubtitle,
-      contentMarkdown: content,
-      htmlContent: content,
+      markdownContent: normalizedContent,
       date: new Date().toISOString().split("T")[0], // Formato "YYYY-MM-DD"
       views: 0, // Inicializa as views como 0
       audioUrl: normalizedAudioUrl,
