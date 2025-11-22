@@ -233,6 +233,8 @@ type PostContentShellProps = {
   initialViews: number;
   audioUrl?: string;
   children: ReactNode;
+  disableViewTracking?: boolean;
+  hideShareButton?: boolean;
 };
 
 export default function PostContentShell({
@@ -242,6 +244,8 @@ export default function PostContentShell({
   initialViews,
   audioUrl,
   children,
+  disableViewTracking = false,
+  hideShareButton = false,
 }: PostContentShellProps) {
   const [views, setViews] = useState(initialViews);
   const [isMobile, setIsMobile] = useState(false);
@@ -264,6 +268,10 @@ export default function PostContentShell({
   }, []);
 
   useEffect(() => {
+    if (disableViewTracking) {
+      return () => {};
+    }
+
     let canceled = false;
 
     const trackView = async () => {
@@ -286,7 +294,7 @@ export default function PostContentShell({
     return () => {
       canceled = true;
     };
-  }, [postId]);
+  }, [disableViewTracking, postId]);
 
   const headerCounters = useMemo(
     () => (
@@ -313,12 +321,12 @@ export default function PostContentShell({
           </div>
 
           <span className="justify-self-end">
-            <ShareButton id={postId} />
+            {!hideShareButton && <ShareButton id={postId} />}
           </span>
         </div>
       </div>
     ),
-    [date, postId, readingTime, views],
+    [date, hideShareButton, postId, readingTime, views],
   );
 
   return (

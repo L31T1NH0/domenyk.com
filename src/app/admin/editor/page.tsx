@@ -1,11 +1,339 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import DOMPurify from "dompurify";
+import Image from "next/image";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
+import { Layout } from "@components/layout";
+import BackHome from "@components/back-home";
 import LexicalEditor from "../../../../components/editor/LexicalEditor";
 import Toggle from "../../../../components/Toggle";
-import { renderMarkdown } from "../../../lib/renderers/markdown";
+import PostContentShell from "../../posts/[id]/post-content-interactive";
+
+const FALLBACK_IMAGE = "/images/profile.jpg";
+
+function calculateReadingTime(markdown: string): string {
+  const wordsPerMinute = 200;
+  const words = markdown.trim() ? markdown.trim().split(/\s+/).length : 0;
+  const minutes = Math.max(1, Math.ceil(words / wordsPerMinute));
+  return `${minutes} min`;
+}
+
+type EditableHeaderProps = {
+  title: string;
+  subtitle: string;
+  cape: string;
+  friendImage: string;
+  coAuthorImage?: string | null;
+  onTitleChange: (value: string) => void;
+  onSubtitleChange: (value: string) => void;
+  onCapeEditRequest: () => void;
+  titleError?: string;
+};
+
+function EditablePostHeader({
+  title,
+  subtitle,
+  cape,
+  friendImage,
+  coAuthorImage,
+  onTitleChange,
+  onSubtitleChange,
+  onCapeEditRequest,
+  titleError,
+}: EditableHeaderProps) {
+  const secondaryImage = coAuthorImage || friendImage || undefined;
+
+  return (
+    <div className="relative overflow-hidden rounded-3xl border border-white/5 bg-[#0c0e14]">
+      {cape && (
+        <Image
+          src={cape}
+          alt="Capa do post"
+          width={1920}
+          height={1080}
+          className="banner w-full h-auto object-cover"
+          priority
+        />
+      )}
+
+      <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-[#040404]/70 via-[#040404]/40 to-[#040404]/90" />
+
+      <div className="absolute right-4 top-4 z-10 flex gap-2">
+        <button
+          type="button"
+          onClick={onCapeEditRequest}
+          className="pointer-events-auto rounded-full border border-white/20 bg-black/40 px-4 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-white backdrop-blur transition hover:border-white/40"
+        >
+          Trocar capa
+        </button>
+      </div>
+
+      <div className="absolute bottom-3 left-4 z-10 flex flex-col gap-3 max-w-[80%]">
+        <div className="flex -space-x-4">
+          <Image
+            priority
+            src={FALLBACK_IMAGE}
+            className="foto-post"
+            height={56}
+            width={56}
+            alt="Domenyk"
+          />
+          {secondaryImage && (
+            <Image
+              src={secondaryImage}
+              className="foto-post"
+              height={56}
+              width={56}
+              alt="Coautor"
+            />
+          )}
+        </div>
+
+        <input
+          className="bg-transparent text-xl text-white focus:outline-none focus:ring-0 font-semibold placeholder:text-zinc-400"
+          placeholder="Título do post"
+          value={title}
+          onChange={(e) => onTitleChange(e.target.value)}
+        />
+        {titleError && <span className="text-xs text-red-300">{titleError}</span>}
+        <input
+          className="bg-transparent text-sm text-zinc-200 focus:outline-none focus:ring-0 placeholder:text-zinc-500"
+          placeholder="Subtítulo (opcional)"
+          value={subtitle}
+          onChange={(e) => onSubtitleChange(e.target.value)}
+        />
+      </div>
+
+      {!cape && (
+        <div className="flex flex-col items-center gap-3 px-6 py-8 text-center">
+          <div className="flex -space-x-4">
+            <Image
+              priority
+              src={FALLBACK_IMAGE}
+              className="rounded-full brightness-125 foto"
+              height={148}
+              width={148}
+              alt="Domenyk"
+            />
+            {secondaryImage && (
+              <Image
+                src={secondaryImage}
+                className="rounded-full brightness-125 foto"
+                height={148}
+                width={148}
+                alt="Coautor"
+              />
+            )}
+          </div>
+          <input
+            className="w-full bg-transparent text-center text-3xl font-semibold text-zinc-50 focus:outline-none placeholder:text-zinc-500"
+            placeholder="Título do post"
+            value={title}
+            onChange={(e) => onTitleChange(e.target.value)}
+          />
+          <input
+            className="w-full bg-transparent text-center text-base text-zinc-400 focus:outline-none placeholder:text-zinc-600"
+            placeholder="Subtítulo (opcional)"
+            value={subtitle}
+            onChange={(e) => onSubtitleChange(e.target.value)}
+          />
+          {titleError && <span className="text-xs text-red-300">{titleError}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+type MetadataPanelProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  inputStyle: string;
+  labelStyle: string;
+  hintText: string;
+  hidden: boolean;
+  paragraphCommentsEnabled: boolean;
+  hasAudio: boolean;
+  audioUrl: string;
+  cape: string;
+  tags: string;
+  postId: string;
+  coAuthorUserId: string;
+  coAuthors: { id: string; name: string; imageUrl: string | null }[];
+  coAuthorError: string | null;
+  validationErrors: Record<string, string>;
+  onToggleHidden: (value: boolean) => void;
+  onToggleParagraphComments: (value: boolean) => void;
+  onToggleHasAudio: (value: boolean) => void;
+  onAudioUrlChange: (value: string) => void;
+  onCapeChange: (value: string) => void;
+  onTagsChange: (value: string) => void;
+  onPostIdChange: (value: string) => void;
+  onSelectCoAuthor: (value: string) => void;
+};
+
+function MetadataPanel({
+  isOpen,
+  onClose,
+  inputStyle,
+  labelStyle,
+  hintText,
+  hidden,
+  paragraphCommentsEnabled,
+  hasAudio,
+  audioUrl,
+  cape,
+  tags,
+  postId,
+  coAuthorUserId,
+  coAuthors,
+  coAuthorError,
+  validationErrors,
+  onToggleHidden,
+  onToggleParagraphComments,
+  onToggleHasAudio,
+  onAudioUrlChange,
+  onCapeChange,
+  onTagsChange,
+  onPostIdChange,
+  onSelectCoAuthor,
+}: MetadataPanelProps) {
+  return (
+    <div
+      className={`pointer-events-auto fixed right-4 top-20 z-30 w-80 max-h-[calc(100vh-6rem)] overflow-y-auto rounded-2xl border border-white/10 bg-[#0b0d12]/95 p-4 shadow-2xl shadow-black/40 backdrop-blur transition duration-200 ${
+        isOpen ? "opacity-100 translate-y-0" : "pointer-events-none opacity-0 translate-y-4"
+      }`}
+    >
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-sm font-semibold text-zinc-100">Metadados do post</p>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-full border border-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-300 hover:border-white/30"
+        >
+          Fechar
+        </button>
+      </div>
+
+      <div className="space-y-4 text-sm">
+        <div className="flex items-start justify-between gap-3 rounded-lg bg-white/[0.02] p-3">
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-zinc-100">Ocultar post</p>
+            <p className={hintText}>Mantém o conteúdo fora das listagens públicas.</p>
+          </div>
+          <Toggle
+            checked={hidden}
+            onChange={onToggleHidden}
+            ariaLabel="Ocultar post nas listagens públicas"
+          />
+        </div>
+
+        <div className="flex items-start justify-between gap-3 rounded-lg bg-white/[0.02] p-3">
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-zinc-100">Comentários por parágrafo</p>
+            <p className={hintText}>Ativa as anotações nos blocos de texto.</p>
+          </div>
+          <Toggle
+            checked={paragraphCommentsEnabled}
+            onChange={onToggleParagraphComments}
+            ariaLabel="Permitir comentários por parágrafo"
+          />
+        </div>
+
+        <label className="flex flex-col gap-2">
+          <span className={labelStyle}>Capa</span>
+          <input
+            name="cape"
+            className={inputStyle}
+            type="text"
+            placeholder="URL da imagem de capa"
+            value={cape}
+            onChange={(e) => onCapeChange(e.target.value)}
+          />
+          {validationErrors.cape && <span className="text-xs text-red-400">{validationErrors.cape}</span>}
+        </label>
+
+        <label className="flex flex-col gap-2">
+          <span className={labelStyle}>Co-autor</span>
+          <div className="rounded-lg border border-white/10 bg-[#0d1017] px-3 py-2">
+            <select
+              name="coAuthorUserId"
+              className="w-full bg-transparent py-2 text-sm text-zinc-100 outline-none"
+              value={coAuthorUserId}
+              onChange={(e) => onSelectCoAuthor(e.target.value)}
+            >
+              <option value="" className="bg-[#0c0e14] text-zinc-200">
+                Selecionar co-autor (opcional)
+              </option>
+              {coAuthors.map((user) => (
+                <option key={user.id} value={user.id} className="bg-[#0c0e14] text-zinc-100">
+                  {user.name}
+                </option>
+              ))}
+            </select>
+            <div className="mt-2 flex items-center justify-between text-xs text-zinc-500">
+              <span>{coAuthorUserId ? "Co-autor vinculado" : "Sem co-autor"}</span>
+              {coAuthorUserId && <span className="text-emerald-300">Ativo</span>}
+            </div>
+            {coAuthorError && <p className="mt-2 text-xs text-red-400">{coAuthorError}</p>}
+          </div>
+        </label>
+
+        <label className="flex flex-col gap-2">
+          <span className={labelStyle}>Tags</span>
+          <input
+            name="tags"
+            className={inputStyle}
+            type="text"
+            placeholder="separe por vírgulas"
+            value={tags}
+            onChange={(e) => onTagsChange(e.target.value)}
+          />
+        </label>
+
+        <div className="space-y-3 rounded-lg border border-white/10 bg-white/[0.02] p-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-zinc-100">Este post possui áudio?</p>
+              <p className={hintText}>Habilite para adicionar uma trilha ou narração.</p>
+            </div>
+            <Toggle
+              checked={hasAudio}
+              onChange={onToggleHasAudio}
+              ariaLabel="Este post possui áudio"
+            />
+          </div>
+          {hasAudio && (
+            <div className="space-y-1">
+              <input
+                name="audioUrl"
+                className={inputStyle}
+                type="text"
+                placeholder="URL do áudio"
+                value={audioUrl}
+                onChange={(e) => onAudioUrlChange(e.target.value)}
+              />
+              {validationErrors.audioUrl && <span className="text-xs text-red-400">{validationErrors.audioUrl}</span>}
+            </div>
+          )}
+        </div>
+
+        <label className="flex flex-col gap-2">
+          <span className={labelStyle}>Post ID</span>
+          <input
+            name="postId"
+            className={inputStyle}
+            type="text"
+            placeholder="Identificador único do post"
+            value={postId}
+            onChange={(e) => onPostIdChange(e.target.value)}
+            required
+          />
+          {validationErrors.postId && <span className="text-xs text-red-400">{validationErrors.postId}</span>}
+        </label>
+      </div>
+    </div>
+  );
+}
 
 export default function Editor() {
   const [title, setTitle] = useState("");
@@ -17,18 +345,12 @@ export default function Editor() {
   const [coAuthors, setCoAuthors] = useState<
     { id: string; name: string; imageUrl: string | null }[]
   >([]);
-  const [isLoadingCoAuthors, setIsLoadingCoAuthors] = useState(false);
   const [tags, setTags] = useState("");
   const [hasAudio, setHasAudio] = useState(false);
   const [audioUrl, setAudioUrl] = useState("");
   const [hidden, setHidden] = useState(false);
   const [paragraphCommentsEnabled, setParagraphCommentsEnabled] = useState(true);
   const [content, setContent] = useState("");
-  const [previewHtml, setPreviewHtml] = useState("");
-  const [previewStatus, setPreviewStatus] = useState<"idle" | "loading" | "error">(
-    "idle"
-  );
-  const [showPreview, setShowPreview] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -36,7 +358,7 @@ export default function Editor() {
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [coAuthorError, setCoAuthorError] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
-  const previewTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isMetadataOpen, setIsMetadataOpen] = useState(false);
   const markDirty = useCallback(() => setIsDirty(true), []);
   const clearFieldError = useCallback((field: string) => {
     setValidationErrors((prev) => {
@@ -171,37 +493,6 @@ export default function Editor() {
     setContent(value);
   };
 
-  useEffect(() => {
-    if (previewTimeoutRef.current) {
-      clearTimeout(previewTimeoutRef.current);
-    }
-
-    if (!content.trim()) {
-      setPreviewHtml("");
-      setPreviewStatus("idle");
-      return;
-    }
-
-    setPreviewStatus("loading");
-
-    previewTimeoutRef.current = setTimeout(async () => {
-      try {
-        const rendered = await renderMarkdown(content);
-        setPreviewHtml(DOMPurify.sanitize(rendered));
-        setPreviewStatus("idle");
-      } catch (previewError) {
-        console.error("Preview render failed", previewError);
-        setPreviewStatus("error");
-      }
-    }, 300);
-
-    return () => {
-      if (previewTimeoutRef.current) {
-        clearTimeout(previewTimeoutRef.current);
-      }
-    };
-  }, [content]);
-
   const editorBorder = useMemo(
     () =>
       isEditorFocused
@@ -213,7 +504,6 @@ export default function Editor() {
   useEffect(() => {
     const loadCoAuthors = async () => {
       try {
-        setIsLoadingCoAuthors(true);
         setCoAuthorError(null);
         const response = await fetch("/admin/api/users");
         if (!response.ok) {
@@ -233,8 +523,6 @@ export default function Editor() {
       } catch (coAuthorLoadError) {
         console.error("Failed to fetch co-authors", coAuthorLoadError);
         setCoAuthorError("Não foi possível carregar os co-autores.");
-      } finally {
-        setIsLoadingCoAuthors(false);
       }
     };
 
@@ -260,343 +548,155 @@ export default function Editor() {
     setFriendImage(selected?.imageUrl ?? "");
   };
 
+  const readingTime = useMemo(() => calculateReadingTime(content), [content]);
+  const draftDate = useMemo(() => new Date().toISOString(), []);
+  const audioSource = hasAudio ? audioUrl : undefined;
+
   return (
-    <div className="min-h-screen bg-[#0b0d12] py-10 text-zinc-100">
-      <div className="mx-auto max-w-6xl px-5">
-        <header className="mb-8 flex flex-col gap-3 text-center lg:flex-row lg:items-end lg:justify-between lg:text-left">
-          <div className="space-y-2">
-            <p className="text-[11px] uppercase tracking-[0.24em] text-zinc-500">
-              Painel editorial
-            </p>
-            <h1 className="text-4xl font-semibold leading-tight text-zinc-50 sm:text-[42px]">
-              Novo post
-            </h1>
-            <p className="max-w-2xl text-base text-zinc-500">
-              Estruture seu artigo e preencha os metadados essenciais de forma direta.
-            </p>
+    <Layout title={title || "Novo post"} description={subtitle || undefined} url="/admin/editor">
+      <form onSubmit={handleSubmit} className="relative space-y-6 pb-10">
+        <EditablePostHeader
+          title={title}
+          subtitle={subtitle}
+          cape={cape}
+          friendImage={friendImage || ""}
+          coAuthorImage={friendImage || null}
+          onTitleChange={(value) => {
+            clearFieldError("title");
+            markDirty();
+            setTitle(value);
+          }}
+          onSubtitleChange={(value) => {
+            markDirty();
+            setSubtitle(value);
+          }}
+          onCapeEditRequest={() => setIsMetadataOpen(true)}
+          titleError={validationErrors.title}
+        />
+
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-zinc-400">
+          <div className="flex items-center gap-3">
+            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-200">
+              Modo edição
+            </span>
+            <p className="text-zinc-500">Visualize o texto final enquanto escreve.</p>
           </div>
-          <div className="flex items-center justify-center gap-3 self-start rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-zinc-200">
-            <div className="text-left">
-              <p className="text-[11px] uppercase tracking-[0.14em] text-emerald-200/80">Preview</p>
-              <p className="text-xs text-zinc-500">Visualização opcional do conteúdo</p>
-            </div>
-            <Toggle
-              checked={showPreview}
-              onChange={setShowPreview}
-              ariaLabel="Alternar pré-visualização"
-            />
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsMetadataOpen((open) => !open)}
+              className="rounded-full border border-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-200 transition hover:border-white/30"
+            >
+              Metadados
+            </button>
+            <button
+              type="submit"
+              className="rounded-full bg-emerald-400 px-5 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-70"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Publicando..." : "Publicar post"}
+            </button>
           </div>
-        </header>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-7">
-          <div className="grid gap-6 lg:grid-cols-[1.6fr,1fr]">
-            <div className="space-y-5">
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-5">
-                <div className="grid gap-3 sm:grid-cols-[1.2fr,0.8fr]">
-                  <label className="flex flex-col gap-2">
-                    <span className="text-xs font-semibold text-zinc-300">Título</span>
-                    <input
-                      name="title"
-                      className={`${inputStyle} text-base font-semibold tracking-tight`}
-                      type="text"
-                      placeholder="Digite o título do post"
-                      value={title}
-                      onChange={(e) => {
-                        clearFieldError("title");
-                        markDirty();
-                        setTitle(e.target.value);
-                      }}
-                      required
-                    />
-                    {validationErrors.title && (
-                      <span className="text-xs text-red-400">{validationErrors.title}</span>
-                    )}
-                  </label>
-                  <label className="flex flex-col gap-2">
-                    <span className={labelStyle}>Subtítulo</span>
-                    <input
-                      name="subtitle"
-                      className={inputStyle}
-                      type="text"
-                      placeholder="Complemento do título"
-                      value={subtitle}
-                      onChange={(e) => {
-                        markDirty();
-                        setSubtitle(e.target.value);
-                      }}
-                    />
-                  </label>
-                </div>
-
-                <div className="mt-5 rounded-lg border border-white/10 bg-[#0f1117]">
-                  <div className="flex items-center justify-between px-4 pb-3 pt-4">
-                    <div>
-                      <p className="text-sm font-semibold text-zinc-200">Editor</p>
-                      <p className={hintText}>Espaço fluido para escrever e formatar seu post.</p>
-                    </div>
-                    <span className="rounded-full border border-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-300">
-                      Foco
-                    </span>
-                  </div>
-                  <div className={`rounded-b-lg border-t border-white/5 bg-[#0c0e14] ${editorBorder} transition duration-200`}>
-                    <LexicalEditor
-                      value={content}
-                      onChange={handleContentChange}
-                      onFocusChange={setIsEditorFocused}
-                    />
-                    {validationErrors.content && (
-                      <p className="px-4 pb-2 text-xs text-red-400">{validationErrors.content}</p>
-                    )}
-                  </div>
-                </div>
-                {showPreview && (
-                  <div className="mt-4 space-y-2 rounded-lg border border-white/10 bg-white/[0.02] p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-zinc-200">Preview</p>
-                        <p className={hintText}>
-                          {previewStatus === "loading"
-                            ? "Renderizando preview..."
-                            : previewStatus === "error"
-                              ? "Falha ao gerar preview."
-                              : "Renderização em tempo real em Markdown."}
-                        </p>
-                      </div>
-                      <span className="rounded-full border border-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-300">
-                        Live
-                      </span>
-                    </div>
-                    <div
-                      className="min-h-[160px] space-y-3 rounded-md bg-[#0d1017] px-4 py-3 text-sm leading-relaxed text-zinc-100"
-                      dangerouslySetInnerHTML={{
-                        __html:
-                          previewStatus === "error"
-                            ? "<p class='text-red-400'>Erro ao gerar preview. Verifique o conteúdo.</p>"
-                            : previewHtml ||
-                              "<p class='text-zinc-500'>Nada para pré-visualizar ainda.</p>",
-                      }}
-                    />
-                  </div>
-                )}
+        <PostContentShell
+          postId={postId || "rascunho"}
+          date={draftDate}
+          readingTime={readingTime}
+          initialViews={0}
+          audioUrl={audioSource}
+          disableViewTracking
+          hideShareButton
+        >
+          <div
+            className={`rounded-2xl border bg-white/[0.02] ${editorBorder} transition duration-200`}
+          >
+            <div className="flex items-center justify-between px-4 pb-2 pt-4">
+              <div>
+                <p className="text-sm font-semibold text-zinc-200">Conteúdo</p>
+                <p className={hintText}>O texto acima é exatamente o que será publicado.</p>
               </div>
-            </div>
-
-            <aside className="space-y-4 lg:sticky lg:top-4">
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-zinc-200">Visibilidade</p>
-                  <span className="text-xs uppercase tracking-[0.14em] text-zinc-500">Meta</span>
-                </div>
-                <div className="mt-4 space-y-3">
-                  <div className="flex items-start justify-between gap-3 rounded-lg bg-white/[0.01] p-3">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-zinc-100">Ocultar post</p>
-                      <p className={hintText}>Mantém o conteúdo fora das listagens públicas.</p>
-                    </div>
-                    <Toggle
-                      checked={hidden}
-                      onChange={(value) => {
-                        markDirty();
-                        setHidden(value);
-                      }}
-                      ariaLabel="Ocultar post nas listagens públicas"
-                    />
-                  </div>
-                  <div className="flex items-start justify-between gap-3 rounded-lg bg-white/[0.01] p-3">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-zinc-100">
-                        Permitir comentários por parágrafo
-                      </p>
-                      <p className={hintText}>Ativa as anotações nos blocos de texto.</p>
-                    </div>
-                    <Toggle
-                      checked={paragraphCommentsEnabled}
-                      onChange={(value) => {
-                        markDirty();
-                        setParagraphCommentsEnabled(value);
-                      }}
-                      ariaLabel="Permitir comentários por parágrafo"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-zinc-200">Mídia & tags</p>
-                  <span className="text-xs uppercase tracking-[0.14em] text-zinc-500">Detalhes</span>
-                </div>
-                <div className="mt-4 space-y-3">
-                  <label className="flex flex-col gap-2">
-                    <span className={labelStyle}>Capa</span>
-                    <input
-                      name="cape"
-                      className={inputStyle}
-                      type="text"
-                      placeholder="URL da imagem de capa"
-                      value={cape}
-                      onChange={(e) => {
-                        markDirty();
-                        clearFieldError("cape");
-                        setCape(e.target.value);
-                      }}
-                    />
-                    {validationErrors.cape && (
-                      <span className="text-xs text-red-400">{validationErrors.cape}</span>
-                    )}
-                  </label>
-                  <label className="flex flex-col gap-2">
-                    <span className={labelStyle}>Co-autor</span>
-                    <div className="rounded-lg border border-white/10 bg-[#0d1017] px-3 py-2">
-                      <select
-                        name="coAuthorUserId"
-                        className="w-full bg-transparent py-2 text-sm text-zinc-100 outline-none"
-                        value={coAuthorUserId}
-                        onChange={(e) => handleSelectCoAuthor(e.target.value)}
-                      >
-                        <option value="" className="bg-[#0c0e14] text-zinc-200">
-                          Selecionar co-autor (opcional)
-                        </option>
-                        {coAuthors.map((user) => (
-                          <option
-                            key={user.id}
-                            value={user.id}
-                            className="bg-[#0c0e14] text-zinc-100"
-                          >
-                            {user.name}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="mt-2 flex items-center justify-between text-xs text-zinc-500">
-                        <span>
-                          {isLoadingCoAuthors
-                            ? "Carregando usuários..."
-                            : coAuthorUserId
-                              ? "Co-autor vinculado"
-                              : "Sem co-autor"}
-                        </span>
-                        {friendImage && (
-                          <span className="text-emerald-300">Foto aplicada</span>
-                        )}
-                      </div>
-                      {coAuthorError && (
-                        <p className="mt-2 text-xs text-red-400">{coAuthorError}</p>
-                      )}
-                    </div>
-                  </label>
-                  <label className="flex flex-col gap-2">
-                    <span className={labelStyle}>Tags</span>
-                    <input
-                      name="tags"
-                      className={inputStyle}
-                      type="text"
-                      placeholder="separe por vírgulas"
-                      value={tags}
-                      onChange={(e) => {
-                        markDirty();
-                        setTags(e.target.value);
-                      }}
-                    />
-                  </label>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-zinc-200">Áudio</p>
-                  <span className="text-xs uppercase tracking-[0.14em] text-zinc-500">Opcional</span>
-                </div>
-                <div className="mt-3 space-y-3">
-                  <div className="flex items-start justify-between gap-3 rounded-lg bg-white/[0.01] p-3">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-zinc-100">Este post possui áudio?</p>
-                      <p className={hintText}>Habilite para adicionar uma trilha ou narração.</p>
-                    </div>
-                    <Toggle
-                      checked={hasAudio}
-                      onChange={(value) => {
-                        markDirty();
-                        clearFieldError("audioUrl");
-                        setHasAudio(value);
-                        if (!value) {
-                          setAudioUrl("");
-                        }
-                      }}
-                      ariaLabel="Este post possui áudio"
-                    />
-                  </div>
-                  {hasAudio && (
-                    <div className="space-y-1">
-                      <input
-                        name="audioUrl"
-                        className={inputStyle}
-                        type="text"
-                        placeholder="URL do áudio"
-                        value={audioUrl}
-                        onChange={(e) => {
-                          markDirty();
-                          clearFieldError("audioUrl");
-                          setAudioUrl(e.target.value);
-                        }}
-                      />
-                      {validationErrors.audioUrl && (
-                        <span className="text-xs text-red-400">{validationErrors.audioUrl}</span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-zinc-200">Publicação</p>
-                  <span className="text-xs uppercase tracking-[0.14em] text-zinc-500">Controle</span>
-                </div>
-                <div className="mt-4 space-y-4">
-                  <label className="flex flex-col gap-2">
-                    <span className={labelStyle}>Post ID</span>
-                    <input
-                      name="postId"
-                      className={inputStyle}
-                      type="text"
-                      placeholder="Identificador único do post"
-                      value={postId}
-                      onChange={(e) => {
-                        clearFieldError("postId");
-                        markDirty();
-                        setPostId(e.target.value);
-                      }}
-                      required
-                    />
-                    {validationErrors.postId && (
-                      <span className="text-xs text-red-400">{validationErrors.postId}</span>
-                    )}
-                  </label>
-
-                  <button
-                    type="submit"
-                    className="inline-flex w-full items-center justify-center rounded-lg bg-emerald-400 px-4 py-3 text-sm font-semibold text-zinc-950 transition duration-150 hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? "Publicando..." : "Publicar post"}
-                  </button>
-                </div>
-              </div>
-            </aside>
-          </div>
-
-          {(success || error) && (
-            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 text-center">
-              {success && (
-                <p className="text-sm font-medium text-emerald-400">{success}</p>
-              )}
-              {error && (
-                <p className="text-sm font-medium text-red-400">{error}</p>
+              {validationErrors.content && (
+                <span className="text-xs text-red-400">{validationErrors.content}</span>
               )}
             </div>
-          )}
-        </form>
-      </div>
-    </div>
+            <div className="border-t border-white/5">
+              <LexicalEditor
+                value={content}
+                onChange={handleContentChange}
+                onFocusChange={setIsEditorFocused}
+                appearance="inline"
+              />
+            </div>
+          </div>
+        </PostContentShell>
+
+        {(success || error) && (
+          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 text-center">
+            {success && <p className="text-sm font-medium text-emerald-400">{success}</p>}
+            {error && <p className="text-sm font-medium text-red-400">{error}</p>}
+          </div>
+        )}
+
+        <BackHome />
+
+        <MetadataPanel
+          isOpen={isMetadataOpen}
+          onClose={() => setIsMetadataOpen(false)}
+          inputStyle={inputStyle}
+          labelStyle={labelStyle}
+          hintText={hintText}
+          hidden={hidden}
+          paragraphCommentsEnabled={paragraphCommentsEnabled}
+          hasAudio={hasAudio}
+          audioUrl={audioUrl}
+          cape={cape}
+          tags={tags}
+          postId={postId}
+          coAuthorUserId={coAuthorUserId}
+          coAuthors={coAuthors}
+          coAuthorError={coAuthorError}
+          validationErrors={validationErrors}
+          onToggleHidden={(value) => {
+            markDirty();
+            setHidden(value);
+          }}
+          onToggleParagraphComments={(value) => {
+            markDirty();
+            setParagraphCommentsEnabled(value);
+          }}
+          onToggleHasAudio={(value) => {
+            markDirty();
+            clearFieldError("audioUrl");
+            setHasAudio(value);
+            if (!value) {
+              setAudioUrl("");
+            }
+          }}
+          onAudioUrlChange={(value) => {
+            markDirty();
+            clearFieldError("audioUrl");
+            setAudioUrl(value);
+          }}
+          onCapeChange={(value) => {
+            markDirty();
+            clearFieldError("cape");
+            setCape(value);
+          }}
+          onTagsChange={(value) => {
+            markDirty();
+            setTags(value);
+          }}
+          onPostIdChange={(value) => {
+            clearFieldError("postId");
+            markDirty();
+            setPostId(value);
+          }}
+          onSelectCoAuthor={(userId) => {
+            handleSelectCoAuthor(userId);
+          }}
+        />
+      </form>
+    </Layout>
   );
 }
