@@ -1,147 +1,21 @@
 "use client";
 
-import Image from "next/image";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { Layout } from "@components/layout";
-import { BackHome } from "@components/back-home";
+import { PostHeader } from "@components/PostHeader";
 import LexicalEditor from "../../../../components/editor/LexicalEditor";
 import Toggle from "../../../../components/Toggle";
 import PostContentShell from "../../posts/[id]/post-content-interactive";
 
-const FALLBACK_IMAGE = "/images/profile.jpg";
-
 function calculateReadingTime(markdown: string): string {
   const wordsPerMinute = 200;
   const words = markdown.trim() ? markdown.trim().split(/\s+/).length : 0;
+  if (words === 0) {
+    return "0 min";
+  }
   const minutes = Math.max(1, Math.ceil(words / wordsPerMinute));
   return `${minutes} min`;
-}
-
-type EditableHeaderProps = {
-  title: string;
-  subtitle: string;
-  cape: string;
-  friendImage: string;
-  coAuthorImage?: string | null;
-  onTitleChange: (value: string) => void;
-  onSubtitleChange: (value: string) => void;
-  onCapeEditRequest: () => void;
-  titleError?: string;
-};
-
-function EditablePostHeader({
-  title,
-  subtitle,
-  cape,
-  friendImage,
-  coAuthorImage,
-  onTitleChange,
-  onSubtitleChange,
-  onCapeEditRequest,
-  titleError,
-}: EditableHeaderProps) {
-  const secondaryImage = coAuthorImage || friendImage || undefined;
-
-  return (
-    <div className="relative overflow-hidden rounded-3xl border border-white/5 bg-[#0c0e14]">
-      {cape && (
-        <Image
-          src={cape}
-          alt="Capa do post"
-          width={1920}
-          height={1080}
-          className="banner w-full h-auto object-cover"
-          priority
-        />
-      )}
-
-      <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-[#040404]/70 via-[#040404]/40 to-[#040404]/90" />
-
-      <div className="absolute right-4 top-4 z-10 flex gap-2">
-        <button
-          type="button"
-          onClick={onCapeEditRequest}
-          className="pointer-events-auto rounded-full border border-white/20 bg-black/40 px-4 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-white backdrop-blur transition hover:border-white/40"
-        >
-          Trocar capa
-        </button>
-      </div>
-
-      <div className="absolute bottom-3 left-4 z-10 flex flex-col gap-3 max-w-[80%]">
-        <div className="flex -space-x-4">
-          <Image
-            priority
-            src={FALLBACK_IMAGE}
-            className="foto-post"
-            height={56}
-            width={56}
-            alt="Domenyk"
-          />
-          {secondaryImage && (
-            <Image
-              src={secondaryImage}
-              className="foto-post"
-              height={56}
-              width={56}
-              alt="Coautor"
-            />
-          )}
-        </div>
-
-        <input
-          className="bg-transparent text-xl text-white focus:outline-none focus:ring-0 font-semibold placeholder:text-zinc-400"
-          placeholder="Título do post"
-          value={title}
-          onChange={(e) => onTitleChange(e.target.value)}
-        />
-        {titleError && <span className="text-xs text-red-300">{titleError}</span>}
-        <input
-          className="bg-transparent text-sm text-zinc-200 focus:outline-none focus:ring-0 placeholder:text-zinc-500"
-          placeholder="Subtítulo (opcional)"
-          value={subtitle}
-          onChange={(e) => onSubtitleChange(e.target.value)}
-        />
-      </div>
-
-      {!cape && (
-        <div className="flex flex-col items-center gap-3 px-6 py-8 text-center">
-          <div className="flex -space-x-4">
-            <Image
-              priority
-              src={FALLBACK_IMAGE}
-              className="rounded-full brightness-125 foto"
-              height={148}
-              width={148}
-              alt="Domenyk"
-            />
-            {secondaryImage && (
-              <Image
-                src={secondaryImage}
-                className="rounded-full brightness-125 foto"
-                height={148}
-                width={148}
-                alt="Coautor"
-              />
-            )}
-          </div>
-          <input
-            className="w-full bg-transparent text-center text-3xl font-semibold text-zinc-50 focus:outline-none placeholder:text-zinc-500"
-            placeholder="Título do post"
-            value={title}
-            onChange={(e) => onTitleChange(e.target.value)}
-          />
-          <input
-            className="w-full bg-transparent text-center text-base text-zinc-400 focus:outline-none placeholder:text-zinc-600"
-            placeholder="Subtítulo (opcional)"
-            value={subtitle}
-            onChange={(e) => onSubtitleChange(e.target.value)}
-          />
-          {titleError && <span className="text-xs text-red-300">{titleError}</span>}
-        </div>
-      )}
-    </div>
-  );
 }
 
 type MetadataPanelProps = {
@@ -551,52 +425,74 @@ export default function Editor() {
   const readingTime = useMemo(() => calculateReadingTime(content), [content]);
   const draftDate = useMemo(() => new Date().toISOString(), []);
   const audioSource = hasAudio ? audioUrl : undefined;
+  const slugPreview = useMemo(
+    () => `domenyk.com/posts/${(postId || "seu-slug").trim() || "seu-slug"}`,
+    [postId]
+  );
+  const hasCape = Boolean(cape);
+
+  const titleSlot = (
+    <input
+      className={`w-full bg-transparent font-semibold text-white focus:outline-none focus:ring-0 placeholder:text-zinc-400 ${
+        hasCape ? "text-xl drop-shadow-sm" : "text-3xl text-center"
+      }`}
+      placeholder="Título do post"
+      value={title}
+      onChange={(e) => {
+        clearFieldError("title");
+        markDirty();
+        setTitle(e.target.value);
+      }}
+    />
+  );
+
+  const subtitleSlot = (
+    <input
+      className={`w-full bg-transparent text-zinc-200 focus:outline-none focus:ring-0 placeholder:text-zinc-500 ${
+        hasCape ? "text-sm" : "text-base text-center"
+      }`}
+      placeholder="Subtítulo (opcional)"
+      value={subtitle}
+      onChange={(e) => {
+        markDirty();
+        setSubtitle(e.target.value);
+      }}
+    />
+  );
 
   return (
-    <Layout title={title || "Novo post"} description={subtitle || undefined} url="/admin/editor">
+    <Layout
+      title={title || "Novo post"}
+      description={subtitle || undefined}
+      url="/admin/editor"
+      hideHeaderControls
+    >
       <form onSubmit={handleSubmit} className="relative space-y-6 pb-10">
-        <EditablePostHeader
-          title={title}
-          subtitle={subtitle}
-          cape={cape}
-          friendImage={friendImage || ""}
-          coAuthorImage={friendImage || null}
-          onTitleChange={(value) => {
-            clearFieldError("title");
-            markDirty();
-            setTitle(value);
-          }}
-          onSubtitleChange={(value) => {
-            markDirty();
-            setSubtitle(value);
-          }}
-          onCapeEditRequest={() => setIsMetadataOpen(true)}
-          titleError={validationErrors.title}
-        />
-
-        <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-zinc-400">
-          <div className="flex items-center gap-3">
-            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-200">
-              Modo edição
-            </span>
-            <p className="text-zinc-500">Visualize o texto final enquanto escreve.</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setIsMetadataOpen((open) => !open)}
-              className="rounded-full border border-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-200 transition hover:border-white/30"
-            >
-              Metadados
-            </button>
-            <button
-              type="submit"
-              className="rounded-full bg-emerald-400 px-5 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-70"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Publicando..." : "Publicar post"}
-            </button>
-          </div>
+        <div className="relative">
+          <PostHeader
+            cape={cape || undefined}
+            title={title || "Título do post"}
+            subtitle={subtitle || undefined}
+            friendImage={friendImage || undefined}
+            coAuthorImageUrl={friendImage || undefined}
+            titleSlot={titleSlot}
+            subtitleSlot={subtitleSlot}
+            disableProfileLinks
+            overlaySlot={
+              <div className="absolute right-3 top-3 z-10 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsMetadataOpen(true)}
+                  className="rounded-full border border-white/20 bg-black/40 px-4 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-white backdrop-blur transition hover:border-white/40"
+                >
+                  Trocar capa
+                </button>
+              </div>
+            }
+          />
+          {validationErrors.title && (
+            <p className="mt-2 text-sm text-red-400">{validationErrors.title}</p>
+          )}
         </div>
 
         <PostContentShell
@@ -607,26 +503,59 @@ export default function Editor() {
           audioUrl={audioSource}
           disableViewTracking
           hideShareButton
-        >
-          <div
-            className={`rounded-2xl border bg-white/[0.02] ${editorBorder} transition duration-200`}
-          >
-            <div className="flex items-center justify-between px-4 pb-2 pt-4">
-              <div>
-                <p className="text-sm font-semibold text-zinc-200">Conteúdo</p>
-                <p className={hintText}>O texto acima é exatamente o que será publicado.</p>
+          secondaryHeaderSlot={
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-200">
+                  Modo edição
+                </span>
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-200">
+                  Prévia
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsMetadataOpen((open) => !open)}
+                  className="rounded-full border border-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-200 transition hover:border-white/30"
+                >
+                  Metadados
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-full bg-emerald-400 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-70"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Publicando..." : "Publicar post"}
+                </button>
               </div>
-              {validationErrors.content && (
-                <span className="text-xs text-red-400">{validationErrors.content}</span>
-              )}
+              <div className="flex flex-wrap items-center gap-2 text-sm text-zinc-500">
+                <span className="font-medium text-zinc-200">{slugPreview}</span>
+                <span aria-hidden className="text-zinc-600">•</span>
+                <span>Pré-visualização da URL do post</span>
+              </div>
+              <div className="text-xs text-zinc-500">
+                Tempo de leitura, data e views são apenas prévias durante a edição.
+              </div>
             </div>
-            <div className="border-t border-white/5">
-              <LexicalEditor
-                value={content}
-                onChange={handleContentChange}
-                onFocusChange={setIsEditorFocused}
-                appearance="inline"
-              />
+          }
+        >
+          <div className="flex flex-col gap-3">
+            <div
+              className={`rounded-2xl border bg-white/[0.02] ${editorBorder} transition duration-200`}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2 px-4 pb-2 pt-4 text-sm text-zinc-400">
+                <p className="text-sm font-semibold text-zinc-200">Conteúdo</p>
+                {validationErrors.content && (
+                  <span className="text-xs text-red-400">{validationErrors.content}</span>
+                )}
+              </div>
+              <div className="border-t border-white/5">
+                <LexicalEditor
+                  value={content}
+                  onChange={handleContentChange}
+                  onFocusChange={setIsEditorFocused}
+                  appearance="inline"
+                />
+              </div>
             </div>
           </div>
         </PostContentShell>
@@ -637,8 +566,6 @@ export default function Editor() {
             {error && <p className="text-sm font-medium text-red-400">{error}</p>}
           </div>
         )}
-
-        <BackHome />
 
         <MetadataPanel
           isOpen={isMetadataOpen}

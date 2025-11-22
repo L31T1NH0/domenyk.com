@@ -15,9 +15,10 @@ type LayoutProps = {
   url?: string;
   home?: boolean;
   children: React.ReactNode;
+  hideHeaderControls?: boolean;
 };
 
-export function Layout({ home = false, children }: LayoutProps) {
+export function Layout({ home = false, children, hideHeaderControls = false }: LayoutProps) {
   return (
     <div
       data-scroll-progress-root
@@ -26,8 +27,16 @@ export function Layout({ home = false, children }: LayoutProps) {
       <ScrollProgressEffect />
       <header className="flex justify-between items-center py-1">
         <div aria-hidden="true" data-scroll-progress-bar />
-        <ThemeSwitcher /> {/* Botão de brilho à direita */}
-        <SettingsMenu /> {/* Botão de três pontos à esquerda */}
+        {hideHeaderControls ? (
+          <span aria-hidden className="h-8 w-8" />
+        ) : (
+          <ThemeSwitcher />
+        )}
+        {hideHeaderControls ? (
+          <span aria-hidden className="h-8 w-8" />
+        ) : (
+          <SettingsMenu />
+        )}
       </header>
       <main className={`${home ? "home" : ""} flex flex-col flex-1`}>
         {children}

@@ -235,6 +235,7 @@ type PostContentShellProps = {
   children: ReactNode;
   disableViewTracking?: boolean;
   hideShareButton?: boolean;
+  secondaryHeaderSlot?: ReactNode;
 };
 
 export default function PostContentShell({
@@ -246,6 +247,7 @@ export default function PostContentShell({
   children,
   disableViewTracking = false,
   hideShareButton = false,
+  secondaryHeaderSlot,
 }: PostContentShellProps) {
   const [views, setViews] = useState(initialViews);
   const [isMobile, setIsMobile] = useState(false);
@@ -334,6 +336,8 @@ export default function PostContentShell({
       <div className="relative flex flex-col gap-6">
         <article className="flex flex-col gap-6 mt-4">
           {headerCounters}
+
+          {secondaryHeaderSlot}
 
           {audioUrl && <AudioPlayer audioUrl={audioUrl} />}
 
