@@ -1,5 +1,6 @@
-"use client"
+"use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -9,13 +10,36 @@ type PostHeaderProps = {
   subtitle?: string; // Subtítulo opcional
   friendImage?: string; // Link opcional para a foto do amigo
   coAuthorImageUrl?: string | null;
+  titleSlot?: ReactNode;
+  subtitleSlot?: ReactNode;
+  disableProfileLinks?: boolean;
+  overlaySlot?: ReactNode;
 };
 
-export function PostHeader({ cape, title, subtitle, friendImage, coAuthorImageUrl }: PostHeaderProps) {
+export function PostHeader({
+  cape,
+  title,
+  subtitle,
+  friendImage,
+  coAuthorImageUrl,
+  titleSlot,
+  subtitleSlot,
+  disableProfileLinks = false,
+  overlaySlot,
+}: PostHeaderProps) {
   const secondaryImage = coAuthorImageUrl || friendImage || undefined;
+
+  const AvatarWrapper = ({ children }: { children: ReactNode }) => {
+    if (disableProfileLinks) {
+      return <div className="pointer-events-none">{children}</div>;
+    }
+
+    return <Link href="/">{children}</Link>;
+  };
 
   return (
     <div className="w-full relative">
+      {overlaySlot}
       {cape && (
         <div className="w-full relative">
           <Image
@@ -33,7 +57,7 @@ export function PostHeader({ cape, title, subtitle, friendImage, coAuthorImageUr
             </div>
             <div className="absolute bottom-1 left-2 lg:bottom-3 flex flex-col gap-2">
               <div className="flex -space-x-5">
-                <Link href="/">
+                <AvatarWrapper>
                   <Image
                     priority
                     src="/images/profile.jpg"
@@ -42,9 +66,9 @@ export function PostHeader({ cape, title, subtitle, friendImage, coAuthorImageUr
                     width={56}
                     alt="Domenyk"
                   />
-                </Link>
+                </AvatarWrapper>
                 {secondaryImage && (
-                  <Link href="/">
+                  <AvatarWrapper>
                     <Image
                       src={secondaryImage}
                       className="foto-post hover:z-30 transition-all"
@@ -52,13 +76,11 @@ export function PostHeader({ cape, title, subtitle, friendImage, coAuthorImageUr
                       width={56}
                       alt="Amigo"
                     />
-                  </Link>
+                  </AvatarWrapper>
                 )}
               </div>
-              <h1 className="text-xl text-white">{title}</h1>
-              {subtitle ? (
-                <p className="text-sm text-zinc-200 drop-shadow">{subtitle}</p>
-              ) : null}
+              {titleSlot ?? <h1 className="text-xl text-white">{title}</h1>}
+              {subtitleSlot ?? (subtitle ? <p className="text-sm text-zinc-200 drop-shadow">{subtitle}</p> : null)}
             </div>
           </div>
         </div>
@@ -66,7 +88,7 @@ export function PostHeader({ cape, title, subtitle, friendImage, coAuthorImageUr
       {!cape && (
         <div className="flex flex-col gap-4 items-center">
           <div className="flex -space-x-4">
-            <Link href="/">
+            <AvatarWrapper>
               <Image
                 priority
                 src="/images/profile.jpg"
@@ -75,9 +97,9 @@ export function PostHeader({ cape, title, subtitle, friendImage, coAuthorImageUr
                 width={148}
                 alt="Domenyk"
               />
-            </Link>
+            </AvatarWrapper>
             {secondaryImage && (
-              <Link href="/">
+              <AvatarWrapper>
                 <Image
                   src={secondaryImage}
                   className="rounded-full brightness-125 foto"
@@ -85,11 +107,11 @@ export function PostHeader({ cape, title, subtitle, friendImage, coAuthorImageUr
                   width={148}
                   alt="Amigo"
                 />
-              </Link>
+              </AvatarWrapper>
             )}
           </div>
-          <h1 className=" ">{title}</h1>
-          {subtitle ? <p className="text-sm text-zinc-300 text-center">{subtitle}</p> : null}
+          {titleSlot ?? <h1 className=" ">{title}</h1>}
+          {subtitleSlot ?? (subtitle ? <p className="text-sm text-zinc-300 text-center">{subtitle}</p> : null)}
         </div>
       )}
     </div>
