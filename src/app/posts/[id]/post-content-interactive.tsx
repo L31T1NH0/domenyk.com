@@ -238,7 +238,7 @@ type PostContentShellProps = {
   hideShareButton?: boolean;
   secondaryHeaderSlot?: ReactNode;
   isEditing?: boolean;
-  contentRef?: RefObject<HTMLDivElement>;
+  contentRef?: RefObject<HTMLDivElement | null>;
 };
 
 export default function PostContentShell({

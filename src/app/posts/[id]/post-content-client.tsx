@@ -75,7 +75,7 @@ type PostContentClientProps = {
   paragraphCommentsEnabled: boolean;
   isAdmin: boolean;
   isEditing?: boolean;
-  contentRef?: RefObject<HTMLDivElement>;
+  contentRef?: RefObject<HTMLDivElement | null>;
 };
 
 export default function PostContentClient({
