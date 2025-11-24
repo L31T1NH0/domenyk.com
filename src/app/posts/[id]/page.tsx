@@ -1,12 +1,9 @@
 ﻿import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { unstable_cache } from "next/cache";
-import Link from "next/link";
 import { Layout } from "@components/layout";
-import { BackHome } from "@components/back-home";
-import Comment from "@components/Comment";
 import { PostHeader } from "@components/PostHeader";
-import PostContentClient from "./post-content-client";
+import PostEditingClient from "./post-editing-client";
 import { renderPostMdx } from "../../../lib/renderers/mdx";
 import { resolveAdminStatus } from "../../../lib/admin";
 import { renderMarkdown } from "../../../lib/renderers/markdown";
@@ -391,10 +388,11 @@ export default async function PostPage({ params }: PostPageProps) {
         friendImage={post.friendImage}
         coAuthorImageUrl={coAuthorImageUrl}
       />
-      <PostContentClient
+      <PostEditingClient
         postId={post.postId}
+        title={title}
         date={dateString}
-        htmlContent={htmlContent}
+        initialHtmlContent={htmlContent}
         initialViews={views}
         audioUrl={post.audioUrl}
         readingTime={readingTime}
@@ -402,26 +400,8 @@ export default async function PostPage({ params }: PostPageProps) {
         coAuthorImageUrl={coAuthorImageUrl || post.friendImage || null}
         paragraphCommentsEnabled={paragraphCommentsEnabled}
         isAdmin={isAdmin}
+        initialMarkdown={markdownSource}
       />
-      <BackHome />
-      {isAdmin && (
-        <div className="mt-4 sm:mt-6 mb-2">
-          <Link
-            href={`/admin/editor?postId=${encodeURIComponent(post.postId)}`}
-            className="inline-flex items-center gap-2 rounded-full bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 dark:bg-purple-500 dark:hover:bg-purple-400"
-            aria-label={`Editar post ${title ? `"${title}"` : "atual"}`}
-          >
-            <span className="leading-none">Editar post</span>
-          </Link>
-        </div>
-      )}
-      <div className="mt-4 sm:mt-6 mb-6">
-        <Comment
-          postId={post.postId}
-          coAuthorUserId={post.coAuthorUserId ?? undefined}
-          isAdmin={isAdmin}
-        />
-      </div>
     </Layout>
   );
 }
