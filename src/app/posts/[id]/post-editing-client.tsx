@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { BackHome } from "@components/back-home";
 import Comment from "@components/Comment";
 
 import PostContentClient from "./post-content-client";
+import PostContentShell from "./post-content-interactive";
 
 export type PostEditingClientProps = {
   postId: string;
@@ -43,83 +44,6 @@ export default function PostEditingClient({
   const [htmlContent, setHtmlContent] = useState(initialHtmlContent);
   const [lastSavedHtml, setLastSavedHtml] = useState(initialHtmlContent);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const contentRef = useRef<HTMLDivElement | null>(null);
-
-  const extractMarkdownFromNode = useCallback((node: Node): string => {
-    if (node.nodeType === Node.TEXT_NODE) {
-      return (node.textContent ?? "").replace(/\s+/g, " ").trim();
-    }
-
-    if (!(node instanceof HTMLElement)) {
-      return "";
-    }
-
-    const serializeInline = (element: HTMLElement): string => {
-      let result = "";
-      element.childNodes.forEach((child) => {
-        if (child.nodeType === Node.TEXT_NODE) {
-          result += child.textContent;
-          return;
-        }
-
-        if (!(child instanceof HTMLElement)) {
-          return;
-        }
-
-        if (child.tagName === "BR") {
-          result += "\n";
-          return;
-        }
-
-        if (child.tagName === "A") {
-          const text = serializeInline(child);
-          const href = child.getAttribute("href") || "";
-          result += href ? `[${text}](${href})` : text;
-          return;
-        }
-
-        result += serializeInline(child);
-      });
-      return result;
-    };
-
-    const serializeBlock = (element: HTMLElement): string => {
-      const tag = element.tagName.toLowerCase();
-      const content = serializeInline(element).trim();
-
-      if (!content) {
-        return "";
-      }
-
-      if (tag === "h1") return `# ${content}`;
-      if (tag === "h2") return `## ${content}`;
-      if (tag === "h3") return `### ${content}`;
-      if (tag === "h4") return `#### ${content}`;
-      if (tag === "h5") return `##### ${content}`;
-      if (tag === "h6") return `###### ${content}`;
-      if (tag === "li") return content;
-      if (tag === "blockquote") {
-        return content
-          .split(/\n+/)
-          .map((line) => `> ${line.trim()}`)
-          .join("\n");
-      }
-      if (tag === "ul") {
-        return Array.from(element.children)
-          .map((child) => `- ${serializeBlock(child as HTMLElement)}`)
-          .join("\n");
-      }
-      if (tag === "ol") {
-        return Array.from(element.children)
-          .map((child, index) => `${index + 1}. ${serializeBlock(child as HTMLElement)}`)
-          .join("\n");
-      }
-
-      return content;
-    };
-
-    return serializeBlock(node);
-  }, []);
 
   const editorActions = useMemo(() => {
     if (!isEditing) {
@@ -146,20 +70,10 @@ export default function PostEditingClient({
             setSaveError(null);
             setIsSaving(true);
             try {
-              const container = contentRef.current;
-              const nextMarkdown = container
-                ? Array.from(container.childNodes)
-                    .map((node) => extractMarkdownFromNode(node))
-                    .filter((value) => value.trim() !== "")
-                    .join("\n\n")
-                : markdownValue;
-
-              setMarkdownValue(nextMarkdown);
-
               const response = await fetch(`/api/posts/${postId}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ markdownContent: nextMarkdown }),
+                body: JSON.stringify({ markdownContent: markdownValue }),
               });
 
               if (!response.ok) {
@@ -216,7 +130,6 @@ export default function PostEditingClient({
       </div>
     );
   }, [
-    extractMarkdownFromNode,
     isEditing,
     isSaving,
     lastSavedMarkdown,
@@ -229,20 +142,37 @@ export default function PostEditingClient({
 
   return (
     <>
-      <PostContentClient
-        postId={postId}
-        date={date}
-        htmlContent={htmlContent}
-        initialViews={initialViews}
-        audioUrl={audioUrl}
-        readingTime={readingTime}
-        coAuthorUserId={coAuthorUserId}
-        coAuthorImageUrl={coAuthorImageUrl}
-        paragraphCommentsEnabled={paragraphCommentsEnabled}
-        isAdmin={isAdmin}
-        isEditing={isEditing}
-        contentRef={contentRef}
-      />
+      {isEditing ? (
+        <PostContentShell
+          postId={postId}
+          date={date}
+          readingTime={readingTime}
+          initialViews={initialViews}
+          audioUrl={audioUrl}
+          disableViewTracking
+          hideShareButton
+        >
+          <textarea
+            value={markdownValue}
+            onChange={(event) => setMarkdownValue(event.target.value)}
+            className="min-h-[420px] w-full resize-vertical rounded-2xl border border-zinc-800 bg-zinc-950/70 px-4 py-3 text-base leading-relaxed text-zinc-100 shadow-sm outline-none transition focus:border-purple-400 focus:ring-2 focus:ring-purple-400/40 dark:border-zinc-800/80"
+          />
+        </PostContentShell>
+      ) : (
+        <PostContentClient
+          postId={postId}
+          date={date}
+          htmlContent={htmlContent}
+          initialViews={initialViews}
+          audioUrl={audioUrl}
+          readingTime={readingTime}
+          coAuthorUserId={coAuthorUserId}
+          coAuthorImageUrl={coAuthorImageUrl}
+          paragraphCommentsEnabled={paragraphCommentsEnabled}
+          isAdmin={isAdmin}
+          isEditing={false}
+        />
+      )}
       <BackHome />
       {isAdmin && (
         <div className="mt-4 sm:mt-6 mb-2">
