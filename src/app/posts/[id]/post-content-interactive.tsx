@@ -236,6 +236,7 @@ type PostContentShellProps = {
   disableViewTracking?: boolean;
   hideShareButton?: boolean;
   secondaryHeaderSlot?: ReactNode;
+  footerSlot?: ReactNode;
 };
 
 export default function PostContentShell({
@@ -248,6 +249,7 @@ export default function PostContentShell({
   disableViewTracking = false,
   hideShareButton = false,
   secondaryHeaderSlot,
+  footerSlot,
 }: PostContentShellProps) {
   const [views, setViews] = useState(initialViews);
   const [isMobile, setIsMobile] = useState(false);
@@ -344,6 +346,8 @@ export default function PostContentShell({
           <div data-post-content className="flex flex-col gap-4 lg:text-lg sm:text-sm max-sm:text-xs">
             {children}
           </div>
+
+          {footerSlot ? <div className="mt-2 flex flex-col gap-2">{footerSlot}</div> : null}
 
           {/* <Chatbot htmlContent={htmlContent} /> */}
         </article>
