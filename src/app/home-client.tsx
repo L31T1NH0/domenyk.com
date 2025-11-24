@@ -196,16 +196,16 @@ export default function HomeClient({ posts, isAdmin, page, hasNext, total }: Hom
               <Link
                 href={`/posts/${post.postId}`}
                 prefetch={false}
-                className="text-xl hover:underline"
+                className="flex flex-col text-left focus-visible:outline-none focus-visible:ring-0"
               >
-                {post.title}
+                <span className="text-xl hover:underline">{post.title}</span>
+                <small className="text-zinc-600 dark:text-zinc-300">
+                  <Date dateString={post.date} /> <span aria-hidden className="mx-2">&middot;</span>
+                  <span className="inline-flex items-center rounded px-2 py-1 text-sm text-zinc-600 dark:text-zinc-300">
+                    {post.views ?? 0} views
+                  </span>
+                </small>
               </Link>
-              <small className="text-zinc-600 dark:text-zinc-300">
-                <Date dateString={post.date} /> <span aria-hidden className="mx-2">&middot;</span>
-                <span className="inline-flex items-center rounded px-2 py-1 text-sm text-zinc-600 dark:text-zinc-300">
-                  {post.views ?? 0} views
-                </span>
-              </small>
               {isAdmin && (
                 <button
                   onClick={() => openDeleteModal(post.postId)}
