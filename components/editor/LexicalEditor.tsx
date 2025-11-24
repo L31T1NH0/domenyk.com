@@ -37,7 +37,7 @@ export default function LexicalEditor({
           onFocus={() => onFocusChange?.(true)}
           onBlur={() => onFocusChange?.(false)}
           placeholder="Comece a escrever…"
-          className="min-h-[350px] w-full resize-none bg-transparent px-4 pb-6 pt-4 text-base leading-relaxed text-zinc-100 caret-emerald-400 focus:outline-none font-[\"IAWriterQuattroV-Italic\",serif]"
+          className="min-h-[350px] w-full resize-none bg-transparent px-4 pb-6 pt-4 text-base leading-relaxed text-zinc-100 caret-emerald-400 focus:outline-none font-['IAWriterQuattroV-Italic',serif]"
           spellCheck={false}
           aria-label="Área principal de conteúdo"
         />
