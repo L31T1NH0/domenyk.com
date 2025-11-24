@@ -509,6 +509,7 @@ export default function Editor() {
           audioUrl={audioSource}
           disableViewTracking
           hideShareButton
+          isEditing
           secondaryHeaderSlot={
             <div className="flex flex-col gap-2">
               <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
