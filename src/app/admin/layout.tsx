@@ -14,7 +14,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 overflow-x-hidden">
       <div className="grid min-h-screen grid-cols-1 md:grid-cols-[260px_1fr]">
         <aside className="hidden md:flex md:flex-col border-r border-zinc-800 bg-zinc-900/40">
           <div className="p-5 border-b border-zinc-800">
@@ -125,7 +125,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               </div>
             )}
           </header>
-          <main className="p-6 md:p-8">{children}</main>
+          <main className="p-6 md:p-8 w-full max-w-screen-2xl mx-auto">{children}</main>
         </div>
       </div>
     </div>
