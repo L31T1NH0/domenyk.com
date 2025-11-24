@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { BackHome } from "@components/back-home";
 import Comment from "@components/Comment";
@@ -44,6 +44,21 @@ export default function PostEditingClient({
   const [htmlContent, setHtmlContent] = useState(initialHtmlContent);
   const [lastSavedHtml, setLastSavedHtml] = useState(initialHtmlContent);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const markdownTextAreaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const adjustTextareaHeight = useCallback(() => {
+    const textarea = markdownTextAreaRef.current;
+    if (!textarea) return;
+
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, []);
+
+  useEffect(() => {
+    if (isEditing) {
+      adjustTextareaHeight();
+    }
+  }, [adjustTextareaHeight, isEditing, markdownValue]);
 
   const editorActions = useMemo(() => {
     if (!isEditing) {
@@ -153,9 +168,12 @@ export default function PostEditingClient({
           hideShareButton
         >
           <textarea
+            ref={markdownTextAreaRef}
             value={markdownValue}
             onChange={(event) => setMarkdownValue(event.target.value)}
-            className="min-h-[420px] w-full resize-vertical rounded-2xl border border-zinc-800 bg-zinc-950/70 px-4 py-3 text-base leading-relaxed text-zinc-100 shadow-sm outline-none transition focus:border-purple-400 focus:ring-2 focus:ring-purple-400/40 dark:border-zinc-800/80"
+            className="block w-full resize-none whitespace-pre-wrap break-words rounded-2xl border border-transparent bg-transparent px-2 py-1 text-base leading-relaxed text-zinc-100 outline-none ring-0 transition focus:border-purple-400/60 focus:ring-2 focus:ring-purple-400/25"
+            style={{ fontFamily: "inherit", minHeight: "120px" }}
+            spellCheck={false}
           />
         </PostContentShell>
       ) : (
