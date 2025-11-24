@@ -15,6 +15,7 @@ import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
+  type RefObject,
 } from "react";
 import { Date } from "@components/date";
 import ShareButton from "@components/ShareButton";
@@ -237,6 +238,7 @@ type PostContentShellProps = {
   hideShareButton?: boolean;
   secondaryHeaderSlot?: ReactNode;
   isEditing?: boolean;
+  contentRef?: RefObject<HTMLDivElement>;
 };
 
 export default function PostContentShell({
@@ -250,6 +252,7 @@ export default function PostContentShell({
   hideShareButton = false,
   secondaryHeaderSlot,
   isEditing = false,
+  contentRef,
 }: PostContentShellProps) {
   const [views, setViews] = useState(initialViews);
   const [isMobile, setIsMobile] = useState(false);
@@ -348,6 +351,7 @@ export default function PostContentShell({
             className="flex flex-col gap-4 lg:text-lg sm:text-sm max-sm:text-xs"
             contentEditable={isEditing || undefined}
             suppressContentEditableWarning
+            ref={contentRef}
           >
             {children}
           </div>

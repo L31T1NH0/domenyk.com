@@ -11,7 +11,7 @@ import PostContentShell, {
   LazyParagraphCommentWidget,
   type ParagraphCommentWidgetProps,
 } from "./post-content-interactive";
-import type { HTMLAttributes } from "react";
+import type { HTMLAttributes, RefObject } from "react";
 
 function renderParagraphWithComments(
   node: Element,
@@ -74,6 +74,8 @@ type PostContentClientProps = {
   coAuthorImageUrl?: string | null;
   paragraphCommentsEnabled: boolean;
   isAdmin: boolean;
+  isEditing?: boolean;
+  contentRef?: RefObject<HTMLDivElement>;
 };
 
 export default function PostContentClient({
@@ -87,6 +89,8 @@ export default function PostContentClient({
   coAuthorImageUrl,
   paragraphCommentsEnabled,
   isAdmin,
+  isEditing = false,
+  contentRef,
 }: PostContentClientProps) {
   let paragraphIndex = 0;
 
@@ -115,7 +119,7 @@ export default function PostContentClient({
       }
     }
 
-    if (node.type === "tag" && node.name === "p" && paragraphCommentsEnabled) {
+    if (node.type === "tag" && node.name === "p" && paragraphCommentsEnabled && !isEditing) {
       const element = node as Element;
       const currentIndex = paragraphIndex;
       paragraphIndex += 1;
@@ -144,6 +148,8 @@ export default function PostContentClient({
       readingTime={readingTime}
       initialViews={initialViews}
       audioUrl={audioUrl}
+      isEditing={isEditing}
+      contentRef={contentRef}
     >
       {parsedContent}
     </PostContentShell>
