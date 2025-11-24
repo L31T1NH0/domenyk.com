@@ -97,7 +97,9 @@ export default async function AdminDashboard() {
           <h2 className="text-sm font-medium">Recentes</h2>
         </div>
         <div className="p-4 md:p-0">
-          <RecentPostsClient initial={latest as any} />
+          <div className="overflow-x-auto">
+            <RecentPostsClient initial={latest as any} />
+          </div>
         </div>
       </section>
     </div>
