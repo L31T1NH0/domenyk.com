@@ -298,11 +298,6 @@ export async function readOrGenerateSitemap(kind: "index" | "posts" | "posts-aud
     tags: path.join(SITEMAPS_DIR, "tags.xml"),
   } as const;
 
-  const existing = await readSitemap(filenames[kind]);
-  if (existing) {
-    return existing;
-  }
-
   try {
     const generated = await generateAllSitemaps();
     const value =
@@ -318,6 +313,11 @@ export async function readOrGenerateSitemap(kind: "index" | "posts" | "posts-aud
     }
   } catch (error) {
     console.error("Failed to generate sitemap; returning fallback", error);
+
+    const existing = await readSitemap(filenames[kind]);
+    if (existing) {
+      return existing;
+    }
 
     const fallback =
       {
