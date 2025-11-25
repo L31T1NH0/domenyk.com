@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { readOrGenerateSitemap } from "@lib/sitemaps";
 
-// Lists the home page and all posts with thumbnails and realistic changefreq.
+// Lists all public posts with thumbnails and realistic changefreq.
 export async function GET() {
   const xml = await readOrGenerateSitemap("posts");
   if (!xml) {
