@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { clientPromise } from "../../../../lib/mongo";
 import { Redis } from "@upstash/redis";
 import { resolveAdminStatus } from "../../../../lib/admin";
-import { triggerSitemapRegeneration } from "@lib/sitemaps";
 
 // Redis instance (for counting replies). When the environment variables are not
 // provided we still want the dashboard to work, so we attempt to instantiate it
@@ -205,8 +204,6 @@ export async function PATCH(req: Request) {
     if (result.matchedCount === 0) {
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
-
-    await triggerSitemapRegeneration();
 
     return NextResponse.json({ message: "Atualizado com sucesso" }, { status: 200 });
   } catch (error) {
