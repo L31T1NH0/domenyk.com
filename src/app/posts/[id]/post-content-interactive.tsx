@@ -15,6 +15,7 @@ import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
+  type RefObject,
 } from "react";
 import { Date } from "@components/date";
 import ShareButton from "@components/ShareButton";
@@ -236,6 +237,8 @@ type PostContentShellProps = {
   disableViewTracking?: boolean;
   hideShareButton?: boolean;
   secondaryHeaderSlot?: ReactNode;
+  isEditing?: boolean;
+  contentRef?: RefObject<HTMLDivElement | null>;
 };
 
 export default function PostContentShell({
@@ -248,6 +251,8 @@ export default function PostContentShell({
   disableViewTracking = false,
   hideShareButton = false,
   secondaryHeaderSlot,
+  isEditing = false,
+  contentRef,
 }: PostContentShellProps) {
   const [views, setViews] = useState(initialViews);
   const [isMobile, setIsMobile] = useState(false);
@@ -341,7 +346,13 @@ export default function PostContentShell({
 
           {audioUrl && <AudioPlayer audioUrl={audioUrl} />}
 
-          <div data-post-content className="flex flex-col gap-4 lg:text-lg sm:text-sm max-sm:text-xs">
+          <div
+            data-post-content
+            className="flex flex-col gap-4 lg:text-lg sm:text-sm max-sm:text-xs"
+            contentEditable={isEditing || undefined}
+            suppressContentEditableWarning
+            ref={contentRef}
+          >
             {children}
           </div>
 

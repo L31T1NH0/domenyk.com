@@ -17,10 +17,7 @@ export async function POST(req: Request) {
     const title = formData.get("title");
     const subtitle = formData.get("subtitle");
     const postId = formData.get("postId");
-    const content =
-      formData.get("markdownContent") ??
-      formData.get("contentMarkdown") ??
-      formData.get("content");
+    const content = formData.get("contentMarkdown") ?? formData.get("content");
     const tags = formData.get("tags");
     const audioUrl = formData.get("audioUrl");
     const cape = formData.get("cape");
@@ -119,7 +116,7 @@ export async function POST(req: Request) {
       postId,
       title,
       subtitle: normalizedSubtitle,
-      markdownContent: normalizedContent,
+      contentMarkdown: normalizedContent,
       date: new Date().toISOString().split("T")[0], // Formato "YYYY-MM-DD"
       views: 0, // Inicializa as views como 0
       audioUrl: normalizedAudioUrl,

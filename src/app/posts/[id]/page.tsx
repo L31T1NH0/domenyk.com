@@ -2,10 +2,8 @@
 import { notFound } from "next/navigation";
 import { unstable_cache } from "next/cache";
 import { Layout } from "@components/layout";
-import { BackHome } from "@components/back-home";
-import Comment from "@components/Comment";
 import { PostHeader } from "@components/PostHeader";
-import PostContentClient from "./post-content-client";
+import PostEditingClient from "./post-editing-client";
 import { renderPostMdx } from "../../../lib/renderers/mdx";
 import { resolveAdminStatus } from "../../../lib/admin";
 import { renderMarkdown } from "../../../lib/renderers/markdown";
@@ -23,7 +21,6 @@ type PostDocument = {
   date: string | Date;
   title: string;
   subtitle?: string | null;
-  markdownContent?: string;
   contentMarkdown?: string;
   htmlContent?: string;
   content?: string;
@@ -55,7 +52,6 @@ async function fetchPostById(id: string) {
           date: 1,
           title: 1,
           subtitle: 1,
-          markdownContent: 1,
           contentMarkdown: 1,
           htmlContent: 1,
           content: 1,
@@ -105,16 +101,16 @@ function extractPlainText(value: string): string {
 }
 
 function extractDescription(post: PostDocument): string {
-  const markdownContent =
-    typeof post.markdownContent === "string"
-      ? post.markdownContent
-      : typeof post.contentMarkdown === "string"
-        ? post.contentMarkdown
+  const markdownCandidate =
+    typeof post.contentMarkdown === "string"
+      ? post.contentMarkdown
+      : typeof post.htmlContent === "string"
+        ? post.htmlContent
         : typeof post.content === "string"
           ? post.content
           : "";
 
-  const normalizedMarkdown = normalizeMarkdownContent(markdownContent);
+  const normalizedMarkdown = normalizeMarkdownContent(markdownCandidate);
 
   if (normalizedMarkdown) {
     const paragraphs = normalizedMarkdown.split(/\n\s*\n/);
@@ -303,7 +299,7 @@ export default async function PostPage({ params }: PostPageProps) {
     typeof post.subtitle === "string" ? post.subtitle.trim() : "";
   const subtitle = rawSubtitle.length > 0 ? rawSubtitle : undefined;
   const markdownSourceRaw =
-    post.markdownContent ?? post.contentMarkdown ?? post.htmlContent ?? post.content ?? "";
+    post.contentMarkdown ?? post.htmlContent ?? post.content ?? "";
   const markdownSource = normalizeMarkdownContent(markdownSourceRaw);
   const shouldUseMdxRenderer = process.env.FEATURE_MDX_RENDERER === "true";
 
@@ -390,10 +386,11 @@ export default async function PostPage({ params }: PostPageProps) {
         friendImage={post.friendImage}
         coAuthorImageUrl={coAuthorImageUrl}
       />
-      <PostContentClient
+      <PostEditingClient
         postId={post.postId}
+        title={title}
         date={dateString}
-        htmlContent={htmlContent}
+        initialHtmlContent={htmlContent}
         initialViews={views}
         audioUrl={post.audioUrl}
         readingTime={readingTime}
@@ -401,15 +398,8 @@ export default async function PostPage({ params }: PostPageProps) {
         coAuthorImageUrl={coAuthorImageUrl || post.friendImage || null}
         paragraphCommentsEnabled={paragraphCommentsEnabled}
         isAdmin={isAdmin}
+        initialMarkdown={markdownSource}
       />
-      <BackHome />
-      <div className="mt-4 sm:mt-6 mb-6">
-        <Comment
-          postId={post.postId}
-          coAuthorUserId={post.coAuthorUserId ?? undefined}
-          isAdmin={isAdmin}
-        />
-      </div>
     </Layout>
   );
 }

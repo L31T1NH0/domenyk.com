@@ -315,7 +315,7 @@ export default function Editor() {
       formData.append("postId", postId);
       const normalizedContent = normalizeMarkdownContent(content);
 
-      formData.append("markdownContent", normalizedContent);
+      formData.append("contentMarkdown", normalizedContent);
       formData.append("tags", tags);
       formData.append("cape", cape);
       if (friendImage) {
@@ -509,15 +509,10 @@ export default function Editor() {
           audioUrl={audioSource}
           disableViewTracking
           hideShareButton
+          isEditing
           secondaryHeaderSlot={
             <div className="flex flex-col gap-2">
               <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
-                <span className="inline-flex items-center rounded-full border border-zinc-800/80 bg-zinc-950/80 px-3 py-1 text-[11px] font-medium text-zinc-100">
-                  Modo edição
-                </span>
-                <span className="inline-flex items-center rounded-full border border-zinc-800/80 bg-zinc-950/60 px-3 py-1 text-[11px] font-medium text-zinc-200">
-                  Prévia
-                </span>
                 <button
                   type="button"
                   onClick={() => setIsMetadataOpen((open) => !open)}

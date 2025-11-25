@@ -8,6 +8,10 @@ export type PostRecord = {
   date: string; // ISO string
   views: number;
   tags: string[];
+  audioUrl: string | null;
+  cape: string | null;
+  friendImage: string | null;
+  updatedAt: string | null;
 };
 
 export type FetchPostsArgs = {
@@ -96,6 +100,10 @@ export async function getPosts({
     date: 1,
     views: 1,
     tags: 1,
+    audioUrl: 1,
+    cape: 1,
+    friendImage: 1,
+    updatedAt: 1,
   } as const;
 
   const [items, total] = await Promise.all([
@@ -122,6 +130,19 @@ export async function getPosts({
       : post.tags
       ? [String(post.tags)]
       : [],
+    audioUrl:
+      typeof (post as any).audioUrl === "string" && (post as any).audioUrl.trim() !== ""
+        ? String((post as any).audioUrl).trim()
+        : null,
+    cape:
+      typeof (post as any).cape === "string" && (post as any).cape.trim() !== ""
+        ? String((post as any).cape).trim()
+        : null,
+    friendImage:
+      typeof (post as any).friendImage === "string" && (post as any).friendImage.trim() !== ""
+        ? String((post as any).friendImage).trim()
+        : null,
+    updatedAt: normalizeDate((post as any).updatedAt),
   }));
 
   const hasNext = page * pageSize < total;

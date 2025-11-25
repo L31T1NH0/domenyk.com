@@ -1,6 +1,7 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+
+import { resolveAdminStatus } from "@lib/admin";
 import { clientPromise } from "../../../../lib/mongo";
-import { resolveAdminStatus } from "../../../../lib/admin";
 
 export async function POST(req: Request) {
   const { isAdmin } = await resolveAdminStatus();
