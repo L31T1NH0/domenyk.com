@@ -66,7 +66,7 @@ function resolveThumbnail(raw: RawPost): string | null {
 }
 
 function normalizePost(raw: RawPost): PostForSitemap | null {
-  const id = raw.postId ?? raw.slug ?? (raw._id ? String(raw._id) : null);
+  const id = raw.postId ?? raw.slug ?? raw._id;
 
   if (!id) {
     console.warn("[sitemap] skipping post without id: %s", JSON.stringify(raw));
@@ -112,6 +112,10 @@ async function fetchPublicPosts(): Promise<PostForSitemap[]> {
     })
     .sort({ date: -1 })
     .toArray();
+
+  if (posts.length === 0) {
+    console.error(`[sitemap] no posts returned from DB query (count: ${posts.length})`);
+  }
 
   console.log(`[sitemap] raw posts from DB: ${posts.length}`);
 
