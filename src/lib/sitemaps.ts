@@ -5,6 +5,8 @@ import { BASE_URL } from "./base-url";
 import { getMongoDb } from "./mongo";
 
 type RawPost = {
+  _id?: unknown;
+  slug?: string;
   postId?: string;
   title?: string;
   date?: string | Date;
@@ -64,13 +66,20 @@ function resolveThumbnail(raw: RawPost): string | null {
 }
 
 function normalizePost(raw: RawPost): PostForSitemap | null {
-  const postId = raw.postId ? String(raw.postId) : "";
-  if (!postId) return null;
+  const id = raw.postId ?? raw.slug ?? (raw._id ? String(raw._id) : null);
 
-  const lastModified = toDate(raw.updatedAt) ?? toDate(raw.date) ?? new Date();
+  if (!id) {
+    console.warn("[sitemap] skipping post without id: %s", JSON.stringify(raw));
+    return null;
+  }
+
+  const lastModified =
+    toDate(raw.updatedAt) ??
+    (typeof raw.date === "string" ? new Date(`${raw.date}T00:00:00.000Z`) : toDate(raw.date)) ??
+    new Date();
 
   return {
-    postId,
+    postId: String(id),
     title: raw.title ? String(raw.title) : "",
     lastModified,
     thumbnailUrl: resolveThumbnail(raw),
@@ -89,7 +98,7 @@ async function fetchPublicPosts(): Promise<PostForSitemap[]> {
   const posts = await collection
     .find({ hidden: { $ne: true } }, {
       projection: {
-        _id: 0,
+        _id: 1,
         postId: 1,
         title: 1,
         date: 1,
@@ -98,14 +107,26 @@ async function fetchPublicPosts(): Promise<PostForSitemap[]> {
         tags: 1,
         cape: 1,
         friendImage: 1,
+        hidden: 1,
       },
     })
     .sort({ date: -1 })
     .toArray();
 
-  return posts
+  console.log(`[sitemap] raw posts from DB: ${posts.length}`);
+
+  const normalized = posts
+    .filter((raw) => raw.hidden !== true)
     .map(normalizePost)
     .filter((post): post is PostForSitemap => Boolean(post?.postId));
+
+  if (normalized.length === 0) {
+    console.warn(
+      `[sitemap] no public posts available for sitemap after normalization (count: ${normalized.length})`,
+    );
+  }
+
+  return normalized;
 }
 
 function changefreqForPost(lastModified: Date): "weekly" | "monthly" {
