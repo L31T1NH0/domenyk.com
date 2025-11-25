@@ -21,7 +21,6 @@ type PostDocument = {
   date: string | Date;
   title: string;
   subtitle?: string | null;
-  markdownContent?: string;
   contentMarkdown?: string;
   htmlContent?: string;
   content?: string;
@@ -53,7 +52,6 @@ async function fetchPostById(id: string) {
           date: 1,
           title: 1,
           subtitle: 1,
-          markdownContent: 1,
           contentMarkdown: 1,
           htmlContent: 1,
           content: 1,
@@ -103,16 +101,16 @@ function extractPlainText(value: string): string {
 }
 
 function extractDescription(post: PostDocument): string {
-  const markdownContent =
-    typeof post.markdownContent === "string"
-      ? post.markdownContent
-      : typeof post.contentMarkdown === "string"
-        ? post.contentMarkdown
+  const markdownCandidate =
+    typeof post.contentMarkdown === "string"
+      ? post.contentMarkdown
+      : typeof post.htmlContent === "string"
+        ? post.htmlContent
         : typeof post.content === "string"
           ? post.content
           : "";
 
-  const normalizedMarkdown = normalizeMarkdownContent(markdownContent);
+  const normalizedMarkdown = normalizeMarkdownContent(markdownCandidate);
 
   if (normalizedMarkdown) {
     const paragraphs = normalizedMarkdown.split(/\n\s*\n/);
@@ -301,7 +299,7 @@ export default async function PostPage({ params }: PostPageProps) {
     typeof post.subtitle === "string" ? post.subtitle.trim() : "";
   const subtitle = rawSubtitle.length > 0 ? rawSubtitle : undefined;
   const markdownSourceRaw =
-    post.markdownContent ?? post.contentMarkdown ?? post.htmlContent ?? post.content ?? "";
+    post.contentMarkdown ?? post.htmlContent ?? post.content ?? "";
   const markdownSource = normalizeMarkdownContent(markdownSourceRaw);
   const shouldUseMdxRenderer = process.env.FEATURE_MDX_RENDERER === "true";
 
