@@ -2,7 +2,7 @@ import { promises as fs } from "fs";
 import path from "path";
 
 import { BASE_URL } from "./base-url";
-import { getMongoDb } from "./mongo";
+import { getPosts, type PostRecord } from "./posts";
 
 type RawPost = {
   _id?: unknown;
@@ -65,64 +65,59 @@ function resolveThumbnail(raw: RawPost): string | null {
   return null;
 }
 
-function normalizePost(raw: RawPost): PostForSitemap | null {
-  const id = raw.postId ?? raw.slug ?? raw._id;
-
-  if (!id) {
-    console.warn("[sitemap] skipping post without id: %s", JSON.stringify(raw));
-    return null;
-  }
-
-  const lastModified =
-    toDate(raw.updatedAt) ??
-    (typeof raw.date === "string" ? new Date(`${raw.date}T00:00:00.000Z`) : toDate(raw.date)) ??
-    new Date();
-
-  return {
-    postId: String(id),
-    title: raw.title ? String(raw.title) : "",
-    lastModified,
-    thumbnailUrl: resolveThumbnail(raw),
-    audioUrl:
-      typeof raw.audioUrl === "string" && raw.audioUrl.trim() !== ""
-        ? raw.audioUrl.trim()
-        : null,
-    tags: Array.isArray(raw.tags) ? raw.tags.filter((tag) => typeof tag === "string") : [],
-  };
-}
-
 async function fetchPublicPosts(): Promise<PostForSitemap[]> {
-  const db = await getMongoDb();
-  const collection = db.collection<RawPost>("posts");
+  const rawPosts: PostRecord[] = [];
+  const pageSize = 100;
+  let page = 1;
 
-  const posts = await collection
-    .find({ hidden: { $ne: true } }, {
-      projection: {
-        _id: 1,
-        postId: 1,
-        title: 1,
-        date: 1,
-        updatedAt: 1,
-        audioUrl: 1,
-        tags: 1,
-        cape: 1,
-        friendImage: 1,
-        hidden: 1,
-      },
-    })
-    .sort({ date: -1 })
-    .toArray();
+  while (true) {
+    const { posts, hasNext } = await getPosts({
+      page,
+      pageSize,
+      sort: "date",
+      order: "desc",
+      includeHidden: false,
+    });
 
-  if (posts.length === 0) {
-    console.error(`[sitemap] no posts returned from DB query (count: ${posts.length})`);
+    rawPosts.push(...posts);
+
+    if (!hasNext) {
+      break;
+    }
+
+    page += 1;
   }
 
-  console.log(`[sitemap] raw posts from DB: ${posts.length}`);
+  if (rawPosts.length === 0) {
+    console.error(`[sitemap] no posts returned from home query (count: ${rawPosts.length})`);
+  }
 
-  const normalized = posts
-    .filter((raw) => raw.hidden !== true)
-    .map(normalizePost)
-    .filter((post): post is PostForSitemap => Boolean(post?.postId));
+  console.log(`[sitemap] raw posts from home fetch: ${rawPosts.length}`);
+
+  const normalized = rawPosts
+    .map((post) => {
+      if (!post.postId) {
+        console.warn("[sitemap] skipping post without id: %s", JSON.stringify(post));
+        return null;
+      }
+
+      const lastModified =
+        toDate(post.updatedAt) ??
+        (typeof post.date === "string" ? new Date(`${post.date}T00:00:00.000Z`) : toDate(post.date)) ??
+        new Date();
+
+      return {
+        postId: String(post.postId),
+        title: post.title ?? "",
+        lastModified,
+        thumbnailUrl: resolveThumbnail({ cape: post.cape, friendImage: post.friendImage }),
+        audioUrl: post.audioUrl,
+        tags: Array.isArray(post.tags) ? post.tags : [],
+      } satisfies PostForSitemap;
+    })
+    .filter((post): post is PostForSitemap => post !== null);
+
+  console.log(`[sitemap] posts normalized for sitemap: ${normalized.length}`);
 
   if (normalized.length === 0) {
     console.warn(
