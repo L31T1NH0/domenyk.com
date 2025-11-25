@@ -88,7 +88,7 @@ export default function PostEditingClient({
               const response = await fetch(`/api/posts/${postId}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ markdownContent: markdownValue }),
+                body: JSON.stringify({ contentMarkdown: markdownValue }),
               });
 
               if (!response.ok) {
@@ -100,12 +100,12 @@ export default function PostEditingClient({
 
               const payload = (await response.json()) as {
                 htmlContent?: string;
-                markdownContent?: string;
+                contentMarkdown?: string;
               };
 
-              if (typeof payload.markdownContent === "string") {
-                setMarkdownValue(payload.markdownContent);
-                setLastSavedMarkdown(payload.markdownContent);
+              if (typeof payload.contentMarkdown === "string") {
+                setMarkdownValue(payload.contentMarkdown);
+                setLastSavedMarkdown(payload.contentMarkdown);
               }
               if (typeof payload.htmlContent === "string") {
                 setHtmlContent(payload.htmlContent);

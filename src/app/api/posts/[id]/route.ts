@@ -35,17 +35,17 @@ export async function PATCH(
     return NextResponse.json({ error: "Not Authorized" }, { status: 403 });
   }
 
-  let markdownContent: string | null = null;
+  let contentMarkdown: string | null = null;
 
   try {
-    const body = (await req.json()) as { markdownContent?: unknown };
-    if (typeof body?.markdownContent !== "string") {
+    const body = (await req.json()) as { contentMarkdown?: unknown };
+    if (typeof body?.contentMarkdown !== "string") {
       return NextResponse.json(
-        { error: "markdownContent is required and must be a string" },
+        { error: "contentMarkdown is required and must be a string" },
         { status: 400 }
       );
     }
-    markdownContent = normalizeMarkdownContent(body.markdownContent);
+    contentMarkdown = normalizeMarkdownContent(body.contentMarkdown);
   } catch (error) {
     return NextResponse.json(
       { error: "Invalid request body" },
@@ -53,9 +53,9 @@ export async function PATCH(
     );
   }
 
-  if (!markdownContent || markdownContent.trim() === "") {
+  if (!contentMarkdown || contentMarkdown.trim() === "") {
     return NextResponse.json(
-      { error: "markdownContent must not be empty" },
+      { error: "contentMarkdown must not be empty" },
       { status: 400 }
     );
   }
@@ -69,8 +69,7 @@ export async function PATCH(
       { postId },
       {
         $set: {
-          markdownContent,
-          contentMarkdown: markdownContent,
+          contentMarkdown,
           updatedAt: new Date(),
         },
       }
@@ -85,19 +84,19 @@ export async function PATCH(
 
     if (shouldUseMdxRenderer) {
       try {
-        htmlContent = await renderPostMdx(markdownContent);
+        htmlContent = await renderPostMdx(contentMarkdown);
       } catch (error) {
         console.error(`MDX renderer failed for post ${postId}:`, error);
-        htmlContent = await renderMarkdown(markdownContent);
+        htmlContent = await renderMarkdown(contentMarkdown);
       }
     } else {
-      htmlContent = await renderMarkdown(markdownContent);
+      htmlContent = await renderMarkdown(contentMarkdown);
     }
 
     await triggerSitemapRegeneration();
 
     return NextResponse.json({
-      markdownContent,
+      contentMarkdown,
       htmlContent,
       updatedAt: new Date().toISOString(),
     });

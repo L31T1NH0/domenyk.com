@@ -315,7 +315,7 @@ export default function Editor() {
       formData.append("postId", postId);
       const normalizedContent = normalizeMarkdownContent(content);
 
-      formData.append("markdownContent", normalizedContent);
+      formData.append("contentMarkdown", normalizedContent);
       formData.append("tags", tags);
       formData.append("cape", cape);
       if (friendImage) {
