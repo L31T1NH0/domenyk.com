@@ -1,6 +1,8 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+
+import { resolveAdminStatus } from "@lib/admin";
 import { clientPromise } from "../../../../lib/mongo";
-import { resolveAdminStatus } from "../../../../lib/admin";
+import { triggerSitemapRegeneration } from "@lib/sitemaps";
 
 export async function POST(req: Request) {
   const { isAdmin } = await resolveAdminStatus();
@@ -26,6 +28,8 @@ export async function POST(req: Request) {
     if (result.matchedCount === 0) {
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
+
+    await triggerSitemapRegeneration();
 
     return NextResponse.json({ message: "Visibility updated", postId, hidden: targetHidden }, { status: 200 });
   } catch (error) {
