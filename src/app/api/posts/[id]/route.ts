@@ -5,7 +5,6 @@ import { renderPostMdx } from "../../../../lib/renderers/mdx";
 import { renderMarkdown } from "../../../../lib/renderers/markdown";
 import { normalizeMarkdownContent } from "../../../../lib/markdown-normalize";
 import { resolveAdminStatus } from "../../../../lib/admin";
-import { triggerSitemapRegeneration } from "@lib/sitemaps";
 
 export async function GET(
   req: NextRequest,
@@ -92,8 +91,6 @@ export async function PATCH(
     } else {
       htmlContent = await renderMarkdown(contentMarkdown);
     }
-
-    await triggerSitemapRegeneration();
 
     return NextResponse.json({
       contentMarkdown,

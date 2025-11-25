@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { clientPromise } from "../../../../../lib/mongo";
 import { resolveAdminStatus } from "../../../../../lib/admin";
-import { triggerSitemapRegeneration } from "@lib/sitemaps";
 
 type BulkBody =
   | { action: "visibility"; postIds: string[]; hidden: boolean }
@@ -34,13 +33,11 @@ export async function POST(req: Request) {
     if (action === "visibility") {
       const hidden = Boolean((body as any).hidden);
       const res = await posts.updateMany({ postId: { $in: postIds } }, { $set: { hidden } });
-      await triggerSitemapRegeneration();
       return NextResponse.json({ updated: res.modifiedCount }, { status: 200 });
     }
 
     if (action === "delete") {
       const res = await posts.deleteMany({ postId: { $in: postIds } });
-      await triggerSitemapRegeneration();
       return NextResponse.json({ deleted: res.deletedCount }, { status: 200 });
     }
 

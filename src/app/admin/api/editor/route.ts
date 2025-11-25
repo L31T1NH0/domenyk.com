@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { clientPromise } from "../../../../lib/mongo"; // Conexão com o MongoDB
 import { resolveAdminStatus } from "../../../../lib/admin";
 import { normalizeMarkdownContent } from "../../../../lib/markdown-normalize";
-import { triggerSitemapRegeneration } from "@lib/sitemaps";
 
 // Handler para POST requests (publicação de posts)
 export async function POST(req: Request) {
@@ -130,9 +129,6 @@ export async function POST(req: Request) {
     };
 
     await postsCollection.insertOne(newPost);
-
-    // Regenerate sitemaps so the new post (and its tags/thumbnail/audio) is discoverable.
-    await triggerSitemapRegeneration();
 
     return NextResponse.json(
       { message: "Post created successfully", postId },
