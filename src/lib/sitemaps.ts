@@ -115,39 +115,24 @@ function changefreqForPost(lastModified: Date): "weekly" | "monthly" {
 }
 
 function createPostsXml(posts: PostForSitemap[]): string {
-  const homeLastModified = posts.reduce<Date | null>((latest, post) => {
-    if (!latest || post.lastModified.getTime() > latest.getTime()) {
-      return post.lastModified;
-    }
-    return latest;
-  }, null);
+  const urls = posts.map((post) => {
+    const changefreq = changefreqForPost(post.lastModified);
+    const postSlug = encodeURIComponent(post.postId);
+    const imageBlock =
+      post.thumbnailUrl !== null
+        ? [`  <image:image>`, `    <image:loc>${escapeXml(post.thumbnailUrl)}</image:loc>`, `  </image:image>`]
+        : [];
 
-  const urls = [
-    `<url>`,
-    `  <loc>${BASE_URL}</loc>`,
-    `  <lastmod>${(homeLastModified ?? new Date()).toISOString()}</lastmod>`,
-    `  <changefreq>daily</changefreq>`,
-    `  <priority>1</priority>`,
-    `</url>`,
-    ...posts.map((post) => {
-      const changefreq = changefreqForPost(post.lastModified);
-      const postSlug = encodeURIComponent(post.postId);
-      const imageBlock =
-        post.thumbnailUrl !== null
-          ? [`  <image:image>`, `    <image:loc>${escapeXml(post.thumbnailUrl)}</image:loc>`, `  </image:image>`]
-          : [];
-
-      return [
-        `<url>`,
-        `  <loc>${BASE_URL}/posts/${postSlug}</loc>`,
-        `  <lastmod>${post.lastModified.toISOString()}</lastmod>`,
-        `  <changefreq>${changefreq}</changefreq>`,
-        `  <priority>0.8</priority>`,
-        ...imageBlock,
-        `</url>`,
-      ].join("\n");
-    }),
-  ];
+    return [
+      `<url>`,
+      `  <loc>${BASE_URL}/posts/${postSlug}</loc>`,
+      `  <lastmod>${post.lastModified.toISOString()}</lastmod>`,
+      `  <changefreq>${changefreq}</changefreq>`,
+      `  <priority>0.8</priority>`,
+      ...imageBlock,
+      `</url>`,
+    ].join("\n");
+  });
 
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
