@@ -303,17 +303,37 @@ export async function readOrGenerateSitemap(kind: "index" | "posts" | "posts-aud
     return existing;
   }
 
-  const generated = await generateAllSitemaps();
-  const value =
-    {
-      index: generated.indexXml,
-      posts: generated.postsXml,
-      "posts-audio": generated.postsAudioXml,
-      tags: generated.tagsXml,
-    }[kind];
+  try {
+    const generated = await generateAllSitemaps();
+    const value =
+      {
+        index: generated.indexXml,
+        posts: generated.postsXml,
+        "posts-audio": generated.postsAudioXml,
+        tags: generated.tagsXml,
+      }[kind];
 
-  if (typeof value === "string") {
-    return value;
+    if (typeof value === "string") {
+      return value;
+    }
+  } catch (error) {
+    console.error("Failed to generate sitemap; returning fallback", error);
+
+    const fallback =
+      {
+        index: createSitemapIndexXml(),
+        posts: createPostsXml([]),
+        "posts-audio": createPostsAudioXml([]),
+        tags: createTagsXml([]),
+      }[kind];
+
+    try {
+      await writeSitemap(filenames[kind], fallback);
+    } catch (writeError) {
+      console.error("Failed to persist fallback sitemap", writeError);
+    }
+
+    return fallback;
   }
 
   return null;
