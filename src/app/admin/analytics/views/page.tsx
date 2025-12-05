@@ -10,10 +10,13 @@ import { getFromDate, parseRange, type RangeKey } from "../utils";
 type ViewRow = {
   path: string;
   serverTs: Date;
+  clientTs: Date;
+  clientTimeZone?: string;
   session: string;
   referrer?: string;
   isAuthenticated?: boolean;
   userId?: string;
+  userName?: string;
   userImage?: string;
   isFirstView: boolean;
 };
@@ -44,37 +47,43 @@ async function getPageViewDetails(from: Date, pathFilter?: string): Promise<Grou
       {
         $setWindowFields: {
           partitionBy: { path: "$path", session: "$session" },
-          sortBy: { serverTs: 1 },
+          sortBy: { clientTs: 1, serverTs: 1 },
           output: {
-            firstTs: { $first: "$serverTs" },
+            firstTs: { $first: "$clientTs" },
           },
         },
       },
-      { $addFields: { isFirstView: { $eq: ["$serverTs", "$firstTs"] } } },
+      { $addFields: { isFirstView: { $eq: ["$clientTs", "$firstTs"] } } },
       {
         $project: {
           _id: 0,
           path: 1,
+          clientTs: 1,
+          clientTimeZone: 1,
           serverTs: 1,
           session: 1,
           referrer: "$page.referrer",
           isAuthenticated: "$flags.isAuthenticated",
-          userId: "$userId",
+          userId: "$user.id",
+          userName: "$user.name",
           userImage: "$user.image",
           isFirstView: 1,
         },
       },
-      { $sort: { path: 1, serverTs: -1 } },
+      { $sort: { path: 1, clientTs: -1, serverTs: -1 } },
       {
         $group: {
           _id: "$path",
           views: {
             $push: {
+              clientTs: "$clientTs",
+              clientTimeZone: "$clientTimeZone",
               serverTs: "$serverTs",
               session: "$session",
               referrer: "$referrer",
               isAuthenticated: "$isAuthenticated",
               userId: "$userId",
+              userName: "$userName",
               userImage: "$userImage",
               isFirstView: "$isFirstView",
             },
@@ -91,10 +100,11 @@ async function getPageViewDetails(from: Date, pathFilter?: string): Promise<Grou
     .map((row) => ({ path: row.path, views: row.views ?? [] }));
 }
 
-function formatDate(value: Date) {
+function formatDate(value: Date, timeZone?: string) {
   return new Date(value).toLocaleString("pt-BR", {
     dateStyle: "short",
     timeStyle: "short",
+    ...(timeZone ? { timeZone } : {}),
   });
 }
 
@@ -215,58 +225,65 @@ export default async function AdminAnalyticsViewsPage({
                     </tr>
                   </thead>
                   <tbody>
-                    {group.views.map((view, idx) => (
-                      <tr key={`${view.session}-${idx}`} className="border-t border-zinc-800">
-                        <td className="px-4 py-2">
-                          <div className="flex items-center gap-3">
-                            {view.userImage ? (
-                              <Image
-                                src={view.userImage}
-                                alt="Avatar"
-                                width={32}
-                                height={32}
-                                className="h-8 w-8 rounded-full object-cover"
-                              />
-                            ) : (
-                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800 text-xs text-zinc-300">
-                                {view.isAuthenticated ? "👤" : ""}
+                    {group.views.map((view, idx) => {
+                      const displayName = view.userName ?? view.userId ?? "Anônimo";
+                      const avatarFallback = displayName.trim().charAt(0).toUpperCase() || "👤";
+
+                      return (
+                        <tr key={`${view.session}-${idx}`} className="border-t border-zinc-800">
+                          <td className="px-4 py-2">
+                            <div className="flex items-center gap-3">
+                              {view.userImage ? (
+                                <Image
+                                  src={view.userImage}
+                                  alt={`Avatar de ${displayName}`}
+                                  width={32}
+                                  height={32}
+                                  className="h-8 w-8 rounded-full object-cover"
+                                />
+                              ) : (
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800 text-xs text-zinc-300">
+                                  {view.isAuthenticated ? avatarFallback : ""}
+                                </div>
+                              )}
+                              <div className="leading-tight">
+                                <div className="text-sm text-zinc-100">{displayName}</div>
+                                <div className="text-xs text-zinc-500">Sessão: {view.session}</div>
                               </div>
-                            )}
-                            <div className="leading-tight">
-                              <div className="text-sm text-zinc-100">{view.userId ?? "Anônimo"}</div>
-                              <div className="text-xs text-zinc-500">Sessão: {view.session}</div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-2 text-zinc-100">{formatDate(view.serverTs)}</td>
-                        <td className="px-4 py-2">
-                          {view.referrer ? (
-                            <Link
-                              href={`https://${view.referrer}/`}
-                              className="text-zinc-200 hover:underline"
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              {view.referrer}
-                            </Link>
-                          ) : (
-                            <span className="text-zinc-500">—</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-2 text-right">
-                          <div className="flex justify-end gap-2">
-                            {view.isAuthenticated ? (
-                              <span className="rounded-full bg-emerald-900/40 px-2 py-1 text-[11px] text-emerald-200">Autenticado</span>
+                          </td>
+                          <td className="px-4 py-2 text-zinc-100">
+                            {formatDate(view.clientTs ?? view.serverTs, view.clientTimeZone)}
+                          </td>
+                          <td className="px-4 py-2">
+                            {view.referrer ? (
+                              <Link
+                                href={`https://${view.referrer}/`}
+                                className="text-zinc-200 hover:underline"
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                {view.referrer}
+                              </Link>
                             ) : (
-                              <span className="rounded-full bg-zinc-800 px-2 py-1 text-[11px] text-zinc-200">Anônimo</span>
+                              <span className="text-zinc-500">—</span>
                             )}
-                            {view.isFirstView ? (
-                              <span className="rounded-full bg-blue-900/40 px-2 py-1 text-[11px] text-blue-200">Primeira view</span>
-                            ) : null}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td className="px-4 py-2 text-right">
+                            <div className="flex justify-end gap-2">
+                              {view.isAuthenticated ? (
+                                <span className="rounded-full bg-emerald-900/40 px-2 py-1 text-[11px] text-emerald-200">Autenticado</span>
+                              ) : (
+                                <span className="rounded-full bg-zinc-800 px-2 py-1 text-[11px] text-zinc-200">Anônimo</span>
+                              )}
+                              {view.isFirstView ? (
+                                <span className="rounded-full bg-blue-900/40 px-2 py-1 text-[11px] text-blue-200">Primeira view</span>
+                              ) : null}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

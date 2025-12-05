@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 
 import type { AnalyticsClientConfig } from "@lib/analytics/config";
 import type { AnalyticsEventName } from "@lib/analytics/events";
@@ -29,6 +30,12 @@ type AnalyticsEventPayload = {
     width?: number;
     height?: number;
   };
+  user?: {
+    id?: string;
+    name?: string;
+    image?: string;
+  };
+  clientTimeZone?: string;
   device?: "mobile" | "desktop";
   flags: {
     isAuthenticated: boolean;
@@ -217,6 +224,60 @@ function getDevice(): "mobile" | "desktop" | undefined {
   return width < 768 ? "mobile" : "desktop";
 }
 
+function sanitizeUserField(value: unknown, maxLength: number) {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  return trimmed.slice(0, maxLength);
+}
+
+function sanitizeUserFromClient(
+  input: { id?: string; name?: string | null; image?: string | null } | null
+) {
+  if (!input) {
+    return undefined;
+  }
+
+  const id = sanitizeUserField(input.id, 128);
+  const name = sanitizeUserField(input.name, 128);
+  const image = sanitizeUserField(input.image, 1024);
+
+  const sanitized: { id?: string; name?: string; image?: string } = {};
+  if (id) {
+    sanitized.id = id;
+  }
+  if (name) {
+    sanitized.name = name;
+  }
+  if (image) {
+    sanitized.image = image;
+  }
+
+  return Object.keys(sanitized).length > 0 ? sanitized : undefined;
+}
+
+function getClientTimeZone(): string | undefined {
+  if (typeof Intl === "undefined" || typeof Intl.DateTimeFormat === "undefined") {
+    return undefined;
+  }
+
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if (typeof tz !== "string") {
+    return undefined;
+  }
+
+  const trimmed = tz.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  return trimmed.slice(0, 128);
+}
+
 export function AnalyticsProvider({
   children,
   isAdmin,
@@ -228,6 +289,8 @@ export function AnalyticsProvider({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const lastTrackedPath = useRef<string | null>(null);
+  const { user } = useUser();
+  const clientTimeZone = useMemo(() => getClientTimeZone(), []);
 
   const enabledEvents = useMemo(() => new Set(config.enabledEvents), [config.enabledEvents]);
 
@@ -385,6 +448,15 @@ export function AnalyticsProvider({
       }
       const title = document.title ? document.title.slice(0, 256) : undefined;
 
+      const userInfo =
+        isAuthenticated && user
+          ? sanitizeUserFromClient({
+              id: user.id,
+              name: user.fullName ?? user.username ?? null,
+              image: user.imageUrl ?? null,
+            })
+          : undefined;
+
       const payload: AnalyticsEventPayload = {
         name,
         clientTs: Date.now(),
@@ -395,6 +467,8 @@ export function AnalyticsProvider({
           ...(title ? { title } : {}),
         },
         ...(sanitizedData ? { data: sanitizedData } : {}),
+        ...(userInfo ? { user: userInfo } : {}),
+        ...(clientTimeZone ? { clientTimeZone } : {}),
         flags: eventFlags,
       };
 
@@ -425,6 +499,8 @@ export function AnalyticsProvider({
       config.maxBatchSize,
       config.maxQueueSize,
       isAuthenticated,
+      user,
+      clientTimeZone,
       flushQueue,
       scheduleFlush,
     ]
