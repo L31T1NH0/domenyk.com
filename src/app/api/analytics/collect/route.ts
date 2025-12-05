@@ -41,6 +41,8 @@ type IncomingEvent = {
   viewport?: unknown;
   flags?: unknown;
   device?: unknown;
+  user?: unknown;
+  clientTimeZone?: unknown;
 };
 
 type NormalizedEvent = {
@@ -59,6 +61,12 @@ type NormalizedEvent = {
     width?: number;
     height?: number;
   };
+  user?: {
+    id?: string;
+    name?: string;
+    image?: string;
+  };
+  clientTimeZone?: string;
   flags?: {
     isSampled?: boolean;
     isAuthenticated?: boolean;
@@ -146,6 +154,54 @@ function sanitizeDevice(value: unknown): "mobile" | "desktop" | undefined {
     return value;
   }
   return undefined;
+}
+
+function sanitizeHttpUrl(value: unknown, maxLength: number) {
+  const asString = sanitizeString(value, maxLength);
+  if (!asString) {
+    return undefined;
+  }
+  if (!/^https?:\/\//i.test(asString)) {
+    return undefined;
+  }
+  return asString;
+}
+
+function sanitizeUserProfile(value: unknown): NormalizedEvent["user"] {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+  const user = value as Record<string, unknown>;
+
+  const id = sanitizeString(user.id, 128);
+  const name = sanitizeString(user.name, 128);
+  const image = sanitizeHttpUrl(user.image, 1024);
+
+  const sanitized: { id?: string; name?: string; image?: string } = {};
+  if (id) {
+    sanitized.id = id;
+  }
+  if (name) {
+    sanitized.name = name;
+  }
+  if (image) {
+    sanitized.image = image;
+  }
+
+  return Object.keys(sanitized).length > 0 ? sanitized : undefined;
+}
+
+function sanitizeTimeZone(value: unknown): string | undefined {
+  const tz = sanitizeString(value, 128);
+  if (!tz) {
+    return undefined;
+  }
+
+  if (!/^[A-Za-z0-9_./+-]+$/.test(tz)) {
+    return undefined;
+  }
+
+  return tz;
 }
 
 function sanitizeAdditionalData(
@@ -294,6 +350,8 @@ async function parseEvents(
     const device = sanitizeDevice(event.device);
     const clientTs = clampClientTimestamp(event.clientTs, serverTs.getTime());
     const additionalData = sanitizeAdditionalData(event.data);
+    const user = flags?.isAuthenticated ? sanitizeUserProfile(event.user) : undefined;
+    const clientTimeZone = sanitizeTimeZone(event.clientTimeZone);
 
     const normalized: NormalizedEvent = {
       name,
@@ -303,8 +361,10 @@ async function parseEvents(
       page,
       ...(additionalData ? { data: additionalData } : {}),
       ...(viewport ? { viewport } : {}),
+      ...(user ? { user } : {}),
       ...(flags ? { flags } : {}),
       ...(device ? { device } : {}),
+      ...(clientTimeZone ? { clientTimeZone } : {}),
       ...(userAgent ? { userAgent: userAgent.slice(0, 256) } : {}),
       ...(origin ? { origin: origin.slice(0, 256) } : {}),
       version: 1,
