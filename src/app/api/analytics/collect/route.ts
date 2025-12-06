@@ -382,7 +382,7 @@ async function parseEvents(
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  const analyticsEnabled = await getAnalyticsEnabled();
+  const analyticsEnabled = await getAnalyticsEnabled({ bypassCache: true });
   if (!analyticsEnabled) {
     return new NextResponse(null, { status: 403 });
   }

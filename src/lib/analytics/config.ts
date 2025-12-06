@@ -133,8 +133,10 @@ function setCachedAnalyticsEnabled(value: boolean) {
   };
 }
 
-export async function getAnalyticsEnabled(): Promise<boolean> {
-  const cached = getCachedAnalyticsEnabled();
+export async function getAnalyticsEnabled({
+  bypassCache = false,
+}: { bypassCache?: boolean } = {}): Promise<boolean> {
+  const cached = bypassCache ? null : getCachedAnalyticsEnabled();
   if (cached !== null) {
     return cached;
   }
