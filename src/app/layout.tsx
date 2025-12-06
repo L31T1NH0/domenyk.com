@@ -7,7 +7,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
 
 import AnalyticsProvider from "@components/analytics/AnalyticsProvider";
-import { getAnalyticsClientConfig } from "@lib/analytics/config";
+import { getAnalyticsClientConfig, getAnalyticsEnabled } from "@lib/analytics/config";
 import { resolveAdminStatus } from "@lib/admin";
 
 type RootLayoutProps = Readonly<{
@@ -16,6 +16,7 @@ type RootLayoutProps = Readonly<{
 
 export default async function RootLayout({ children }: RootLayoutProps) {
   const analyticsConfig = getAnalyticsClientConfig();
+  const analyticsEnabledPromise = getAnalyticsEnabled();
 
   let isAdmin = false;
   let authState: Awaited<ReturnType<typeof auth>> | null = null;
@@ -38,6 +39,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
     }
   }
 
+  const analyticsEnabled = await analyticsEnabledPromise;
   const isAuthenticated = Boolean(authState?.userId);
 
   return (
@@ -49,6 +51,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
               isAdmin={isAdmin}
               config={analyticsConfig}
               isAuthenticated={isAuthenticated}
+              analyticsEnabled={analyticsEnabled}
             >
               {children}
             </AnalyticsProvider>

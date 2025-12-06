@@ -8,6 +8,7 @@
   - `/api/posts` (GET) — retorna posts com paginação, respeitando `hidden` para visitantes; admins podem pedir `includeHidden=true`.
   - `/api/search-posts` (GET) — busca posts públicos com limites de tamanho, paginação e rate limit.
   - `/staff/[...action]` (POST) — ações internas (ex.: `deletePost`) via whitelist; exige admin e valida entradas.
+  - `/api/admin/analytics/toggle` (GET/POST) — só admins; lê e atualiza o flag `analyticsEnabled` salvo na coleção `settings`.
 
 ## Avaliação de autenticação/autorização
 - **Aplicação de papéis**: o middleware deriva o papel da sessão Clerk e exige autenticação para qualquer API fora da lista pública. Rotas administrativas de página também chamam `resolveAdminStatus` no servidor, reforçando a checagem. Apenas admins acessam `/admin` e `/staff`.
@@ -21,6 +22,7 @@
   - `/api/search-posts` limita tamanho de `query`, aplica paginação/rate limit e usa regex escapada para evitar padrões pesados.
   - `/staff/[...action]` utiliza whitelist de ações e validação estrita do payload.
 - **Formulários e ações do admin**: ações de role (`setRole`, `removeRole`) dependem do `resolveAdminStatus`; não há CSRF tokens além da proteção implícita de Server Actions.
+- **Suspensão de analytics**: o flag `analyticsEnabled` fica no MongoDB e desliga imediatamente `/api/analytics/collect`, que passa a responder 403/204 sem persistir eventos.
 
 ## Exposição de informações sensíveis
 - **Logs de servidor**: logs das APIs foram reduzidos para evitar vazamento de dados de posts ou stack traces completos.

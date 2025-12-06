@@ -62,6 +62,9 @@ NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=...
 
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 
+# Flag opcional para suspender a coleta de analytics (padrão: true)
+ANALYTICS_ENABLED=true
+
 4. Rodar o projeto
 npm run dev
 
@@ -74,6 +77,14 @@ Build para produção
 
 npm run build
 npm start
+
+-----------------------------------------
+Configuração de analytics
+-----------------------------------------
+
+- O flag `analyticsEnabled` tem fonte de verdade no MongoDB (coleção `settings`, chave `analyticsEnabled`).
+- O valor inicial cai para a env `ANALYTICS_ENABLED` (padrão `true`) se não existir registro na coleção.
+- Admins podem ligar/desligar em tempo real pela página `/admin/analytics`, que usa o endpoint protegido `/api/admin/analytics/toggle`.
 
 -----------------------------------------
 Licença
