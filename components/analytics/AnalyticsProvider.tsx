@@ -68,6 +68,7 @@ type AnalyticsProviderProps = {
   isAdmin: boolean;
   config: AnalyticsClientConfig;
   isAuthenticated: boolean;
+  analyticsEnabled: boolean;
 };
 
 type FlushReason = "scheduled" | "visibility" | "immediate";
@@ -283,6 +284,7 @@ export function AnalyticsProvider({
   isAdmin,
   config,
   isAuthenticated,
+  analyticsEnabled,
 }: AnalyticsProviderProps) {
   const [trackingReady, setTrackingReady] = useState(false);
   const [trackingAllowed, setTrackingAllowed] = useState(false);
@@ -298,8 +300,23 @@ export function AnalyticsProvider({
   const flushTimeoutRef = useRef<number | null>(null);
   const flushInProgressRef = useRef(false);
 
+  const clearFlushTimeout = useCallback(() => {
+    if (flushTimeoutRef.current !== null) {
+      window.clearTimeout(flushTimeoutRef.current);
+      flushTimeoutRef.current = null;
+    }
+  }, []);
+
   useEffect(() => {
     if (typeof window === "undefined") {
+      return;
+    }
+
+    if (!analyticsEnabled) {
+      setTrackingAllowed(false);
+      setTrackingReady(true);
+      clearFlushTimeout();
+      queueRef.current = [];
       return;
     }
 
@@ -317,14 +334,7 @@ export function AnalyticsProvider({
 
     setTrackingAllowed(true);
     setTrackingReady(true);
-  }, [isAdmin]);
-
-  const clearFlushTimeout = useCallback(() => {
-    if (flushTimeoutRef.current !== null) {
-      window.clearTimeout(flushTimeoutRef.current);
-      flushTimeoutRef.current = null;
-    }
-  }, []);
+  }, [analyticsEnabled, isAdmin, clearFlushTimeout]);
 
   const sendBatch = useCallback(
     async (events: AnalyticsEventPayload[], reason: FlushReason) => {

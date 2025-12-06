@@ -3,6 +3,8 @@ import Link from "next/link";
 import { getMongoDb } from "@lib/mongo";
 import { resolveAdminStatus } from "@lib/admin";
 import { getFromDate, parseRange, type RangeKey } from "./utils";
+import { getAnalyticsEnabled } from "@lib/analytics/config";
+import { AnalyticsToggle } from "@components/analytics/AnalyticsToggle";
 
 type DeviceBreakdown = { device: string; count: number }[];
 type TopPageRow = {
@@ -287,6 +289,8 @@ export default async function AdminAnalyticsPage({
   const range = parseRange(sp?.range);
   const from = getFromDate(range);
 
+  const analyticsEnabled = await getAnalyticsEnabled();
+
   const [summary, device, topPages, series] = await Promise.all([
     getSummary(from),
     getDeviceBreakdown(from),
@@ -330,6 +334,8 @@ export default async function AdminAnalyticsPage({
           ))}
         </div>
       </div>
+
+      <AnalyticsToggle initialEnabled={analyticsEnabled} />
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">

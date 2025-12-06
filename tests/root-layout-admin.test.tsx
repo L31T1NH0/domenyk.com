@@ -13,9 +13,10 @@ const adminStub = `
 `;
 
 const analyticsProviderStub = `
-  export default function AnalyticsProvider({ children, isAdmin, isAuthenticated }) {
+  export default function AnalyticsProvider({ children, isAdmin, isAuthenticated, analyticsEnabled }) {
     globalThis.__TEST_ANALYTICS_IS_ADMIN = isAdmin;
     globalThis.__TEST_ANALYTICS_IS_AUTHENTICATED = isAuthenticated;
+    globalThis.__TEST_ANALYTICS_ENABLED = analyticsEnabled;
     return children;
   }
 `;
@@ -32,6 +33,7 @@ const analyticsConfigStub = `
     maxBatchSize: 0,
     maxQueueSize: 0,
   });
+  export const getAnalyticsEnabled = async () => globalThis.__TEST_ANALYTICS_ENABLED_VALUE ?? true;
 `;
 
 const analyticsComponentStub = `
@@ -50,6 +52,8 @@ void test("RootLayout skips admin resolution for anonymous users", async () => {
     __TEST_RESOLVE_ADMIN?: (...args: unknown[]) => Promise<{ isAdmin: boolean; userId: string | null }>;
     __TEST_ANALYTICS_IS_ADMIN?: boolean;
     __TEST_ANALYTICS_IS_AUTHENTICATED?: boolean;
+    __TEST_ANALYTICS_ENABLED?: boolean;
+    __TEST_ANALYTICS_ENABLED_VALUE?: boolean;
   }).__TEST_AUTH_STATE = { userId: null, sessionClaims: null };
 
   (globalThis as typeof globalThis & { __TEST_RESOLVE_ADMIN?: (...args: unknown[]) => Promise<{ isAdmin: boolean; userId: string | null }> }).__TEST_RESOLVE_ADMIN = async () => {
@@ -77,16 +81,21 @@ void test("RootLayout skips admin resolution for anonymous users", async () => {
     (globalThis as typeof globalThis & { __TEST_ANALYTICS_IS_AUTHENTICATED?: boolean }).__TEST_ANALYTICS_IS_AUTHENTICATED,
     false,
   );
+  assert.equal((globalThis as typeof globalThis & { __TEST_ANALYTICS_ENABLED?: boolean }).__TEST_ANALYTICS_ENABLED, true);
 
   delete (globalThis as typeof globalThis & {
     __TEST_AUTH_STATE?: unknown;
     __TEST_RESOLVE_ADMIN?: (...args: unknown[]) => Promise<{ isAdmin: boolean; userId: string | null }>;
     __TEST_ANALYTICS_IS_ADMIN?: boolean;
     __TEST_ANALYTICS_IS_AUTHENTICATED?: boolean;
+    __TEST_ANALYTICS_ENABLED?: boolean;
+    __TEST_ANALYTICS_ENABLED_VALUE?: boolean;
   }).__TEST_AUTH_STATE;
   delete (globalThis as typeof globalThis & { __TEST_RESOLVE_ADMIN?: (...args: unknown[]) => Promise<{ isAdmin: boolean; userId: string | null }> }).__TEST_RESOLVE_ADMIN;
   delete (globalThis as typeof globalThis & { __TEST_ANALYTICS_IS_ADMIN?: boolean }).__TEST_ANALYTICS_IS_ADMIN;
   delete (globalThis as typeof globalThis & { __TEST_ANALYTICS_IS_AUTHENTICATED?: boolean }).__TEST_ANALYTICS_IS_AUTHENTICATED;
+  delete (globalThis as typeof globalThis & { __TEST_ANALYTICS_ENABLED?: boolean }).__TEST_ANALYTICS_ENABLED;
+  delete (globalThis as typeof globalThis & { __TEST_ANALYTICS_ENABLED_VALUE?: boolean }).__TEST_ANALYTICS_ENABLED_VALUE;
 });
 
 void test("RootLayout forwards admin flag when user is signed in", async () => {
@@ -98,6 +107,8 @@ void test("RootLayout forwards admin flag when user is signed in", async () => {
     __TEST_RESOLVE_ADMIN?: (...args: unknown[]) => Promise<{ isAdmin: boolean; userId: string | null }>;
     __TEST_ANALYTICS_IS_ADMIN?: boolean;
     __TEST_ANALYTICS_IS_AUTHENTICATED?: boolean;
+    __TEST_ANALYTICS_ENABLED?: boolean;
+    __TEST_ANALYTICS_ENABLED_VALUE?: boolean;
   }).__TEST_AUTH_STATE = {
     userId: "user_123",
     sessionClaims: { publicMetadata: { role: "admin" } },
@@ -133,14 +144,19 @@ void test("RootLayout forwards admin flag when user is signed in", async () => {
     (globalThis as typeof globalThis & { __TEST_ANALYTICS_IS_AUTHENTICATED?: boolean }).__TEST_ANALYTICS_IS_AUTHENTICATED,
     true,
   );
+  assert.equal((globalThis as typeof globalThis & { __TEST_ANALYTICS_ENABLED?: boolean }).__TEST_ANALYTICS_ENABLED, true);
 
   delete (globalThis as typeof globalThis & {
     __TEST_AUTH_STATE?: unknown;
     __TEST_RESOLVE_ADMIN?: (...args: unknown[]) => Promise<{ isAdmin: boolean; userId: string | null }>;
     __TEST_ANALYTICS_IS_ADMIN?: boolean;
     __TEST_ANALYTICS_IS_AUTHENTICATED?: boolean;
+    __TEST_ANALYTICS_ENABLED?: boolean;
+    __TEST_ANALYTICS_ENABLED_VALUE?: boolean;
   }).__TEST_AUTH_STATE;
   delete (globalThis as typeof globalThis & { __TEST_RESOLVE_ADMIN?: (...args: unknown[]) => Promise<{ isAdmin: boolean; userId: string | null }> }).__TEST_RESOLVE_ADMIN;
   delete (globalThis as typeof globalThis & { __TEST_ANALYTICS_IS_ADMIN?: boolean }).__TEST_ANALYTICS_IS_ADMIN;
   delete (globalThis as typeof globalThis & { __TEST_ANALYTICS_IS_AUTHENTICATED?: boolean }).__TEST_ANALYTICS_IS_AUTHENTICATED;
+  delete (globalThis as typeof globalThis & { __TEST_ANALYTICS_ENABLED?: boolean }).__TEST_ANALYTICS_ENABLED;
+  delete (globalThis as typeof globalThis & { __TEST_ANALYTICS_ENABLED_VALUE?: boolean }).__TEST_ANALYTICS_ENABLED_VALUE;
 });
