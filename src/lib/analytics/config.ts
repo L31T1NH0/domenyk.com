@@ -1,4 +1,4 @@
-import { getMongoDb } from "@lib/mongo";
+import type { Db } from "mongodb";
 
 import { AnalyticsEventName, parseEnabledEvents } from "./events";
 
@@ -98,6 +98,27 @@ const DEFAULT_ANALYTICS_ENABLED = parseBooleanFlag(
 
 let analyticsEnabledCache: { value: boolean; expiresAt: number } | null = null;
 
+let loadMongoDb: (() => Promise<Db>) | null = null;
+
+async function getMongoDbSafely(): Promise<Db | null> {
+  if (!loadMongoDb) {
+    try {
+      const mongo = await import("@lib/mongo");
+      loadMongoDb = mongo.getMongoDb;
+    } catch (error) {
+      console.warn("Mongo client unavailable; falling back to env flag", error);
+      return null;
+    }
+  }
+
+  try {
+    return await loadMongoDb();
+  } catch (error) {
+    console.warn("Failed to init Mongo client for analytics flag", error);
+    return null;
+  }
+}
+
 function getCachedAnalyticsEnabled(): boolean | null {
   if (analyticsEnabledCache && analyticsEnabledCache.expiresAt > Date.now()) {
     return analyticsEnabledCache.value;
@@ -121,13 +142,15 @@ export async function getAnalyticsEnabled(): Promise<boolean> {
   let storedValue: boolean | null = null;
 
   try {
-    const db = await getMongoDb();
-    const storedSetting = await db
-      .collection<AnalyticsEnabledSetting>("settings")
-      .findOne({ _id: ANALYTICS_ENABLED_SETTING_KEY });
+    const db = await getMongoDbSafely();
+    if (db) {
+      const storedSetting = await db
+        .collection<AnalyticsEnabledSetting>("settings")
+        .findOne({ _id: ANALYTICS_ENABLED_SETTING_KEY });
 
-    if (storedSetting && typeof storedSetting.value === "boolean") {
-      storedValue = storedSetting.value;
+      if (storedSetting && typeof storedSetting.value === "boolean") {
+        storedValue = storedSetting.value;
+      }
     }
   } catch (error) {
     console.warn("Failed to fetch analyticsEnabled from storage", error);
@@ -140,19 +163,18 @@ export async function getAnalyticsEnabled(): Promise<boolean> {
 }
 
 export async function setAnalyticsEnabled(enabled: boolean): Promise<boolean> {
-  try {
-    const db = await getMongoDb();
-    await db
-      .collection<AnalyticsEnabledSetting>("settings")
-      .updateOne(
-        { _id: ANALYTICS_ENABLED_SETTING_KEY },
-        { $set: { value: enabled, updatedAt: new Date() } },
-        { upsert: true }
-      );
-  } catch (error) {
-    console.error("Failed to persist analyticsEnabled flag", error);
-    throw error;
+  const db = await getMongoDbSafely();
+  if (!db) {
+    throw new Error("MongoDB não está configurado para persistir analyticsEnabled");
   }
+
+  await db
+    .collection<AnalyticsEnabledSetting>("settings")
+    .updateOne(
+      { _id: ANALYTICS_ENABLED_SETTING_KEY },
+      { $set: { value: enabled, updatedAt: new Date() } },
+      { upsert: true }
+    );
 
   setCachedAnalyticsEnabled(enabled);
   return enabled;
