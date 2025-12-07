@@ -1,3 +1,5 @@
+import type { Db } from "mongodb";
+
 import { AnalyticsEventName, parseEnabledEvents } from "./events";
 
 const DEFAULT_ENDPOINT = "/api/analytics/collect";
@@ -8,6 +10,8 @@ const DEFAULT_RATE_LIMIT_WINDOW_SECONDS = 60;
 const DEFAULT_RATE_LIMIT_MAX_EVENTS = 120;
 const DEFAULT_MAX_EVENTS_PER_REQUEST = 25;
 const DEFAULT_MAX_EVENT_BYTES = 4096;
+const ANALYTICS_ENABLED_CACHE_TTL_MS = 60_000;
+const ANALYTICS_ENABLED_SETTING_KEY = "analyticsEnabled";
 
 function toNumber(
   value: string | null | undefined,
@@ -45,6 +49,22 @@ function parseOrigins(value: string | null | undefined): string[] {
     .filter((origin) => origin.length > 0);
 }
 
+function parseBooleanFlag(value: string | null | undefined, fallback: boolean) {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(normalized)) {
+    return true;
+  }
+  if (["0", "false", "no", "off"].includes(normalized)) {
+    return false;
+  }
+
+  return fallback;
+}
+
 export type AnalyticsClientConfig = {
   endpoint: string;
   enabledEvents: AnalyticsEventName[];
@@ -64,6 +84,103 @@ export type AnalyticsServerConfig = {
   maxEventsPerRequest: number;
   maxEventBytes: number;
 };
+
+type AnalyticsEnabledSetting = {
+  _id: typeof ANALYTICS_ENABLED_SETTING_KEY;
+  value: boolean;
+  updatedAt?: Date;
+};
+
+const DEFAULT_ANALYTICS_ENABLED = parseBooleanFlag(
+  process.env.ANALYTICS_ENABLED,
+  true
+);
+
+let analyticsEnabledCache: { value: boolean; expiresAt: number } | null = null;
+
+let loadMongoDb: (() => Promise<Db>) | null = null;
+
+async function getMongoDbSafely(): Promise<Db | null> {
+  if (!loadMongoDb) {
+    try {
+      const mongo = await import("@lib/mongo");
+      loadMongoDb = mongo.getMongoDb;
+    } catch (error) {
+      console.warn("Mongo client unavailable; falling back to env flag", error);
+      return null;
+    }
+  }
+
+  try {
+    return await loadMongoDb();
+  } catch (error) {
+    console.warn("Failed to init Mongo client for analytics flag", error);
+    return null;
+  }
+}
+
+function getCachedAnalyticsEnabled(): boolean | null {
+  if (analyticsEnabledCache && analyticsEnabledCache.expiresAt > Date.now()) {
+    return analyticsEnabledCache.value;
+  }
+  return null;
+}
+
+function setCachedAnalyticsEnabled(value: boolean) {
+  analyticsEnabledCache = {
+    value,
+    expiresAt: Date.now() + ANALYTICS_ENABLED_CACHE_TTL_MS,
+  };
+}
+
+export async function getAnalyticsEnabled({
+  bypassCache = false,
+}: { bypassCache?: boolean } = {}): Promise<boolean> {
+  const cached = bypassCache ? null : getCachedAnalyticsEnabled();
+  if (cached !== null) {
+    return cached;
+  }
+
+  let storedValue: boolean | null = null;
+
+  try {
+    const db = await getMongoDbSafely();
+    if (db) {
+      const storedSetting = await db
+        .collection<AnalyticsEnabledSetting>("settings")
+        .findOne({ _id: ANALYTICS_ENABLED_SETTING_KEY });
+
+      if (storedSetting && typeof storedSetting.value === "boolean") {
+        storedValue = storedSetting.value;
+      }
+    }
+  } catch (error) {
+    console.warn("Failed to fetch analyticsEnabled from storage", error);
+  }
+
+  const value =
+    storedValue ?? parseBooleanFlag(process.env.ANALYTICS_ENABLED, DEFAULT_ANALYTICS_ENABLED);
+  setCachedAnalyticsEnabled(value);
+  return value;
+}
+
+export async function setAnalyticsEnabled(enabled: boolean): Promise<boolean> {
+  const db = await getMongoDbSafely();
+  if (!db) {
+    throw new Error("MongoDB não está configurado para persistir analyticsEnabled");
+  }
+
+  await db
+    .collection<AnalyticsEnabledSetting>("settings")
+    .updateOne(
+      { _id: ANALYTICS_ENABLED_SETTING_KEY },
+      { $set: { value: enabled, updatedAt: new Date() } },
+      { upsert: true }
+    );
+
+  setCachedAnalyticsEnabled(enabled);
+  return enabled;
+}
 
 export function getAnalyticsClientConfig(): AnalyticsClientConfig {
   const enabledEvents = parseEnabledEvents(process.env.ANALYTICS_ENABLED_EVENTS);

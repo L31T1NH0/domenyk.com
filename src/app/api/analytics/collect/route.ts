@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getMongoDb } from "@lib/mongo";
 import { resolveAdminStatus } from "@lib/admin";
-import { getAnalyticsServerConfig } from "@lib/analytics/config";
+import { getAnalyticsEnabled, getAnalyticsServerConfig } from "@lib/analytics/config";
 import {
   ANALYTICS_SESSION_COOKIE_NAME,
   anonymizeNetworkIdentifier,
@@ -382,6 +382,11 @@ async function parseEvents(
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  const analyticsEnabled = await getAnalyticsEnabled({ bypassCache: true });
+  if (!analyticsEnabled) {
+    return new NextResponse(null, { status: 403 });
+  }
+
   if (!isAllowedOrigin(req)) {
     return new NextResponse(null, { status: 204 });
   }
