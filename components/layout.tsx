@@ -19,6 +19,8 @@ type LayoutProps = {
 };
 
 export function Layout({ home = false, children, hideHeaderControls = false }: LayoutProps) {
+  const currentYear = new Date().getFullYear();
+
   return (
     <div
       data-scroll-progress-root
@@ -41,6 +43,13 @@ export function Layout({ home = false, children, hideHeaderControls = false }: L
       <main className={`${home ? "home" : ""} flex flex-col flex-1`}>
         {children}
       </main>
+      <footer
+        className="mt-10 mb-4 text-center text-sm leading-relaxed text-zinc-400"
+        style={{ fontFamily: "Calibri, Candara, Segoe, 'Segoe UI', Optima, Arial, sans-serif" }}
+      >
+        <p>© {currentYear} domenyk.com</p>
+        <p className="mt-1 break-all">bc1qfv788krszr8xz3uxvvzy33pp8jph0hw53557d4</p>
+      </footer>
     </div>
   );
 }
