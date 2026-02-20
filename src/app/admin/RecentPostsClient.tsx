@@ -404,6 +404,12 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
                 >
                   views
                 </button>
+                <button
+                  onClick={() => toggleSort("status")}
+                  className={`rounded-md border px-3 py-2 transition-colors ${sortKey === "status" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
+                >
+                  status
+                </button>
                 <div className="ml-2 flex items-center gap-2">
                   <span className="text-zinc-400">↓↑</span>
                   <button
