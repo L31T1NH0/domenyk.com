@@ -32,6 +32,7 @@ type PostDocument = {
   hidden?: boolean;
   paragraphCommentsEnabled?: boolean;
   updatedAt?: string | Date;
+  tags?: string[];
 };
 
 type PostPageProps = {
@@ -62,6 +63,7 @@ async function fetchPostById(id: string) {
           coAuthorUserId: 1,
           hidden: 1,
           paragraphCommentsEnabled: 1,
+          tags: 1,
         },
       }
     );
@@ -399,6 +401,7 @@ export default async function PostPage({ params }: PostPageProps) {
         paragraphCommentsEnabled={paragraphCommentsEnabled}
         isAdmin={isAdmin}
         initialMarkdown={markdownSource}
+        tags={Array.isArray(post.tags) ? post.tags : []}
       />
     </Layout>
   );

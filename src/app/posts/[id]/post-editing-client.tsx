@@ -21,6 +21,7 @@ export type PostEditingClientProps = {
   paragraphCommentsEnabled: boolean;
   isAdmin: boolean;
   initialMarkdown: string;
+  tags: string[];
 };
 
 export default function PostEditingClient({
@@ -36,6 +37,7 @@ export default function PostEditingClient({
   paragraphCommentsEnabled,
   isAdmin,
   initialMarkdown,
+  tags,
 }: PostEditingClientProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -191,6 +193,20 @@ export default function PostEditingClient({
           isEditing={false}
         />
       )}
+      <div className="mt-8 border-t border-zinc-200/80 pt-5 dark:border-zinc-700/80">
+        {tags.length > 0 && (
+          <div className="mb-5 flex flex-wrap items-center gap-2">
+            {tags.map((tag) => (
+              <span
+                key={tag}
+                className="inline-flex items-center rounded-full border border-zinc-300/80 px-3 py-1 text-xs font-medium text-zinc-700 dark:border-zinc-600 dark:text-zinc-200"
+              >
+                #{tag}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
       <BackHome />
       {isAdmin && (
         <div className="mt-4 sm:mt-6 mb-2">
