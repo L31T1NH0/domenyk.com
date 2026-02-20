@@ -389,29 +389,23 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
                     posts.forEach((row) => (map[row.postId] = next));
                     setSelected(map);
                   }}
-                  label="Selecionar todos"
+                  label="selecionar todos"
                 />
-                <span className="text-zinc-400">Ordenar por:</span>
-                <button
-                  onClick={() => toggleSort("views")}
-                  className={`rounded border px-3 py-2 ${sortKey === "views" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
-                >
-                  Views
-                </button>
+                <span className="text-zinc-400">order:</span>
                 <button
                   onClick={() => toggleSort("date")}
                   className={`rounded border px-3 py-2 ${sortKey === "date" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
                 >
-                  Data
+                  data
                 </button>
                 <button
-                  onClick={() => toggleSort("status")}
-                  className={`rounded border px-3 py-2 ${sortKey === "status" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
+                  onClick={() => toggleSort("views")}
+                  className={`rounded border px-3 py-2 ${sortKey === "views" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
                 >
-                  Visibilidade
+                  views
                 </button>
                 <div className="ml-2 flex items-center gap-2">
-                  <span className="text-zinc-400">Ordem:</span>
+                  <span className="text-zinc-400">↓↑</span>
                   <button
                     onClick={() => setSortOrder("asc")}
                     className={`rounded border px-3 py-2 ${sortOrder === "asc" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
@@ -436,7 +430,7 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
                   }}
                   className="w-full rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-200 hover:bg-zinc-800 sm:w-auto"
                 >
-                  Ver todos os comentários
+                  ver todos os comentarios
                 </button>
               </div>
             </div>

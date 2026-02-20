@@ -83,11 +83,11 @@ export default async function AdminDashboard() {
 
       <section className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
-          <div className="text-xs text-zinc-400">Posts publicados</div>
+          <div className="text-xs text-zinc-400">posts publicados</div>
           <div className="mt-2 text-3xl font-semibold">{count}</div>
         </div>
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
-          <div className="text-xs text-zinc-400">Visualizacoes (total)</div>
+          <div className="text-xs text-zinc-400">views</div>
           <div className="mt-2 text-3xl font-semibold">{totalViews}</div>
         </div>
       </section>
@@ -105,7 +105,6 @@ export default async function AdminDashboard() {
     </div>
   );
 }
-
 
 
 
