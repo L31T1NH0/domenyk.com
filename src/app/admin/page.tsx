@@ -62,39 +62,42 @@ export default async function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      <div className="relative overflow-hidden rounded-2xl border border-zinc-800/80 bg-gradient-to-br from-zinc-900/90 via-zinc-900/70 to-zinc-950 p-6 shadow-[0_20px_60px_-35px_rgba(0,0,0,0.7)]">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(161,161,170,0.12),transparent_45%)]" />
+        <div className="relative flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
           <p className="text-sm text-zinc-400">Resumo do seu conteudo e desempenho.</p>
         </div>
         <Link
           href="/admin/editor"
-          className="inline-flex items-center justify-center rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-200 shadow-sm hover:bg-zinc-800 hover:text-zinc-100 transition-colors"
+          className="inline-flex items-center justify-center rounded-lg border border-zinc-700/80 bg-zinc-900/90 px-4 py-2 text-sm font-medium text-zinc-100 shadow-sm transition-all hover:-translate-y-0.5 hover:border-zinc-600 hover:bg-zinc-800"
         >
           Novo post
         </Link>
         <Link
           href="/admin/analytics"
-          className="inline-flex items-center justify-center rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-200 shadow-sm hover:bg-zinc-800 hover:text-zinc-100 transition-colors"
+          className="inline-flex items-center justify-center rounded-lg border border-zinc-700/80 bg-zinc-900/90 px-4 py-2 text-sm font-medium text-zinc-100 shadow-sm transition-all hover:-translate-y-0.5 hover:border-zinc-600 hover:bg-zinc-800"
         >
           Analytics
         </Link>
+        </div>
       </div>
 
       <section className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
-          <div className="text-xs text-zinc-400">Posts publicados</div>
-          <div className="mt-2 text-3xl font-semibold">{count}</div>
+        <div className="rounded-2xl border border-zinc-800/80 bg-gradient-to-b from-zinc-900/90 to-zinc-900/50 p-5 shadow-[0_12px_40px_-28px_rgba(0,0,0,0.9)]">
+          <div className="text-xs text-zinc-400">posts publicados</div>
+          <div className="mt-2 text-3xl font-semibold tracking-tight">{count}</div>
         </div>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
-          <div className="text-xs text-zinc-400">Visualizacoes (total)</div>
-          <div className="mt-2 text-3xl font-semibold">{totalViews}</div>
+        <div className="rounded-2xl border border-zinc-800/80 bg-gradient-to-b from-zinc-900/90 to-zinc-900/50 p-5 shadow-[0_12px_40px_-28px_rgba(0,0,0,0.9)]">
+          <div className="text-xs text-zinc-400">views</div>
+          <div className="mt-2 text-3xl font-semibold tracking-tight">{totalViews}</div>
         </div>
       </section>
 
-      <section className="rounded-xl border border-zinc-800 bg-zinc-900/60">
-        <div className="flex items-center justify-between border-b border-zinc-800 p-4">
-          <h2 className="text-sm font-medium">Recentes</h2>
+      <section className="overflow-hidden rounded-2xl border border-zinc-800/80 bg-zinc-900/60 shadow-[0_20px_50px_-40px_rgba(0,0,0,0.9)]">
+        <div className="flex items-center justify-between border-b border-zinc-800/90 bg-zinc-900/60 px-4 py-3">
+          <h2 className="text-sm font-medium text-zinc-200">Recentes</h2>
         </div>
         <div className="p-4 md:p-0">
           <div className="overflow-x-auto">
@@ -105,7 +108,6 @@ export default async function AdminDashboard() {
     </div>
   );
 }
-
 
 
 

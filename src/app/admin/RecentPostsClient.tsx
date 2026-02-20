@@ -328,13 +328,13 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
     { key: "visibility", label: "Visibilidade", align: "right" as const },
   ];
 
-  const cellBase = "md:table-cell md:border-t md:border-zinc-800 md:px-4 md:py-2";
-  const headerCellBase = "md:table-cell md:px-4 md:py-2";
+  const cellBase = "md:table-cell md:border-t md:border-zinc-800/90 md:px-4 md:py-2.5";
+  const headerCellBase = "md:table-cell md:px-4 md:py-3";
 
   return (
     <>
       <div className="space-y-4 text-sm md:table md:w-full md:border-separate md:space-y-0 md:[border-spacing:0]">
-        <div className="hidden md:table-header-group bg-zinc-900/40 text-zinc-400">
+        <div className="hidden md:table-header-group bg-zinc-900/70 text-zinc-400 backdrop-blur">
           <div className="md:table-row">
             {headerCells.map((cell) => (
               <div
@@ -348,7 +348,7 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
         </div>
           <div className="space-y-4 md:table-row-group md:space-y-0">
           {selectedIds.length > 0 && (
-            <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-4 md:table-row md:border-0 md:bg-zinc-900/40 md:p-0">
+            <div className="rounded-xl border border-zinc-800/90 bg-zinc-900/70 p-4 shadow-[0_12px_32px_-24px_rgba(0,0,0,0.9)] md:table-row md:rounded-none md:border-0 md:bg-zinc-900/40 md:p-0 md:shadow-none">
               <div className={`${cellBase}`}>
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="text-sm text-zinc-300">{selectedIds.length} selecionado(s)</div>
@@ -379,9 +379,9 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
               </div>
             </div>
           )}
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-4 md:table-row md:border-0 md:bg-transparent md:p-0">
+          <div className="rounded-xl border border-zinc-800/90 bg-zinc-900/70 p-4 shadow-[0_12px_32px_-24px_rgba(0,0,0,0.9)] md:table-row md:rounded-none md:border-0 md:bg-transparent md:p-0 md:shadow-none">
             <div className={`${cellBase}`}>
-              <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-300">
+              <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-300">
                 <CheckboxBtn
                   checked={allSelected}
                   onChange={(next) => {
@@ -389,39 +389,39 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
                     posts.forEach((row) => (map[row.postId] = next));
                     setSelected(map);
                   }}
-                  label="Selecionar todos"
+                  label="selecionar todos"
                 />
-                <span className="text-zinc-400">Ordenar por:</span>
-                <button
-                  onClick={() => toggleSort("views")}
-                  className={`rounded border px-3 py-2 ${sortKey === "views" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
-                >
-                  Views
-                </button>
+                <span className="text-zinc-400">order:</span>
                 <button
                   onClick={() => toggleSort("date")}
-                  className={`rounded border px-3 py-2 ${sortKey === "date" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
+                  className={`rounded-md border px-3 py-2 transition-colors ${sortKey === "date" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
                 >
-                  Data
+                  data
+                </button>
+                <button
+                  onClick={() => toggleSort("views")}
+                  className={`rounded-md border px-3 py-2 transition-colors ${sortKey === "views" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
+                >
+                  views
                 </button>
                 <button
                   onClick={() => toggleSort("status")}
-                  className={`rounded border px-3 py-2 ${sortKey === "status" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
+                  className={`rounded-md border px-3 py-2 transition-colors ${sortKey === "status" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
                 >
-                  Visibilidade
+                  status
                 </button>
                 <div className="ml-2 flex items-center gap-2">
-                  <span className="text-zinc-400">Ordem:</span>
+                  <span className="text-zinc-400">↓↑</span>
                   <button
                     onClick={() => setSortOrder("asc")}
-                    className={`rounded border px-3 py-2 ${sortOrder === "asc" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
+                    className={`rounded-md border px-3 py-2 transition-colors ${sortOrder === "asc" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
                     title="Crescente"
                   >
                     ↑
                   </button>
                   <button
                     onClick={() => setSortOrder("desc")}
-                    className={`rounded border px-3 py-2 ${sortOrder === "desc" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
+                    className={`rounded-md border px-3 py-2 transition-colors ${sortOrder === "desc" ? "border-zinc-500 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}
                     title="Decrescente"
                   >
                     ↓
@@ -434,9 +434,9 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
                     setModalPostId(null);
                     setModalOpen(true);
                   }}
-                  className="w-full rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-200 hover:bg-zinc-800 sm:w-auto"
+                  className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-200 transition-colors hover:bg-zinc-800 sm:w-auto"
                 >
-                  Ver todos os comentários
+                  ver todos os comentarios
                 </button>
               </div>
             </div>
@@ -444,7 +444,7 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
           {posts.map((p) => (
             <div
               key={p.postId}
-              className="space-y-4 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4 transition-colors md:table-row md:space-y-0 md:border-0 md:bg-transparent md:p-0 md:hover:bg-zinc-900/40"
+              className="space-y-4 rounded-xl border border-zinc-800/90 bg-zinc-900/40 p-4 transition-all hover:border-zinc-700 md:table-row md:space-y-0 md:rounded-none md:border-0 md:bg-transparent md:p-0 md:hover:bg-zinc-900/40"
             >
               <div className={`${cellBase} md:w-12`}>
                 <div className="flex items-center justify-between md:block">
@@ -578,7 +578,7 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
               </div>
             </div>
           )}
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-4 md:table-row md:border-0 md:bg-transparent md:p-0">
+          <div className="rounded-xl border border-zinc-800/90 bg-zinc-900/70 p-4 shadow-[0_12px_32px_-24px_rgba(0,0,0,0.9)] md:table-row md:rounded-none md:border-0 md:bg-transparent md:p-0 md:shadow-none">
             <div className={`${cellBase}`}>
               <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
                 {error && <span className="text-sm text-red-500 sm:mr-4">{error}</span>}
