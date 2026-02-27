@@ -1,18 +1,20 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ReactNode, useState } from "react";
 import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
 
 const navItems = [
-  { href: "/admin", label: "dashboard" },
-  { href: "/admin/users", label: "users" },
-  { href: "/admin/editor", label: "new post" },
+  { href: "/admin", label: "Dashboard" },
+  { href: "/admin/users", label: "Usuários" },
+  { href: "/admin/editor", label: "Novo post" },
   { href: "/admin/analytics", label: "Analytics" },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 overflow-x-hidden">
@@ -23,18 +25,24 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               domenyk.com
             </Link>
           </div>
-          <nav className="flex-1 px-5 py-5">
-            <ul className="space-y-5">
-              {navItems.map((item) => (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    className="block text-sm tracking-wide text-zinc-200 hover:text-zinc-50"
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
+          <nav className="flex-1 px-3 py-5">
+            <ul className="space-y-1 bg-transparent list-none p-0 m-0">
+              {navItems.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      className={`flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${isActive
+                          ? "bg-zinc-800 text-zinc-100"
+                          : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
+                        }`}
+                    >
+                      {item.label}
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           </nav>
           <div className="p-4 border-t border-zinc-800 mt-auto">
@@ -102,18 +110,24 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 className="border-t border-b border-zinc-800 bg-zinc-900/95 px-6 py-4 md:hidden"
               >
                 <nav>
-                  <ul className="space-y-1">
-                    {navItems.map((item) => (
-                      <li key={item.href}>
-                        <Link
-                          href={item.href}
-                          onClick={() => setMobileOpen(false)}
-                          className="block rounded-md border border-transparent px-3 py-2 text-sm hover:border-zinc-800 hover:bg-zinc-800/60"
-                        >
-                          {item.label}
-                        </Link>
-                      </li>
-                    ))}
+                  <ul className="space-y-1 list-none p-0 m-0">
+                    {navItems.map((item) => {
+                      const isActive = pathname === item.href;
+                      return (
+                        <li key={item.href}>
+                          <Link
+                            href={item.href}
+                            onClick={() => setMobileOpen(false)}
+                            className={`block rounded-md px-3 py-2 text-sm font-medium transition-colors ${isActive
+                                ? "bg-zinc-800 text-zinc-100"
+                                : "text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200"
+                              }`}
+                          >
+                            {item.label}
+                          </Link>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </nav>
               </div>
