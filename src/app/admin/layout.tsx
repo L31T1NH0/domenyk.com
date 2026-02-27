@@ -19,35 +19,47 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 overflow-x-hidden">
       <div className="grid min-h-screen grid-cols-1 md:grid-cols-[220px_1fr]">
-        <aside className="hidden md:flex md:flex-col border-r border-zinc-800 bg-zinc-900/40">
-          <div className="px-5 py-4 border-b border-zinc-800">
-            <Link href="/admin" className="text-base font-semibold tracking-tight">
+        <aside className="hidden md:flex md:flex-col border-r border-zinc-800/80 bg-gradient-to-b from-zinc-900 via-zinc-950 to-black shadow-[inset_-1px_0_0_rgba(63,63,70,0.4)]">
+          <div className="px-5 py-5 border-b border-zinc-800/80">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-3 rounded-lg px-2 py-1.5 text-base font-semibold tracking-tight text-zinc-100 transition-colors hover:bg-zinc-800/60"
+            >
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-zinc-700 bg-zinc-900 text-xs font-bold text-zinc-300">
+                d
+              </span>
               domenyk.com
             </Link>
           </div>
-          <nav className="flex-1 px-3 py-5">
-            <ul className="space-y-1 bg-transparent list-none p-0 m-0">
+          <nav className="flex-1 px-4 py-6">
+            <p className="mb-3 px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+              Painel
+            </p>
+            <ul className="space-y-1.5 bg-transparent list-none p-0 m-0">
               {navItems.map((item) => {
                 const isActive = pathname === item.href;
                 return (
                   <li key={item.href}>
                     <Link
                       href={item.href}
-                      className={`flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${isActive
-                          ? "bg-zinc-800 text-zinc-100"
-                          : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
+                      className={`group flex items-center justify-between rounded-lg border px-3 py-2.5 text-sm font-medium transition-all ${isActive
+                          ? "border-zinc-700 bg-zinc-800/90 text-zinc-100 shadow-sm"
+                          : "border-transparent text-zinc-400 hover:border-zinc-800 hover:bg-zinc-900 hover:text-zinc-200"
                         }`}
                     >
-                      {item.label}
+                      <span>{item.label}</span>
+                      <span className={`text-xs transition-opacity ${isActive ? "opacity-100 text-zinc-500" : "opacity-0 group-hover:opacity-100 text-zinc-600"}`}>
+                        →
+                      </span>
                     </Link>
                   </li>
                 );
               })}
             </ul>
           </nav>
-          <div className="p-4 border-t border-zinc-800 mt-auto">
+          <div className="p-4 border-t border-zinc-800/80 mt-auto">
             <SignedIn>
-              <div className="flex items-center justify-between rounded-md bg-zinc-900 px-4 py-3">
+              <div className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/90 px-4 py-3">
                 <span className="text-xs text-zinc-400">Logado</span>
                 <UserButton appearance={{ elements: { userButtonPopoverCard: "bg-zinc-900" } }} />
               </div>
@@ -88,7 +100,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     )}
                   </svg>
                 </button>
-                <Link href="/admin" className="font-semibold">Admin</Link>
+                <Link href="/" className="font-semibold">domenyk.com</Link>
               </div>
               <div className="flex-1" />
               <div className="flex items-center gap-4">
@@ -139,4 +151,3 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
-
