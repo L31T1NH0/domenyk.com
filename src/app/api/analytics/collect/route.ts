@@ -139,12 +139,11 @@ function sanitizeFlags(value: unknown) {
     return undefined;
   }
   const flags = value as Record<string, unknown>;
-  const result: { isSampled?: boolean; isAuthenticated?: boolean } = {};
+  // Nota: isAuthenticated NÃO é lido aqui — é sempre determinado pelo servidor
+  // no handler POST e injetado após o parsing (veja uso de serverIsAuthenticated).
+  const result: { isSampled?: boolean } = {};
   if (typeof flags.isSampled === "boolean") {
     result.isSampled = flags.isSampled;
-  }
-  if (typeof flags.isAuthenticated === "boolean") {
-    result.isAuthenticated = flags.isAuthenticated;
   }
   return Object.keys(result).length > 0 ? result : undefined;
 }
@@ -300,11 +299,15 @@ function computeEventSize(event: NormalizedEvent): number {
   return Buffer.byteLength(JSON.stringify(event));
 }
 
+// FIX #5: `serverIsAuthenticated` é determinado pelo servidor (via Clerk) no
+// handler POST e passado aqui — o valor enviado pelo cliente é completamente
+// ignorado para `isAuthenticated`.
 async function parseEvents(
   req: NextRequest,
   sessionHash: string,
   userAgent: string,
-  origin: string | null
+  origin: string | null,
+  serverIsAuthenticated: boolean
 ): Promise<NormalizedEvent[]> {
   const rawBody = await req.text();
   if (!rawBody) {
@@ -346,12 +349,20 @@ async function parseEvents(
 
     const page = sanitizePage(event.page, fallbackPath);
     const viewport = sanitizeViewport(event.viewport);
-    const flags = sanitizeFlags(event.flags);
+    // sanitizeFlags agora só extrai isSampled; isAuthenticated vem do servidor
+    const clientFlags = sanitizeFlags(event.flags);
     const device = sanitizeDevice(event.device);
     const clientTs = clampClientTimestamp(event.clientTs, serverTs.getTime());
     const additionalData = sanitizeAdditionalData(event.data);
-    const user = flags?.isAuthenticated ? sanitizeUserProfile(event.user) : undefined;
+    // Perfil do usuário só é incluído quando o servidor confirma autenticação
+    const user = serverIsAuthenticated ? sanitizeUserProfile(event.user) : undefined;
     const clientTimeZone = sanitizeTimeZone(event.clientTimeZone);
+
+    // Monta flags com isAuthenticated sempre vindo do servidor
+    const flags: NormalizedEvent["flags"] = {
+      isAuthenticated: serverIsAuthenticated,
+      ...(clientFlags?.isSampled !== undefined ? { isSampled: clientFlags.isSampled } : {}),
+    };
 
     const normalized: NormalizedEvent = {
       name,
@@ -362,7 +373,7 @@ async function parseEvents(
       ...(additionalData ? { data: additionalData } : {}),
       ...(viewport ? { viewport } : {}),
       ...(user ? { user } : {}),
-      ...(flags ? { flags } : {}),
+      flags,
       ...(device ? { device } : {}),
       ...(clientTimeZone ? { clientTimeZone } : {}),
       ...(userAgent ? { userAgent: userAgent.slice(0, 256) } : {}),
@@ -412,12 +423,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const ipHash = anonymizeNetworkIdentifier((req as NextRequest & { ip?: string }).ip ?? undefined);
 
-  const { isAdmin } = await resolveAdminStatus();
+  // FIX #5: resolveAdminStatus retorna userId verificado pelo Clerk no servidor.
+  // Usamos userId !== null como fonte autoritativa de isAuthenticated.
+  const { isAdmin, userId } = await resolveAdminStatus();
   if (isAdmin) {
     return new NextResponse(null, { status: 204 });
   }
 
-  const events = await parseEvents(req, sessionHash, userAgent, origin);
+  const serverIsAuthenticated = userId !== null;
+
+  const events = await parseEvents(req, sessionHash, userAgent, origin, serverIsAuthenticated);
   if (events.length === 0) {
     return new NextResponse(null, { status: 204 });
   }
