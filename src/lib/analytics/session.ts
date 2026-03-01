@@ -20,7 +20,18 @@ function getSalt(): string {
     return fallback.trim();
   }
 
-  return "domenyk-analytics-salt";
+  // Em produção, um salt hardcoded quebra o anonimato dos hashes de sessão.
+  // Garanta que ANALYTICS_SESSION_SALT (ou NEXT_AUTH_SECRET / MONGODB_DB) esteja
+  // definido nas variáveis de ambiente do deploy.
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "[analytics/session] Salt não configurado. " +
+        "Defina ANALYTICS_SESSION_SALT nas variáveis de ambiente de produção."
+    );
+  }
+
+  // Fallback apenas para desenvolvimento local — nunca alcançado em produção.
+  return "domenyk-analytics-salt-dev";
 }
 
 export function generateSessionId(): string {
