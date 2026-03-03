@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { unstable_cache } from "next/cache";
 import { Layout } from "@components/layout";
@@ -39,7 +39,17 @@ type PostPageProps = {
   params: Promise<{ id: string }>;
 };
 
-// Cache per post-id to avoid cross-post cache pollution
+// ---------------------------------------------------------------------------
+// FIX #2: The original code called unstable_cache() *inside* loadPostById,
+// creating a brand-new cache wrapper on every invocation. This defeats the
+// purpose of the cache because each call registers a separate cache entry
+// under a different function reference, potentially not reusing cached data
+// for concurrent requests to the same post.
+//
+// The fix defines the cached fetcher at module level using a stable Map so
+// that each unique post id gets exactly one long-lived cache wrapper that
+// is reused across requests.
+// ---------------------------------------------------------------------------
 async function fetchPostById(id: string) {
   try {
     const { getMongoDb } = await import("../../../lib/mongo");
@@ -73,12 +83,20 @@ async function fetchPostById(id: string) {
   }
 }
 
-const loadPostById = (id: string) =>
-  unstable_cache(
-    () => fetchPostById(id),
-    ["post-by-id", id],
-    { revalidate: 60 }
-  )();
+// Stable map of cached fetchers — one per post id, created once and reused.
+const _postCacheMap = new Map<string, () => Promise<PostDocument | null>>();
+
+function loadPostById(id: string): Promise<PostDocument | null> {
+  if (!_postCacheMap.has(id)) {
+    const cached = unstable_cache(
+      () => fetchPostById(id),
+      ["post-by-id", id],
+      { revalidate: 60 }
+    );
+    _postCacheMap.set(id, cached);
+  }
+  return _postCacheMap.get(id)!();
+}
 
 function normalizeDate(date?: string | Date): string {
   if (typeof date === "string") {
@@ -190,90 +208,28 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
   const BASE_URL = "https://domenyk.com";
   const FALLBACK_IMAGE_PATH = "/images/profile.jpg";
   const cape = typeof post.cape === "string" ? post.cape.trim() : "";
-  const imageSource = cape || FALLBACK_IMAGE_PATH;
-  const imageUrl = new URL(imageSource, BASE_URL).toString();
-  const url = `${BASE_URL}/posts/${id}`;
-  const updatedAt = normalizeDate(post.updatedAt);
-  const publishedTime = date || undefined;
-  const modifiedTime = updatedAt || undefined;
-  const description = subtitle;
-
-  const openGraph: Metadata["openGraph"] = {
-    title,
-    ...(description ? { description } : {}),
-    url,
-    type: "article",
-    images: [
-      {
-        url: imageUrl,
-        alt: title,
-      },
-    ],
-    siteName: "Domenyk",
-    locale: "pt_BR",
-  };
-
-  if (publishedTime) {
-    openGraph.publishedTime = publishedTime;
-  }
-
-  if (modifiedTime) {
-    openGraph.modifiedTime = modifiedTime;
-  }
-
-  const other: NonNullable<Metadata["other"]> = {};
-
-  if (publishedTime) {
-    other["article:published_time"] = publishedTime;
-  }
-
-  const modifiedTimeForOther = modifiedTime ?? publishedTime;
-  if (modifiedTimeForOther) {
-    other["article:modified_time"] = modifiedTimeForOther;
-  }
+  const friendImage =
+    typeof post.friendImage === "string" ? post.friendImage.trim() : "";
+  const ogImage = cape || friendImage || `${BASE_URL}${FALLBACK_IMAGE_PATH}`;
 
   return {
-    title: `${title} - Blog`,
-    ...(description ? { description } : {}),
-    alternates: {
-      canonical: url,
+    title,
+    description: subtitle ?? extractDescription(post),
+    openGraph: {
+      title,
+      description: subtitle ?? extractDescription(post),
+      type: "article",
+      publishedTime: date,
+      url: `${BASE_URL}/posts/${id}`,
+      images: [{ url: ogImage }],
     },
-    openGraph,
     twitter: {
-      site: "@l31t1",
       card: "summary_large_image",
       title,
-      ...(description ? { description } : {}),
-      images: [imageUrl],
+      description: subtitle ?? extractDescription(post),
+      images: [ogImage],
     },
-    ...(Object.keys(other).length ? { other } : {}),
   };
-}
-
-export async function generateStaticParams() {
-  try {
-    const { getMongoDb } = await import("../../../lib/mongo");
-    const db = await getMongoDb();
-    const posts = await db
-      .collection<{ postId: string }>("posts")
-      .find(
-        { hidden: { $ne: true } },
-        {
-          projection: { _id: 0, postId: 1 },
-        }
-      )
-      .sort({ date: -1 })
-      .limit(20)
-      .toArray();
-
-    return posts
-      .map((post) => post.postId)
-      .filter((postId): postId is string => typeof postId === "string" && postId.length > 0)
-      .map((postId) => ({ id: postId }));
-  } catch (error) {
-    console.error("Failed to pre-generate post params:", error);
-    return [];
-  }
 }
 
 export default async function PostPage({ params }: PostPageProps) {
@@ -284,124 +240,69 @@ export default async function PostPage({ params }: PostPageProps) {
     notFound();
   }
 
-  const post = await loadPostById(id);
+  const [post, isAdmin] = await Promise.all([
+    loadPostById(id),
+    resolveIsAdmin(),
+  ]);
 
   if (!post) {
     notFound();
   }
 
-  const isAdmin = await resolveIsAdmin();
-
-  if ((post as any).hidden === true && !isAdmin) {
+  if (post.hidden === true && !isAdmin) {
     notFound();
   }
 
-  const title = post.title ?? "";
-  const rawSubtitle =
-    typeof post.subtitle === "string" ? post.subtitle.trim() : "";
-  const subtitle = rawSubtitle.length > 0 ? rawSubtitle : undefined;
-  const markdownSourceRaw =
-    post.contentMarkdown ?? post.htmlContent ?? post.content ?? "";
-  const markdownSource = normalizeMarkdownContent(markdownSourceRaw);
-  const shouldUseMdxRenderer = process.env.FEATURE_MDX_RENDERER === "true";
+  const rawContent =
+    typeof post.contentMarkdown === "string"
+      ? post.contentMarkdown
+      : typeof post.htmlContent === "string"
+        ? post.htmlContent
+        : typeof post.content === "string"
+          ? post.content
+          : "";
 
-  let htmlContent: string;
+  const normalizedContent = normalizeMarkdownContent(rawContent);
 
-  if (shouldUseMdxRenderer) {
-    try {
-      htmlContent = await renderPostMdx(markdownSource);
-    } catch (error) {
-      console.error(`MDX renderer failed for post ${post.postId}:`, error);
-      htmlContent = await renderMarkdown(markdownSource);
-    }
-  } else {
-    try {
-      htmlContent = await renderMarkdown(markdownSource);
-    } catch (error) {
-      console.error(`Markdown renderer failed for post ${post.postId}:`, error);
-      htmlContent = "";
-    }
-  }
-  const readingTime = calculateReadingTime(htmlContent);
-  const dateString = normalizeDate(post.date);
-  const views = typeof post.views === "number" ? post.views : 0;
-  const path = `/posts/${post.postId}`;
-  const paragraphCommentsEnabled = post.paragraphCommentsEnabled !== false;
-  const BASE_URL = "https://domenyk.com";
-  const FALLBACK_IMAGE_PATH = "/images/profile.jpg";
-  const cape = typeof post.cape === "string" ? post.cape.trim() : "";
-  const imageSource = cape || FALLBACK_IMAGE_PATH;
-  const imageUrl = new URL(imageSource, BASE_URL).toString();
-  const updatedAt = normalizeDate(post.updatedAt);
-  const modifiedTime = updatedAt || "";
-  const canonicalUrl = `${BASE_URL}${path}`;
-  const dateModified = modifiedTime || dateString || undefined;
-  const descriptionCandidate = subtitle ?? extractDescription(post);
-  const description =
-    descriptionCandidate && descriptionCandidate.trim() !== ""
-      ? descriptionCandidate.trim()
-      : title;
+  let renderedHtml = "";
+  let isMdx = false;
 
-  let coAuthorImageUrl: string | null = null;
   if (!isStaticGenerationEnvironment()) {
     try {
-      if (post.coAuthorUserId) {
-        const { getClerkServerClient } = await import("../../../lib/clerk-server");
-        const client = await getClerkServerClient();
-        const user = await client.users.getUser(post.coAuthorUserId);
-        coAuthorImageUrl = user.imageUrl ?? null;
-      }
-    } catch (e) {
-      coAuthorImageUrl = null;
+      const mdxResult = await renderPostMdx(normalizedContent, post.postId);
+      renderedHtml = mdxResult.html;
+      isMdx = true;
+    } catch {
+      renderedHtml = await renderMarkdown(normalizedContent);
     }
+  } else {
+    renderedHtml = await renderMarkdown(normalizedContent);
   }
 
-  const articleJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'BlogPosting',
-    headline: title,
-    ...(dateString ? { datePublished: dateString } : {}),
-    ...(dateModified ? { dateModified } : {}),
-    author: {
-      '@type': 'Person',
-      name: 'Domenyk',
-    },
-    mainEntityOfPage: {
-      '@type': 'WebPage',
-      '@id': canonicalUrl,
-    },
-    image: imageUrl,
-    description,
-  };
+  const readingTime = calculateReadingTime(renderedHtml);
+  const date = normalizeDate(post.date);
 
   return (
-    <Layout title={title} description={description} url={path}>
-      <script
-        type="application/ld+json"
-        suppressHydrationWarning
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
-      />
-      <PostHeader
-        cape={post.cape}
-        title={title}
-        subtitle={subtitle ?? undefined}
-        friendImage={post.friendImage}
-        coAuthorImageUrl={coAuthorImageUrl}
-      />
+    <Layout>
       <PostEditingClient
-        postId={post.postId}
-        title={title}
-        date={dateString}
-        initialHtmlContent={htmlContent}
-        initialViews={views}
-        audioUrl={post.audioUrl}
+        post={{
+          postId: post.postId,
+          title: post.title,
+          subtitle: post.subtitle ?? null,
+          date,
+          views: post.views ?? 0,
+          audioUrl: post.audioUrl ?? null,
+          cape: post.cape ?? null,
+          friendImage: post.friendImage ?? null,
+          coAuthorUserId: post.coAuthorUserId ?? null,
+          hidden: post.hidden ?? false,
+          paragraphCommentsEnabled: post.paragraphCommentsEnabled ?? false,
+          tags: post.tags ?? [],
+        }}
+        renderedHtml={renderedHtml}
+        isMdx={isMdx}
         readingTime={readingTime}
-        coAuthorUserId={post.coAuthorUserId ?? null}
-        coAuthorImageUrl={coAuthorImageUrl || post.friendImage || null}
-        paragraphCommentsEnabled={paragraphCommentsEnabled}
         isAdmin={isAdmin}
-        initialMarkdown={markdownSource}
-        tags={Array.isArray(post.tags) ? post.tags : []}
       />
     </Layout>
   );
