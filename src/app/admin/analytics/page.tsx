@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { unstable_cache } from "next/cache";
 import { getMongoDb } from "@lib/mongo";
 import { resolveAdminStatus } from "@lib/admin";
 import { getFromDate, parseRange, type RangeKey } from "./utils";
@@ -15,7 +16,15 @@ type TopPageRow = {
   referrer?: string;
 }[];
 
-async function getSummary(from: Date) {
+// ---------------------------------------------------------------------------
+// FIX #4a: Wrap all heavy MongoDB aggregate functions with unstable_cache.
+// Previously, every page render hit the database with 4+ aggregation pipelines.
+// With these wrappers, results are cached per range key for 5 minutes,
+// dramatically reducing DB load for the admin analytics dashboard.
+// ---------------------------------------------------------------------------
+
+async function _getSummary(fromIso: string) {
+  const from = new Date(fromIso);
   const db = await getMongoDb();
   const events = db.collection("analytics_events");
 
@@ -55,11 +64,11 @@ async function getSummary(from: Date) {
   }
 
   const pageViews = authenticatedPageViews + anonymousPageViews;
-
   return { pageViews, authenticatedPageViews, anonymousPageViews, uniqueSessions };
 }
 
-async function getDeviceBreakdown(from: Date): Promise<DeviceBreakdown> {
+async function _getDeviceBreakdown(fromIso: string): Promise<DeviceBreakdown> {
+  const from = new Date(fromIso);
   const db = await getMongoDb();
   const events = db.collection("analytics_events");
   const rows = await events
@@ -72,73 +81,95 @@ async function getDeviceBreakdown(from: Date): Promise<DeviceBreakdown> {
   return rows.map((r) => ({ device: r._id ?? "unknown", count: r.count }));
 }
 
-async function getTopPages(from: Date, limit = 10): Promise<TopPageRow> {
+// ---------------------------------------------------------------------------
+// FIX #4b: The original getTopPages ran TWO sequential aggregation pipelines
+// against the same collection (one for view counts, then another for referrers).
+// This caused two full collection scans on `analytics_events`.
+//
+// The fix merges both into a single pipeline using $facet, so MongoDB scans
+// the collection only once and returns views + referrers in one round-trip.
+// ---------------------------------------------------------------------------
+async function _getTopPages(fromIso: string, limit = 10): Promise<TopPageRow> {
+  const from = new Date(fromIso);
   const db = await getMongoDb();
   const events = db.collection("analytics_events");
-  const baseRows = await events
+
+  const [result] = await events
     .aggregate<{
-      path: string;
-      views: number;
-      authenticatedViews: number;
+      baseRows: { path: string; views: number; authenticatedViews: number }[];
+      refRows: { path: string; referrer: string }[];
     }>([
+      // Single $match on the whole collection — used by both facets below.
       { $match: { serverTs: { $gte: from }, name: "page_view" } },
       {
-        $group: {
-          _id: "$page.path",
-          views: { $sum: 1 },
-          authenticatedViews: {
-            $sum: { $cond: [{ $eq: ["$flags.isAuthenticated", true] }, 1, 0] },
-          },
+        $facet: {
+          // Facet 1: view counts per path (same as the old first aggregation)
+          baseRows: [
+            {
+              $group: {
+                _id: "$page.path",
+                views: { $sum: 1 },
+                authenticatedViews: {
+                  $sum: { $cond: [{ $eq: ["$flags.isAuthenticated", true] }, 1, 0] },
+                },
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                path: "$_id",
+                views: 1,
+                authenticatedViews: 1,
+              },
+            },
+            { $sort: { views: -1 } },
+            { $limit: limit },
+          ],
+          // Facet 2: top referrer per path (was a separate aggregation before)
+          refRows: [
+            {
+              $match: {
+                "page.referrer": { $type: "string", $ne: "" },
+              },
+            },
+            {
+              $group: {
+                _id: { path: "$page.path", referrer: "$page.referrer" },
+                count: { $sum: 1 },
+              },
+            },
+            { $sort: { count: -1 } },
+            {
+              $group: {
+                _id: "$_id.path",
+                referrer: { $first: "$_id.referrer" },
+              },
+            },
+            { $project: { _id: 0, path: "$_id", referrer: 1 } },
+          ],
         },
       },
-      {
-        $project: {
-          _id: 0,
-          path: "$_id",
-          views: 1,
-          authenticatedViews: 1,
-        },
-      },
-      { $sort: { views: -1 } },
-      { $limit: limit },
     ])
     .toArray();
 
-  const topPaths = baseRows.map((row) => row.path).filter((path): path is string => typeof path === "string");
-  let referrers: Record<string, string | undefined> = {};
-
-  if (topPaths.length > 0) {
-    const refRows = await events
-      .aggregate<{ path: string; referrer: string }>([
-        {
-          $match: {
-            serverTs: { $gte: from },
-            name: "page_view",
-            "page.path": { $in: topPaths },
-            "page.referrer": { $type: "string", $ne: "" },
-          },
-        },
-        { $group: { _id: { path: "$page.path", referrer: "$page.referrer" }, count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
-        { $group: { _id: "$_id.path", referrer: { $first: "$_id.referrer" } } },
-        { $project: { _id: 0, path: "$_id", referrer: 1 } },
-      ])
-      .toArray();
-
-    referrers = Object.fromEntries(refRows.map((row) => [row.path, row.referrer]));
-  }
+  const baseRows = result?.baseRows ?? [];
+  const refMap = new Map(
+    (result?.refRows ?? []).map((r) => [r.path, r.referrer])
+  );
 
   return baseRows
-    .filter((row): row is typeof row & { path: string } => typeof row.path === "string" && row.path.length > 0)
+    .filter(
+      (row): row is typeof row & { path: string } =>
+        typeof row.path === "string" && row.path.length > 0
+    )
     .map((row) => ({
       path: row.path,
       views: row.views,
       authenticatedViews: row.authenticatedViews,
       anonymousViews: Math.max(0, row.views - row.authenticatedViews),
-      referrer: referrers[row.path],
+      referrer: refMap.get(row.path),
     }));
 }
-
 
 type TimeSeriesPoint = {
   label: string;
@@ -187,7 +218,8 @@ function buildRange(from: Date, unit: TimeUnit): string[] {
   return keys;
 }
 
-async function getTimeSeries(from: Date, unit: TimeUnit): Promise<TimeSeriesPoint[]> {
+async function _getTimeSeries(fromIso: string, unit: TimeUnit): Promise<TimeSeriesPoint[]> {
+  const from = new Date(fromIso);
   const db = await getMongoDb();
   const events = db.collection("analytics_events");
   const [result] = await events
@@ -203,19 +235,19 @@ async function getTimeSeries(from: Date, unit: TimeUnit): Promise<TimeSeriesPoin
             { $match: { name: "page_view" } },
             { $group: { _id: { $dateTrunc: { date: "$serverTs", unit: unit } }, count: { $sum: 1 } } },
             { $project: { _id: 0, bucket: "$_id", count: 1 } },
-            { $sort: { day: 1 } },
+            { $sort: { bucket: 1 } },
           ],
           authenticatedViews: [
             { $match: { name: "page_view", "flags.isAuthenticated": true } },
             { $group: { _id: { $dateTrunc: { date: "$serverTs", unit: unit } }, count: { $sum: 1 } } },
             { $project: { _id: 0, bucket: "$_id", count: 1 } },
-            { $sort: { day: 1 } },
+            { $sort: { bucket: 1 } },
           ],
           sessions: [
             { $group: { _id: { bucket: { $dateTrunc: { date: "$serverTs", unit: unit } }, session: "$session" } } },
             { $group: { _id: "$_id.bucket", count: { $sum: 1 } } },
             { $project: { _id: 0, bucket: "$_id", count: 1 } },
-            { $sort: { day: 1 } },
+            { $sort: { bucket: 1 } },
           ],
         },
       },
@@ -223,11 +255,15 @@ async function getTimeSeries(from: Date, unit: TimeUnit): Promise<TimeSeriesPoin
     .toArray();
 
   const keys = buildRange(from, unit);
-  const viewsMap = new Map<string, number>((result?.views ?? []).map((r) => [toKeyString(new Date(r.bucket), unit), r.count]));
+  const viewsMap = new Map<string, number>(
+    (result?.views ?? []).map((r) => [toKeyString(new Date(r.bucket), unit), r.count])
+  );
   const authedMap = new Map<string, number>(
     (result?.authenticatedViews ?? []).map((r) => [toKeyString(new Date(r.bucket), unit), r.count])
   );
-  const sessMap = new Map<string, number>((result?.sessions ?? []).map((r) => [toKeyString(new Date(r.bucket), unit), r.count]));
+  const sessMap = new Map<string, number>(
+    (result?.sessions ?? []).map((r) => [toKeyString(new Date(r.bucket), unit), r.count])
+  );
 
   return keys.map((label) => ({
     label,
@@ -237,6 +273,42 @@ async function getTimeSeries(from: Date, unit: TimeUnit): Promise<TimeSeriesPoin
     anonymousViews: Math.max(0, (viewsMap.get(label) ?? 0) - (authedMap.get(label) ?? 0)),
   }));
 }
+
+// ─── Cached wrappers (5-minute TTL per range key) ───────────────────────────
+const ANALYTICS_CACHE_TTL = 5 * 60; // seconds
+
+function getSummary(fromIso: string) {
+  return unstable_cache(
+    () => _getSummary(fromIso),
+    ["analytics-summary", fromIso],
+    { revalidate: ANALYTICS_CACHE_TTL }
+  )();
+}
+
+function getDeviceBreakdown(fromIso: string) {
+  return unstable_cache(
+    () => _getDeviceBreakdown(fromIso),
+    ["analytics-device", fromIso],
+    { revalidate: ANALYTICS_CACHE_TTL }
+  )();
+}
+
+function getTopPages(fromIso: string, limit = 10) {
+  return unstable_cache(
+    () => _getTopPages(fromIso, limit),
+    ["analytics-top-pages", fromIso, String(limit)],
+    { revalidate: ANALYTICS_CACHE_TTL }
+  )();
+}
+
+function getTimeSeries(fromIso: string, unit: TimeUnit) {
+  return unstable_cache(
+    () => _getTimeSeries(fromIso, unit),
+    ["analytics-time-series", fromIso, unit],
+    { revalidate: ANALYTICS_CACHE_TTL }
+  )();
+}
+// ────────────────────────────────────────────────────────────────────────────
 
 function LineChart({ points }: { points: TimeSeriesPoint[] }) {
   const width = 640;
@@ -288,14 +360,16 @@ export default async function AdminAnalyticsPage({
   const sp = await searchParams;
   const range = parseRange(sp?.range);
   const from = getFromDate(range);
+  // Serialize to ISO string so unstable_cache key is stable across requests
+  const fromIso = from.toISOString();
 
   const analyticsEnabled = await getAnalyticsEnabled();
 
   const [summary, device, topPages, series] = await Promise.all([
-    getSummary(from),
-    getDeviceBreakdown(from),
-    getTopPages(from, 10),
-    getTimeSeries(from, range === "24h" ? "hour" : "day"),
+    getSummary(fromIso),
+    getDeviceBreakdown(fromIso),
+    getTopPages(fromIso, 10),
+    getTimeSeries(fromIso, range === "24h" ? "hour" : "day"),
   ]);
 
   const rangeTabs: { key: RangeKey; label: string }[] = [
@@ -374,7 +448,7 @@ export default async function AdminAnalyticsPage({
               <thead className="bg-zinc-900/40 text-zinc-400">
                 <tr>
                   <th className="px-4 py-2 font-medium">Página</th>
-                  <th className="px-4 py-2 font-medium">Domínio</th>
+                  <th className="px-4 py-2 font-medium">Referrer</th>
                   <th className="px-4 py-2 font-medium text-right">Views</th>
                   <th className="px-4 py-2 font-medium text-right">Autenticadas</th>
                   <th className="px-4 py-2 font-medium text-right">Anônimas</th>
@@ -382,30 +456,15 @@ export default async function AdminAnalyticsPage({
               </thead>
               <tbody>
                 {topPages.length > 0 ? (
-                  topPages.map((row) => (
-                    <tr key={row.path} className="border-t border-zinc-800">
-                      <td className="px-4 py-2">
-                        <Link href={row.path} className="text-zinc-100 hover:underline">
-                          {row.path}
-                        </Link>
+                  topPages.map((p) => (
+                    <tr key={p.path} className="border-t border-zinc-800">
+                      <td className="px-4 py-2 font-mono text-xs">{p.path}</td>
+                      <td className="px-4 py-2 text-xs text-zinc-400 truncate max-w-[160px]">
+                        {p.referrer ?? "—"}
                       </td>
-                      <td className="px-4 py-2">
-                        {row.referrer ? (
-                          <Link
-                            href={`https://${row.referrer}/`}
-                            className="text-zinc-200 hover:underline"
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            {row.referrer}
-                          </Link>
-                        ) : (
-                          <span className="text-zinc-500">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-2 text-right tabular-nums">{row.views}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">{row.authenticatedViews}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">{row.anonymousViews}</td>
+                      <td className="px-4 py-2 text-right tabular-nums">{p.views}</td>
+                      <td className="px-4 py-2 text-right tabular-nums">{p.authenticatedViews}</td>
+                      <td className="px-4 py-2 text-right tabular-nums">{p.anonymousViews}</td>
                     </tr>
                   ))
                 ) : (
@@ -419,6 +478,7 @@ export default async function AdminAnalyticsPage({
             </table>
           </div>
         </div>
+
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/60">
           <div className="flex items-center justify-between border-b border-zinc-800 p-4">
             <h2 className="text-sm font-medium">Dispositivos</h2>
@@ -427,7 +487,7 @@ export default async function AdminAnalyticsPage({
             <table className="min-w-full text-left text-sm">
               <thead className="bg-zinc-900/40 text-zinc-400">
                 <tr>
-                  <th className="px-4 py-2 font-medium">Tipo</th>
+                  <th className="px-4 py-2 font-medium">Dispositivo</th>
                   <th className="px-4 py-2 font-medium text-right">Eventos</th>
                 </tr>
               </thead>
@@ -458,4 +518,3 @@ export default async function AdminAnalyticsPage({
 }
 
 export const runtime = "nodejs";
-
