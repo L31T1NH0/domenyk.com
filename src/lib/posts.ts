@@ -1,4 +1,4 @@
-﻿import { unstable_cache } from "next/cache";
+import { unstable_cache } from "next/cache";
 import { getMongoDb } from "../lib/mongo";
 
 export type PostRecord = {
@@ -45,13 +45,29 @@ function normalizeDate(d: unknown): string {
   return "";
 }
 
+// ---------------------------------------------------------------------------
+// FIX #1: Cache the result of hasAnyTextIndex at module level.
+// Previously this called collection.indexes() on every single search request,
+// causing a redundant round-trip to MongoDB. Indexes almost never change at
+// runtime, so we cache the boolean result per process lifetime with a 10-min
+// TTL to handle the rare case where an index is added/dropped while running.
+// ---------------------------------------------------------------------------
+let _textIndexCache: { value: boolean; expiresAt: number } | null = null;
+const TEXT_INDEX_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
 async function hasAnyTextIndex(collection: any): Promise<boolean> {
+  const now = Date.now();
+  if (_textIndexCache && _textIndexCache.expiresAt > now) {
+    return _textIndexCache.value;
+  }
   try {
     const indexes = await collection.indexes();
-    return indexes.some((idx: any) => {
+    const value = indexes.some((idx: any) => {
       const key = idx?.key ?? {};
       return Object.values(key).some((v: any) => String(v).toLowerCase() === "text");
     });
+    _textIndexCache = { value, expiresAt: now + TEXT_INDEX_CACHE_TTL_MS };
+    return value;
   } catch (_e) {
     return false;
   }
@@ -227,4 +243,3 @@ export async function getPostReferenceMetadata(
     thumbnailUrl,
   };
 }
-
