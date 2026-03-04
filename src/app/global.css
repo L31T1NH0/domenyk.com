@@ -112,10 +112,22 @@ h1 {
   transition: width 0.12s ease-out, opacity 0.12s ease-out;
 }
 
+[data-scroll-heatmap-bar] {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px));
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: var(--scroll-heatmap-gradient, transparent);
+  pointer-events: none;
+  z-index: 9998;
+  opacity: var(--scroll-heatmap-visible, 0);
+  transition: opacity 0.3s ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-scroll-progress-bar] {
     transition: none;
   }
 }
-
 
