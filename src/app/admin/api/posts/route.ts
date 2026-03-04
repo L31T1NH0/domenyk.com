@@ -47,6 +47,7 @@ export async function GET(req: Request) {
       categories: 1,
       coAuthorUserId: 1,
       paragraphCommentsEnabled: 1,
+      pinnedOrder: 1,
     } as const;
 
     // Build sort doc
