@@ -341,20 +341,19 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
   const headerCells = [
     { key: "select", label: "", className: "md:w-12" },
     { key: "title", label: "Título" },
-    { key: "subtitle", label: "Subtítulo", hide: true },
-    { key: "id", label: "ID", hide: true },
+    { key: "subtitle", label: "Subtítulo" },
+    { key: "id", label: "ID" },
     { key: "date", label: "Data" },
     { key: "views", label: "Views", align: "right" as const },
     { key: "comments", label: "Comentários", align: "right" as const },
-    { key: "tags", label: "Tags", hide: true },
-    { key: "categories", label: "Categorias", hide: true },
-    { key: "coAuthor", label: "Co-autor", hide: true },
-    { key: "paragraphs", label: "Parágrafos", align: "right" as const, hide: true },
+    { key: "tags", label: "Tags" },
+    { key: "categories", label: "Categorias" },
+    { key: "coAuthor", label: "Co-autor" },
+    { key: "paragraphs", label: "Parágrafos", align: "right" as const },
     { key: "visibility", label: "Visibilidade", align: "right" as const },
   ];
 
   const cellBase = "md:table-cell md:border-t md:border-zinc-800/90 md:px-4 md:py-2.5";
-  const cellHide = "md:hidden";
   const headerCellBase = "md:table-cell md:px-4 md:py-3";
 
   return (
@@ -463,7 +462,7 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
               {headerCells.map((cell) => (
                 <div
                   key={cell.key}
-                  className={`${cell.hide ? "md:hidden" : headerCellBase} font-medium ${cell.className ?? ""} ${cell.align === "right" ? "text-right" : ""}`}
+                  className={`${headerCellBase} font-medium ${cell.className ?? ""} ${cell.align === "right" ? "text-right" : ""}`}
                 >
                   {cell.label}
                 </div>
@@ -494,7 +493,7 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
                     {p.title}
                   </Link>
                 </div>
-                <div className={`${cellHide}`}>
+                <div className={`${cellBase}`}>
                   <div className="text-xs font-medium uppercase text-zinc-500 md:hidden">Subtítulo</div>
                   <SubtitleEditor
                     value={p.subtitle ?? null}
@@ -506,7 +505,7 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
                     }}
                   />
                 </div>
-                <div className={`${cellHide}`}>
+                <div className={`${cellBase}`}>
                   <div className="text-xs font-medium uppercase text-zinc-500 md:hidden">ID</div>
                   <div className="text-sm text-zinc-400 break-all">{p.postId}</div>
                 </div>
@@ -532,7 +531,7 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
                     {p.commentCount ?? 0} comentários
                   </button>
                 </div>
-                <div className={`${cellHide}`}>
+                <div className={`${cellBase}`}>
                   <div className="text-xs font-medium uppercase text-zinc-500 md:hidden">Tags</div>
                   <TagListEditor
                     values={p.tags ?? []}
@@ -544,7 +543,7 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
                     }}
                   />
                 </div>
-                <div className={`${cellHide}`}>
+                <div className={`${cellBase}`}>
                   <div className="text-xs font-medium uppercase text-zinc-500 md:hidden">Categorias</div>
                   <TagListEditor
                     values={p.categories ?? []}
@@ -556,7 +555,7 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
                     }}
                   />
                 </div>
-                <div className={`${cellHide}`}>
+                <div className={`${cellBase}`}>
                   <div className="text-xs font-medium uppercase text-zinc-500 md:hidden">Co-autor</div>
                   <select
                     className="w-full rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 md:min-w-[160px] md:w-auto"
@@ -575,7 +574,7 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
                     ))}
                   </select>
                 </div>
-                <div className={`${cellHide}`}>
+                <div className={`${cellBase}`}>
                   <div className="text-xs font-medium uppercase text-zinc-500 md:hidden">Parágrafos</div>
                   <div className="mt-2 md:mt-0">
                     <ParagraphCommentsToggle
