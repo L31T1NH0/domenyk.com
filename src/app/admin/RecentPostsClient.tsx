@@ -5,6 +5,7 @@ import Link from "next/link";
 import VisibilityToggle from "./VisibilityToggle";
 import ParagraphCommentsToggle from "./ParagraphCommentsToggle";
 import CommentsModal from "./CommentsModal";
+import ScrollHeatmap from "./ScrollHeatmap";
 
 type PostRow = {
   postId: string;
@@ -516,6 +517,7 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
                 <div className={`${cellBase} md:text-right`}>
                   <div className="text-xs font-medium uppercase text-zinc-500 md:hidden">Views</div>
                   <div className="text-sm">{p.views ?? 0}</div>
+                  <ScrollHeatmap postId={p.postId} />
                 </div>
                 <div className={`${cellBase} md:text-right`}>
                   <div className="text-xs font-medium uppercase text-zinc-500 md:hidden">Comentários</div>

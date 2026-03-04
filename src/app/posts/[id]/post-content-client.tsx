@@ -13,6 +13,7 @@ import PostContentShell, {
   LazyParagraphCommentWidget,
   type ParagraphCommentWidgetProps,
 } from "./post-content-interactive";
+import SectionAttentionTracker from "@components/analytics/SectionAttentionTracker";
 import type { HTMLAttributes, RefObject } from "react";
 import { useCommentsSummary } from "@components/paragraph-comments/useCommentsSummary";
 
@@ -158,6 +159,7 @@ export default function PostContentClient({
       isEditing={isEditing}
       contentRef={contentRef}
     >
+      <SectionAttentionTracker postId={postId} />
       {parsedContent}
     </PostContentShell>
   );

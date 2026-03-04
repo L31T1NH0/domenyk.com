@@ -4,6 +4,7 @@ export const ANALYTICS_EVENT_NAMES = [
   "comment_submit",
   "search_query",
   "sort_change",
+  "section_attention",
 ] as const;
 
 export type AnalyticsEventName = (typeof ANALYTICS_EVENT_NAMES)[number];
@@ -11,6 +12,7 @@ export type AnalyticsEventName = (typeof ANALYTICS_EVENT_NAMES)[number];
 const DEFAULT_EVENTS: AnalyticsEventName[] = [
   "page_view",
   "comment_submit",
+  "section_attention",
 ];
 
 export function parseEnabledEvents(value: string | null | undefined): AnalyticsEventName[] {
