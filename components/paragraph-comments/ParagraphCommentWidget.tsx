@@ -50,6 +50,7 @@ type ParagraphCommentWidgetProps = {
   isAdmin: boolean;
   isMobile: boolean;
   initialCount?: number;
+  autoOpen?: boolean;
 };
 
 export default function ParagraphCommentWidget({
@@ -62,6 +63,7 @@ export default function ParagraphCommentWidget({
   isAdmin,
   isMobile,
   initialCount = 0,
+  autoOpen = false,
 }: ParagraphCommentWidgetProps) {
   const { isLoaded, userId } = useAuth();
   const { openSignIn } = useClerk();
@@ -660,6 +662,11 @@ export default function ParagraphCommentWidget({
       }
     };
   }, [closeLoginPrompt, loginPromptCycle, showLoginPrompt, userId]);
+
+  useEffect(() => {
+    if (!autoOpen) return;
+    void openComments();
+  }, [autoOpen, openComments]);
 
   useEffect(() => {
     const onOtherParagraphOpen = (e: Event) => {

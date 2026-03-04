@@ -33,6 +33,7 @@ export type ParagraphCommentWidgetProps = {
   isAdmin: boolean;
   isMobile: boolean;
   initialCount?: number;
+  autoOpen?: boolean;
 };
 
 export type ParagraphCommentWidgetComponent = ComponentType<ParagraphCommentWidgetProps>;
@@ -128,13 +129,15 @@ ParagraphContent.displayName = "ParagraphContent";
 
 export function LazyParagraphCommentWidget(props: ParagraphCommentWidgetProps) {
   const [shouldRenderWidget, setShouldRenderWidget] = useState(false);
+  const [pendingOpen, setPendingOpen] = useState(false);
   const [Widget, setWidget] = useState<ParagraphCommentWidgetComponent | null>(null);
   const placeholderRef = useRef<HTMLParagraphElement | null>(null);
   const contextIsMobile = useContext(IsMobileContext);
   const { isMobile: propIsMobile, ...restProps } = props;
   const isMobile = (contextIsMobile ?? propIsMobile) ?? false;
 
-  const ensureWidget = useCallback(() => {
+  const ensureWidget = useCallback((withOpen = false) => {
+    if (withOpen) setPendingOpen(true);
     setShouldRenderWidget((previous) => (previous ? previous : true));
   }, []);
 
@@ -196,7 +199,7 @@ export function LazyParagraphCommentWidget(props: ParagraphCommentWidgetProps) {
       <ParagraphContent
         ref={placeholderRef}
         paragraphProps={props.paragraphProps}
-        onLoadRequest={ensureWidget}
+        onLoadRequest={() => ensureWidget(isMobile)}
       >
         {props.children}
       </ParagraphContent>
@@ -215,7 +218,7 @@ export function LazyParagraphCommentWidget(props: ParagraphCommentWidgetProps) {
     );
   }
 
-  return <Widget {...restProps} isMobile={isMobile} />;
+  return <Widget {...restProps} isMobile={isMobile} autoOpen={pendingOpen} />;
 }
 
 const IsMobileContext = createContext<boolean | null>(null);
