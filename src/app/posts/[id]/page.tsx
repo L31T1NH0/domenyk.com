@@ -280,6 +280,12 @@ export default async function PostPage({ params }: PostPageProps) {
 
   return (
     <Layout>
+      <PostHeader
+        cape={post.cape}
+        title={post.title}
+        subtitle={post.subtitle ?? undefined}
+        friendImage={post.friendImage}
+      />
       <PostEditingClient
         postId={post.postId}
         title={post.title}
