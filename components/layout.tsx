@@ -28,6 +28,7 @@ export function Layout({ home = false, children, hideHeaderControls = false }: L
     >
       <ScrollProgressEffect />
       <header className="flex justify-between items-center py-1">
+        <div aria-hidden="true" data-scroll-heatmap-bar />
         <div aria-hidden="true" data-scroll-progress-bar />
         {hideHeaderControls ? (
           <span aria-hidden className="h-8 w-8" />

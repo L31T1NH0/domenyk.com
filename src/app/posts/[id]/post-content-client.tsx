@@ -14,6 +14,7 @@ import PostContentShell, {
   type ParagraphCommentWidgetProps,
 } from "./post-content-interactive";
 import SectionAttentionTracker from "@components/analytics/SectionAttentionTracker";
+import HeatmapProgressBar from "@components/HeatmapProgressBar";
 import type { HTMLAttributes, RefObject } from "react";
 import { useCommentsSummary } from "@components/paragraph-comments/useCommentsSummary";
 
@@ -160,6 +161,7 @@ export default function PostContentClient({
       contentRef={contentRef}
     >
       <SectionAttentionTracker postId={postId} />
+      <HeatmapProgressBar postId={postId} />
       {parsedContent}
     </PostContentShell>
   );
