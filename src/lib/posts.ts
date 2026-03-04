@@ -122,7 +122,8 @@ export async function getPosts({
         { $sort: { _pinnedSort: 1, [sortField]: sortOrder } },
         { $skip: skip },
         { $limit: pageSize },
-        { $project: { ...projection, _pinnedSort: 0 } },
+        { $project: projection },
+        { $unset: "_pinnedSort" },
       ])
       .toArray(),
     collection.countDocuments(filter),
