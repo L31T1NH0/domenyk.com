@@ -195,11 +195,7 @@ export default function HomeClient({ posts, isAdmin, page, hasNext, total }: Hom
           {posts.map((post) => (
             <li
               key={post.postId}
-              className={`flex flex-col mb-2 group relative${
-                post.pinnedOrder != null
-                  ? " border-l-2 border-zinc-400 pl-3"
-                  : ""
-              }`}
+              className="flex flex-col mb-2 group relative"
             >
               {post.pinnedOrder != null && (
                 <span className="mb-1 inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide text-zinc-400">
@@ -279,7 +275,6 @@ export default function HomeClient({ posts, isAdmin, page, hasNext, total }: Hom
     </section>
   );
 }
-
 
 
 
