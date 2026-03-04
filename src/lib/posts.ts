@@ -13,6 +13,7 @@ export type PostRecord = {
   cape: string | null;
   friendImage: string | null;
   updatedAt: string | null;
+  pinnedOrder: number | null;
 };
 
 export type FetchPostsArgs = {
@@ -104,14 +105,26 @@ export async function getPosts({
     cape: 1,
     friendImage: 1,
     updatedAt: 1,
+    pinnedOrder: 1,
   } as const;
 
   const [items, total] = await Promise.all([
     collection
-      .find(filter, { projection })
-      .sort({ [sortField]: sortOrder })
-      .skip(skip)
-      .limit(pageSize)
+      .aggregate([
+        { $match: filter },
+        {
+          $addFields: {
+            _pinnedSort: {
+              $ifNull: ["$pinnedOrder", 999999],
+            },
+          },
+        },
+        { $sort: { _pinnedSort: 1, [sortField]: sortOrder } },
+        { $skip: skip },
+        { $limit: pageSize },
+        { $project: projection },
+        { $unset: "_pinnedSort" },
+      ])
       .toArray(),
     collection.countDocuments(filter),
   ]);
@@ -143,6 +156,10 @@ export async function getPosts({
         ? String((post as any).friendImage).trim()
         : null,
     updatedAt: normalizeDate((post as any).updatedAt),
+    pinnedOrder:
+      typeof (post as any).pinnedOrder === "number"
+        ? (post as any).pinnedOrder
+        : null,
   }));
 
   const hasNext = page * pageSize < total;

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import VisibilityToggle from "./VisibilityToggle";
+import PinToggle from "./PinToggle";
 import ParagraphCommentsToggle from "./ParagraphCommentsToggle";
 import CommentsModal from "./CommentsModal";
 import ScrollHeatmap from "./ScrollHeatmap";
@@ -19,6 +20,7 @@ type PostRow = {
   categories?: string[];
   coAuthorUserId?: string | null;
   paragraphCommentsEnabled?: boolean;
+  pinnedOrder?: number | null;
 };
 
 type SortKey = "date" | "views" | "status";
@@ -351,6 +353,7 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
     { key: "categories", label: "Categorias" },
     { key: "coAuthor", label: "Co-autor" },
     { key: "paragraphs", label: "Parágrafos", align: "right" as const },
+    { key: "pinned", label: "Fixado", align: "right" as const },
     { key: "visibility", label: "Visibilidade", align: "right" as const },
   ];
 
@@ -592,6 +595,14 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
                         )
                       }
                     />
+                  </div>
+                </div>
+                <div className={`${cellBase} md:text-right`}>
+                  <div className="text-xs font-medium uppercase text-zinc-500 md:hidden">
+                    Fixado
+                  </div>
+                  <div className="mt-2 md:mt-0">
+                    <PinToggle postId={p.postId} pinnedOrder={p.pinnedOrder} />
                   </div>
                 </div>
                 <div className={`${cellBase} md:text-right`}>
