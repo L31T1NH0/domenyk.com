@@ -25,6 +25,7 @@
     "dotenv": "^17.2.3",
     "gray-matter": "^4.0.3",
     "html-react-parser": "^5.2.8",
+    "jszip": "^3.10.1",
     "lexical": "^0.38.2",
     "minidenticons": "^4.2.1",
     "mongodb": "^7.0.0",
@@ -50,6 +51,7 @@
     "unist-util-visit": "^5.0.0"
   },
   "devDependencies": {
+    "@types/jszip": "^3.4.0",
     "@types/node": "^24.10.0",
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",
