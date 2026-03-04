@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
   let posts;
   if (postIds === "all") {
     posts = await collection
-      .find({}, { projection: { postId: 1, title: 1, subtitle: 1, contentMarkdown: 1, content: 1, date: 1, tags: 1 } })
+      .find({}, { projection: { postId: 1, title: 1, subtitle: 1, contentMarkdown: 1, htmlContent: 1, content: 1, date: 1, tags: 1 } })
       .toArray();
   } else {
     if (!Array.isArray(postIds) || postIds.length === 0) {
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     posts = await collection
       .find(
         { postId: { $in: postIds } },
-        { projection: { postId: 1, title: 1, subtitle: 1, contentMarkdown: 1, content: 1, date: 1, tags: 1 } }
+        { projection: { postId: 1, title: 1, subtitle: 1, contentMarkdown: 1, htmlContent: 1, content: 1, date: 1, tags: 1 } }
       )
       .toArray();
   }
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     lines.push("");
     lines.push("---");
     lines.push("");
-    lines.push(post.contentMarkdown || post.content || "");
+    lines.push(post.contentMarkdown || post.content || post.htmlContent || "");
 
     folder.file(`${safeTitle}.txt`, lines.join("\n"));
   }
