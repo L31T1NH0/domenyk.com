@@ -265,13 +265,9 @@ export default async function PostPage({ params }: PostPageProps) {
   const normalizedContent = normalizeMarkdownContent(rawContent);
 
   let renderedHtml = "";
-  let isMdx = false;
-
   if (!isStaticGenerationEnvironment()) {
     try {
-      const mdxResult = await renderPostMdx(normalizedContent, post.postId);
-      renderedHtml = mdxResult.html;
-      isMdx = true;
+      renderedHtml = await renderPostMdx(normalizedContent);
     } catch {
       renderedHtml = await renderMarkdown(normalizedContent);
     }
@@ -284,25 +280,26 @@ export default async function PostPage({ params }: PostPageProps) {
 
   return (
     <Layout>
+      <PostHeader
+        cape={post.cape}
+        title={post.title}
+        subtitle={post.subtitle ?? undefined}
+        friendImage={post.friendImage}
+      />
       <PostEditingClient
-        post={{
-          postId: post.postId,
-          title: post.title,
-          subtitle: post.subtitle ?? null,
-          date,
-          views: post.views ?? 0,
-          audioUrl: post.audioUrl ?? null,
-          cape: post.cape ?? null,
-          friendImage: post.friendImage ?? null,
-          coAuthorUserId: post.coAuthorUserId ?? null,
-          hidden: post.hidden ?? false,
-          paragraphCommentsEnabled: post.paragraphCommentsEnabled ?? false,
-          tags: post.tags ?? [],
-        }}
-        renderedHtml={renderedHtml}
-        isMdx={isMdx}
+        postId={post.postId}
+        title={post.title}
+        date={date}
+        initialHtmlContent={renderedHtml}
+        initialViews={post.views ?? 0}
+        audioUrl={post.audioUrl}
         readingTime={readingTime}
+        coAuthorUserId={post.coAuthorUserId ?? null}
+        coAuthorImageUrl={post.friendImage ?? null}
+        paragraphCommentsEnabled={post.paragraphCommentsEnabled ?? false}
         isAdmin={isAdmin}
+        initialMarkdown={normalizedContent}
+        tags={post.tags ?? []}
       />
     </Layout>
   );

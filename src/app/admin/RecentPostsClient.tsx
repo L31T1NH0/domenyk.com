@@ -312,6 +312,32 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
     }
   }
 
+  const handleDownload = async () => {
+    const ids = selectedIds.length > 0 ? selectedIds : "all";
+    try {
+      const res = await fetch("/admin/api/posts/download", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postIds: ids }),
+      });
+      if (!res.ok) {
+        const err = (await res.json()) as { error?: string };
+        alert(err.error || "Erro ao baixar posts.");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `posts-${Date.now()}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao baixar posts.");
+    }
+  };
+
   const headerCells = [
     { key: "select", label: "", className: "md:w-12" },
     { key: "title", label: "Título" },
@@ -334,36 +360,41 @@ export default function RecentPostsClient({ initial }: { initial: PostRow[] }) {
   return (
     <>
       <div className="space-y-4">
-        {selectedIds.length > 0 && (
-          <div className="rounded-lg border border-zinc-700/80 bg-zinc-800/50 p-3 shadow-sm">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="text-sm text-zinc-300">{selectedIds.length} selecionado(s)</div>
-              <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-                <button
-                  onClick={() => bulkAction("visibility", { hidden: false })}
-                  disabled={bulkLoading}
-                  className="inline-flex w-full items-center justify-center rounded-md border border-zinc-700 bg-zinc-100 px-3 py-2 text-xs font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-60 sm:w-auto"
-                >
-                  Tornar visível
-                </button>
-                <button
-                  onClick={() => bulkAction("visibility", { hidden: true })}
-                  disabled={bulkLoading}
-                  className="inline-flex w-full items-center justify-center rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:bg-zinc-800 disabled:opacity-60 sm:w-auto"
-                >
-                  Ocultar
-                </button>
-                <button
-                  onClick={() => bulkAction("delete")}
-                  disabled={bulkLoading}
-                  className="inline-flex w-full items-center justify-center rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-red-300 hover:bg-zinc-800 disabled:opacity-60 sm:w-auto"
-                >
-                  Excluir
-                </button>
-              </div>
+        <div className="rounded-lg border border-zinc-700/80 bg-zinc-800/50 p-3 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-sm text-zinc-300">{selectedIds.length} selecionado(s)</div>
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+              <button
+                onClick={handleDownload}
+                className="inline-flex w-full items-center justify-center rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:bg-zinc-800 disabled:opacity-60 sm:w-auto"
+                title={selectedIds.length > 0 ? `Baixar ${selectedIds.length} post(s) selecionado(s)` : "Baixar todos os posts"}
+              >
+                {selectedIds.length > 0 ? `⬇ Baixar (${selectedIds.length})` : "⬇ Baixar todos"}
+              </button>
+              <button
+                onClick={() => bulkAction("visibility", { hidden: false })}
+                disabled={bulkLoading || selectedIds.length === 0}
+                className="inline-flex w-full items-center justify-center rounded-md border border-zinc-700 bg-zinc-100 px-3 py-2 text-xs font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-60 sm:w-auto"
+              >
+                Tornar visível
+              </button>
+              <button
+                onClick={() => bulkAction("visibility", { hidden: true })}
+                disabled={bulkLoading || selectedIds.length === 0}
+                className="inline-flex w-full items-center justify-center rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:bg-zinc-800 disabled:opacity-60 sm:w-auto"
+              >
+                Ocultar
+              </button>
+              <button
+                onClick={() => bulkAction("delete")}
+                disabled={bulkLoading || selectedIds.length === 0}
+                className="inline-flex w-full items-center justify-center rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-red-300 hover:bg-zinc-800 disabled:opacity-60 sm:w-auto"
+              >
+                Excluir
+              </button>
             </div>
           </div>
-        )}
+        </div>
 
         <div className="rounded-lg border border-zinc-800/60 bg-zinc-900/30 p-3">
           <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-300">
