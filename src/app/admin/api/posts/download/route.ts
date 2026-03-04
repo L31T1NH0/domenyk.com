@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     folder.file(`${safeTitle}.txt`, lines.join("\n"));
   }
 
-  const zipBuffer = await zip.generateAsync({ type: "arraybuffer" });
+  const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
 
   return new NextResponse(zipBuffer, {
     status: 200,
