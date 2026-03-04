@@ -61,9 +61,10 @@ export async function POST(request: NextRequest) {
     folder.file(`${safeTitle}.txt`, lines.join("\n"));
   }
 
-  const zipBuffer = await zip.generateAsync({ type: "arraybuffer" });
+  const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
+  const zipUint8 = new Uint8Array(zipBuffer);
 
-  return new NextResponse(zipBuffer, {
+  return new NextResponse(zipUint8, {
     status: 200,
     headers: {
       "Content-Type": "application/zip",
