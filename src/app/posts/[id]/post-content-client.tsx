@@ -1,3 +1,5 @@
+"use client";
+
 import parse, {
   DOMNode,
   Element,
@@ -12,14 +14,17 @@ import PostContentShell, {
   type ParagraphCommentWidgetProps,
 } from "./post-content-interactive";
 import type { HTMLAttributes, RefObject } from "react";
+import { useCommentsSummary } from "@components/paragraph-comments/useCommentsSummary";
 
 function renderParagraphWithComments(
   node: Element,
   parserOptions: HTMLReactParserOptions,
   paragraphIndex: number,
   options: Pick<ParagraphCommentWidgetProps, "postId" | "coAuthorUserId" | "isAdmin">,
+  summaryMap: Map<string, number>,
 ) {
   const paragraphId = `${options.postId}-paragraph-${paragraphIndex}`;
+  const initialCount = summaryMap.get(paragraphId) ?? 0;
   const paragraphProps = attributesToProps(node.attribs ?? {}) as HTMLAttributes<HTMLParagraphElement>;
   const enhancedParagraphProps: HTMLAttributes<HTMLParagraphElement> = {
     ...paragraphProps,
@@ -41,6 +46,7 @@ function renderParagraphWithComments(
       paragraphProps={enhancedParagraphProps}
       isAdmin={options.isAdmin}
       isMobile={false}
+      initialCount={initialCount}
     >
       {domToReact((node.children ?? []) as DOMNode[], parserOptions)}
     </LazyParagraphCommentWidget>
@@ -92,6 +98,7 @@ export default function PostContentClient({
   isEditing = false,
   contentRef,
 }: PostContentClientProps) {
+  const summaryMap = useCommentsSummary(postId);
   let paragraphIndex = 0;
 
   type ReplaceReturn = ReturnType<NonNullable<HTMLReactParserOptions["replace"]>>;
@@ -128,7 +135,7 @@ export default function PostContentClient({
         postId,
         coAuthorUserId,
         isAdmin,
-      });
+      }, summaryMap);
     }
 
     if (node.type === "tag" && node.name === "p" && !paragraphCommentsEnabled) {

@@ -13,6 +13,7 @@ import { sanitizeCommentHtml } from "@components/comments/utils";
 import { UPPERCASE_MAX_RATIO, getUppercaseState, buildUppercaseErrorMessage } from "@components/comments/uppercaseUtils";
 import type { ParagraphComment } from "../../types/paragraph-comments";
 import { useAnalytics } from "@components/analytics/AnalyticsProvider";
+import CommentIndicator from "./CommentIndicator";
 
 const LOGIN_PROMPT_TIMEOUT_MS = 5000;
 
@@ -48,6 +49,7 @@ type ParagraphCommentWidgetProps = {
   children: React.ReactNode;
   isAdmin: boolean;
   isMobile: boolean;
+  initialCount?: number;
 };
 
 export default function ParagraphCommentWidget({
@@ -59,6 +61,7 @@ export default function ParagraphCommentWidget({
   children,
   isAdmin,
   isMobile,
+  initialCount = 0,
 }: ParagraphCommentWidgetProps) {
   const { isLoaded, userId } = useAuth();
   const { openSignIn } = useClerk();
@@ -88,6 +91,8 @@ export default function ParagraphCommentWidget({
   const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const undoIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [isUndoingDelete, setIsUndoingDelete] = useState(false);
+  const [localDelta, setLocalDelta] = useState(0);
+  const displayCount = hasLoaded ? comments.length : initialCount + localDelta;
   const { trackEvent, isTrackingEnabled } = useAnalytics();
 
   const clearPendingDeleteTimeout = useCallback(() => {
@@ -452,6 +457,7 @@ export default function ParagraphCommentWidget({
 
       const data = (await response.json()) as { comment: ParagraphComment };
       setComments((prev) => [...prev, data.comment]);
+      if (!hasLoaded) setLocalDelta((d) => d + 1);
       setDraft("");
       setErrorMessage(null);
       setIsFeatureBlocked(false);
@@ -545,6 +551,7 @@ export default function ParagraphCommentWidget({
         }
 
         setComments((prev) => prev.filter((comment) => comment._id !== commentId));
+        if (!hasLoaded) setLocalDelta((d) => d - 1);
         setIsFeatureBlocked(false);
         showUndoToast(commentToDelete);
       } catch (error) {
@@ -717,6 +724,14 @@ export default function ParagraphCommentWidget({
         >
           <ChatBubbleLeftRightIcon className="h-4 w-4" />
         </button>
+        {!isExpanded && displayCount > 0 && (
+          <span className="absolute right-[-2rem] top-1/2 -translate-y-1/2">
+            <CommentIndicator
+              count={displayCount}
+              onClick={toggleComments}
+            />
+          </span>
+        )}
       </div>
 
       {isExpanded && (
@@ -919,5 +934,4 @@ export default function ParagraphCommentWidget({
     </>
   );
 }
-
 

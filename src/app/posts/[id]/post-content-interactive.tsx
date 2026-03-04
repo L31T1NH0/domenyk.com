@@ -32,6 +32,7 @@ export type ParagraphCommentWidgetProps = {
   children: ReactNode;
   isAdmin: boolean;
   isMobile: boolean;
+  initialCount?: number;
 };
 
 export type ParagraphCommentWidgetComponent = ComponentType<ParagraphCommentWidgetProps>;
