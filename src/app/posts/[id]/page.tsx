@@ -39,17 +39,6 @@ type PostPageProps = {
   params: Promise<{ id: string }>;
 };
 
-// ---------------------------------------------------------------------------
-// FIX #2: The original code called unstable_cache() *inside* loadPostById,
-// creating a brand-new cache wrapper on every invocation. This defeats the
-// purpose of the cache because each call registers a separate cache entry
-// under a different function reference, potentially not reusing cached data
-// for concurrent requests to the same post.
-//
-// The fix defines the cached fetcher at module level using a stable Map so
-// that each unique post id gets exactly one long-lived cache wrapper that
-// is reused across requests.
-// ---------------------------------------------------------------------------
 async function fetchPostById(id: string) {
   try {
     const { getMongoDb } = await import("../../../lib/mongo");
@@ -83,20 +72,11 @@ async function fetchPostById(id: string) {
   }
 }
 
-// Stable map of cached fetchers — one per post id, created once and reused.
-const _postCacheMap = new Map<string, () => Promise<PostDocument | null>>();
-
-function loadPostById(id: string): Promise<PostDocument | null> {
-  if (!_postCacheMap.has(id)) {
-    const cached = unstable_cache(
-      () => fetchPostById(id),
-      ["post-by-id", id],
-      { revalidate: 60 }
-    );
-    _postCacheMap.set(id, cached);
-  }
-  return _postCacheMap.get(id)!();
-}
+const getPostById = unstable_cache(
+  (id: string) => fetchPostById(id),
+  ["post-by-id"],
+  { revalidate: 60 }
+);
 
 function normalizeDate(date?: string | Date): string {
   if (typeof date === "string") {
@@ -183,7 +163,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
     };
   }
 
-  const post = await loadPostById(id);
+  const post = await getPostById(id);
 
   if (!post) {
     return {
@@ -241,7 +221,7 @@ export default async function PostPage({ params }: PostPageProps) {
   }
 
   const [post, isAdmin] = await Promise.all([
-    loadPostById(id),
+    getPostById(id),
     resolveIsAdmin(),
   ]);
 
