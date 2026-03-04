@@ -1,4 +1,5 @@
 import { unstable_cache } from "next/cache";
+import type { Collection } from "mongodb";
 import { getMongoDb } from "../lib/mongo";
 
 export type PostRecord = {
@@ -45,32 +46,15 @@ function normalizeDate(d: unknown): string {
   return "";
 }
 
-// ---------------------------------------------------------------------------
-// FIX #1: Cache the result of hasAnyTextIndex at module level.
-// Previously this called collection.indexes() on every single search request,
-// causing a redundant round-trip to MongoDB. Indexes almost never change at
-// runtime, so we cache the boolean result per process lifetime with a 10-min
-// TTL to handle the rare case where an index is added/dropped while running.
-// ---------------------------------------------------------------------------
-let _textIndexCache: { value: boolean; expiresAt: number } | null = null;
-const TEXT_INDEX_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const textIndexCache = new Map<string, boolean>();
 
-async function hasAnyTextIndex(collection: any): Promise<boolean> {
-  const now = Date.now();
-  if (_textIndexCache && _textIndexCache.expiresAt > now) {
-    return _textIndexCache.value;
-  }
-  try {
-    const indexes = await collection.indexes();
-    const value = indexes.some((idx: any) => {
-      const key = idx?.key ?? {};
-      return Object.values(key).some((v: any) => String(v).toLowerCase() === "text");
-    });
-    _textIndexCache = { value, expiresAt: now + TEXT_INDEX_CACHE_TTL_MS };
-    return value;
-  } catch (_e) {
-    return false;
-  }
+async function hasAnyTextIndex(collection: Collection): Promise<boolean> {
+  const key = collection.collectionName;
+  if (textIndexCache.has(key)) return textIndexCache.get(key)!;
+  const indexes = await collection.indexes();
+  const result = indexes.some((idx) => idx.key?.["_fts"] === "text");
+  textIndexCache.set(key, result);
+  return result;
 }
 
 export async function getPosts({
