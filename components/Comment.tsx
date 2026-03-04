@@ -117,13 +117,13 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
     }
   }, [submissionStatus]);
 
-  const commentLookup = useMemo(() => buildCommentLookup(comments), [comments]);
-  const commentById = useMemo(() => {
-    const map = new Map<string, CommentEntity>();
+  const { commentLookup, commentById } = useMemo(() => {
+    const lookup = buildCommentLookup(comments);
+    const byId = new Map<string, CommentEntity>();
     comments.forEach((comment) => {
-      map.set(comment._id, comment);
+      byId.set(comment._id, comment);
     });
-    return map;
+    return { commentLookup: lookup, commentById: byId };
   }, [comments]);
   const replyCounts = useMemo(
     () => countThreadReplies(commentLookup),
@@ -658,7 +658,6 @@ const Comment: React.FC<CommentProps> = ({ postId, coAuthorUserId, isAdmin }) =>
 };
 
 export default Comment;
-
 
 
 
