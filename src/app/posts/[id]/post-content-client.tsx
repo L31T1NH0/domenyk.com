@@ -28,7 +28,7 @@ function renderParagraphWithComments(
   node: Element,
   parserOptions: HTMLReactParserOptions,
   paragraphIndex: number,
-  options: Pick<ParagraphCommentWidgetProps, "postId" | "coAuthorUserId" | "isAdmin">,
+  options: Pick<ParagraphCommentWidgetProps, "postId" | "coAuthorUserId" | "isAdmin" | "mobileHighlightStyle">,
   summaryMap: Map<string, number>,
   highlightProps?: {
     highlights: Highlight[];
@@ -116,6 +116,7 @@ function renderParagraphWithComments(
               });
           }}
           highlightCount={highlightProps.highlights.filter((h) => h.paragraphId === paragraphId).length}
+          mobileHighlightStyle={highlightProps.mobileHighlightStyle}
         >
           {content}
         </LazyParagraphCommentWidget>
@@ -134,6 +135,7 @@ function renderParagraphWithComments(
       isAdmin={options.isAdmin}
       isMobile={false}
       initialCount={initialCount}
+      mobileHighlightStyle={options.mobileHighlightStyle ?? "badges"}
     >
       {content}
     </LazyParagraphCommentWidget>
@@ -176,6 +178,7 @@ function ImageParagraphWithComments({
   coAuthorUserId,
   isAdmin,
   initialCount,
+  mobileHighlightStyle = "badges",
 }: {
   src: string;
   alt: string;
@@ -185,6 +188,7 @@ function ImageParagraphWithComments({
   coAuthorUserId?: string | null;
   isAdmin: boolean;
   initialCount: number;
+  mobileHighlightStyle?: "badges" | "border";
 }) {
   const isMobile = useContext(IsMobileContext) ?? false;
 
@@ -198,6 +202,7 @@ function ImageParagraphWithComments({
       isMobile={isMobile}
       initialCount={initialCount}
       paragraphProps={{}}
+      mobileHighlightStyle={mobileHighlightStyle}
     >
       <span />
     </LazyParagraphCommentWidget>
@@ -313,6 +318,7 @@ export default function PostContentClient({
               coAuthorUserId={coAuthorUserId}
               isAdmin={isAdmin}
               initialCount={initialCount}
+              mobileHighlightStyle={mobileHighlightStyle}
             />
           );
         }
@@ -336,7 +342,7 @@ export default function PostContentClient({
         element,
         parserOptions,
         currentIndex,
-        { postId, coAuthorUserId, isAdmin },
+        { postId, coAuthorUserId, isAdmin, mobileHighlightStyle },
         summaryMap,
         {
           highlights,

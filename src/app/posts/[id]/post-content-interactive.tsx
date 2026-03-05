@@ -38,6 +38,7 @@ export type ParagraphCommentWidgetProps = {
   onRegisterOpenComments?: (fn: () => Promise<void>) => void;
   onHighlight?: () => void;
   highlightCount?: number;
+  mobileHighlightStyle?: "badges" | "border";
 };
 
 export type ParagraphCommentWidgetComponent =

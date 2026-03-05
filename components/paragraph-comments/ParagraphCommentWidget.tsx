@@ -68,6 +68,7 @@ type ParagraphCommentWidgetProps = {
   onRegisterOpenComments?: (fn: () => Promise<void>) => void;
   onHighlight?: () => void;
   highlightCount?: number;
+  mobileHighlightStyle?: "badges" | "border";
 };
 
 export default function ParagraphCommentWidget({
@@ -84,6 +85,7 @@ export default function ParagraphCommentWidget({
   onRegisterOpenComments,
   onHighlight,
   highlightCount = 0,
+  mobileHighlightStyle = "badges",
 }: ParagraphCommentWidgetProps) {
   const { isLoaded, userId } = useAuth();
   const { openSignIn } = useClerk();
@@ -833,7 +835,8 @@ export default function ParagraphCommentWidget({
               </button>
             )}
           </span>
-          {!isExpanded && (displayCount > 0 || highlightCount > 0) && (
+          {!isExpanded && (displayCount > 0 || highlightCount > 0) &&
+            mobileHighlightStyle !== "border" && (
             useCompactUi ? (
               // Mobile: lado a lado, bordas coladas na horizontal
               <span className="flex items-center mt-0.5">

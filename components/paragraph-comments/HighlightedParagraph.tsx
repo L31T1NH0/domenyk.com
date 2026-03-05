@@ -255,7 +255,7 @@ export default function HighlightedParagraph({
         className={[
           (paragraphProps as any)?.className,
           "relative",
-          mobileHighlightStyle === "border" && isMobile
+          mobileHighlightStyle === "border"
             ? myHighlight && hasComments
               ? "border-l-2 pl-2"
               : myHighlight
@@ -270,7 +270,7 @@ export default function HighlightedParagraph({
           .filter(Boolean)
           .join(" ")}
         style={
-          mobileHighlightStyle === "border" && isMobile && myHighlight && hasComments
+          mobileHighlightStyle === "border" && myHighlight && hasComments
             ? { borderImage: "linear-gradient(to bottom, #facc15 50%, #a78bfa 50%) 1" }
             : undefined
         }
