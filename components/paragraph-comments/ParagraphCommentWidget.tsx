@@ -1,8 +1,18 @@
 ﻿"use client";
 
 import { useAuth, useClerk } from "@clerk/nextjs";
-import { ChatBubbleLeftRightIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  ChatBubbleLeftRightIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   PARAGRAPH_COMMENT_MAX_LENGTH,
   buildLengthErrorMessage,
@@ -10,7 +20,11 @@ import {
 } from "@components/comments/lengthUtils";
 import CommentAvatar from "@components/CommentAvatar";
 import { sanitizeCommentHtml } from "@components/comments/utils";
-import { UPPERCASE_MAX_RATIO, getUppercaseState, buildUppercaseErrorMessage } from "@components/comments/uppercaseUtils";
+import {
+  UPPERCASE_MAX_RATIO,
+  getUppercaseState,
+  buildUppercaseErrorMessage,
+} from "@components/comments/uppercaseUtils";
 import type { ParagraphComment } from "../../types/paragraph-comments";
 import { useAnalytics } from "@components/analytics/AnalyticsProvider";
 import CommentIndicator from "./CommentIndicator";
@@ -90,9 +104,9 @@ export default function ParagraphCommentWidget({
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const pendingDeleteTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const deleteButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  const [undoToast, setUndoToast] = useState<{ comment: ParagraphComment } | null>(
-    null
-  );
+  const [undoToast, setUndoToast] = useState<{
+    comment: ParagraphComment;
+  } | null>(null);
   const [undoCountdown, setUndoCountdown] = useState(0);
   const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const undoIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -117,10 +131,12 @@ export default function ParagraphCommentWidget({
     (commentId: string) => {
       clearPendingDeleteTimeout();
       pendingDeleteTimeoutRef.current = setTimeout(() => {
-        setPendingDeleteId((current) => (current === commentId ? null : current));
+        setPendingDeleteId((current) =>
+          current === commentId ? null : current,
+        );
       }, 6000);
     },
-    [clearPendingDeleteTimeout]
+    [clearPendingDeleteTimeout],
   );
 
   const clearUndoTimers = useCallback(() => {
@@ -161,7 +177,7 @@ export default function ParagraphCommentWidget({
         });
       }, 1000);
     },
-    [clearUndoTimers]
+    [clearUndoTimers],
   );
 
   useEffect(() => {
@@ -232,11 +248,12 @@ export default function ParagraphCommentWidget({
       });
 
       if (response.status === 403) {
-        const data = (await response.json().catch(() => null)) as
-          | { error?: string }
-          | null;
+        const data = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
         setErrorMessage(
-          data?.error ?? "Comentários por parágrafo desativados para este post."
+          data?.error ??
+            "Comentários por parágrafo desativados para este post.",
         );
         setIsFeatureBlocked(true);
         setUndoToast(null);
@@ -253,7 +270,7 @@ export default function ParagraphCommentWidget({
       setUndoToast(null);
       setUndoCountdown(0);
       setIsFeatureBlocked(false);
-      } catch (error) {
+    } catch (error) {
       console.error("Failed to undo paragraph comment deletion", error);
       setErrorMessage("Não foi possível desfazer a exclusão.");
       setUndoToast(null);
@@ -287,7 +304,7 @@ export default function ParagraphCommentWidget({
         setQueuedExpand(null);
       }
     },
-    [setQueuedExpand]
+    [setQueuedExpand],
   );
 
   const loadComments = useCallback(async () => {
@@ -299,15 +316,16 @@ export default function ParagraphCommentWidget({
           method: "GET",
           headers: { "Content-Type": "application/json" },
           cache: "no-store",
-        }
+        },
       );
 
       if (response.status === 403) {
-        const data = (await response.json().catch(() => null)) as
-          | { error?: string }
-          | null;
+        const data = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
         setErrorMessage(
-          data?.error ?? "Comentários por parágrafo desativados para este post."
+          data?.error ??
+            "Comentários por parágrafo desativados para este post.",
         );
         setIsFeatureBlocked(true);
         setComments([]);
@@ -352,12 +370,22 @@ export default function ParagraphCommentWidget({
 
     if (next) {
       if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent(OPEN_EVENT, { detail: { paragraphId } }));
+        window.dispatchEvent(
+          new CustomEvent(OPEN_EVENT, { detail: { paragraphId } }),
+        );
       }
     }
 
     setIsExpanded(next);
-  }, [hasLoaded, isExpanded, isLoaded, loadComments, openLoginPrompt, paragraphId, userId]);
+  }, [
+    hasLoaded,
+    isExpanded,
+    isLoaded,
+    loadComments,
+    openLoginPrompt,
+    paragraphId,
+    userId,
+  ]);
 
   const openComments = useCallback(async () => {
     const next = true;
@@ -378,7 +406,9 @@ export default function ParagraphCommentWidget({
     }
 
     if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent(OPEN_EVENT, { detail: { paragraphId } }));
+      window.dispatchEvent(
+        new CustomEvent(OPEN_EVENT, { detail: { paragraphId } }),
+      );
     }
 
     setIsExpanded(next);
@@ -407,14 +437,24 @@ export default function ParagraphCommentWidget({
       }
       if (next) {
         if (typeof window !== "undefined") {
-          window.dispatchEvent(new CustomEvent(OPEN_EVENT, { detail: { paragraphId } }));
+          window.dispatchEvent(
+            new CustomEvent(OPEN_EVENT, { detail: { paragraphId } }),
+          );
         }
       }
       setIsExpanded(next);
     };
 
     void applyToggle();
-  }, [hasLoaded, isLoaded, loadComments, openLoginPrompt, paragraphId, queuedExpand, userId]);
+  }, [
+    hasLoaded,
+    isLoaded,
+    loadComments,
+    openLoginPrompt,
+    paragraphId,
+    queuedExpand,
+    userId,
+  ]);
 
   const submitComment = useCallback(async () => {
     const trimmed = draft.trim();
@@ -425,7 +465,7 @@ export default function ParagraphCommentWidget({
 
     if (draftLength.isOverLimit) {
       setErrorMessage(
-        buildLengthErrorMessage(PARAGRAPH_COMMENT_MAX_LENGTH, "comentário")
+        buildLengthErrorMessage(PARAGRAPH_COMMENT_MAX_LENGTH, "comentário"),
       );
       return;
     }
@@ -434,7 +474,9 @@ export default function ParagraphCommentWidget({
     {
       const upperState = getUppercaseState(trimmed, UPPERCASE_MAX_RATIO);
       if (upperState.isOverLimit) {
-        setErrorMessage(buildUppercaseErrorMessage(trimmed, UPPERCASE_MAX_RATIO));
+        setErrorMessage(
+          buildUppercaseErrorMessage(trimmed, UPPERCASE_MAX_RATIO),
+        );
         return;
       }
     }
@@ -451,11 +493,12 @@ export default function ParagraphCommentWidget({
       });
 
       if (response.status === 403) {
-        const data = (await response.json().catch(() => null)) as
-          | { error?: string }
-          | null;
+        const data = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
         setErrorMessage(
-          data?.error ?? "Comentários por parágrafo desativados para este post."
+          data?.error ??
+            "Comentários por parágrafo desativados para este post.",
         );
         setIsFeatureBlocked(true);
         return;
@@ -479,18 +522,20 @@ export default function ParagraphCommentWidget({
         trackEvent(
           "comment_submit",
           { slug: postId, paragraphIndex, length: trimmed.length },
-          { immediate: true }
+          { immediate: true },
         );
       }
     } catch (error) {
       console.error("Failed to submit paragraph comment", error);
-  setErrorMessage("Não foi possível enviar seu comentário.");
+      setErrorMessage("Não foi possível enviar seu comentário.");
     } finally {
       setIsSubmitting(false);
     }
   }, [draft, paragraphId, postId, hasLoaded]);
 
-  const handleSubmit: React.FormEventHandler<HTMLFormElement> = async (event) => {
+  const handleSubmit: React.FormEventHandler<HTMLFormElement> = async (
+    event,
+  ) => {
     event.preventDefault();
     if (isFeatureBlocked) {
       return;
@@ -517,12 +562,16 @@ export default function ParagraphCommentWidget({
 
       if (
         !isAdmin &&
-        !comments.some((comment) => comment._id === commentId && comment.userId === userId)
+        !comments.some(
+          (comment) => comment._id === commentId && comment.userId === userId,
+        )
       ) {
         return;
       }
 
-      const commentToDelete = comments.find((comment) => comment._id === commentId);
+      const commentToDelete = comments.find(
+        (comment) => comment._id === commentId,
+      );
       if (!commentToDelete) {
         return;
       }
@@ -542,16 +591,17 @@ export default function ParagraphCommentWidget({
           {
             method: "DELETE",
             headers: { "Content-Type": "application/json" },
-          }
+          },
         );
 
         if (response.status === 403) {
-          const data = (await response.json().catch(() => null)) as
-            | { error?: string }
-            | null;
-      setErrorMessage(
-        data?.error ?? "Comentários por parágrafo desativados para este post."
-      );
+          const data = (await response.json().catch(() => null)) as {
+            error?: string;
+          } | null;
+          setErrorMessage(
+            data?.error ??
+              "Comentários por parágrafo desativados para este post.",
+          );
           setIsFeatureBlocked(true);
           return;
         }
@@ -560,7 +610,9 @@ export default function ParagraphCommentWidget({
           throw new Error(await response.text());
         }
 
-        setComments((prev) => prev.filter((comment) => comment._id !== commentId));
+        setComments((prev) =>
+          prev.filter((comment) => comment._id !== commentId),
+        );
         if (!hasLoaded) setLocalDelta((d) => d - 1);
         setIsFeatureBlocked(false);
         showUndoToast(commentToDelete);
@@ -582,19 +634,24 @@ export default function ParagraphCommentWidget({
       schedulePendingDeleteTimeout,
       showUndoToast,
       userId,
-    ]
+    ],
   );
 
   const formattedComments = useMemo(
     () =>
       comments
         .slice()
-        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+        .sort(
+          (a, b) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+        )
         .map((comment) => ({
           ...comment,
-          safeHtml: sanitizeCommentHtml(comment.content.replace(/\n/g, "<br />")),
+          safeHtml: sanitizeCommentHtml(
+            comment.content.replace(/\n/g, "<br />"),
+          ),
         })),
-    [comments]
+    [comments],
   );
 
   const {
@@ -689,20 +746,31 @@ export default function ParagraphCommentWidget({
       }
     };
     if (typeof window !== "undefined") {
-      window.addEventListener(OPEN_EVENT, onOtherParagraphOpen as EventListener);
+      window.addEventListener(
+        OPEN_EVENT,
+        onOtherParagraphOpen as EventListener,
+      );
     }
     return () => {
       if (typeof window !== "undefined") {
-        window.removeEventListener(OPEN_EVENT, onOtherParagraphOpen as EventListener);
+        window.removeEventListener(
+          OPEN_EVENT,
+          onOtherParagraphOpen as EventListener,
+        );
       }
     };
   }, [paragraphId]);
 
-  const loginPromptProgressPercent = Math.min(Math.max(loginPromptProgress, 0), 1) * 100;
+  const loginPromptProgressPercent =
+    Math.min(Math.max(loginPromptProgress, 0), 1) * 100;
 
   return (
     <>
-      <section ref={sectionRef} className="flex flex-col gap-3" data-paragraph-id={paragraphId}>
+      <section
+        ref={sectionRef}
+        className="flex flex-col gap-3"
+        data-paragraph-id={paragraphId}
+      >
         <div className="relative group">
           <p
             {...restParagraphProps}
@@ -710,203 +778,205 @@ export default function ParagraphCommentWidget({
             onClick={(e) => {
               incomingOnClick?.(e);
             }}
-          onFocus={(e) => {
-            incomingOnFocus?.(e);
-            if ((e as React.FocusEvent<HTMLParagraphElement>).defaultPrevented) return;
-            if (isMobile && !isExpanded) void openComments();
-          }}
-          onKeyDown={(e) => {
-            incomingOnKeyDown?.(e);
-            if (e.defaultPrevented) return;
-            if (!isMobile) return;
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              void openComments();
-            }
-          }}
-          className={`${paragraphClassName} peer`}
-        >
-          {children}
-        </p>
-        <span aria-hidden="true" className="hidden md:block absolute right-[-2rem] top-0 h-full w-8 pointer-events-none" />
-        <span className="hidden md:flex pointer-events-none absolute right-0 top-1/2 z-10 -translate-y-1/2 translate-x-[calc(100%+0.5rem)] opacity-0 transition-opacity peer-hover:opacity-100 group-hover:opacity-100 hover:opacity-100 peer-hover:pointer-events-auto group-hover:pointer-events-auto hover:pointer-events-auto items-center gap-0.5">
-          {onHighlight && (
-            <button
-              type="button"
-              onClick={onHighlight}
-              className="shrink-0 flex items-center gap-1 rounded-full border border-zinc-300 bg-white px-2.5 py-1 text-sm font-medium text-yellow-500 shadow-sm hover:border-zinc-400 hover:text-yellow-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-yellow-400 dark:hover:border-zinc-500"
-              aria-label="Destacar parágrafo"
-            >
-              ✦
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={toggleComments}
-            className="shrink-0 flex items-center gap-1 rounded-full border border-zinc-300 bg-white px-2.5 py-1 text-sm font-medium text-zinc-600 shadow-sm hover:border-zinc-400 hover:text-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:text-white"
-            aria-label="Comentar parágrafo"
+            onFocus={(e) => {
+              incomingOnFocus?.(e);
+              if (
+                (e as React.FocusEvent<HTMLParagraphElement>).defaultPrevented
+              )
+                return;
+            }}
+            onKeyDown={(e) => {
+              incomingOnKeyDown?.(e);
+              if (e.defaultPrevented) return;
+            }}
+            className={`${paragraphClassName} peer`}
           >
-            <ChatBubbleLeftRightIcon className="h-4 w-4" />
-          </button>
-        </span>
-        {!isExpanded && displayCount > 0 && (
-          <span className="absolute right-[-2rem] top-1/2 -translate-y-1/2">
-            <CommentIndicator
-              count={displayCount}
-              onClick={toggleComments}
-            />
-          </span>
-        )}
-      </div>
-
-      {isExpanded && (
-        <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/70">
-          <div className="flex items-center justify-between pb-3">
-            <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">
-              Comentários deste parágrafo
-            </span>
-            <span className="text-xs text-zinc-500 dark:text-zinc-400">
-              Parágrafo {paragraphIndex + 1}
-            </span>
-          </div>
-
-          <div className="-mt-2 mb-1 flex justify-end">
+            {children}
+          </p>
+          <span
+            aria-hidden="true"
+            className="hidden md:block absolute right-[-1.5rem] top-0 h-full w-6 pointer-events-none"
+          />
+          <span className="hidden md:flex pointer-events-none absolute right-0 top-1/2 z-10 -translate-y-1/2 translate-x-1/2 opacity-0 transition-opacity peer-hover:opacity-100 group-hover:opacity-100 hover:opacity-100 peer-hover:pointer-events-auto group-hover:pointer-events-auto hover:pointer-events-auto flex-col items-center gap-0">
             <button
               type="button"
-              onClick={() => setIsExpanded(false)}
-              aria-label="Fechar comentários deste parágrafo"
-              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-zinc-300 text-zinc-500 hover:text-zinc-700 hover:border-zinc-400 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 dark:border-zinc-700 dark:text-zinc-400 dark:hover:text-white dark:hover:border-zinc-500"
+              onClick={toggleComments}
+              className="shrink-0 flex h-8 w-8 items-center justify-center rounded-t-full border border-zinc-300 border-b-0 bg-white text-zinc-600 shadow-sm hover:border-zinc-400 hover:text-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:text-white"
+              aria-label="Comentar parágrafo"
             >
-              <XMarkIcon className="h-4 w-4" />
+              <ChatBubbleLeftRightIcon className="h-4 w-4" />
             </button>
-          </div>
-
-          {errorMessage && (
-            <p className="mb-3 text-sm text-red-500" role="alert">
-              {errorMessage}
-            </p>
-          )}
-
-          <form className="flex flex-col gap-2" onSubmit={handleSubmit}>
-            <textarea
-              name="paragraph-comment"
-              value={draft}
-              onChange={(event) => {
-                setDraft(event.target.value);
-                if (errorMessage && !isFeatureBlocked) {
-                  setErrorMessage(null);
-                }
-              }}
-              placeholder="Escreva seu comentário"
-              rows={3}
-              className="w-full resize-none rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm text-zinc-800 shadow-inner outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-700 whitespace-pre-wrap break-words"
-              disabled={isFeatureBlocked}
-            />
-            <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
-              <span
-                className={
-                  draftLength.isOverLimit
-                    ? "font-medium text-red-500 dark:text-red-400"
-                    : undefined
-                }
-              >
-                {draftLength.message}
-              </span>
+            {onHighlight && (
               <button
-                type="submit"
-                disabled={
-                  isSubmitting || isFeatureBlocked || draftLength.isOverLimit
-                }
-                className="inline-flex items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 py-1 text-sm font-medium text-zinc-700 transition-colors hover:border-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700"
+                type="button"
+                onClick={onHighlight}
+                className="shrink-0 flex h-8 w-8 items-center justify-center rounded-b-full border border-zinc-300 bg-white text-yellow-500 shadow-sm hover:border-zinc-400 hover:text-yellow-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-yellow-400 dark:hover:border-zinc-500"
+                aria-label="Destacar parágrafo"
               >
-                {isSubmitting ? "Enviando..." : "Publicar"}
+                ✦
               </button>
-            </div>
-          </form>
-
-          <div className="mt-4 space-y-3">
-            {isLoading ? (
-              <p className="text-sm text-zinc-500">Carregando comentários...</p>
-            ) : formattedComments.length === 0 ? (
-              <p className="text-sm text-zinc-500">
-                Ainda não há comentários neste parágrafo.
-              </p>
-            ) : (
-              formattedComments.map((comment) => (
-                <div key={comment._id} className="flex items-start gap-3">
-                  <CommentAvatar
-                    imageUrl={comment.authorImageUrl}
-                    name={comment.authorName}
-                    size={32}
-                    className="h-8 w-8 icon"
-                  />
-                  <div className="flex-1 min-w-0 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-700 shadow-sm dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-100">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-zinc-800 dark:text-white">
-                          {comment.authorName}
-                        </span>
-                        {coAuthorUserId && comment.userId === coAuthorUserId && (
-                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
-                            co-autor
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3 text-xs text-zinc-500 dark:text-zinc-400">
-                        <span>{formatDateLabel(comment.createdAt)}</span>
-                        {(isAdmin || comment.userId === userId) && (
-                          <button
-                            type="button"
-                            ref={(element) => {
-                              deleteButtonRefs.current[comment._id] = element;
-                            }}
-                            onClick={() => handleDelete(comment._id)}
-                            disabled={deletingId === comment._id}
-                            className={`rounded-full text-xs font-medium text-red-500 transition-colors hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 disabled:cursor-not-allowed disabled:text-red-300 ${
-                              pendingDeleteId === comment._id ? "text-red-600 font-semibold" : ""
-                            }`}
-                          >
-                            {deletingId === comment._id
-                              ? "Removendo..."
-                              : pendingDeleteId === comment._id
-                              ? "Confirmar exclusão?"
-                              : "Remover"}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    <div
-                      className="mt-2 leading-relaxed break-words break-all"
-                      dangerouslySetInnerHTML={{ __html: comment.safeHtml }}
-                    />
-                  </div>
-                </div>
-              ))
             )}
-          </div>
-          {undoToast && (
-            <div className="mt-4">
-              <div
-                role="status"
-                aria-live="polite"
-                className="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-sm sm:flex-row sm:items-center sm:justify-between dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-              >
-                <span>Comentário excluído.</span>
-                <button
-                  type="button"
-                  onClick={handleUndoDelete}
-                  disabled={isUndoingDelete || undoCountdown <= 0}
-                  className="inline-flex items-center justify-center rounded-full border border-purple-500 px-3 py-1 text-xs font-semibold text-purple-600 transition-colors hover:bg-purple-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-purple-400 dark:text-purple-300 dark:hover:bg-purple-400/10"
-                >
-                  {isUndoingDelete
-                    ? "Restaurando..."
-                    : `Desfazer (${Math.max(undoCountdown, 0)}s)`}
-                </button>
-              </div>
-            </div>
+          </span>
+          {!isExpanded && displayCount > 0 && (
+            <span className="absolute right-[-2rem] top-1/2 -translate-y-1/2">
+              <CommentIndicator count={displayCount} onClick={toggleComments} />
+            </span>
           )}
         </div>
-      )}
+
+        {isExpanded && (
+          <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/70">
+            <div className="flex items-center justify-between pb-3">
+              <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">
+                Comentários deste parágrafo
+              </span>
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                Parágrafo {paragraphIndex + 1}
+              </span>
+            </div>
+
+            <div className="-mt-2 mb-1 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setIsExpanded(false)}
+                aria-label="Fechar comentários deste parágrafo"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-zinc-300 text-zinc-500 hover:text-zinc-700 hover:border-zinc-400 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 dark:border-zinc-700 dark:text-zinc-400 dark:hover:text-white dark:hover:border-zinc-500"
+              >
+                <XMarkIcon className="h-4 w-4" />
+              </button>
+            </div>
+
+            {errorMessage && (
+              <p className="mb-3 text-sm text-red-500" role="alert">
+                {errorMessage}
+              </p>
+            )}
+
+            <form className="flex flex-col gap-2" onSubmit={handleSubmit}>
+              <textarea
+                name="paragraph-comment"
+                value={draft}
+                onChange={(event) => {
+                  setDraft(event.target.value);
+                  if (errorMessage && !isFeatureBlocked) {
+                    setErrorMessage(null);
+                  }
+                }}
+                placeholder="Escreva seu comentário"
+                rows={3}
+                className="w-full resize-none rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm text-zinc-800 shadow-inner outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-700 whitespace-pre-wrap break-words"
+                disabled={isFeatureBlocked}
+              />
+              <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
+                <span
+                  className={
+                    draftLength.isOverLimit
+                      ? "font-medium text-red-500 dark:text-red-400"
+                      : undefined
+                  }
+                >
+                  {draftLength.message}
+                </span>
+                <button
+                  type="submit"
+                  disabled={
+                    isSubmitting || isFeatureBlocked || draftLength.isOverLimit
+                  }
+                  className="inline-flex items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 py-1 text-sm font-medium text-zinc-700 transition-colors hover:border-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700"
+                >
+                  {isSubmitting ? "Enviando..." : "Publicar"}
+                </button>
+              </div>
+            </form>
+
+            <div className="mt-4 space-y-3">
+              {isLoading ? (
+                <p className="text-sm text-zinc-500">
+                  Carregando comentários...
+                </p>
+              ) : formattedComments.length === 0 ? (
+                <p className="text-sm text-zinc-500">
+                  Ainda não há comentários neste parágrafo.
+                </p>
+              ) : (
+                formattedComments.map((comment) => (
+                  <div key={comment._id} className="flex items-start gap-3">
+                    <CommentAvatar
+                      imageUrl={comment.authorImageUrl}
+                      name={comment.authorName}
+                      size={32}
+                      className="h-8 w-8 icon"
+                    />
+                    <div className="flex-1 min-w-0 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-700 shadow-sm dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-100">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-zinc-800 dark:text-white">
+                            {comment.authorName}
+                          </span>
+                          {coAuthorUserId &&
+                            comment.userId === coAuthorUserId && (
+                              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
+                                co-autor
+                              </span>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-zinc-500 dark:text-zinc-400">
+                          <span>{formatDateLabel(comment.createdAt)}</span>
+                          {(isAdmin || comment.userId === userId) && (
+                            <button
+                              type="button"
+                              ref={(element) => {
+                                deleteButtonRefs.current[comment._id] = element;
+                              }}
+                              onClick={() => handleDelete(comment._id)}
+                              disabled={deletingId === comment._id}
+                              className={`rounded-full text-xs font-medium text-red-500 transition-colors hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 disabled:cursor-not-allowed disabled:text-red-300 ${
+                                pendingDeleteId === comment._id
+                                  ? "text-red-600 font-semibold"
+                                  : ""
+                              }`}
+                            >
+                              {deletingId === comment._id
+                                ? "Removendo..."
+                                : pendingDeleteId === comment._id
+                                  ? "Confirmar exclusão?"
+                                  : "Remover"}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <div
+                        className="mt-2 leading-relaxed break-words break-all"
+                        dangerouslySetInnerHTML={{ __html: comment.safeHtml }}
+                      />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            {undoToast && (
+              <div className="mt-4">
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 shadow-sm sm:flex-row sm:items-center sm:justify-between dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                >
+                  <span>Comentário excluído.</span>
+                  <button
+                    type="button"
+                    onClick={handleUndoDelete}
+                    disabled={isUndoingDelete || undoCountdown <= 0}
+                    className="inline-flex items-center justify-center rounded-full border border-purple-500 px-3 py-1 text-xs font-semibold text-purple-600 transition-colors hover:bg-purple-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-purple-400 dark:text-purple-300 dark:hover:bg-purple-400/10"
+                  >
+                    {isUndoingDelete
+                      ? "Restaurando..."
+                      : `Desfazer (${Math.max(undoCountdown, 0)}s)`}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       {showLoginPrompt && (
@@ -931,7 +1001,10 @@ export default function ParagraphCommentWidget({
                 style={{ width: `${loginPromptProgressPercent}%` }}
               />
             </div>
-            <h2 id={loginPromptTitleId} className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">
+            <h2
+              id={loginPromptTitleId}
+              className="text-sm font-semibold text-zinc-800 dark:text-zinc-100"
+            >
               Quer participar?
             </h2>
             <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
@@ -947,7 +1020,9 @@ export default function ParagraphCommentWidget({
               </button>
               <button
                 type="button"
-                onClick={() => openSignIn({ afterSignInUrl: buildRedirectUrl() })}
+                onClick={() =>
+                  openSignIn({ afterSignInUrl: buildRedirectUrl() })
+                }
                 className="rounded-full bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 dark:bg-purple-500 dark:hover:bg-purple-400"
               >
                 Fazer login
