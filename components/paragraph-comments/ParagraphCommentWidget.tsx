@@ -67,6 +67,8 @@ type ParagraphCommentWidgetProps = {
   autoOpen?: boolean;
   onRegisterOpenComments?: (fn: () => Promise<void>) => void;
   onHighlight?: () => void;
+  onRemoveHighlight?: () => void;
+  hasMyHighlight?: boolean;
   highlightCount?: number;
   mobileHighlightStyle?: "badges" | "border";
 };
@@ -84,6 +86,8 @@ export default function ParagraphCommentWidget({
   autoOpen = false,
   onRegisterOpenComments,
   onHighlight,
+  onRemoveHighlight,
+  hasMyHighlight = false,
   highlightCount = 0,
   mobileHighlightStyle = "badges",
 }: ParagraphCommentWidgetProps) {
@@ -824,12 +828,17 @@ export default function ParagraphCommentWidget({
             >
               <ChatBubbleLeftRightIcon className="h-4 w-4" />
             </button>
-            {onHighlight && (
+            {(onHighlight || onRemoveHighlight) && (
               <button
                 type="button"
-                onClick={onHighlight}
-                className="shrink-0 flex h-8 w-8 items-center justify-center rounded-b-full border border-zinc-300 bg-white text-yellow-500 shadow-sm hover:border-zinc-400 hover:text-yellow-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-yellow-400 dark:hover:border-zinc-500"
-                aria-label="Destacar parágrafo"
+                onClick={hasMyHighlight ? onRemoveHighlight : onHighlight}
+                className={[
+                  "shrink-0 flex h-8 w-8 items-center justify-center rounded-b-full border bg-white shadow-sm focus-visible:outline-none focus-visible:ring-2 dark:bg-zinc-900",
+                  hasMyHighlight
+                    ? "border-red-300 text-red-400 hover:border-red-400 hover:text-red-500 focus-visible:ring-red-500 dark:border-red-800 dark:text-red-400 dark:hover:border-red-600"
+                    : "border-zinc-300 text-yellow-500 hover:border-zinc-400 hover:text-yellow-600 focus-visible:ring-zinc-500 dark:border-zinc-700 dark:text-yellow-400 dark:hover:border-zinc-500",
+                ].join(" ")}
+                aria-label={hasMyHighlight ? "Remover destaque" : "Destacar parágrafo"}
               >
                 ✦
               </button>
