@@ -74,7 +74,7 @@ export default function HighlightedParagraph({
     window.getSelection()?.removeAllRanges();
     setMobileMenuPos({
       x: rect.right,
-      y: rect.top + window.scrollY - 8,
+      y: rect.top - 8,
     });
     setShowMobileMenu(true);
   }, []);
