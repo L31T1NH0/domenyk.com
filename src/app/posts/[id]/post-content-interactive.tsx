@@ -19,6 +19,7 @@ import {
 } from "react";
 import { Date } from "@components/date";
 import ShareButton from "@components/ShareButton";
+import { useRealReadingTime } from "@components/useRealReadingTime";
 import AudioPlayer from "@components/AudioPlayer";
 import PostMinimap from "@components/PostMinimap";
 import { EyeIcon, ClockIcon } from "@heroicons/react/24/solid";
@@ -259,6 +260,7 @@ export default function PostContentShell({
   contentRef,
 }: PostContentShellProps) {
   const [views, setViews] = useState(initialViews);
+  const displayReadingTime = useRealReadingTime(postId, readingTime);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -320,7 +322,7 @@ export default function PostContentShell({
               <span className="inline-flex items-center gap-1">
                 <ClockIcon className="h-4 w-4" aria-hidden="true" />
                 <span className="sr-only">Tempo de leitura:</span>
-                {readingTime}
+                {displayReadingTime}
               </span>
               <span aria-hidden className="mx-1 text-zinc-400">•</span>
               <span className="inline-flex items-center gap-1">
@@ -337,7 +339,7 @@ export default function PostContentShell({
         </div>
       </div>
     ),
-    [date, hideShareButton, postId, readingTime, views],
+    [date, displayReadingTime, hideShareButton, postId, views],
   );
 
   return (
