@@ -21,6 +21,8 @@ type Props = {
   userId: string | null | undefined;
   onOpenComments?: () => void;
   isMobile?: boolean;
+  mobileHighlightStyle?: "badges" | "border";
+  hasComments?: boolean;
 };
 
 type SelectionInfo = {
@@ -42,6 +44,8 @@ export default function HighlightedParagraph({
   userId,
   onOpenComments,
   isMobile = false,
+  mobileHighlightStyle = "badges",
+  hasComments = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [selection, setSelection] = useState<SelectionInfo | null>(null);
@@ -251,10 +255,25 @@ export default function HighlightedParagraph({
         className={[
           (paragraphProps as any)?.className,
           "relative",
-          myHighlight ? "border-l-2 border-yellow-400/60 pl-2" : "",
+          mobileHighlightStyle === "border" && isMobile
+            ? myHighlight && hasComments
+              ? "border-l-2 pl-2"
+              : myHighlight
+                ? "border-l-2 border-yellow-400/60 pl-2"
+                : hasComments
+                  ? "border-l-2 border-purple-400/60 pl-2"
+                  : ""
+            : myHighlight
+              ? "border-l-2 border-yellow-400/60 pl-2"
+              : "",
         ]
           .filter(Boolean)
           .join(" ")}
+        style={
+          mobileHighlightStyle === "border" && isMobile && myHighlight && hasComments
+            ? { borderImage: "linear-gradient(to bottom, #facc15 50%, #a78bfa 50%) 1" }
+            : undefined
+        }
       >
         {children}
       </div>

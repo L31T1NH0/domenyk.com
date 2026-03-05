@@ -34,6 +34,7 @@ function renderParagraphWithComments(
     highlights: Highlight[];
     userId: string | null | undefined;
     isMobile: boolean;
+    mobileHighlightStyle: "badges" | "border";
     openCommentsFnsRef: RefObject<Map<string, () => Promise<void>>>;
     onHighlightSaved: (h: Highlight) => void;
     onHighlightDeleted: (id: string) => void;
@@ -66,6 +67,8 @@ function renderParagraphWithComments(
         onHighlightDeleted={highlightProps.onHighlightDeleted}
         paragraphProps={enhancedParagraphProps}
         isMobile={highlightProps.isMobile}
+        mobileHighlightStyle={highlightProps.mobileHighlightStyle}
+        hasComments={initialCount > 0}
         onOpenComments={() => highlightProps.openCommentsFnsRef.current?.get(paragraphId)?.()}
       >
         <LazyParagraphCommentWidget
@@ -222,6 +225,7 @@ type PostContentClientProps = {
   coAuthorUserId?: string | null;
   coAuthorImageUrl?: string | null;
   paragraphCommentsEnabled: boolean;
+  mobileHighlightStyle?: "badges" | "border";
   isAdmin: boolean;
   isEditing?: boolean;
   contentRef?: RefObject<HTMLDivElement | null>;
@@ -237,6 +241,7 @@ export default function PostContentClient({
   coAuthorUserId,
   coAuthorImageUrl,
   paragraphCommentsEnabled,
+  mobileHighlightStyle,
   isAdmin,
   isEditing = false,
   contentRef,
@@ -337,6 +342,7 @@ export default function PostContentClient({
           highlights,
           userId,
           isMobile,
+          mobileHighlightStyle: mobileHighlightStyle ?? "badges",
           openCommentsFnsRef,
           onHighlightSaved: addHighlight,
           onHighlightDeleted: removeHighlight,
