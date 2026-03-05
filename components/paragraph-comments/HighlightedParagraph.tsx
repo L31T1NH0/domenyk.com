@@ -149,14 +149,15 @@ export default function HighlightedParagraph({
   const highlightCount = otherHighlights.length + (myHighlight ? 1 : 0);
 
   return (
-    <span className="relative block">
+    <>
       <span
-        {...paragraphProps}
+        {...(paragraphProps as any)}
         ref={containerRef}
         onMouseUp={handleMouseUp}
         onTouchEnd={handleMouseUp}
         className={[
-          paragraphProps?.className,
+          (paragraphProps as any)?.className,
+          "relative",
           myHighlight ? "border-l-2 border-yellow-400/60 pl-2" : "",
         ]
           .filter(Boolean)
@@ -207,6 +208,6 @@ export default function HighlightedParagraph({
           <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-zinc-900" />
         </span>
       )}
-    </span>
+    </>
   );
 }
