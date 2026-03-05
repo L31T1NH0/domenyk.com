@@ -135,9 +135,14 @@ export default function HighlightedParagraph({
     if (!selection) return;
     const onDown = (e: MouseEvent) => {
       const target = e.target as Node;
-      if (!containerRef.current?.contains(target)) {
-        setSelection(null);
+      // Não fecha se o clique foi no próprio popover
+      if (
+        containerRef.current?.contains(target) ||
+        (target as Element).closest?.("[data-highlight-popover]")
+      ) {
+        return;
       }
+      setSelection(null);
     };
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
@@ -177,6 +182,7 @@ export default function HighlightedParagraph({
 
       {selection && userId && (
         <span
+          data-highlight-popover
           className="fixed z-[9998] -translate-x-1/2 -translate-y-full"
           style={{ left: selection.x, top: selection.y }}
         >
