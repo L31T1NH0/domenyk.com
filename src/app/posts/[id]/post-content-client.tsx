@@ -115,6 +115,22 @@ function renderParagraphWithComments(
                 console.error("Failed to save highlight", error);
               });
           }}
+          hasMyHighlight={highlightProps.highlights.some(
+            (h) => h.paragraphId === paragraphId && h.userId === highlightProps.userId,
+          )}
+          onRemoveHighlight={() => {
+            const mine = highlightProps.highlights.find(
+              (h) => h.paragraphId === paragraphId && h.userId === highlightProps.userId,
+            );
+            if (!mine) return;
+            void fetch(`/api/posts/${encodeURIComponent(options.postId)}/paragraph-highlights`, {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ highlightId: mine._id }),
+            })
+              .then(() => highlightProps.onHighlightDeleted(mine._id))
+              .catch(console.error);
+          }}
           highlightCount={highlightProps.highlights.filter((h) => h.paragraphId === paragraphId).length}
           mobileHighlightStyle={highlightProps.mobileHighlightStyle}
         >
