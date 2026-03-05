@@ -221,7 +221,7 @@ export function LazyParagraphCommentWidget(props: ParagraphCommentWidgetProps) {
   return <Widget {...restProps} isMobile={isMobile} autoOpen={pendingOpen} />;
 }
 
-const IsMobileContext = createContext<boolean | null>(null);
+export const IsMobileContext = createContext<boolean | null>(null);
 
 export function useIsMobile(): boolean {
   const context = useContext(IsMobileContext);
