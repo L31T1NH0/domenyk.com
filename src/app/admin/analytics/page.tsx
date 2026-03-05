@@ -6,6 +6,7 @@ import { resolveAdminStatus } from "@lib/admin";
 import { getFromDate, parseRange, type RangeKey } from "./utils";
 import { getAnalyticsEnabled } from "@lib/analytics/config";
 import { AnalyticsToggle } from "@components/analytics/AnalyticsToggle";
+import MobileHighlightStyleToggle from "../MobileHighlightStyleToggle";
 
 type DeviceBreakdown = { device: string; count: number }[];
 type TopPageRow = {
@@ -15,6 +16,12 @@ type TopPageRow = {
   anonymousViews: number;
   referrer?: string;
 }[];
+
+type MobileHighlightStyleSetting = {
+  _id: string;
+  value?: "badges" | "border";
+};
+
 
 // ---------------------------------------------------------------------------
 // FIX #4a: Wrap all heavy MongoDB aggregate functions with unstable_cache.
@@ -363,7 +370,18 @@ export default async function AdminAnalyticsPage({
   // Serialize to ISO string so unstable_cache key is stable across requests
   const fromIso = from.toISOString();
 
-  const analyticsEnabled = await getAnalyticsEnabled();
+  const [analyticsEnabled, mobileHighlightStyle] = await Promise.all([
+    getAnalyticsEnabled(),
+    getMongoDb()
+      .then((db) =>
+        db
+          .collection<MobileHighlightStyleSetting>("settings")
+          .findOne({ _id: "mobileHighlightStyle" })
+      )
+      .then((highlightStyleDoc) =>
+        (highlightStyleDoc?.value as "badges" | "border") ?? "badges"
+      ),
+  ]);
 
   const [summary, device, topPages, series] = await Promise.all([
     getSummary(fromIso),
@@ -410,6 +428,7 @@ export default async function AdminAnalyticsPage({
       </div>
 
       <AnalyticsToggle initialEnabled={analyticsEnabled} />
+      <MobileHighlightStyleToggle initialValue={mobileHighlightStyle} />
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">

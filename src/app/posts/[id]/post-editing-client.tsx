@@ -19,6 +19,7 @@ export type PostEditingClientProps = {
   coAuthorUserId?: string | null;
   coAuthorImageUrl?: string | null;
   paragraphCommentsEnabled: boolean;
+  mobileHighlightStyle: "badges" | "border";
   isAdmin: boolean;
   initialMarkdown: string;
   tags: string[];
@@ -35,6 +36,7 @@ export default function PostEditingClient({
   coAuthorUserId,
   coAuthorImageUrl,
   paragraphCommentsEnabled,
+  mobileHighlightStyle,
   isAdmin,
   initialMarkdown,
   tags,
@@ -189,6 +191,7 @@ export default function PostEditingClient({
           coAuthorUserId={coAuthorUserId}
           coAuthorImageUrl={coAuthorImageUrl}
           paragraphCommentsEnabled={paragraphCommentsEnabled}
+          mobileHighlightStyle={mobileHighlightStyle}
           isAdmin={isAdmin}
           isEditing={false}
         />

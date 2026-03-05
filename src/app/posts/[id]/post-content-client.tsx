@@ -28,12 +28,13 @@ function renderParagraphWithComments(
   node: Element,
   parserOptions: HTMLReactParserOptions,
   paragraphIndex: number,
-  options: Pick<ParagraphCommentWidgetProps, "postId" | "coAuthorUserId" | "isAdmin">,
+  options: Pick<ParagraphCommentWidgetProps, "postId" | "coAuthorUserId" | "isAdmin" | "mobileHighlightStyle">,
   summaryMap: Map<string, number>,
   highlightProps?: {
     highlights: Highlight[];
     userId: string | null | undefined;
     isMobile: boolean;
+    mobileHighlightStyle: "badges" | "border";
     openCommentsFnsRef: RefObject<Map<string, () => Promise<void>>>;
     onHighlightSaved: (h: Highlight) => void;
     onHighlightDeleted: (id: string) => void;
@@ -66,6 +67,8 @@ function renderParagraphWithComments(
         onHighlightDeleted={highlightProps.onHighlightDeleted}
         paragraphProps={enhancedParagraphProps}
         isMobile={highlightProps.isMobile}
+        mobileHighlightStyle={highlightProps.mobileHighlightStyle}
+        hasComments={initialCount > 0}
         onOpenComments={() => highlightProps.openCommentsFnsRef.current?.get(paragraphId)?.()}
       >
         <LazyParagraphCommentWidget
@@ -113,6 +116,7 @@ function renderParagraphWithComments(
               });
           }}
           highlightCount={highlightProps.highlights.filter((h) => h.paragraphId === paragraphId).length}
+          mobileHighlightStyle={highlightProps.mobileHighlightStyle}
         >
           {content}
         </LazyParagraphCommentWidget>
@@ -131,6 +135,7 @@ function renderParagraphWithComments(
       isAdmin={options.isAdmin}
       isMobile={false}
       initialCount={initialCount}
+      mobileHighlightStyle={options.mobileHighlightStyle ?? "badges"}
     >
       {content}
     </LazyParagraphCommentWidget>
@@ -173,6 +178,7 @@ function ImageParagraphWithComments({
   coAuthorUserId,
   isAdmin,
   initialCount,
+  mobileHighlightStyle = "badges",
 }: {
   src: string;
   alt: string;
@@ -182,6 +188,7 @@ function ImageParagraphWithComments({
   coAuthorUserId?: string | null;
   isAdmin: boolean;
   initialCount: number;
+  mobileHighlightStyle?: "badges" | "border";
 }) {
   const isMobile = useContext(IsMobileContext) ?? false;
 
@@ -195,6 +202,7 @@ function ImageParagraphWithComments({
       isMobile={isMobile}
       initialCount={initialCount}
       paragraphProps={{}}
+      mobileHighlightStyle={mobileHighlightStyle}
     >
       <span />
     </LazyParagraphCommentWidget>
@@ -222,6 +230,7 @@ type PostContentClientProps = {
   coAuthorUserId?: string | null;
   coAuthorImageUrl?: string | null;
   paragraphCommentsEnabled: boolean;
+  mobileHighlightStyle?: "badges" | "border";
   isAdmin: boolean;
   isEditing?: boolean;
   contentRef?: RefObject<HTMLDivElement | null>;
@@ -237,6 +246,7 @@ export default function PostContentClient({
   coAuthorUserId,
   coAuthorImageUrl,
   paragraphCommentsEnabled,
+  mobileHighlightStyle,
   isAdmin,
   isEditing = false,
   contentRef,
@@ -308,6 +318,7 @@ export default function PostContentClient({
               coAuthorUserId={coAuthorUserId}
               isAdmin={isAdmin}
               initialCount={initialCount}
+              mobileHighlightStyle={mobileHighlightStyle}
             />
           );
         }
@@ -331,12 +342,13 @@ export default function PostContentClient({
         element,
         parserOptions,
         currentIndex,
-        { postId, coAuthorUserId, isAdmin },
+        { postId, coAuthorUserId, isAdmin, mobileHighlightStyle },
         summaryMap,
         {
           highlights,
           userId,
           isMobile,
+          mobileHighlightStyle: mobileHighlightStyle ?? "badges",
           openCommentsFnsRef,
           onHighlightSaved: addHighlight,
           onHighlightDeleted: removeHighlight,

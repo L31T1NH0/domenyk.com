@@ -8,6 +8,7 @@ import { renderPostMdx } from "../../../lib/renderers/mdx";
 import { resolveAdminStatus } from "../../../lib/admin";
 import { renderMarkdown } from "../../../lib/renderers/markdown";
 import { normalizeMarkdownContent } from "../../../lib/markdown-normalize";
+import { getMongoDb } from "../../../lib/mongo";
 
 function isStaticGenerationEnvironment(): boolean {
   return process.env.NEXT_PHASE === "phase-production-build";
@@ -37,6 +38,11 @@ type PostDocument = {
 
 type PostPageProps = {
   params: Promise<{ id: string }>;
+};
+
+type MobileHighlightStyleSetting = {
+  _id: string;
+  value?: "badges" | "border";
 };
 
 async function fetchPostById(id: string) {
@@ -220,10 +226,17 @@ export default async function PostPage({ params }: PostPageProps) {
     notFound();
   }
 
-  const [post, isAdmin] = await Promise.all([
+  const [post, isAdmin, highlightStyleDoc] = await Promise.all([
     getPostById(id),
     resolveIsAdmin(),
+    getMongoDb().then((db) =>
+      db
+        .collection<MobileHighlightStyleSetting>("settings")
+        .findOne({ _id: "mobileHighlightStyle" })
+    ),
   ]);
+  const mobileHighlightStyle =
+    (highlightStyleDoc?.value as "badges" | "border") ?? "badges";
 
   if (!post) {
     notFound();
@@ -277,6 +290,7 @@ export default async function PostPage({ params }: PostPageProps) {
         coAuthorUserId={post.coAuthorUserId ?? null}
         coAuthorImageUrl={post.friendImage ?? null}
         paragraphCommentsEnabled={post.paragraphCommentsEnabled ?? false}
+        mobileHighlightStyle={mobileHighlightStyle}
         isAdmin={isAdmin}
         initialMarkdown={normalizedContent}
         tags={post.tags ?? []}
