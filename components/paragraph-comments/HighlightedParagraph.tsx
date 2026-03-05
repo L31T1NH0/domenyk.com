@@ -232,11 +232,6 @@ export default function HighlightedParagraph({
     };
   }, [showMobileMenu]);
 
-  const otherHighlights = highlights.filter(
-    (h) => h.paragraphId === paragraphId && h.userId !== userId,
-  );
-  const highlightCount = otherHighlights.length + (myHighlight ? 1 : 0);
-
   return (
     <>
       <div
@@ -261,15 +256,6 @@ export default function HighlightedParagraph({
       >
         {children}
       </div>
-
-      {highlightCount > 0 && (
-        <span
-          className="flex items-center gap-0.5 rounded-full bg-yellow-400/20 px-1.5 py-0.5 text-[10px] font-medium text-yellow-700 dark:text-yellow-300 cursor-default w-fit"
-          title={`${highlightCount} destaque${highlightCount > 1 ? "s" : ""} neste parágrafo`}
-        >
-          ✦ {highlightCount}
-        </span>
-      )}
 
       {showMobileMenu && mobileMenuPos && (
         <span

@@ -37,6 +37,7 @@ export type ParagraphCommentWidgetProps = {
   autoOpen?: boolean;
   onRegisterOpenComments?: (fn: () => Promise<void>) => void;
   onHighlight?: () => void;
+  highlightCount?: number;
 };
 
 export type ParagraphCommentWidgetComponent =

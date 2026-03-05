@@ -112,6 +112,7 @@ function renderParagraphWithComments(
                 console.error("Failed to save highlight", error);
               });
           }}
+          highlightCount={highlightProps.highlights.filter((h) => h.paragraphId === paragraphId).length}
         >
           {content}
         </LazyParagraphCommentWidget>
