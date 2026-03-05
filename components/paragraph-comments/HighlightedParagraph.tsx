@@ -256,25 +256,27 @@ export default function HighlightedParagraph({
           (paragraphProps as any)?.className,
           "relative",
           mobileHighlightStyle === "border"
-            ? myHighlight && hasComments
-              ? "border-l-2 pl-2"
-              : myHighlight
-                ? "border-l-2 border-yellow-400/60 pl-2"
-                : hasComments
-                  ? "border-l-2 border-purple-400/60 pl-2"
-                  : ""
+            ? (myHighlight || hasComments ? "pl-2" : "")
             : myHighlight
               ? "border-l-2 border-yellow-400/60 pl-2"
               : "",
         ]
           .filter(Boolean)
           .join(" ")}
-        style={
-          mobileHighlightStyle === "border" && myHighlight && hasComments
-            ? { borderImage: "linear-gradient(to bottom, #facc15 50%, #a78bfa 50%) 1" }
-            : undefined
-        }
       >
+        {mobileHighlightStyle === "border" && (myHighlight || hasComments) && (
+          <span
+            aria-hidden
+            className="absolute left-0 top-0 h-full w-0.5"
+            style={{
+              background: myHighlight && hasComments
+                ? "linear-gradient(to bottom, #facc1599 50%, #a78bfa99 50%)"
+                : myHighlight
+                  ? "#facc1599"
+                  : "#a78bfa99",
+            }}
+          />
+        )}
         {children}
       </div>
 
