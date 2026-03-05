@@ -244,6 +244,8 @@ export default function HighlightedParagraph({
         }}
         onClick={(e) => {
           if (!useTouchActions) return;
+          const target = e.target as HTMLElement;
+          if (target.closest("button, a, input, textarea, select, [role='button']")) return;
           openTouchMenuAt();
         }}
         className={[
