@@ -67,10 +67,15 @@ export default function HighlightedParagraph({
     return () => media.removeEventListener("change", update);
   }, [isMobile]);
 
-  const openTouchMenuAt = useCallback((x: number, y: number) => {
+  const openTouchMenuAt = useCallback(() => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
     setSelection(null);
     window.getSelection()?.removeAllRanges();
-    setMobileMenuPos({ x, y });
+    setMobileMenuPos({
+      x: rect.right,
+      y: rect.top + window.scrollY - 8,
+    });
     setShowMobileMenu(true);
   }, []);
 
@@ -239,14 +244,12 @@ export default function HighlightedParagraph({
         ref={containerRef}
         onMouseUp={handleMouseUp}
         onTouchEnd={(e) => {
-          const touch = e.changedTouches[0];
-          if (!touch) return;
-          openTouchMenuAt(touch.clientX, touch.clientY + window.scrollY - 8);
+          if (!e.changedTouches[0]) return;
+          openTouchMenuAt();
         }}
         onClick={(e) => {
           if (!useTouchActions) return;
-          const event = e.nativeEvent as MouseEvent;
-          openTouchMenuAt(event.clientX, event.clientY + window.scrollY - 8);
+          openTouchMenuAt();
         }}
         className={[
           (paragraphProps as any)?.className,
@@ -271,7 +274,7 @@ export default function HighlightedParagraph({
       {showMobileMenu && mobileMenuPos && (
         <span
           data-highlight-popover
-          className="fixed z-[9998] -translate-x-1/2 -translate-y-full"
+          className="fixed z-[9998] -translate-x-full -translate-y-full"
           style={{ left: mobileMenuPos.x, top: mobileMenuPos.y }}
         >
           <span className="flex items-center gap-1 rounded-full bg-zinc-900 px-3 py-1.5 shadow-lg ring-1 ring-zinc-700">
