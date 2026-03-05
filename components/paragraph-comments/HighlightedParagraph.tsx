@@ -19,6 +19,8 @@ type Props = {
   paragraphProps?: HTMLAttributes<HTMLElement>;
   children: ReactNode;
   userId: string | null | undefined;
+  onOpenComments?: () => void;
+  isMobile?: boolean;
 };
 
 type SelectionInfo = {
@@ -38,11 +40,15 @@ export default function HighlightedParagraph({
   paragraphProps,
   children,
   userId,
+  onOpenComments,
+  isMobile = false,
 }: Props) {
   const containerRef = useRef<HTMLSpanElement>(null);
   const [selection, setSelection] = useState<SelectionInfo | null>(null);
   const [saving, setSaving] = useState(false);
   const [myHighlight, setMyHighlight] = useState<Highlight | null>(null);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [mobileMenuPos, setMobileMenuPos] = useState<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     const mine = highlights.find(
@@ -117,6 +123,36 @@ export default function HighlightedParagraph({
     }
   }, [selection, saving, postId, paragraphId, onHighlightSaved]);
 
+  const highlightFullParagraph = useCallback(async () => {
+    if (!userId || saving) return;
+    const fullText = containerRef.current?.textContent?.trim() ?? "";
+    if (!fullText) return;
+    setSaving(true);
+    try {
+      const res = await fetch(
+        `/api/posts/${encodeURIComponent(postId)}/paragraph-highlights`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            paragraphId,
+            selectedText: fullText,
+            startOffset: 0,
+            endOffset: fullText.length,
+          }),
+        }
+      );
+      if (!res.ok) throw new Error(await res.text());
+      const { highlight } = await res.json();
+      onHighlightSaved(highlight);
+      setShowMobileMenu(false);
+    } catch (e) {
+      console.error("Failed to save highlight", e);
+    } finally {
+      setSaving(false);
+    }
+  }, [userId, saving, postId, paragraphId, onHighlightSaved]);
+
   const deleteHighlight = useCallback(async () => {
     if (!myHighlight) return;
     try {
@@ -132,10 +168,9 @@ export default function HighlightedParagraph({
   }, [myHighlight, postId, onHighlightDeleted]);
 
   useEffect(() => {
-    if (!selection) return;
+    if (!selection && !showMobileMenu) return;
     const onDown = (e: MouseEvent) => {
       const target = e.target as Node;
-      // Não fecha se o clique foi no próprio popover
       if (
         containerRef.current?.contains(target) ||
         (target as Element).closest?.("[data-highlight-popover]")
@@ -143,10 +178,11 @@ export default function HighlightedParagraph({
         return;
       }
       setSelection(null);
+      setShowMobileMenu(false);
     };
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
-  }, [selection]);
+  }, [selection, showMobileMenu]);
 
   const otherHighlights = highlights.filter(
     (h) => h.paragraphId === paragraphId && h.userId !== userId
@@ -159,7 +195,15 @@ export default function HighlightedParagraph({
         {...(paragraphProps as any)}
         ref={containerRef}
         onMouseUp={handleMouseUp}
-        onTouchEnd={handleMouseUp}
+        onTouchEnd={(e) => {
+          if (isMobile && userId) {
+            const touch = e.changedTouches[0];
+            setMobileMenuPos({ x: touch.clientX, y: touch.clientY + window.scrollY - 8 });
+            setShowMobileMenu((v) => !v);
+            return;
+          }
+          handleMouseUp();
+        }}
         className={[
           (paragraphProps as any)?.className,
           "relative",
@@ -180,36 +224,96 @@ export default function HighlightedParagraph({
         )}
       </span>
 
-      {selection && userId && (
+      {isMobile && showMobileMenu && userId && mobileMenuPos && (
+        <span
+          data-highlight-popover
+          className="fixed z-[9998] -translate-x-1/2 -translate-y-full"
+          style={{ left: mobileMenuPos.x, top: mobileMenuPos.y }}
+        >
+          <span className="flex items-center gap-1 rounded-full bg-zinc-900 px-3 py-1.5 shadow-lg ring-1 ring-zinc-700">
+            {!myHighlight ? (
+              <button
+                type="button"
+                onClick={() => void highlightFullParagraph()}
+                disabled={saving}
+                className="flex items-center gap-1 text-xs font-medium text-yellow-300 hover:text-yellow-200 disabled:opacity-50"
+              >
+                <span aria-hidden>✦</span>
+                {saving ? "Salvando…" : "Destacar"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  void deleteHighlight();
+                  setShowMobileMenu(false);
+                }}
+                className="flex items-center gap-1 text-xs font-medium text-red-400 hover:text-red-300"
+              >
+                <span aria-hidden>✦</span>
+                Remover destaque
+              </button>
+            )}
+            <span className="mx-1 text-zinc-600" aria-hidden>
+              |
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setShowMobileMenu(false);
+                onOpenComments?.();
+              }}
+              className="flex items-center gap-1 text-xs font-medium text-zinc-300 hover:text-white"
+            >
+              Comentar
+            </button>
+          </span>
+          <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-zinc-900" />
+        </span>
+      )}
+
+      {!isMobile && selection && userId && (
         <span
           data-highlight-popover
           className="fixed z-[9998] -translate-x-1/2 -translate-y-full"
           style={{ left: selection.x, top: selection.y }}
         >
           <span className="flex items-center gap-1 rounded-full bg-zinc-900 px-3 py-1.5 shadow-lg ring-1 ring-zinc-700">
+            {!myHighlight && (
+              <button
+                type="button"
+                onClick={saveHighlight}
+                disabled={saving}
+                className="flex items-center gap-1 text-xs font-medium text-yellow-300 hover:text-yellow-200 disabled:opacity-50"
+              >
+                <span aria-hidden>✦</span>
+                {saving ? "Salvando…" : "Destacar"}
+              </button>
+            )}
+            {myHighlight && (
+              <button
+                type="button"
+                onClick={deleteHighlight}
+                className="flex items-center gap-1 text-xs font-medium text-red-400 hover:text-red-300"
+              >
+                <span aria-hidden>✦</span>
+                Remover
+              </button>
+            )}
+            <span className="mx-1 text-zinc-600" aria-hidden>
+              |
+            </span>
             <button
               type="button"
-              onClick={saveHighlight}
-              disabled={saving}
-              className="flex items-center gap-1 text-xs font-medium text-yellow-300 hover:text-yellow-200 disabled:opacity-50"
+              onClick={() => {
+                setSelection(null);
+                window.getSelection()?.removeAllRanges();
+                onOpenComments?.();
+              }}
+              className="flex items-center gap-1 text-xs font-medium text-zinc-300 hover:text-white"
             >
-              <span aria-hidden>✦</span>
-              {saving ? "Salvando…" : "Destacar"}
+              Comentar
             </button>
-            {myHighlight && (
-              <>
-                <span className="mx-1 text-zinc-600" aria-hidden>
-                  |
-                </span>
-                <button
-                  type="button"
-                  onClick={deleteHighlight}
-                  className="text-xs text-zinc-400 hover:text-red-400"
-                >
-                  Remover
-                </button>
-              </>
-            )}
           </span>
           <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-zinc-900" />
         </span>
