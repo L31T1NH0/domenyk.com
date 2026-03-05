@@ -6,7 +6,6 @@ import { getMongoDb } from "@lib/mongo";
 import { resolveAdminStatus } from "@lib/admin";
 
 const COLLECTION = "paragraph-highlights";
-const MAX_LENGTH = 300;
 
 export async function GET(
   _req: Request,
@@ -73,9 +72,9 @@ export async function POST(
     return NextResponse.json({ error: "Dados insuficientes." }, { status: 400 });
   }
 
-  if (selectedText.trim().length === 0 || selectedText.length > MAX_LENGTH) {
+  if (selectedText.trim().length === 0) {
     return NextResponse.json(
-      { error: `Destaque deve ter entre 1 e ${MAX_LENGTH} caracteres.` },
+      { error: "Destaque deve ter pelo menos 1 caractere." },
       { status: 400 }
     );
   }
