@@ -19,6 +19,10 @@ import HeatmapProgressBar from "@components/HeatmapProgressBar";
 import { useContext, type HTMLAttributes, type RefObject } from "react";
 import { useCommentsSummary } from "@components/paragraph-comments/useCommentsSummary";
 import ImageParagraph from "@components/ImageParagraph";
+import { useHighlights } from "@components/paragraph-comments/useHighlights";
+import HighlightedParagraph from "@components/paragraph-comments/HighlightedParagraph";
+import { useAuth } from "@clerk/nextjs";
+import type { Highlight } from "@components/paragraph-comments/useHighlights";
 
 function renderParagraphWithComments(
   node: Element,
@@ -26,6 +30,12 @@ function renderParagraphWithComments(
   paragraphIndex: number,
   options: Pick<ParagraphCommentWidgetProps, "postId" | "coAuthorUserId" | "isAdmin">,
   summaryMap: Map<string, number>,
+  highlightProps?: {
+    highlights: Highlight[];
+    userId: string | null | undefined;
+    onHighlightSaved: (h: Highlight) => void;
+    onHighlightDeleted: (id: string) => void;
+  }
 ) {
   const paragraphId = `${options.postId}-paragraph-${paragraphIndex}`;
   const initialCount = summaryMap.get(paragraphId) ?? 0;
@@ -40,6 +50,36 @@ function renderParagraphWithComments(
       .join(" "),
   };
 
+  const content = domToReact((node.children ?? []) as DOMNode[], parserOptions);
+
+  if (highlightProps) {
+    return (
+      <HighlightedParagraph
+        key={paragraphId}
+        paragraphId={paragraphId}
+        postId={options.postId}
+        highlights={highlightProps.highlights}
+        userId={highlightProps.userId}
+        onHighlightSaved={highlightProps.onHighlightSaved}
+        onHighlightDeleted={highlightProps.onHighlightDeleted}
+        paragraphProps={enhancedParagraphProps}
+      >
+        <LazyParagraphCommentWidget
+          postId={options.postId}
+          paragraphId={paragraphId}
+          paragraphIndex={paragraphIndex}
+          coAuthorUserId={options.coAuthorUserId}
+          paragraphProps={{}}
+          isAdmin={options.isAdmin}
+          isMobile={false}
+          initialCount={initialCount}
+        >
+          {content}
+        </LazyParagraphCommentWidget>
+      </HighlightedParagraph>
+    );
+  }
+
   return (
     <LazyParagraphCommentWidget
       key={paragraphId}
@@ -52,7 +92,7 @@ function renderParagraphWithComments(
       isMobile={false}
       initialCount={initialCount}
     >
-      {domToReact((node.children ?? []) as DOMNode[], parserOptions)}
+      {content}
     </LazyParagraphCommentWidget>
   );
 }
@@ -161,7 +201,9 @@ export default function PostContentClient({
   isEditing = false,
   contentRef,
 }: PostContentClientProps) {
+  const { userId } = useAuth();
   const summaryMap = useCommentsSummary(postId);
+  const { highlights, addHighlight, removeHighlight } = useHighlights(postId);
   let paragraphIndex = 0;
 
   type ReplaceReturn = ReturnType<NonNullable<HTMLReactParserOptions["replace"]>>;
@@ -243,11 +285,19 @@ export default function PostContentClient({
       const currentIndex = paragraphIndex;
       paragraphIndex += 1;
 
-      return renderParagraphWithComments(element, parserOptions, currentIndex, {
-        postId,
-        coAuthorUserId,
-        isAdmin,
-      }, summaryMap);
+      return renderParagraphWithComments(
+        element,
+        parserOptions,
+        currentIndex,
+        { postId, coAuthorUserId, isAdmin },
+        summaryMap,
+        {
+          highlights,
+          userId,
+          onHighlightSaved: addHighlight,
+          onHighlightDeleted: removeHighlight,
+        }
+      );
     }
 
     if (node.type === "tag" && node.name === "p" && !paragraphCommentsEnabled) {
