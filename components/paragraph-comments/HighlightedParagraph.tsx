@@ -43,7 +43,7 @@ export default function HighlightedParagraph({
   onOpenComments,
   isMobile = false,
 }: Props) {
-  const containerRef = useRef<HTMLSpanElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [selection, setSelection] = useState<SelectionInfo | null>(null);
   const [saving, setSaving] = useState(false);
   const [myHighlight, setMyHighlight] = useState<Highlight | null>(null);
@@ -213,7 +213,7 @@ export default function HighlightedParagraph({
 
   return (
     <>
-      <span
+      <div
         {...(paragraphProps as any)}
         ref={containerRef}
         onMouseUp={handleMouseUp}
@@ -256,7 +256,7 @@ export default function HighlightedParagraph({
             ✦ {highlightCount}
           </span>
         )}
-      </span>
+      </div>
 
       {isMobile && showMobileMenu && mobileMenuPos && (
         <span
