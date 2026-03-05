@@ -67,6 +67,7 @@ type ParagraphCommentWidgetProps = {
   autoOpen?: boolean;
   onRegisterOpenComments?: (fn: () => Promise<void>) => void;
   onHighlight?: () => void;
+  highlightCount?: number;
 };
 
 export default function ParagraphCommentWidget({
@@ -82,6 +83,7 @@ export default function ParagraphCommentWidget({
   autoOpen = false,
   onRegisterOpenComments,
   onHighlight,
+  highlightCount = 0,
 }: ParagraphCommentWidgetProps) {
   const { isLoaded, userId } = useAuth();
   const { openSignIn } = useClerk();
@@ -831,14 +833,34 @@ export default function ParagraphCommentWidget({
               </button>
             )}
           </span>
-          {!isExpanded && displayCount > 0 && (
+          {!isExpanded && (displayCount > 0 || highlightCount > 0) && (
             useCompactUi ? (
-              <span className="flex justify-start">
-                <CommentIndicator count={displayCount} onClick={toggleComments} />
+              <span className="flex items-center gap-1 mt-0.5">
+                {highlightCount > 0 && (
+                  <span
+                    className="inline-flex items-center gap-0.5 rounded-full bg-yellow-400/20 px-1.5 py-0.5 text-[10px] font-medium text-yellow-700 dark:text-yellow-300 cursor-default"
+                    title={`${highlightCount} destaque${highlightCount > 1 ? "s" : ""} neste parágrafo`}
+                  >
+                    ✦ {highlightCount}
+                  </span>
+                )}
+                {displayCount > 0 && (
+                  <CommentIndicator count={displayCount} onClick={toggleComments} />
+                )}
               </span>
             ) : (
-              <span className="absolute left-0 -translate-x-full top-1/2 -translate-y-1/2 pr-1">
-                <CommentIndicator count={displayCount} onClick={toggleComments} />
+              <span className="absolute left-0 -translate-x-full top-1/2 -translate-y-1/2 pr-1 flex flex-col items-end gap-0.5">
+                {highlightCount > 0 && (
+                  <span
+                    className="inline-flex items-center gap-0.5 rounded-full bg-yellow-400/20 px-1.5 py-0.5 text-[10px] font-medium text-yellow-700 dark:text-yellow-300 cursor-default"
+                    title={`${highlightCount} destaque${highlightCount > 1 ? "s" : ""} neste parágrafo`}
+                  >
+                    ✦ {highlightCount}
+                  </span>
+                )}
+                {displayCount > 0 && (
+                  <CommentIndicator count={displayCount} onClick={toggleComments} />
+                )}
               </span>
             )
           )}
@@ -910,11 +932,7 @@ export default function ParagraphCommentWidget({
             </form>
 
             <div className="mt-4 space-y-3">
-              {isLoading ? (
-                <p className="text-sm text-zinc-500">
-                  Carregando comentários...
-                </p>
-              ) : formattedComments.length === 0 ? (
+              {!isLoading && formattedComments.length === 0 ? (
                 <p className="text-sm text-zinc-500">
                   Ainda não há comentários neste parágrafo.
                 </p>
