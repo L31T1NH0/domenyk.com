@@ -28,6 +28,7 @@ const isPublicApiRoute = createRouteMatcher([
   "/api/posts/shorten-url",
   "/api/posts/(.*)/attention-heatmap",
   "/api/posts/(.*)",
+  "/api/posts/(.*)/reading-time",
   "/api/search-posts",
   "/api/comments(.*)",
   "/api/post-references(.*)",
