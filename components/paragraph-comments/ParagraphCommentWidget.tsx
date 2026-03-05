@@ -840,7 +840,7 @@ export default function ParagraphCommentWidget({
                 {highlightCount > 0 && (
                   <span
                     className={[
-                      "inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium bg-yellow-400/20 text-yellow-700 dark:text-yellow-300 cursor-default border border-zinc-300 dark:border-zinc-700",
+                      "inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium bg-yellow-400/20 text-yellow-700 dark:text-yellow-300 cursor-default border border-zinc-300 dark:border-zinc-700",
                       displayCount > 0 ? "rounded-l-full border-r-0" : "rounded-full",
                     ].join(" ")}
                     title={`${highlightCount} destaque${highlightCount > 1 ? "s" : ""} neste parágrafo`}
@@ -865,7 +865,7 @@ export default function ParagraphCommentWidget({
                 {highlightCount > 0 && (
                   <span
                     className={[
-                      "inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium bg-yellow-400/20 text-yellow-700 dark:text-yellow-300 cursor-default border border-zinc-300 dark:border-zinc-700",
+                      "inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium bg-yellow-400/20 text-yellow-700 dark:text-yellow-300 cursor-default border border-zinc-300 dark:border-zinc-700",
                       displayCount > 0 ? "rounded-t-full border-b-0" : "rounded-full",
                     ].join(" ")}
                     title={`${highlightCount} destaque${highlightCount > 1 ? "s" : ""} neste parágrafo`}
