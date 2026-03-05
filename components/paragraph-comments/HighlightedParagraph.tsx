@@ -43,7 +43,7 @@ export default function HighlightedParagraph({
   onOpenComments,
   isMobile = false,
 }: Props) {
-  const containerRef = useRef<HTMLSpanElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [selection, setSelection] = useState<SelectionInfo | null>(null);
   const [saving, setSaving] = useState(false);
   const [myHighlight, setMyHighlight] = useState<Highlight | null>(null);
@@ -52,6 +52,27 @@ export default function HighlightedParagraph({
     x: number;
     y: number;
   } | null>(null);
+  const [useTouchActions, setUseTouchActions] = useState(isMobile);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const media = window.matchMedia("(hover: none), (pointer: coarse), (max-width: 767px)");
+    const update = () => {
+      setUseTouchActions(isMobile || media.matches || navigator.maxTouchPoints > 0);
+    };
+
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, [isMobile]);
+
+  const openTouchMenuAt = useCallback((x: number, y: number) => {
+    setSelection(null);
+    window.getSelection()?.removeAllRanges();
+    setMobileMenuPos({ x, y });
+    setShowMobileMenu(true);
+  }, []);
 
   useEffect(() => {
     const mine = highlights.find(
@@ -213,30 +234,19 @@ export default function HighlightedParagraph({
 
   return (
     <>
-      <span
+      <div
         {...(paragraphProps as any)}
         ref={containerRef}
         onMouseUp={handleMouseUp}
         onTouchEnd={(e) => {
-          if (isMobile) {
-            const touch = e.changedTouches[0];
-            setMobileMenuPos({
-              x: touch.clientX,
-              y: touch.clientY + window.scrollY - 8,
-            });
-            setShowMobileMenu(true);
-            return;
-          }
-          handleMouseUp();
+          const touch = e.changedTouches[0];
+          if (!touch) return;
+          openTouchMenuAt(touch.clientX, touch.clientY + window.scrollY - 8);
         }}
         onClick={(e) => {
-          if (!isMobile) return;
+          if (!useTouchActions) return;
           const event = e.nativeEvent as MouseEvent;
-          setMobileMenuPos({
-            x: event.clientX,
-            y: event.clientY + window.scrollY - 8,
-          });
-          setShowMobileMenu(true);
+          openTouchMenuAt(event.clientX, event.clientY + window.scrollY - 8);
         }}
         className={[
           (paragraphProps as any)?.className,
@@ -256,9 +266,9 @@ export default function HighlightedParagraph({
             ✦ {highlightCount}
           </span>
         )}
-      </span>
+      </div>
 
-      {isMobile && showMobileMenu && mobileMenuPos && (
+      {showMobileMenu && mobileMenuPos && (
         <span
           data-highlight-popover
           className="fixed z-[9998] -translate-x-1/2 -translate-y-full"

@@ -112,8 +112,22 @@ export default function ParagraphCommentWidget({
   const undoIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [isUndoingDelete, setIsUndoingDelete] = useState(false);
   const [localDelta, setLocalDelta] = useState(0);
+  const [useCompactUi, setUseCompactUi] = useState(isMobile);
   const displayCount = hasLoaded ? comments.length : initialCount + localDelta;
   const { trackEvent, isTrackingEnabled } = useAnalytics();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const media = window.matchMedia("(hover: none), (pointer: coarse), (max-width: 767px)");
+    const update = () => {
+      setUseCompactUi(isMobile || media.matches || navigator.maxTouchPoints > 0);
+    };
+
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, [isMobile]);
 
   const clearPendingDeleteTimeout = useCallback(() => {
     if (pendingDeleteTimeoutRef.current) {
@@ -817,7 +831,7 @@ export default function ParagraphCommentWidget({
               </button>
             )}
           </span>
-          {!isExpanded && displayCount > 0 && (
+          {!isExpanded && displayCount > 0 && !useCompactUi && (
             <span className="absolute right-[-2rem] top-1/2 -translate-y-1/2">
               <CommentIndicator count={displayCount} onClick={toggleComments} />
             </span>
