@@ -51,6 +51,7 @@ type ParagraphCommentWidgetProps = {
   isMobile: boolean;
   initialCount?: number;
   autoOpen?: boolean;
+  onRegisterOpenComments?: (fn: () => Promise<void>) => void;
 };
 
 export default function ParagraphCommentWidget({
@@ -64,6 +65,7 @@ export default function ParagraphCommentWidget({
   isMobile,
   initialCount = 0,
   autoOpen = false,
+  onRegisterOpenComments,
 }: ParagraphCommentWidgetProps) {
   const { isLoaded, userId } = useAuth();
   const { openSignIn } = useClerk();
@@ -379,6 +381,10 @@ export default function ParagraphCommentWidget({
 
     setIsExpanded(next);
   }, [hasLoaded, isLoaded, loadComments, openLoginPrompt, paragraphId, userId]);
+
+  useEffect(() => {
+    onRegisterOpenComments?.(openComments);
+  }, [onRegisterOpenComments, openComments]);
 
   useEffect(() => {
     if (!isLoaded || queuedExpand === null) {
@@ -700,10 +706,8 @@ export default function ParagraphCommentWidget({
             {...restParagraphProps}
             tabIndex={0}
             onClick={(e) => {
-            incomingOnClick?.(e);
-            if ((e as React.MouseEvent<HTMLParagraphElement>).defaultPrevented) return;
-            if (isMobile) void openComments();
-          }}
+              incomingOnClick?.(e);
+            }}
           onFocus={(e) => {
             incomingOnFocus?.(e);
             if ((e as React.FocusEvent<HTMLParagraphElement>).defaultPrevented) return;
@@ -941,4 +945,3 @@ export default function ParagraphCommentWidget({
     </>
   );
 }
-

@@ -16,7 +16,7 @@ import PostContentShell, {
 } from "./post-content-interactive";
 import SectionAttentionTracker from "@components/analytics/SectionAttentionTracker";
 import HeatmapProgressBar from "@components/HeatmapProgressBar";
-import { useContext, type HTMLAttributes, type RefObject } from "react";
+import { useContext, useRef, type HTMLAttributes, type RefObject } from "react";
 import { useCommentsSummary } from "@components/paragraph-comments/useCommentsSummary";
 import ImageParagraph from "@components/ImageParagraph";
 import { useHighlights } from "@components/paragraph-comments/useHighlights";
@@ -33,6 +33,8 @@ function renderParagraphWithComments(
   highlightProps?: {
     highlights: Highlight[];
     userId: string | null | undefined;
+    isMobile: boolean;
+    openCommentsFnsRef: RefObject<Map<string, () => Promise<void>>>;
     onHighlightSaved: (h: Highlight) => void;
     onHighlightDeleted: (id: string) => void;
   }
@@ -63,6 +65,8 @@ function renderParagraphWithComments(
         onHighlightSaved={highlightProps.onHighlightSaved}
         onHighlightDeleted={highlightProps.onHighlightDeleted}
         paragraphProps={enhancedParagraphProps}
+        isMobile={highlightProps.isMobile}
+        onOpenComments={() => highlightProps.openCommentsFnsRef.current?.get(paragraphId)?.()}
       >
         <LazyParagraphCommentWidget
           postId={options.postId}
@@ -71,8 +75,9 @@ function renderParagraphWithComments(
           coAuthorUserId={options.coAuthorUserId}
           paragraphProps={{}}
           isAdmin={options.isAdmin}
-          isMobile={false}
+          isMobile={highlightProps.isMobile}
           initialCount={initialCount}
+          onRegisterOpenComments={(fn) => highlightProps.openCommentsFnsRef.current?.set(paragraphId, fn)}
         >
           {content}
         </LazyParagraphCommentWidget>
@@ -202,8 +207,10 @@ export default function PostContentClient({
   contentRef,
 }: PostContentClientProps) {
   const { userId } = useAuth();
+  const isMobile = useContext(IsMobileContext) ?? false;
   const summaryMap = useCommentsSummary(postId);
   const { highlights, addHighlight, removeHighlight } = useHighlights(postId);
+  const openCommentsFnsRef = useRef<Map<string, () => Promise<void>>>(new Map());
   let paragraphIndex = 0;
 
   type ReplaceReturn = ReturnType<NonNullable<HTMLReactParserOptions["replace"]>>;
@@ -294,6 +301,8 @@ export default function PostContentClient({
         {
           highlights,
           userId,
+          isMobile,
+          openCommentsFnsRef,
           onHighlightSaved: addHighlight,
           onHighlightDeleted: removeHighlight,
         }
