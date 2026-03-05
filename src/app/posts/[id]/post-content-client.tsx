@@ -10,13 +10,15 @@ import parse, {
 import PostReference from "@components/PostReference";
 import AutorReference from "@components/AutorReference";
 import PostContentShell, {
+  IsMobileContext,
   LazyParagraphCommentWidget,
   type ParagraphCommentWidgetProps,
 } from "./post-content-interactive";
 import SectionAttentionTracker from "@components/analytics/SectionAttentionTracker";
 import HeatmapProgressBar from "@components/HeatmapProgressBar";
-import type { HTMLAttributes, RefObject } from "react";
+import { useContext, type HTMLAttributes, type RefObject } from "react";
 import { useCommentsSummary } from "@components/paragraph-comments/useCommentsSummary";
+import ImageParagraph from "@components/ImageParagraph";
 
 function renderParagraphWithComments(
   node: Element,
@@ -71,7 +73,66 @@ function renderParagraphWithoutComments(node: Element, parserOptions: HTMLReactP
   );
 }
 
+function ImageParagraphWithoutComments({
+  src,
+  alt,
+}: {
+  src: string;
+  alt: string;
+}) {
+  const isMobile = useContext(IsMobileContext) ?? false;
+  return <ImageParagraph src={src} alt={alt} isMobile={isMobile} />;
+}
+
+function ImageParagraphWithComments({
+  src,
+  alt,
+  postId,
+  paragraphId,
+  paragraphIndex,
+  coAuthorUserId,
+  isAdmin,
+  initialCount,
+}: {
+  src: string;
+  alt: string;
+  postId: string;
+  paragraphId: string;
+  paragraphIndex: number;
+  coAuthorUserId?: string | null;
+  isAdmin: boolean;
+  initialCount: number;
+}) {
+  const isMobile = useContext(IsMobileContext) ?? false;
+
+  const commentSlot = (
+    <LazyParagraphCommentWidget
+      postId={postId}
+      paragraphId={paragraphId}
+      paragraphIndex={paragraphIndex}
+      coAuthorUserId={coAuthorUserId}
+      isAdmin={isAdmin}
+      isMobile={isMobile}
+      initialCount={initialCount}
+      paragraphProps={{}}
+    >
+      <span />
+    </LazyParagraphCommentWidget>
+  );
+
+  return (
+    <ImageParagraph
+      src={src}
+      alt={alt}
+      isMobile={isMobile}
+      paragraphCommentSlot={commentSlot}
+      initialCommentCount={initialCount}
+    />
+  );
+}
+
 type PostContentClientProps = {
+
   postId: string;
   date: string;
   htmlContent: string;
@@ -107,6 +168,19 @@ export default function PostContentClient({
 
   const parserOptions: HTMLReactParserOptions = {};
 
+  function extractSingleImage(node: Element): { src: string; alt: string } | null {
+    const children = (node.children ?? []).filter(
+      (c: any) => c.type !== "text" || c.data?.trim() !== "",
+    );
+    if (children.length !== 1) return null;
+    const child = children[0] as any;
+    if (child.type !== "tag" || child.name !== "img") return null;
+    const src = child.attribs?.src ?? "";
+    const alt = child.attribs?.alt ?? "";
+    if (!src) return null;
+    return { src, alt };
+  }
+
   parserOptions.replace = (node: DOMNode): ReplaceReturn => {
     if (node.type === "tag" && node.name === "span") {
       const element = node as Element;
@@ -125,6 +199,42 @@ export default function PostContentClient({
         if (kind === "co-author") {
           return <AutorReference kind="co-author" coAuthorImageUrl={coAuthorImageUrl ?? null} />;
         }
+      }
+    }
+
+    if (node.type === "tag" && node.name === "p" && !isEditing) {
+      const element = node as Element;
+      const imageData = extractSingleImage(element);
+
+      if (imageData) {
+        const currentIndex = paragraphIndex;
+        paragraphIndex += 1;
+        const paragraphId = `${postId}-paragraph-${currentIndex}`;
+        const initialCount = summaryMap.get(paragraphId) ?? 0;
+
+        if (paragraphCommentsEnabled) {
+          return (
+            <ImageParagraphWithComments
+              key={paragraphId}
+              src={imageData.src}
+              alt={imageData.alt}
+              postId={postId}
+              paragraphId={paragraphId}
+              paragraphIndex={currentIndex}
+              coAuthorUserId={coAuthorUserId}
+              isAdmin={isAdmin}
+              initialCount={initialCount}
+            />
+          );
+        }
+
+        return (
+          <ImageParagraphWithoutComments
+            key={paragraphId}
+            src={imageData.src}
+            alt={imageData.alt}
+          />
+        );
       }
     }
 
