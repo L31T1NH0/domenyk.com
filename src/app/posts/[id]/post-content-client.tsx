@@ -78,6 +78,40 @@ function renderParagraphWithComments(
           isMobile={highlightProps.isMobile}
           initialCount={initialCount}
           onRegisterOpenComments={(fn) => highlightProps.openCommentsFnsRef.current?.set(paragraphId, fn)}
+          onHighlight={() => {
+            if (!highlightProps.userId) {
+              return;
+            }
+            const paragraphText = document
+              .querySelector(`[data-paragraph-id="${paragraphId}"] p`)
+              ?.textContent?.trim();
+            if (!paragraphText) {
+              return;
+            }
+
+            void fetch(`/api/posts/${encodeURIComponent(options.postId)}/paragraph-highlights`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                paragraphId,
+                selectedText: paragraphText,
+                startOffset: 0,
+                endOffset: paragraphText.length,
+              }),
+            })
+              .then(async (response) => {
+                if (!response.ok) {
+                  throw new Error(await response.text());
+                }
+                return response.json() as Promise<{ highlight: Highlight }>;
+              })
+              .then((data) => {
+                highlightProps.onHighlightSaved(data.highlight);
+              })
+              .catch((error) => {
+                console.error("Failed to save highlight", error);
+              });
+          }}
         >
           {content}
         </LazyParagraphCommentWidget>
