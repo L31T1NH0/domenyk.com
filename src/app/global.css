@@ -88,6 +88,11 @@ ul {
 }
 img {
   @apply rounded-md grayscale-100 w-full h-full;
+  transition: filter 300ms ease;
+}
+
+[data-image-paragraph]:hover img {
+  filter: grayscale(0);
 }
 h4 {
   @apply lg:text-3xl max-sm:text-xl font-bold;
