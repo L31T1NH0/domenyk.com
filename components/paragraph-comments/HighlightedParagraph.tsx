@@ -190,6 +190,22 @@ export default function HighlightedParagraph({
     return () => document.removeEventListener("mousedown", onDown);
   }, [selection, showMobileMenu]);
 
+  useEffect(() => {
+    if (!showMobileMenu) return;
+
+    const hideMobileMenu = () => {
+      setShowMobileMenu(false);
+    };
+
+    window.addEventListener("scroll", hideMobileMenu, { passive: true });
+    window.addEventListener("touchmove", hideMobileMenu, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", hideMobileMenu);
+      window.removeEventListener("touchmove", hideMobileMenu);
+    };
+  }, [showMobileMenu]);
+
   const otherHighlights = highlights.filter(
     (h) => h.paragraphId === paragraphId && h.userId !== userId,
   );
@@ -208,10 +224,19 @@ export default function HighlightedParagraph({
               x: touch.clientX,
               y: touch.clientY + window.scrollY - 8,
             });
-            setShowMobileMenu((v) => !v);
+            setShowMobileMenu(true);
             return;
           }
           handleMouseUp();
+        }}
+        onClick={(e) => {
+          if (!isMobile) return;
+          const event = e.nativeEvent as MouseEvent;
+          setMobileMenuPos({
+            x: event.clientX,
+            y: event.clientY + window.scrollY - 8,
+          });
+          setShowMobileMenu(true);
         }}
         className={[
           (paragraphProps as any)?.className,

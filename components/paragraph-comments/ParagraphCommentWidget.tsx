@@ -795,9 +795,9 @@ export default function ParagraphCommentWidget({
           </p>
           <span
             aria-hidden="true"
-            className="hidden md:block absolute right-[-1.5rem] top-0 h-full w-6 pointer-events-none"
+            className="hidden md:block absolute right-[-1rem] top-0 h-full w-5 pointer-events-none"
           />
-          <span className="hidden md:flex pointer-events-none absolute right-0 top-1/2 z-10 -translate-y-1/2 translate-x-1/2 opacity-0 transition-opacity peer-hover:opacity-100 group-hover:opacity-100 hover:opacity-100 peer-hover:pointer-events-auto group-hover:pointer-events-auto hover:pointer-events-auto flex-col items-center gap-0">
+          <span className="hidden md:flex pointer-events-none absolute right-0 top-1/2 z-10 -translate-y-1/2 translate-x-[40%] opacity-0 transition-opacity peer-hover:opacity-100 group-hover:opacity-100 hover:opacity-100 peer-hover:pointer-events-auto group-hover:pointer-events-auto hover:pointer-events-auto flex-col items-center gap-0">
             <button
               type="button"
               onClick={toggleComments}
