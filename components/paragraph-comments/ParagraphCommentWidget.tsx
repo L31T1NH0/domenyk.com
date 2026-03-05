@@ -817,7 +817,7 @@ export default function ParagraphCommentWidget({
               </button>
             )}
           </span>
-          {!isExpanded && displayCount > 0 && (
+          {!isExpanded && displayCount > 0 && !isMobile && (
             <span className="absolute right-[-2rem] top-1/2 -translate-y-1/2">
               <CommentIndicator count={displayCount} onClick={toggleComments} />
             </span>
