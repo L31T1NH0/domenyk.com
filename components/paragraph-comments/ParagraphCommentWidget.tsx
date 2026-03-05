@@ -729,7 +729,7 @@ export default function ParagraphCommentWidget({
           {children}
         </p>
         <span aria-hidden="true" className="hidden md:block absolute right-[-2rem] top-0 h-full w-8 pointer-events-none" />
-        <span className="hidden md:flex pointer-events-none absolute right-[-2rem] top-1/2 z-10 -translate-y-1/2 translate-x-full opacity-0 transition-opacity peer-hover:opacity-100 group-hover:opacity-100 peer-hover:pointer-events-auto group-hover:pointer-events-auto items-center gap-1">
+        <span className="hidden md:flex pointer-events-none absolute right-0 top-1/2 z-10 -translate-y-1/2 translate-x-[calc(100%+0.5rem)] opacity-0 transition-opacity peer-hover:opacity-100 group-hover:opacity-100 hover:opacity-100 peer-hover:pointer-events-auto group-hover:pointer-events-auto hover:pointer-events-auto items-center gap-0.5">
           {onHighlight && (
             <button
               type="button"
