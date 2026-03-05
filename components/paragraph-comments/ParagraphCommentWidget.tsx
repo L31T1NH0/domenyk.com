@@ -835,31 +835,53 @@ export default function ParagraphCommentWidget({
           </span>
           {!isExpanded && (displayCount > 0 || highlightCount > 0) && (
             useCompactUi ? (
-              <span className="flex items-center gap-1 mt-0.5">
+              // Mobile: lado a lado, bordas coladas na horizontal
+              <span className="flex items-center mt-0.5">
                 {highlightCount > 0 && (
                   <span
-                    className="inline-flex items-center gap-0.5 rounded-full bg-yellow-400/20 px-1.5 py-0.5 text-[10px] font-medium text-yellow-700 dark:text-yellow-300 cursor-default"
+                    className={[
+                      "inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium bg-yellow-400/20 text-yellow-700 dark:text-yellow-300 cursor-default border border-zinc-300 dark:border-zinc-700",
+                      displayCount > 0 ? "rounded-l-full border-r-0" : "rounded-full",
+                    ].join(" ")}
                     title={`${highlightCount} destaque${highlightCount > 1 ? "s" : ""} neste parágrafo`}
                   >
                     ✦ {highlightCount}
                   </span>
                 )}
                 {displayCount > 0 && (
-                  <CommentIndicator count={displayCount} onClick={toggleComments} />
+                  <CommentIndicator
+                    count={displayCount}
+                    onClick={toggleComments}
+                    className={[
+                      "inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium border border-zinc-300 bg-white text-zinc-600 shadow-sm hover:border-zinc-400 hover:text-zinc-800 focus-visible:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:text-white",
+                      highlightCount > 0 ? "rounded-r-full" : "rounded-full",
+                    ].join(" ")}
+                  />
                 )}
               </span>
             ) : (
-              <span className="absolute left-0 -translate-x-full top-1/2 -translate-y-1/2 pr-1 flex flex-col items-end gap-0.5">
+              // Desktop: empilhados, bordas coladas na vertical
+              <span className="absolute left-0 -translate-x-full top-1/2 -translate-y-1/2 pr-1 flex flex-col items-end">
                 {highlightCount > 0 && (
                   <span
-                    className="inline-flex items-center gap-0.5 rounded-full bg-yellow-400/20 px-1.5 py-0.5 text-[10px] font-medium text-yellow-700 dark:text-yellow-300 cursor-default"
+                    className={[
+                      "inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium bg-yellow-400/20 text-yellow-700 dark:text-yellow-300 cursor-default border border-zinc-300 dark:border-zinc-700",
+                      displayCount > 0 ? "rounded-t-full border-b-0" : "rounded-full",
+                    ].join(" ")}
                     title={`${highlightCount} destaque${highlightCount > 1 ? "s" : ""} neste parágrafo`}
                   >
                     ✦ {highlightCount}
                   </span>
                 )}
                 {displayCount > 0 && (
-                  <CommentIndicator count={displayCount} onClick={toggleComments} />
+                  <CommentIndicator
+                    count={displayCount}
+                    onClick={toggleComments}
+                    className={[
+                      "inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium border border-zinc-300 bg-white text-zinc-600 shadow-sm hover:border-zinc-400 hover:text-zinc-800 focus-visible:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:text-white",
+                      highlightCount > 0 ? "rounded-b-full" : "rounded-full",
+                    ].join(" ")}
+                  />
                 )}
               </span>
             )
