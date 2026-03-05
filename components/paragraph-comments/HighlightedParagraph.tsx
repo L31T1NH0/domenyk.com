@@ -48,11 +48,14 @@ export default function HighlightedParagraph({
   const [saving, setSaving] = useState(false);
   const [myHighlight, setMyHighlight] = useState<Highlight | null>(null);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [mobileMenuPos, setMobileMenuPos] = useState<{ x: number; y: number } | null>(null);
+  const [mobileMenuPos, setMobileMenuPos] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
 
   useEffect(() => {
     const mine = highlights.find(
-      (h) => h.paragraphId === paragraphId && h.userId === userId
+      (h) => h.paragraphId === paragraphId && h.userId === userId,
     );
     setMyHighlight(mine ?? null);
   }, [highlights, paragraphId, userId]);
@@ -109,7 +112,7 @@ export default function HighlightedParagraph({
             startOffset: selection.startOffset,
             endOffset: selection.endOffset,
           }),
-        }
+        },
       );
       if (!res.ok) throw new Error(await res.text());
       const { highlight } = await res.json();
@@ -140,7 +143,7 @@ export default function HighlightedParagraph({
             startOffset: 0,
             endOffset: fullText.length,
           }),
-        }
+        },
       );
       if (!res.ok) throw new Error(await res.text());
       const { highlight } = await res.json();
@@ -156,11 +159,14 @@ export default function HighlightedParagraph({
   const deleteHighlight = useCallback(async () => {
     if (!myHighlight) return;
     try {
-      await fetch(`/api/posts/${encodeURIComponent(postId)}/paragraph-highlights`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ highlightId: myHighlight._id }),
-      });
+      await fetch(
+        `/api/posts/${encodeURIComponent(postId)}/paragraph-highlights`,
+        {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ highlightId: myHighlight._id }),
+        },
+      );
       onHighlightDeleted(myHighlight._id);
     } catch (e) {
       console.error("Failed to delete highlight", e);
@@ -184,8 +190,24 @@ export default function HighlightedParagraph({
     return () => document.removeEventListener("mousedown", onDown);
   }, [selection, showMobileMenu]);
 
+  useEffect(() => {
+    if (!showMobileMenu) return;
+
+    const hideMobileMenu = () => {
+      setShowMobileMenu(false);
+    };
+
+    window.addEventListener("scroll", hideMobileMenu, { passive: true });
+    window.addEventListener("touchmove", hideMobileMenu, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", hideMobileMenu);
+      window.removeEventListener("touchmove", hideMobileMenu);
+    };
+  }, [showMobileMenu]);
+
   const otherHighlights = highlights.filter(
-    (h) => h.paragraphId === paragraphId && h.userId !== userId
+    (h) => h.paragraphId === paragraphId && h.userId !== userId,
   );
   const highlightCount = otherHighlights.length + (myHighlight ? 1 : 0);
 
@@ -196,13 +218,25 @@ export default function HighlightedParagraph({
         ref={containerRef}
         onMouseUp={handleMouseUp}
         onTouchEnd={(e) => {
-          if (isMobile && userId) {
+          if (isMobile) {
             const touch = e.changedTouches[0];
-            setMobileMenuPos({ x: touch.clientX, y: touch.clientY + window.scrollY - 8 });
-            setShowMobileMenu((v) => !v);
+            setMobileMenuPos({
+              x: touch.clientX,
+              y: touch.clientY + window.scrollY - 8,
+            });
+            setShowMobileMenu(true);
             return;
           }
           handleMouseUp();
+        }}
+        onClick={(e) => {
+          if (!isMobile) return;
+          const event = e.nativeEvent as MouseEvent;
+          setMobileMenuPos({
+            x: event.clientX,
+            y: event.clientY + window.scrollY - 8,
+          });
+          setShowMobileMenu(true);
         }}
         className={[
           (paragraphProps as any)?.className,
@@ -224,7 +258,7 @@ export default function HighlightedParagraph({
         )}
       </span>
 
-      {isMobile && showMobileMenu && userId && mobileMenuPos && (
+      {isMobile && showMobileMenu && mobileMenuPos && (
         <span
           data-highlight-popover
           className="fixed z-[9998] -translate-x-1/2 -translate-y-full"

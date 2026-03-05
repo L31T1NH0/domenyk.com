@@ -39,7 +39,8 @@ export type ParagraphCommentWidgetProps = {
   onHighlight?: () => void;
 };
 
-export type ParagraphCommentWidgetComponent = ComponentType<ParagraphCommentWidgetProps>;
+export type ParagraphCommentWidgetComponent =
+  ComponentType<ParagraphCommentWidgetProps>;
 
 type ParagraphContentProps = {
   paragraphProps?: HTMLAttributes<HTMLParagraphElement>;
@@ -48,8 +49,14 @@ type ParagraphContentProps = {
   onLoadRequest?: () => void;
 };
 
-const ParagraphContent = forwardRef<HTMLParagraphElement, ParagraphContentProps>(
-  ({ paragraphProps, children, showLoadingIndicator = false, onLoadRequest }, ref) => {
+const ParagraphContent = forwardRef<
+  HTMLParagraphElement,
+  ParagraphContentProps
+>(
+  (
+    { paragraphProps, children, showLoadingIndicator = false, onLoadRequest },
+    ref,
+  ) => {
     const {
       className,
       onClick,
@@ -104,7 +111,10 @@ const ParagraphContent = forwardRef<HTMLParagraphElement, ParagraphContentProps>
       [onPointerDown, requestLoad],
     );
 
-    const combinedClassName = [className, showLoadingIndicator ? "opacity-80" : null]
+    const combinedClassName = [
+      className,
+      showLoadingIndicator ? "opacity-80" : null,
+    ]
       .filter(Boolean)
       .join(" ");
 
@@ -121,7 +131,9 @@ const ParagraphContent = forwardRef<HTMLParagraphElement, ParagraphContentProps>
       >
         {children}
         {showLoadingIndicator ? (
-          <span className="ml-2 text-xs text-zinc-400">Carregando comentários…</span>
+          <span className="ml-2 text-xs text-zinc-400">
+            Carregando comentários…
+          </span>
         ) : null}
       </p>
     );
@@ -133,11 +145,13 @@ ParagraphContent.displayName = "ParagraphContent";
 export function LazyParagraphCommentWidget(props: ParagraphCommentWidgetProps) {
   const [shouldRenderWidget, setShouldRenderWidget] = useState(false);
   const [pendingOpen, setPendingOpen] = useState(false);
-  const [Widget, setWidget] = useState<ParagraphCommentWidgetComponent | null>(null);
+  const [Widget, setWidget] = useState<ParagraphCommentWidgetComponent | null>(
+    null,
+  );
   const placeholderRef = useRef<HTMLParagraphElement | null>(null);
   const contextIsMobile = useContext(IsMobileContext);
   const { isMobile: propIsMobile, ...restProps } = props;
-  const isMobile = (contextIsMobile ?? propIsMobile) ?? false;
+  const isMobile = contextIsMobile ?? propIsMobile ?? false;
 
   const ensureWidget = useCallback((withOpen = false) => {
     if (withOpen) setPendingOpen(true);
@@ -172,7 +186,11 @@ export function LazyParagraphCommentWidget(props: ParagraphCommentWidgetProps) {
     }
 
     const element = placeholderRef.current;
-    if (!element || typeof window === "undefined" || !("IntersectionObserver" in window)) {
+    if (
+      !element ||
+      typeof window === "undefined" ||
+      !("IntersectionObserver" in window)
+    ) {
       ensureWidget();
       return;
     }
@@ -202,7 +220,7 @@ export function LazyParagraphCommentWidget(props: ParagraphCommentWidgetProps) {
       <ParagraphContent
         ref={placeholderRef}
         paragraphProps={props.paragraphProps}
-        onLoadRequest={() => ensureWidget(isMobile)}
+        onLoadRequest={() => ensureWidget()}
       >
         {props.children}
       </ParagraphContent>
@@ -229,7 +247,9 @@ export const IsMobileContext = createContext<boolean | null>(null);
 export function useIsMobile(): boolean {
   const context = useContext(IsMobileContext);
   if (context === null) {
-    throw new Error("useIsMobile must be used within an IsMobileContext provider");
+    throw new Error(
+      "useIsMobile must be used within an IsMobileContext provider",
+    );
   }
   return context;
 }
@@ -326,7 +346,9 @@ export default function PostContentShell({
                 <span className="sr-only">Tempo de leitura:</span>
                 {displayReadingTime}
               </span>
-              <span aria-hidden className="mx-1 text-zinc-400">•</span>
+              <span aria-hidden className="mx-1 text-zinc-400">
+                •
+              </span>
               <span className="inline-flex items-center gap-1">
                 <EyeIcon className="h-4 w-4" aria-hidden="true" />
                 <span className="sr-only">Views:</span>
