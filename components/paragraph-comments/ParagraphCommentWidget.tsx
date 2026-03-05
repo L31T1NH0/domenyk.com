@@ -831,10 +831,16 @@ export default function ParagraphCommentWidget({
               </button>
             )}
           </span>
-          {!isExpanded && displayCount > 0 && !useCompactUi && (
-            <span className="absolute right-[-2rem] top-1/2 -translate-y-1/2">
-              <CommentIndicator count={displayCount} onClick={toggleComments} />
-            </span>
+          {!isExpanded && displayCount > 0 && (
+            useCompactUi ? (
+              <span className="flex justify-start">
+                <CommentIndicator count={displayCount} onClick={toggleComments} />
+              </span>
+            ) : (
+              <span className="absolute left-0 -translate-x-full top-1/2 -translate-y-1/2 pr-1">
+                <CommentIndicator count={displayCount} onClick={toggleComments} />
+              </span>
+            )
           )}
         </div>
 
