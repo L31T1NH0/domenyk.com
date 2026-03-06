@@ -129,13 +129,29 @@ export async function getMongoClient() {
   }
 }
 
+let indexesEnsured = false;
+
+async function ensureIndexes(db: ReturnType<MongoClient["db"]>) {
+  if (indexesEnsured) return;
+  indexesEnsured = true;
+  try {
+    await db.collection("analytics_events").createIndex(
+      { name: 1, "data.postId": 1 },
+      { background: true }
+    );
+  } catch (error) {
+    console.warn("Erro ao criar índices do MongoDB:", error);
+  }
+}
+
 export async function getMongoDb() {
   try {
     const client = await getMongoClient();
-    return client.db(MONGODB_DB);
+    const db = client.db(MONGODB_DB);
+    void ensureIndexes(db);
+    return db;
   } catch (error) {
     console.error("Erro ao acessar o banco de dados MongoDB:", error);
     throw error;
   }
 }
-
