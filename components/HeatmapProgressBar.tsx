@@ -25,9 +25,14 @@ export default function HeatmapProgressBar({ postId }: { postId: string }) {
       .then((r) => r.json())
       .then((data) => {
         if (cancelled) return;
-        if (!data.available) return;
+        if (!data.available) {
+          document.documentElement.style.setProperty("--scroll-progress-color", "#E00070");
+          document.documentElement.style.setProperty("--scroll-heatmap-visible", "0");
+          return;
+        }
 
         const gradient = buildGradient(data.buckets);
+        document.documentElement.style.setProperty("--scroll-progress-color", gradient);
         document.documentElement.style.setProperty("--scroll-heatmap-gradient", gradient);
         document.documentElement.style.setProperty("--scroll-heatmap-visible", "1");
       })
@@ -35,6 +40,7 @@ export default function HeatmapProgressBar({ postId }: { postId: string }) {
 
     return () => {
       cancelled = true;
+      document.documentElement.style.setProperty("--scroll-progress-color", "#E00070");
       document.documentElement.style.setProperty("--scroll-heatmap-visible", "0");
     };
   }, [postId]);
