@@ -198,7 +198,7 @@ export default function HomeClient({ posts, isAdmin, page, hasNext, total }: Hom
               className="group relative py-5 first:pt-0"
             >
               {post.pinnedOrder != null && (
-                <span className="mb-2 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-[#E00070]">
+                <span className="mb-2 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-[#A8A095]">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 16 16"
@@ -223,13 +223,13 @@ export default function HomeClient({ posts, isAdmin, page, hasNext, total }: Hom
                   <span className="text-xs text-[#A8A095]">
                     <Date dateString={post.date} />
                   </span>
-                  <span aria-hidden className="h-px w-px rounded-full bg-white/20" />
+                  <span aria-hidden className="text-[#A8A095]/40">·</span>
                   <span className="text-xs text-[#A8A095] tabular-nums">
                     {post.views ?? 0} views
                   </span>
                   {post.tags && post.tags.length > 0 && (
                     <>
-                      <span aria-hidden className="h-px w-px rounded-full bg-white/20" />
+                      <span aria-hidden className="text-[#A8A095]/40">·</span>
                       <span className="text-[10px] font-bold uppercase tracking-wider text-[#A8A095]">
                         {post.tags[0]}
                       </span>
