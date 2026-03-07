@@ -71,17 +71,17 @@ export default async function AdminDashboard() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-xl font-medium tracking-tight text-zinc-100">
+          <h1 className="text-xl font-semibold tracking-tight text-[#f1f1f1]">
             Dashboard
           </h1>
-          <p className="mt-1 text-sm text-zinc-500">
+          <p className="mt-1 text-sm text-[#A8A095]">
             Resumo do seu conteúdo e desempenho.
           </p>
         </div>
         <div className="flex gap-2">
           <Link
             href="/admin/editor"
-            className="inline-flex items-center gap-1.5 rounded-md bg-zinc-100 px-3.5 py-1.5 text-sm font-medium text-zinc-900 transition-colors hover:bg-white"
+            className="inline-flex items-center gap-1.5 rounded-md bg-[#E00070] px-3.5 py-1.5 text-sm font-medium text-white transition-opacity hover:opacity-80"
           >
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <path d="M8 3v10M3 8h10" />
@@ -90,7 +90,7 @@ export default async function AdminDashboard() {
           </Link>
           <Link
             href="/admin/analytics"
-            className="inline-flex items-center rounded-md border border-zinc-800 px-3.5 py-1.5 text-sm text-zinc-400 transition-colors hover:border-zinc-700 hover:text-zinc-200"
+            className="inline-flex items-center rounded-md border border-white/10 px-3.5 py-1.5 text-sm text-[#A8A095] transition-colors hover:border-white/20 hover:text-[#f1f1f1]"
           >
             Analytics
           </Link>
@@ -98,8 +98,8 @@ export default async function AdminDashboard() {
       </div>
 
       {/* Stats */}
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Views totais" value={totalViews.toLocaleString("pt-BR")} />
+      <section className="grid sm:grid-cols-2 lg:grid-cols-4 border border-white/8 rounded-lg overflow-hidden divide-x divide-white/8">
+        <StatCard label="Views totais" value={totalViews.toLocaleString("pt-BR")} accent />
         <StatCard label="Posts visíveis" value={visibleCount} />
         <StatCard label="Posts publicados" value={totalCount} />
         <StatCard label="Comentários totais" value={totalComments} />
@@ -107,26 +107,24 @@ export default async function AdminDashboard() {
 
       {/* Recent posts */}
       <section>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-medium text-zinc-400">Recentes</h2>
+        <div className="mb-3">
+          <h2 className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#A8A095]">
+            Posts
+          </h2>
         </div>
-        <div className="overflow-hidden rounded-lg border border-zinc-800/60">
-          <div className="overflow-x-auto">
-            <RecentPostsClient initial={latest as any} />
-          </div>
-        </div>
+        <RecentPostsClient initial={latest as any} />
       </section>
     </div>
   );
 }
 
-function StatCard({ label, value }: { label: string; value: string | number }) {
+function StatCard({ label, value, accent }: { label: string; value: string | number; accent?: boolean }) {
   return (
-    <div className="rounded-lg border border-zinc-800/60 bg-zinc-900/40 px-5 py-4">
-      <div className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+    <div className="bg-[#040404] px-5 py-5 flex flex-col gap-3">
+      <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#A8A095]">
         {label}
       </div>
-      <div className="mt-2 text-2xl font-semibold tabular-nums tracking-tight text-zinc-100">
+      <div className={`text-3xl font-semibold tabular-nums tracking-tight ${accent ? "text-[#E00070]" : "text-[#f1f1f1]"}`}>
         {value}
       </div>
     </div>
