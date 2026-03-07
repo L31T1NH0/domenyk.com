@@ -109,7 +109,8 @@ h1 {
   top: calc(env(safe-area-inset-top, 0px));
   left: 0;
   height: 3px;
-  background: #E00070;
+  background: var(--scroll-progress-color, #E00070);
+  background-size: 100vw 100%;
   width: var(--scroll-progress);
   pointer-events: none;
   z-index: 9999;
@@ -135,4 +136,3 @@ h1 {
     transition: none;
   }
 }
-
