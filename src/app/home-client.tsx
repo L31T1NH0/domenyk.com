@@ -133,9 +133,9 @@ export default function HomeClient({ posts, isAdmin, page, hasNext, total }: Hom
   return (
     <section className="flex-1 gap-6">
       <div className="mb-5 flex flex-row flex-wrap items-center gap-2 sm:mb-6 sm:gap-3">
-        <h1 className="flex items-center gap-1 text-sm font-semibold text-[#f1f1f1]">
+        <h1 className="flex items-center gap-1 text-sm font-semibold uppercase tracking-wide text-[#f1f1f1]">
           Posts
-          <span className="tabular-nums text-[#A8A095] font-normal">({totalCount})</span>
+          <span className="tabular-nums text-[#f1f1f1] font-normal">({totalCount})</span>
         </h1>
         <div className="w-auto">
           <SearchBar
@@ -216,7 +216,7 @@ export default function HomeClient({ posts, isAdmin, page, hasNext, total }: Hom
                 prefetch={false}
                 className="flex flex-col gap-2 text-left focus-visible:outline-none focus-visible:ring-0"
               >
-                <span className="text-lg font-semibold leading-snug text-[#f1f1f1]">
+                <span className="text-lg font-normal leading-snug text-[#f1f1f1]">
                   {post.title}
                 </span>
                 <div className="flex items-center gap-3">
