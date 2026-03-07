@@ -133,9 +133,9 @@ export default function HomeClient({ posts, isAdmin, page, hasNext, total }: Hom
   return (
     <section className="flex-1 gap-6">
       <div className="mb-5 flex flex-row flex-wrap items-center gap-2 sm:mb-6 sm:gap-3">
-        <h1 className="flex items-center gap-2 text-2xl font-bold">
+        <h1 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#A8A095]">
           Posts
-          <span>({totalCount})</span>
+          <span className="tabular-nums">({totalCount})</span>
         </h1>
         <div className="w-auto">
           <SearchBar
@@ -191,14 +191,14 @@ export default function HomeClient({ posts, isAdmin, page, hasNext, total }: Hom
           <p>Tente ajustar a busca ou filtros.</p>
         </div>
       ) : (
-        <ul className="text-xl ml-0 flex flex-col gap-4">
+        <ul className="ml-0 divide-y divide-white/8">
           {posts.map((post) => (
             <li
               key={post.postId}
-              className="flex flex-col mb-2 group relative"
+              className="group relative py-5 first:pt-0"
             >
               {post.pinnedOrder != null && (
-                <span className="mb-1 inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide text-zinc-400">
+                <span className="mb-2 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-[#E00070]">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 16 16"
@@ -214,22 +214,35 @@ export default function HomeClient({ posts, isAdmin, page, hasNext, total }: Hom
               <Link
                 href={`/posts/${post.postId}`}
                 prefetch={false}
-                className="flex flex-col text-left focus-visible:outline-none focus-visible:ring-0"
+                className="flex flex-col gap-2 text-left focus-visible:outline-none focus-visible:ring-0"
               >
-                <span className="text-xl hover:underline">{post.title}</span>
-                <small className="text-zinc-600 dark:text-zinc-300">
-                  <Date dateString={post.date} /> <span aria-hidden className="mx-2">&middot;</span>
-                  <span className="inline-flex items-center rounded px-2 py-1 text-sm text-zinc-600 dark:text-zinc-300">
+                <span className="text-lg font-semibold leading-snug text-[#f1f1f1] transition-colors group-hover:text-[#E00070]">
+                  {post.title}
+                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-[#A8A095]">
+                    <Date dateString={post.date} />
+                  </span>
+                  <span aria-hidden className="h-px w-px rounded-full bg-white/20" />
+                  <span className="text-xs text-[#A8A095] tabular-nums">
                     {post.views ?? 0} views
                   </span>
-                </small>
+                  {post.tags && post.tags.length > 0 && (
+                    <>
+                      <span aria-hidden className="h-px w-px rounded-full bg-white/20" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#A8A095]">
+                        {post.tags[0]}
+                      </span>
+                    </>
+                  )}
+                </div>
               </Link>
               {isAdmin && (
                 <button
                   onClick={() => openDeleteModal(post.postId)}
                   aria-label={`Apagar ${post.title}`}
                   title={`Apagar ${post.title}`}
-                  className="absolute right-0 top-0 text-red-600 hover:text-red-700 text-sm opacity-0 group-hover:opacity-100 max-sm:opacity-100 transition-opacity duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/40"
+                  className="absolute right-0 top-5 text-red-500 hover:text-red-400 opacity-0 group-hover:opacity-100 max-sm:opacity-100 transition-opacity duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/40"
                 >
                   <TrashIcon className="size-4" aria-hidden="true" />
                 </button>
@@ -275,7 +288,6 @@ export default function HomeClient({ posts, isAdmin, page, hasNext, total }: Hom
     </section>
   );
 }
-
 
 
 

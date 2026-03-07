@@ -24,7 +24,7 @@ export function Layout({ home = false, children, hideHeaderControls = false }: L
   return (
     <div
       data-scroll-progress-root
-      className="max-w-xl flex flex-col mx-auto px-4 mb-4"
+      className="max-w-2xl flex flex-col mx-auto px-5 mb-4"
     >
       <ScrollProgressEffect />
       <header className="flex justify-between items-center py-1">
