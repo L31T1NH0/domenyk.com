@@ -133,9 +133,9 @@ export default function HomeClient({ posts, isAdmin, page, hasNext, total }: Hom
   return (
     <section className="flex-1 gap-6">
       <div className="mb-5 flex flex-row flex-wrap items-center gap-2 sm:mb-6 sm:gap-3">
-        <h1 className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] text-[#A8A095]">
+        <h1 className="flex items-center gap-1 text-sm font-semibold text-[#f1f1f1]">
           Posts
-          <span className="tabular-nums">({totalCount})</span>
+          <span className="tabular-nums text-[#A8A095] font-normal">({totalCount})</span>
         </h1>
         <div className="w-auto">
           <SearchBar

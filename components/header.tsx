@@ -14,7 +14,7 @@ export function Header({ home }: HeaderProps) {
   
 
   return (
-    <header className="flex flex-col items-center gap-4 py-6">
+    <header className="flex flex-col items-center gap-4 pt-6 pb-2">
       {home ? (
         <>
           <Image
