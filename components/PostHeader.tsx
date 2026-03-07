@@ -80,13 +80,13 @@ export function PostHeader({
                 )}
               </div>
               {titleSlot ?? <h1 className="text-xl text-white">{title}</h1>}
-              {subtitleSlot ?? (subtitle ? <p className="text-sm text-zinc-200 drop-shadow">{subtitle}</p> : null)}
+              {subtitleSlot ?? (subtitle ? <p className="text-xs text-zinc-300 drop-shadow">{subtitle}</p> : null)}
             </div>
           </div>
         </div>
       )}
       {!cape && (
-        <div className="flex flex-col gap-4 items-center">
+        <div className="flex flex-col gap-2 items-center">
           <div className="flex -space-x-4">
             <AvatarWrapper>
               <Image
