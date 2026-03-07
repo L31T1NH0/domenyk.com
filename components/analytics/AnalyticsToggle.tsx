@@ -39,28 +39,28 @@ export function AnalyticsToggle({ initialEnabled }: { initialEnabled: boolean })
   };
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-medium text-zinc-50">Coleta de analytics</p>
-          <p className="text-xs text-zinc-400">Liga ou desliga o rastreamento de eventos do site.</p>
+    <div className="border border-white/8 rounded-lg px-4 py-3 flex items-center justify-between gap-4">
+      <div>
+        <p className="text-sm font-medium text-[#f1f1f1]">Coleta de analytics</p>
+        <p className="text-xs text-[#A8A095]">Liga ou desliga o rastreamento de eventos do site.</p>
+        <div className="mt-1 text-xs">
+          {isSaving && <span className="text-[#A8A095]">Salvando...</span>}
+          {!isSaving && message && <span className="text-[#E00070]">{message}</span>}
+          {!isSaving && error && <span className="text-red-400">{error}</span>}
         </div>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            className="h-4 w-4 accent-emerald-500"
-            checked={enabled}
-            disabled={isSaving}
-            onChange={(event) => updateToggle(event.target.checked)}
-          />
-          <span className="text-zinc-200">{enabled ? "Ligado" : "Desligado"}</span>
-        </label>
       </div>
-      <div className="text-xs text-zinc-400">
-        {isSaving && <span className="text-amber-300">Salvando...</span>}
-        {!isSaving && message && <span className="text-emerald-300">{message}</span>}
-        {!isSaving && error && <span className="text-red-400">{error}</span>}
-      </div>
+      <button
+        type="button"
+        disabled={isSaving}
+        onClick={() => updateToggle(!enabled)}
+        className={`shrink-0 rounded-md border px-3 py-1.5 text-xs font-medium transition-all ${
+          enabled
+            ? "border-[#E00070]/40 bg-[#E00070]/10 text-[#E00070]"
+            : "border-white/10 text-[#A8A095] hover:border-white/20 hover:text-[#f1f1f1]"
+        }`}
+      >
+        {enabled ? "Ligado" : "Desligado"}
+      </button>
     </div>
   );
 }
