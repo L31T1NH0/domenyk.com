@@ -121,7 +121,7 @@ export default async function HomePage({
   return (
     <Layout home>
       <Header home={true} />
-      <section className="text-xl flex flex-col gap-3 py-6 text-primary items-center text-center">
+      <section className="flex flex-col gap-1 py-2 items-center text-center">
         <p className="text-lg text-zinc-200">
           Dou minhas opiniões aqui
         </p>

@@ -59,10 +59,10 @@ a {
 }
 
 a:hover {
-  text-decoration: underline;
+  text-decoration: none;
 }
 ul {
-  @apply list-disc ml-10;
+  @apply list-none ml-10;
 }
 .ml-0 {
   @apply ml-0;

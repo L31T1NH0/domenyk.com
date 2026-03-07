@@ -133,7 +133,7 @@ export default function HomeClient({ posts, isAdmin, page, hasNext, total }: Hom
   return (
     <section className="flex-1 gap-6">
       <div className="mb-5 flex flex-row flex-wrap items-center gap-2 sm:mb-6 sm:gap-3">
-        <h1 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#A8A095]">
+        <h1 className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] text-[#A8A095]">
           Posts
           <span className="tabular-nums">({totalCount})</span>
         </h1>
@@ -216,7 +216,7 @@ export default function HomeClient({ posts, isAdmin, page, hasNext, total }: Hom
                 prefetch={false}
                 className="flex flex-col gap-2 text-left focus-visible:outline-none focus-visible:ring-0"
               >
-                <span className="text-lg font-semibold leading-snug text-[#f1f1f1] transition-colors group-hover:text-[#E00070]">
+                <span className="text-lg font-semibold leading-snug text-[#f1f1f1]">
                   {post.title}
                 </span>
                 <div className="flex items-center gap-3">
@@ -227,14 +227,7 @@ export default function HomeClient({ posts, isAdmin, page, hasNext, total }: Hom
                   <span className="text-xs text-[#A8A095] tabular-nums">
                     {post.views ?? 0} views
                   </span>
-                  {post.tags && post.tags.length > 0 && (
-                    <>
-                      <span aria-hidden className="text-[#A8A095]/40">·</span>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#A8A095]">
-                        {post.tags[0]}
-                      </span>
-                    </>
-                  )}
+                  {null}
                 </div>
               </Link>
               {isAdmin && (
