@@ -14,13 +14,13 @@ export function Header({ home }: HeaderProps) {
   
 
   return (
-    <header className="flex flex-col items-center gap-4 py-6">
+    <header className="flex flex-col items-center gap-4 pb-2">
       {home ? (
         <>
           <Image
             priority
             src="/images/profile.jpg"
-            className="rounded-full brightness-110 foto"
+            className="rounded-full brightness-125 foto"
             height={148}
             width={148}
             alt={name}
@@ -35,7 +35,7 @@ export function Header({ home }: HeaderProps) {
             <Image
               priority
               src="/images/profile.jpg"
-              className="rounded-full brightness-110 foto transition-opacity hover:opacity-80"
+              className="rounded-full brightness-125 foto transition-opacity hover:opacity-80"
               height={148}
               width={148}
               alt={name}
