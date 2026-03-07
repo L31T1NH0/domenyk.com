@@ -25,8 +25,11 @@ export default async function AdminDashboard() {
 
   const db = await getMongoDb();
   const postsCollection = db.collection("posts");
+  const commentsCollection = db.collection("comments");
+  const authCommentsCollection = db.collection("auth-comments");
 
-  const [count, viewsAgg, latest] = await Promise.all([
+  const [totalCount, visibleCount, viewsAgg, totalComments, latest] = await Promise.all([
+    postsCollection.countDocuments({}),
     postsCollection.countDocuments({ hidden: { $ne: true } }),
     postsCollection
       .aggregate<{ totalViews: number }>([
@@ -35,6 +38,10 @@ export default async function AdminDashboard() {
       ])
       .toArray()
       .then((arr) => arr[0]?.totalViews ?? 0),
+    Promise.all([
+      commentsCollection.countDocuments({ parentId: null }),
+      authCommentsCollection.countDocuments({ parentId: null }),
+    ]).then(([a, b]) => a + b),
     postsCollection
       .find(
         {},
@@ -53,7 +60,7 @@ export default async function AdminDashboard() {
         }
       )
       .sort({ date: -1 })
-      .limit(6)
+      .limit(3)
       .toArray() as unknown as Promise<PostRow[]>,
   ]);
 
@@ -92,8 +99,10 @@ export default async function AdminDashboard() {
 
       {/* Stats */}
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Posts publicados" value={count} />
         <StatCard label="Views totais" value={totalViews.toLocaleString("pt-BR")} />
+        <StatCard label="Posts visíveis" value={visibleCount} />
+        <StatCard label="Posts publicados" value={totalCount} />
+        <StatCard label="Comentários totais" value={totalComments} />
       </section>
 
       {/* Recent posts */}
