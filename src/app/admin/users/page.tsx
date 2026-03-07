@@ -31,68 +31,60 @@ export default async function UsersAdmin() {
     <div className="space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Usuários</h1>
-          <p className="text-sm text-zinc-400">Gerencie papéis e permissões.</p>
+          <h1 className="text-xl font-semibold tracking-tight text-[#f1f1f1]">Usuários</h1>
+          <p className="text-sm text-[#A8A095]">Gerencie papéis e permissões.</p>
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900/60">
-        <table className="min-w-full text-left text-sm">
-          <thead className="bg-zinc-900/40 text-zinc-400">
+      <div className="border border-white/8 rounded-lg overflow-hidden">
+        <table className="min-w-full text-left text-xs">
+          <thead className="border-b border-white/6">
             <tr>
-              <th className="px-4 py-2 font-medium">Nome</th>
-              <th className="px-4 py-2 font-medium">Email</th>
-              <th className="px-4 py-2 font-medium">Papel</th>
-              <th className="px-4 py-2 font-medium">Contribuições</th>
-              <th className="px-4 py-2 text-right font-medium">Ações</th>
+              <th className="px-4 py-2.5 font-bold uppercase tracking-[0.14em] text-[#A8A095]">Nome</th>
+              <th className="px-4 py-2.5 font-bold uppercase tracking-[0.14em] text-[#A8A095]">Email</th>
+              <th className="px-4 py-2.5 font-bold uppercase tracking-[0.14em] text-[#A8A095]">Papel</th>
+              <th className="px-4 py-2.5 font-bold uppercase tracking-[0.14em] text-[#A8A095]">Comentários</th>
+              <th className="px-4 py-2.5 font-bold uppercase tracking-[0.14em] text-[#A8A095] text-right">Ações</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-white/6">
             {users.map((user) => {
               const primaryEmail = user.emailAddresses.find(
                 (e) => e.id === user.primaryEmailAddressId
               )?.emailAddress;
               const role = (user.publicMetadata as any)?.role as string | undefined;
+              const comments = commentsMap.get(user.id) ?? 0;
 
               return (
-                <tr key={user.id} className="border-t border-zinc-800 hover:bg-zinc-900/40">
-                  <td className="px-4 py-3">
-                    <div className="text-zinc-100">
-                      {user.firstName} {user.lastName}
-                    </div>
+                <tr key={user.id} className="hover:bg-white/2 transition-colors">
+                  <td className="px-4 py-3 text-[#f1f1f1] font-medium">
+                    {user.firstName} {user.lastName}
                   </td>
-                  <td className="px-4 py-3 text-zinc-300">{primaryEmail}</td>
+                  <td className="px-4 py-3 text-[#A8A095]">{primaryEmail}</td>
                   <td className="px-4 py-3">
-                    <span className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-1 text-xs text-zinc-300">
-                      {role ?? "-"}
+                    <span
+                      className={`rounded border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                        role === "admin"
+                          ? "border-[#E00070]/40 bg-[#E00070]/10 text-[#E00070]"
+                          : role === "moderator"
+                            ? "border-white/20 bg-white/5 text-[#f1f1f1]"
+                            : "border-white/10 text-[#A8A095]"
+                      }`}
+                    >
+                      {role ?? "—"}
                     </span>
                   </td>
+                  <td className="px-4 py-3 tabular-nums text-[#A8A095]">{comments}</td>
                   <td className="px-4 py-3">
-                    {(() => {
-                      const comments = commentsMap.get(user.id) ?? 0;
-                      const total = comments + 0 + 0;
-                      return (
-                        <div className="flex flex-col gap-2">
-                          <span className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-1 text-xs text-zinc-300">
-                            Total: {total}
-                          </span>
-                          <span className="text-xs text-zinc-400">
-                            ComentÃ¡rios: {comments} â€¢ Posts: 0 â€¢ SugestÃµes: 0
-                          </span>
-                        </div>
-                      );
-                    })()}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-3">
+                    <div className="flex items-center justify-end gap-2">
                       <form action={setRole} className="inline">
                         <input type="hidden" value={user.id} name="id" />
                         <input type="hidden" value="admin" name="role" />
                         <button
                           type="submit"
-                          className="rounded-md border border-zinc-700 bg-zinc-100 px-3 py-2 text-xs font-medium text-zinc-900 hover:bg-zinc-200"
+                          className="rounded-md bg-[#E00070] px-3 py-1.5 text-xs font-medium text-white hover:opacity-80 transition-opacity"
                         >
-                          Tornar Admin
+                          Admin
                         </button>
                       </form>
                       <form action={setRole} className="inline">
@@ -100,18 +92,18 @@ export default async function UsersAdmin() {
                         <input type="hidden" value="moderator" name="role" />
                         <button
                           type="submit"
-                          className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:bg-zinc-800"
+                          className="rounded-md border border-white/10 px-3 py-1.5 text-xs text-[#A8A095] hover:border-white/20 hover:text-[#f1f1f1] transition-colors"
                         >
-                          Tornar Moderator
+                          Moderador
                         </button>
                       </form>
                       <form action={removeRole} className="inline">
                         <input type="hidden" value={user.id} name="id" />
                         <button
                           type="submit"
-                          className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-red-300 hover:bg-zinc-800"
+                          className="rounded-md border border-white/10 px-3 py-1.5 text-xs text-red-400 hover:border-red-400/30 hover:bg-red-400/5 transition-colors"
                         >
-                          Remover Papel
+                          Remover
                         </button>
                       </form>
                     </div>
@@ -121,7 +113,7 @@ export default async function UsersAdmin() {
             })}
             {users.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-zinc-400">
+                <td colSpan={5} className="px-4 py-8 text-center text-[#A8A095]">
                   Nenhum usuário encontrado.
                 </td>
               </tr>
@@ -132,5 +124,3 @@ export default async function UsersAdmin() {
     </div>
   );
 }
-
-

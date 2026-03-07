@@ -337,18 +337,14 @@ function LineChart({ points }: { points: TimeSeriesPoint[] }) {
   return (
     <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="w-full h-auto">
       <rect x={0} y={0} width={width} height={height} fill="none" />
-      {/* grid */}
-      <line x1={pad} y1={height - pad} x2={width - pad} y2={height - pad} stroke="#3f3f46" strokeWidth={1} />
-      {/* views */}
-      <polyline fill="none" stroke="#60a5fa" strokeWidth={2} points={toPolyline(views)} />
-      {/* sessions */}
-      <polyline fill="none" stroke="#4ade80" strokeWidth={2} points={toPolyline(sessions)} />
-      {/* legend */}
+      <line x1={pad} y1={height - pad} x2={width - pad} y2={height - pad} stroke="rgba(255,255,255,0.06)" strokeWidth={1} />
+      <polyline fill="none" stroke="#E00070" strokeWidth={2} points={toPolyline(views)} />
+      <polyline fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth={1.5} points={toPolyline(sessions)} />
       <g>
-        <circle cx={pad + 6} cy={pad + 6} r={3} fill="#60a5fa" />
-        <text x={pad + 12} y={pad + 9} fill="#e4e4e7" fontSize="10">Views</text>
-        <circle cx={pad + 64} cy={pad + 6} r={3} fill="#4ade80" />
-        <text x={pad + 70} y={pad + 9} fill="#e4e4e7" fontSize="10">Sessões</text>
+        <circle cx={pad + 6} cy={pad + 6} r={3} fill="#E00070" />
+        <text x={pad + 12} y={pad + 9} fill="#A8A095" fontSize="10">Views</text>
+        <circle cx={pad + 64} cy={pad + 6} r={3} fill="rgba(255,255,255,0.3)" />
+        <text x={pad + 70} y={pad + 9} fill="#A8A095" fontSize="10">Sessões</text>
       </g>
     </svg>
   );
@@ -400,13 +396,13 @@ export default async function AdminAnalyticsPage({
     <div className="space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>
-          <p className="text-sm text-zinc-400">Leituras, dispositivos e engajamento.</p>
+          <h1 className="text-xl font-semibold tracking-tight text-[#f1f1f1]">Analytics</h1>
+          <p className="text-sm text-[#A8A095]">Leituras, dispositivos e engajamento.</p>
         </div>
         <div className="flex items-center gap-2">
           <Link
             href="/admin/analytics/views"
-            className="inline-flex items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-sm text-zinc-300 transition-colors hover:bg-zinc-800"
+            className="inline-flex items-center justify-center rounded-md border border-white/10 px-3 py-1.5 text-xs text-[#A8A095] transition-colors hover:border-white/20 hover:text-[#f1f1f1]"
           >
             Detalhar views por post
           </Link>
@@ -415,10 +411,10 @@ export default async function AdminAnalyticsPage({
               key={t.key}
               href={`?range=${t.key}`}
               className={[
-                "inline-flex items-center justify-center rounded-lg border px-3 py-1.5 text-sm transition-colors",
+                "inline-flex items-center justify-center rounded-md border px-3 py-1.5 text-xs transition-colors",
                 range === t.key
-                  ? "border-zinc-600 bg-zinc-800 text-zinc-100"
-                  : "border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800",
+                  ? "border-[#E00070]/40 bg-[#E00070]/10 text-[#f1f1f1]"
+                  : "border-white/10 text-[#A8A095] hover:border-white/20 hover:text-[#f1f1f1]",
               ].join(" ")}
             >
               {t.label}
@@ -430,65 +426,67 @@ export default async function AdminAnalyticsPage({
       <AnalyticsToggle initialEnabled={analyticsEnabled} />
       <MobileHighlightStyleToggle initialValue={mobileHighlightStyle} />
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
-          <div className="text-xs text-zinc-400">Page views</div>
-          <div className="mt-2 text-3xl font-semibold">{summary.pageViews}</div>
+      <section className="grid sm:grid-cols-2 xl:grid-cols-4 border border-white/8 rounded-lg overflow-hidden divide-x divide-white/8">
+        <div className="bg-[#040404] px-5 py-5 flex flex-col gap-3">
+          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#A8A095]">Page views</div>
+          <div className="text-3xl font-semibold tabular-nums text-[#E00070]">{summary.pageViews}</div>
         </div>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
-          <div className="text-xs text-zinc-400">Sessões únicas</div>
-          <div className="mt-2 text-3xl font-semibold">{summary.uniqueSessions}</div>
+        <div className="bg-[#040404] px-5 py-5 flex flex-col gap-3">
+          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#A8A095]">Sessões únicas</div>
+          <div className="text-3xl font-semibold tabular-nums text-[#f1f1f1]">{summary.uniqueSessions}</div>
         </div>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
-          <div className="text-xs text-zinc-400">Views autenticadas</div>
-          <div className="mt-2 text-3xl font-semibold">{summary.authenticatedPageViews}</div>
+        <div className="bg-[#040404] px-5 py-5 flex flex-col gap-3">
+          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#A8A095]">Views autenticadas</div>
+          <div className="text-3xl font-semibold tabular-nums text-[#f1f1f1]">{summary.authenticatedPageViews}</div>
         </div>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
-          <div className="text-xs text-zinc-400">Views anônimas</div>
-          <div className="mt-2 text-3xl font-semibold">{summary.anonymousPageViews}</div>
+        <div className="bg-[#040404] px-5 py-5 flex flex-col gap-3">
+          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#A8A095]">Views anônimas</div>
+          <div className="text-3xl font-semibold tabular-nums text-[#f1f1f1]">{summary.anonymousPageViews}</div>
         </div>
       </section>
 
-      <section className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
-        <div className="flex items-center justify-between border-b border-zinc-800 pb-3 mb-3">
-          <h2 className="text-sm font-medium">Série temporal (views x sessões)</h2>
-          <span className="text-xs text-zinc-400">{series.length} dia(s)</span>
+      <section className="border border-white/8 rounded-lg overflow-hidden">
+        <div className="flex items-center justify-between border-b border-white/6 px-4 py-3">
+          <h2 className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#A8A095]">Série temporal — views x sessões</h2>
+          <span className="text-xs text-[#A8A095]">{series.length} dia(s)</span>
         </div>
-        <LineChart points={series} />
+        <div className="bg-[#040404] p-4">
+          <LineChart points={series} />
+        </div>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/60">
-          <div className="flex items-center justify-between border-b border-zinc-800 p-4">
-            <h2 className="text-sm font-medium">Top páginas por views</h2>
+        <div className="border border-white/8 rounded-lg overflow-hidden">
+          <div className="border-b border-white/6 px-4 py-3">
+            <h2 className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#A8A095]">Top páginas por views</h2>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm min-w-[640px]">
-              <thead className="bg-zinc-900/40 text-zinc-400">
+            <table className="min-w-full text-left text-xs">
+              <thead className="border-b border-white/6">
                 <tr>
-                  <th className="px-4 py-2 font-medium">Página</th>
-                  <th className="px-4 py-2 font-medium">Referrer</th>
-                  <th className="px-4 py-2 font-medium text-right">Views</th>
-                  <th className="px-4 py-2 font-medium text-right">Autenticadas</th>
-                  <th className="px-4 py-2 font-medium text-right">Anônimas</th>
+                  <th className="px-4 py-2 font-bold uppercase tracking-[0.14em] text-[#A8A095]">Página</th>
+                  <th className="px-4 py-2 font-bold uppercase tracking-[0.14em] text-[#A8A095]">Referrer</th>
+                  <th className="px-4 py-2 font-bold uppercase tracking-[0.14em] text-[#A8A095] text-right">Views</th>
+                  <th className="px-4 py-2 font-bold uppercase tracking-[0.14em] text-[#A8A095] text-right">Auth</th>
+                  <th className="px-4 py-2 font-bold uppercase tracking-[0.14em] text-[#A8A095] text-right">Anon</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-white/6">
                 {topPages.length > 0 ? (
                   topPages.map((p) => (
-                    <tr key={p.path} className="border-t border-zinc-800">
-                      <td className="px-4 py-2 font-mono text-xs">{p.path}</td>
-                      <td className="px-4 py-2 text-xs text-zinc-400 truncate max-w-[160px]">
+                    <tr key={p.path} className="hover:bg-white/2 transition-colors">
+                      <td className="px-4 py-2.5 font-mono text-[#f1f1f1]">{p.path}</td>
+                      <td className="px-4 py-2.5 text-[#A8A095] truncate max-w-[140px]">
                         {p.referrer ?? "—"}
                       </td>
-                      <td className="px-4 py-2 text-right tabular-nums">{p.views}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">{p.authenticatedViews}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">{p.anonymousViews}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-[#f1f1f1]">{p.views}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-[#A8A095]">{p.authenticatedViews}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-[#A8A095]">{p.anonymousViews}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-zinc-400">
+                    <td colSpan={5} className="px-4 py-8 text-center text-[#A8A095]">
                       Nenhum dado no período.
                     </td>
                   </tr>
@@ -498,29 +496,29 @@ export default async function AdminAnalyticsPage({
           </div>
         </div>
 
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/60">
-          <div className="flex items-center justify-between border-b border-zinc-800 p-4">
-            <h2 className="text-sm font-medium">Dispositivos</h2>
+        <div className="border border-white/8 rounded-lg overflow-hidden">
+          <div className="border-b border-white/6 px-4 py-3">
+            <h2 className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#A8A095]">Dispositivos</h2>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-zinc-900/40 text-zinc-400">
+            <table className="min-w-full text-left text-xs">
+              <thead className="border-b border-white/6">
                 <tr>
-                  <th className="px-4 py-2 font-medium">Dispositivo</th>
-                  <th className="px-4 py-2 font-medium text-right">Eventos</th>
+                  <th className="px-4 py-2 font-bold uppercase tracking-[0.14em] text-[#A8A095]">Dispositivo</th>
+                  <th className="px-4 py-2 font-bold uppercase tracking-[0.14em] text-[#A8A095] text-right">Eventos</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-white/6">
                 {device.length > 0 ? (
                   device.map((d) => (
-                    <tr key={d.device} className="border-t border-zinc-800">
-                      <td className="px-4 py-2 capitalize">{d.device}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">{d.count}</td>
+                    <tr key={d.device} className="hover:bg-white/2 transition-colors">
+                      <td className="px-4 py-2.5 capitalize text-[#f1f1f1]">{d.device}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-[#f1f1f1]">{d.count}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={2} className="px-4 py-8 text-center text-zinc-400">
+                    <td colSpan={2} className="px-4 py-8 text-center text-[#A8A095]">
                       Nenhum dado no período.
                     </td>
                   </tr>
