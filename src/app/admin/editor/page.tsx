@@ -229,7 +229,6 @@ export default function Editor() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isEditorFocused, setIsEditorFocused] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [coAuthorError, setCoAuthorError] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
@@ -373,14 +372,6 @@ export default function Editor() {
     setContent(normalizedValue);
   };
 
-  const editorBorder = useMemo(
-    () =>
-      isEditorFocused
-        ? "border-cyan-400/50 ring-2 ring-cyan-500/15"
-        : "border-zinc-800/80",
-    [isEditorFocused]
-  );
-
   useEffect(() => {
     const loadCoAuthors = async () => {
       try {
@@ -439,10 +430,10 @@ export default function Editor() {
 
   const titleSlot = (
     <input
-      className={`w-full bg-transparent font-semibold text-white focus:outline-none focus:ring-0 placeholder:text-zinc-400 ${
-        hasCape ? "text-xl drop-shadow-sm" : "text-3xl text-center"
+      className={`w-full bg-transparent font-bold tracking-tight text-white focus:outline-none focus:ring-0 placeholder:text-white/20 ${
+        hasCape ? "text-2xl drop-shadow-sm" : "text-4xl text-center"
       }`}
-      placeholder="Título do post"
+      placeholder="Sem título"
       value={title}
       onChange={(e) => {
         clearFieldError("title");
@@ -454,10 +445,10 @@ export default function Editor() {
 
   const subtitleSlot = (
     <input
-      className={`w-full bg-transparent text-zinc-200 focus:outline-none focus:ring-0 placeholder:text-zinc-500 ${
+      className={`w-full bg-transparent text-[#A8A095] focus:outline-none focus:ring-0 placeholder:text-white/15 ${
         hasCape ? "text-sm" : "text-base text-center"
       }`}
-      placeholder="Subtítulo (opcional)"
+      placeholder="Adicionar subtítulo"
       value={subtitle}
       onChange={(e) => {
         markDirty();
@@ -516,16 +507,16 @@ export default function Editor() {
                 <button
                   type="button"
                   onClick={() => setIsMetadataOpen((open) => !open)}
-                  className="inline-flex items-center rounded-full border border-zinc-800/80 bg-transparent px-3 py-1 text-[11px] font-medium text-zinc-200 transition-colors hover:border-zinc-600 hover:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-600/30"
+                  className="rounded-md border border-white/10 px-3 py-1.5 text-xs text-[#A8A095] transition-colors hover:border-white/20 hover:text-[#f1f1f1] focus:outline-none"
                 >
                   Metadados
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex items-center rounded-full border border-zinc-200/80 bg-white px-4 py-1.5 text-xs font-semibold text-zinc-900 shadow-sm transition hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-500/40 disabled:cursor-not-allowed disabled:opacity-70"
+                  className="rounded-md bg-[#E00070] px-4 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? "Publicando..." : "Publicar post"}
+                  {isSubmitting ? "Publicando..." : "Publicar"}
                 </button>
               </div>
               <div className="flex flex-wrap items-center gap-2 text-sm text-zinc-500">
@@ -540,23 +531,16 @@ export default function Editor() {
           }
         >
           <div className="flex flex-col gap-3">
-            <div
-              className={`rounded-2xl border bg-zinc-950/70 ${editorBorder} transition duration-200`}
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2 px-4 pb-2 pt-4 text-sm text-zinc-400">
-                <p className="text-sm font-semibold text-zinc-100">Conteúdo</p>
-                {validationErrors.content && (
-                  <span className="text-xs text-red-400">{validationErrors.content}</span>
-                )}
-              </div>
-              <div className="border-t border-zinc-800/80">
-                <LexicalEditor
-                  value={content}
-                  onChange={handleContentChange}
-                  onFocusChange={setIsEditorFocused}
-                  appearance="inline"
-                />
-              </div>
+            <div className="flex flex-col gap-1">
+              {validationErrors.content && (
+                <span className="px-1 text-xs text-red-400">{validationErrors.content}</span>
+              )}
+              <LexicalEditor
+                value={content}
+                onChange={handleContentChange}
+                onFocusChange={() => {}}
+                appearance="inline"
+              />
             </div>
           </div>
         </PostContentShell>
