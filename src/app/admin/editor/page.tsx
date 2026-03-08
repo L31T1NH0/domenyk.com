@@ -2,22 +2,10 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
-import { Layout } from "@components/layout";
 import { PostHeader } from "@components/PostHeader";
 import LexicalEditor from "../../../../components/editor/LexicalEditor";
 import Toggle from "../../../../components/Toggle";
-import PostContentShell from "../../posts/[id]/post-content-interactive";
 import { normalizeMarkdownContent } from "../../../lib/markdown-normalize";
-
-function calculateReadingTime(markdown: string): string {
-  const wordsPerMinute = 200;
-  const words = markdown.trim() ? markdown.trim().split(/\s+/).length : 0;
-  if (words === 0) {
-    return "0 min";
-  }
-  const minutes = Math.max(1, Math.ceil(words / wordsPerMinute));
-  return `${minutes} min`;
-}
 
 type MetadataPanelProps = {
   isOpen: boolean;
@@ -233,6 +221,7 @@ export default function Editor() {
   const [coAuthorError, setCoAuthorError] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [isMetadataOpen, setIsMetadataOpen] = useState(false);
+  const [, setIsEditorFocused] = useState(false);
   const markDirty = useCallback(() => setIsDirty(true), []);
   const clearFieldError = useCallback((field: string) => {
     setValidationErrors((prev) => {
@@ -419,9 +408,6 @@ export default function Editor() {
     setFriendImage(selected?.imageUrl ?? "");
   };
 
-  const readingTime = useMemo(() => calculateReadingTime(content), [content]);
-  const draftDate = useMemo(() => new Date().toISOString(), []);
-  const audioSource = hasAudio ? audioUrl : undefined;
   const slugPreview = useMemo(
     () => `domenyk.com/posts/${(postId || "seu-slug").trim() || "seu-slug"}`,
     [postId]
@@ -430,7 +416,7 @@ export default function Editor() {
 
   const titleSlot = (
     <input
-      className={`w-full bg-transparent font-bold tracking-tight text-white focus:outline-none focus:ring-0 placeholder:text-white/20 ${
+      className={`w-full bg-transparent font-bold tracking-tight text-[#f1f1f1] focus:outline-none focus:ring-0 placeholder:text-white/15 ${
         hasCape ? "text-2xl drop-shadow-sm" : "text-4xl text-center"
       }`}
       placeholder="Sem título"
@@ -445,7 +431,7 @@ export default function Editor() {
 
   const subtitleSlot = (
     <input
-      className={`w-full bg-transparent text-[#A8A095] focus:outline-none focus:ring-0 placeholder:text-white/15 ${
+      className={`w-full bg-transparent text-[#A8A095] focus:outline-none focus:ring-0 placeholder:text-white/10 ${
         hasCape ? "text-sm" : "text-base text-center"
       }`}
       placeholder="Adicionar subtítulo"
@@ -458,17 +444,40 @@ export default function Editor() {
   );
 
   return (
-    <Layout
-      title={title || "Novo post"}
-      description={subtitle || undefined}
-      url="/admin/editor"
-      hideHeaderControls
-    >
-      <form onSubmit={handleSubmit} className="relative space-y-6 pb-10">
+    <div className="min-h-screen bg-[#040404]">
+      <div className="fixed left-0 right-0 top-0 z-40 flex items-center justify-between border-b border-white/6 bg-[#040404]/90 px-6 py-3 backdrop-blur">
+        <span className="max-w-xs truncate text-xs text-[#A8A095]">{slugPreview}</span>
+        <div className="flex items-center gap-2">
+          {isDirty && !isSubmitting && (
+            <span className="text-[10px] text-[#A8A095]">Não salvo</span>
+          )}
+          <button
+            type="button"
+            onClick={() => setIsMetadataOpen((open) => !open)}
+            className="rounded-md border border-white/10 px-3 py-1.5 text-xs text-[#A8A095] transition-colors hover:border-white/20 hover:text-[#f1f1f1]"
+          >
+            Metadados
+          </button>
+          <button
+            type="submit"
+            form="editor-form"
+            disabled={isSubmitting}
+            className="rounded-md bg-[#E00070] px-4 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-80 disabled:opacity-40"
+          >
+            {isSubmitting ? "Publicando..." : "Publicar"}
+          </button>
+        </div>
+      </div>
+
+      <form
+        id="editor-form"
+        onSubmit={handleSubmit}
+        className="mx-auto max-w-2xl px-6 pb-40 pt-20"
+      >
         <div className="relative">
           <PostHeader
             cape={cape || undefined}
-            title={title || "Título do post"}
+            title={title || "Sem título"}
             subtitle={subtitle || undefined}
             friendImage={friendImage || undefined}
             coAuthorImageUrl={friendImage || undefined}
@@ -476,11 +485,11 @@ export default function Editor() {
             subtitleSlot={subtitleSlot}
             disableProfileLinks
             overlaySlot={
-              <div className="absolute right-3 top-3 z-10 flex items-center gap-2">
+              <div className="absolute right-3 top-3 z-10">
                 <button
                   type="button"
                   onClick={() => setIsMetadataOpen(true)}
-                  className="inline-flex items-center rounded-full border border-zinc-800/80 bg-zinc-950/70 px-4 py-1.5 text-xs font-medium text-zinc-100 shadow-sm shadow-black/20 transition-colors hover:border-zinc-600 hover:bg-zinc-900/70 focus:outline-none focus:ring-2 focus:ring-zinc-600/30"
+                  className="rounded-md border border-white/10 bg-[#040404]/70 px-3 py-1.5 text-xs text-[#A8A095] backdrop-blur transition-colors hover:border-white/20 hover:text-[#f1f1f1]"
                 >
                   Trocar capa
                 </button>
@@ -488,67 +497,28 @@ export default function Editor() {
             }
           />
           {validationErrors.title && (
-            <p className="mt-2 text-sm text-red-400">{validationErrors.title}</p>
+            <p className="mt-2 text-xs text-red-400">{validationErrors.title}</p>
           )}
         </div>
 
-        <PostContentShell
-          postId={postId || "rascunho"}
-          date={draftDate}
-          readingTime={readingTime}
-          initialViews={0}
-          audioUrl={audioSource}
-          disableViewTracking
-          hideShareButton
-          isEditing
-          secondaryHeaderSlot={
-            <div className="flex flex-col gap-2">
-              <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
-                <button
-                  type="button"
-                  onClick={() => setIsMetadataOpen((open) => !open)}
-                  className="rounded-md border border-white/10 px-3 py-1.5 text-xs text-[#A8A095] transition-colors hover:border-white/20 hover:text-[#f1f1f1] focus:outline-none"
-                >
-                  Metadados
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-md bg-[#E00070] px-4 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Publicando..." : "Publicar"}
-                </button>
-              </div>
-              <div className="flex flex-wrap items-center gap-2 text-sm text-zinc-500">
-                <span className="font-medium text-zinc-200">{slugPreview}</span>
-                <span aria-hidden className="text-zinc-700">•</span>
-                <span>Pré-visualização da URL do post</span>
-              </div>
-              <div className="text-xs text-zinc-500">
-                Tempo de leitura, data e views são apenas prévias durante a edição.
-              </div>
-            </div>
-          }
-        >
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1">
-              {validationErrors.content && (
-                <span className="px-1 text-xs text-red-400">{validationErrors.content}</span>
-              )}
-              <LexicalEditor
-                value={content}
-                onChange={handleContentChange}
-                onFocusChange={() => {}}
-                appearance="inline"
-              />
-            </div>
-          </div>
-        </PostContentShell>
+        <div className="my-8 border-t border-white/6" />
+
+        <div className="flex flex-col gap-1">
+          {validationErrors.content && (
+            <span className="mb-2 text-xs text-red-400">{validationErrors.content}</span>
+          )}
+          <LexicalEditor
+            value={content}
+            onChange={handleContentChange}
+            onFocusChange={setIsEditorFocused}
+            appearance="inline"
+          />
+        </div>
 
         {(success || error) && (
-          <div className="rounded-xl border border-zinc-800/80 bg-zinc-950/80 p-4 text-center">
-            {success && <p className="text-sm font-medium text-emerald-400">{success}</p>}
-            {error && <p className="text-sm font-medium text-red-400">{error}</p>}
+          <div className="mt-8 rounded-lg border border-white/8 p-4 text-center">
+            {success && <p className="text-sm text-[#E00070]">{success}</p>}
+            {error && <p className="text-sm text-red-400">{error}</p>}
           </div>
         )}
 
@@ -609,6 +579,6 @@ export default function Editor() {
           }}
         />
       </form>
-    </Layout>
+    </div>
   );
 }
