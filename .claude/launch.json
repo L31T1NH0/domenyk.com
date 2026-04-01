@@ -1,0 +1,8 @@
+[
+  {
+    "name": "Next.js Dev Server",
+    "command": "npm",
+    "args": ["run", "dev"],
+    "port": 3000
+  }
+]
