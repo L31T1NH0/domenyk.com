@@ -1,93 +1,139 @@
-Domenyk.com
+# Domenyk.com
 
-Este repositório contém o código do Domenyk.com, um blog moderno construído com Next.js (App Router).
-O site exibe posts escritos em Markdown, permite leitura interativa, conta views e possui dois sistemas de comentários:
-um no final do post e outro diretamente em cada parágrafo.
+A modern, interactive blog platform built with **Next.js 15** and **React 19**. Features rich Markdown/MDX content rendering, real-time comments, paragraph-level annotations, and analytics tracking.
 
------------------------------------------
-O que o projeto faz
------------------------------------------
+## ✨ Features
 
-• Lista posts com busca, ordenação e paginação.
-• Renderiza conteúdo Markdown/MDX em HTML.
-• Mostra tempo de leitura, data, capa e player de áudio (quando existe).
-• Injeta minimapa, referências internas e widgets dentro do próprio conteúdo.
-• Possui:
-  – Comentários globais em árvore (Mongo + dados antigos de Redis).
-  – Comentários por parágrafo, com login via Clerk e undo de deleção.
-• Registra views, progresso de leitura e analytics.
-• Suporta permissões (visitante, usuário autenticado, admin/staff).
+- **Interactive Posts** — Markdown/MDX rendering with support for embeds, audio players, and custom widgets
+- **Dual Comment Systems** — Global threaded comments + paragraph-level inline comments with Clerk authentication
+- **Reading Analytics** — Automatic view tracking, reading progress, estimated reading time, and Vercel analytics
+- **Content Organization** — Search, filtering, pagination, and metadata management (cover images, audio)
+- **Permission System** — Support for visitor, authenticated user, and admin/staff roles
+- **Dynamic Minimap** — Auto-generated table of contents and internal reference linking
+- **Admin Dashboard** — Control analytics collection and manage site settings in real-time
 
-Em resumo: cada post vira uma página interativa, onde o conteúdo controla vários recursos do site.
+## 🚀 Tech Stack
 
------------------------------------------
-Tecnologias principais
------------------------------------------
+- **Framework** — [Next.js 15](https://nextjs.org) with App Router
+- **UI** — [React 19](https://react.dev) + [TailwindCSS 4](https://tailwindcss.com)
+- **Content** — [MDX](https://mdxjs.com), [Remark](https://remark.js.org), [Rehype](https://rehype.js.org)
+- **Database** — [MongoDB](https://mongodb.com) (primary) + [Redis](https://redis.io) (legacy)
+- **Authentication** — [Clerk](https://clerk.com)
+- **Observability** — [Vercel Analytics](https://vercel.com/analytics) + [Speed Insights](https://vercel.com/insights)
 
-• Next.js (App Router)
-• React + TailwindCSS
-• MongoDB
-• Redis (legado)
-• Clerk (autenticação)
-• MDX / Remark / Rehype
-• Vercel Analytics
+## 📦 Getting Started
 
------------------------------------------
-Como rodar localmente
------------------------------------------
+### Prerequisites
+- Node.js 18+ 
+- npm, yarn, or pnpm
+- MongoDB and Redis instances (or connection strings)
+- Clerk application credentials
 
-1. Clonar o repositório
-git clone https://github.com/SEU-USUARIO/SEU-REPO.git
-cd SEU-REPO
+### Local Development
 
-2. Instalar dependências
-npm install
-ou:
-yarn
-ou:
-pnpm install
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/l31t1nh0/domenyk.com.git
+   cd domenyk.com
+   ```
 
-3. Configurar variáveis de ambiente
-Criar um arquivo .env.local com:
+2. **Install dependencies**
+   ```bash
+   npm install
+   # or: yarn install / pnpm install
+   ```
 
-MONGODB_URI=...
+3. **Configure environment variables**
+   
+   Create a `.env.local` file in the root directory:
+   ```env
+   # Database
+   MONGODB_URI=mongodb+srv://...
+   REDIS_URL=redis://...
+   
+   # Authentication (Clerk)
+   CLERK_PUBLISHABLE_KEY=pk_test_...
+   CLERK_SECRET_KEY=sk_test_...
+   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+   
+   # Site Configuration
+   NEXT_PUBLIC_SITE_URL=http://localhost:3000
+   
+   # Analytics (optional, defaults to true)
+   ANALYTICS_ENABLED=true
+   ```
 
-REDIS_URL=...
+4. **Run the development server**
+   ```bash
+   npm run dev
+   ```
+   
+   Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-CLERK_PUBLISHABLE_KEY=...
+## 🔨 Build & Deploy
 
-CLERK_SECRET_KEY=...
-
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=...
-
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
-
-# Flag opcional para suspender a coleta de analytics (padrão: true)
-ANALYTICS_ENABLED=true
-
-4. Rodar o projeto
+**Development:**
+```bash
 npm run dev
+```
 
-Abrir no navegador:
-http://localhost:3000
-
------------------------------------------
-Build para produção
------------------------------------------
-
+**Production build:**
+```bash
 npm run build
 npm start
+```
 
------------------------------------------
-Configuração de analytics
------------------------------------------
+## ⚙️ Configuration
 
-- O flag `analyticsEnabled` tem fonte de verdade no MongoDB (coleção `settings`, chave `analyticsEnabled`).
-- O valor inicial cai para a env `ANALYTICS_ENABLED` (padrão `true`) se não existir registro na coleção.
-- Admins podem ligar/desligar em tempo real pela página `/admin/analytics`, que usa o endpoint protegido `/api/admin/analytics/toggle`.
+### Analytics Settings
 
------------------------------------------
-Licença
------------------------------------------
+Analytics collection is controlled by the `analyticsEnabled` flag in MongoDB:
+- **Source of truth** — `settings` collection in MongoDB, key `analyticsEnabled`
+- **Default fallback** — Environment variable `ANALYTICS_ENABLED` (defaults to `true`)
+- **Admin control** — Toggle real-time from `/admin/analytics` page
+- **API endpoint** — `POST /api/admin/analytics/toggle` (admin-only)
 
-Código aberto para estudo. Direitos reservados ao autor.
+This allows you to enable/disable analytics collection without redeploying.
+
+## 📋 Project Structure
+
+```
+├── app/                 # Next.js App Router
+├── components/          # React components
+├── lib/                 # Utilities, API clients, database helpers
+├── public/              # Static assets
+├── styles/              # Global CSS and Tailwind configuration
+└── content/             # Blog posts in Markdown/MDX
+```
+
+## 🔐 Permissions & Access Control
+
+Three permission levels:
+- **Visitor** — Read-only access to posts and public features
+- **Authenticated User** — Can comment, create paragraph annotations, mark progress
+- **Admin/Staff** — Full access to settings, analytics, and moderation tools
+
+## 💬 Comment System Details
+
+### Global Comments
+- Tree-structured threaded comments
+- Stored in MongoDB
+- Legacy data also pulled from Redis
+
+### Paragraph Comments
+- Inline annotations on specific paragraphs
+- Requires Clerk authentication
+- Features soft-delete with undo capability
+- Attached to exact paragraph anchors
+
+## 📝 Contributing
+
+Contributions are welcome! Please feel free to submit a pull request.
+
+## 📄 License
+
+Open source for educational purposes. All rights reserved to the author.
+
+---
+
+**Built with ❤️ using Next.js & React**
