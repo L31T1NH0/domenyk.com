@@ -23,6 +23,7 @@ import { useRealReadingTime } from "@components/useRealReadingTime";
 import AudioPlayer from "@components/AudioPlayer";
 import PostMinimap from "@components/PostMinimap";
 import { EyeIcon, ClockIcon } from "@heroicons/react/24/solid";
+import { usePostContentFontSize } from "@components/usePostContentFontSize";
 
 export type ParagraphCommentWidgetProps = {
   postId: string;
@@ -270,6 +271,7 @@ type PostContentShellProps = {
   secondaryHeaderSlot?: ReactNode;
   isEditing?: boolean;
   contentRef?: RefObject<HTMLDivElement | null>;
+  paragraphTexts?: string[];
 };
 
 export default function PostContentShell({
@@ -284,10 +286,17 @@ export default function PostContentShell({
   secondaryHeaderSlot,
   isEditing = false,
   contentRef,
+  paragraphTexts,
 }: PostContentShellProps) {
   const [views, setViews] = useState(initialViews);
   const displayReadingTime = useRealReadingTime(postId, readingTime);
   const [isMobile, setIsMobile] = useState(false);
+  const measureRef = useRef<HTMLDivElement>(null);
+  const adaptiveFontSize = usePostContentFontSize(
+    paragraphTexts ?? [],
+    measureRef,
+    { minSize: 14, maxSize: 18 }
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -382,10 +391,14 @@ export default function PostContentShell({
 
           <div
             data-post-content
-            className="flex flex-col gap-4 lg:text-lg sm:text-sm max-sm:text-xs"
+            className="flex flex-col gap-4"
+            style={paragraphTexts?.length ? { fontSize: adaptiveFontSize } : undefined}
             contentEditable={isEditing || undefined}
             suppressContentEditableWarning
-            ref={contentRef}
+            ref={(el) => {
+              measureRef.current = el;
+              if (contentRef) contentRef.current = el;
+            }}
           >
             {children}
           </div>

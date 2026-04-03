@@ -16,7 +16,7 @@ import PostContentShell, {
 } from "./post-content-interactive";
 import SectionAttentionTracker from "@components/analytics/SectionAttentionTracker";
 import HeatmapProgressBar from "@components/HeatmapProgressBar";
-import { useContext, useRef, type HTMLAttributes, type RefObject } from "react";
+import { useContext, useMemo, useRef, type HTMLAttributes, type RefObject } from "react";
 import { useCommentsSummary } from "@components/paragraph-comments/useCommentsSummary";
 import ImageParagraph from "@components/ImageParagraph";
 import { useHighlights } from "@components/paragraph-comments/useHighlights";
@@ -274,6 +274,13 @@ export default function PostContentClient({
   const openCommentsFnsRef = useRef<Map<string, () => Promise<void>>>(new Map());
   let paragraphIndex = 0;
 
+  const paragraphTexts = useMemo(() => {
+    const matches = htmlContent.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi);
+    return Array.from(matches)
+      .map((m) => m[1].replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim())
+      .filter(Boolean);
+  }, [htmlContent]);
+
   type ReplaceReturn = ReturnType<NonNullable<HTMLReactParserOptions["replace"]>>;
 
   const parserOptions: HTMLReactParserOptions = {};
@@ -391,6 +398,7 @@ export default function PostContentClient({
       audioUrl={audioUrl}
       isEditing={isEditing}
       contentRef={contentRef}
+      paragraphTexts={paragraphTexts}
     >
       <SectionAttentionTracker postId={postId} />
       <HeatmapProgressBar postId={postId} />
