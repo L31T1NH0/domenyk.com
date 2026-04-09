@@ -57,6 +57,41 @@ export default function HighlightedParagraph({
     y: number;
   } | null>(null);
   const [useTouchActions, setUseTouchActions] = useState(isMobile);
+  const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
+  const longPressTimerRef = useRef<number | null>(null);
+  const longPressTriggeredRef = useRef(false);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const snackbarTimeoutRef = useRef<number | null>(null);
+  const lastHintAtRef = useRef(0);
+
+  const clearLongPressTimer = useCallback(() => {
+    if (longPressTimerRef.current !== null) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const showSnackbar = useCallback((message: string, durationMs = 2600) => {
+    if (snackbarTimeoutRef.current !== null) {
+      window.clearTimeout(snackbarTimeoutRef.current);
+      snackbarTimeoutRef.current = null;
+    }
+    setSnackbarMessage(message);
+    snackbarTimeoutRef.current = window.setTimeout(() => {
+      setSnackbarMessage(null);
+      snackbarTimeoutRef.current = null;
+    }, durationMs);
+  }, []);
+
+  const isInteractiveTarget = useCallback((target: EventTarget | null) => {
+    const element = target as HTMLElement | null;
+    if (!element) return false;
+    return Boolean(
+      element.closest(
+        "button, a, input, textarea, select, [role='button'], [contenteditable='true'], [data-highlight-popover]",
+      ),
+    );
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -71,6 +106,24 @@ export default function HighlightedParagraph({
     return () => media.removeEventListener("change", update);
   }, [isMobile]);
 
+  useEffect(() => {
+    if (typeof window === "undefined" || !useTouchActions) return;
+    const key = "paragraph-actions-gesture-hint-v1";
+    const hasSeenHint = window.localStorage.getItem(key) === "1";
+    if (hasSeenHint) return;
+    showSnackbar("Dica: pressione e segure um parágrafo para comentar ou destacar.", 3400);
+    window.localStorage.setItem(key, "1");
+  }, [showSnackbar, useTouchActions]);
+
+  useEffect(() => {
+    return () => {
+      clearLongPressTimer();
+      if (snackbarTimeoutRef.current !== null) {
+        window.clearTimeout(snackbarTimeoutRef.current);
+      }
+    };
+  }, [clearLongPressTimer]);
+
   const openTouchMenuAt = useCallback(() => {
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -81,7 +134,8 @@ export default function HighlightedParagraph({
       y: rect.top - 8,
     });
     setShowMobileMenu(true);
-  }, []);
+    showSnackbar("Ações do parágrafo abertas: comentar ou destacar.", 2200);
+  }, [showSnackbar]);
 
   useEffect(() => {
     const mine = highlights.find(
@@ -242,15 +296,50 @@ export default function HighlightedParagraph({
         {...(paragraphProps as any)}
         ref={containerRef}
         onMouseUp={handleMouseUp}
-        onTouchEnd={(e) => {
-          if (!e.changedTouches[0]) return;
-          openTouchMenuAt();
-        }}
-        onClick={(e) => {
+        onTouchStart={(e) => {
           if (!useTouchActions) return;
-          const target = e.target as HTMLElement;
-          if (target.closest("button, a, input, textarea, select, [role='button']")) return;
-          openTouchMenuAt();
+          if (isInteractiveTarget(e.target)) return;
+          const touch = e.touches[0];
+          if (!touch) return;
+          touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+          longPressTriggeredRef.current = false;
+          clearLongPressTimer();
+          longPressTimerRef.current = window.setTimeout(() => {
+            longPressTriggeredRef.current = true;
+            openTouchMenuAt();
+          }, 420);
+        }}
+        onTouchMove={(e) => {
+          if (!useTouchActions || !touchStartRef.current) return;
+          const touch = e.touches[0];
+          if (!touch) return;
+          const dx = Math.abs(touch.clientX - touchStartRef.current.x);
+          const dy = Math.abs(touch.clientY - touchStartRef.current.y);
+          if (dx > 10 || dy > 10) {
+            clearLongPressTimer();
+            touchStartRef.current = null;
+          }
+        }}
+        onTouchEnd={() => {
+          if (!useTouchActions) return;
+          const hadTapCandidate = touchStartRef.current !== null;
+          const triggered = longPressTriggeredRef.current;
+          clearLongPressTimer();
+          touchStartRef.current = null;
+          longPressTriggeredRef.current = false;
+          if (!triggered && hadTapCandidate) {
+            const now = Date.now();
+            if (now - lastHintAtRef.current < 5000) {
+              return;
+            }
+            lastHintAtRef.current = now;
+            showSnackbar("Para comentar ou destacar, pressione e segure o parágrafo.");
+          }
+        }}
+        onTouchCancel={() => {
+          clearLongPressTimer();
+          touchStartRef.current = null;
+          longPressTriggeredRef.current = false;
         }}
         className={[
           (paragraphProps as any)?.className,
@@ -325,6 +414,12 @@ export default function HighlightedParagraph({
             </button>
           </span>
           <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-zinc-900" />
+        </span>
+      )}
+
+      {useTouchActions && snackbarMessage && (
+        <span className="fixed bottom-4 left-1/2 z-[9999] w-[min(92vw,28rem)] -translate-x-1/2 rounded-xl border border-zinc-700 bg-zinc-900/95 px-4 py-3 text-center text-xs font-medium text-zinc-100 shadow-xl backdrop-blur">
+          {snackbarMessage}
         </span>
       )}
 
