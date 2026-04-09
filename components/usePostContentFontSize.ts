@@ -1,35 +1,82 @@
-import { useEffect, useState, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { prepare, layout } from "@chenglou/pretext";
 
+type Options = {
+  minSize?: number;
+  maxSize?: number;
+  maxLinesPerParagraph?: number;
+};
+
+type PreparedParagraph = {
+  text: string;
+  lineHeightRatio: number;
+  getPrepared: (fontSize: number) => ReturnType<typeof prepare>;
+};
+
+function getLineHeightRatio(style: CSSStyleDeclaration, fallbackFontSize: number) {
+  const lineHeight = Number.parseFloat(style.lineHeight);
+  if (Number.isFinite(lineHeight) && fallbackFontSize > 0) {
+    return lineHeight / fallbackFontSize;
+  }
+
+  return 1.625;
+}
+
+function buildFont(style: CSSStyleDeclaration, fontSize: number) {
+  const fontStyle = style.fontStyle || "normal";
+  const fontVariant = style.fontVariant || "normal";
+  const fontWeight = style.fontWeight || "400";
+  const fontStretch = style.fontStretch || "normal";
+  const fontFamily = style.fontFamily || "PolySans";
+
+  return `${fontStyle} ${fontVariant} ${fontWeight} ${fontStretch} ${fontSize}px ${fontFamily}`;
+}
+
 export function usePostContentFontSize(
-  paragraphTexts: string[],
   containerRef: RefObject<HTMLElement | null>,
-  options: {
-    minSize?: number;
-    maxSize?: number;
-    fontFamily?: string;
-    lineHeightRatio?: number;
-    maxLinesPerParagraph?: number;
-  } = {}
+  options: Options = {}
 ): number {
-  const {
-    minSize = 14,
-    maxSize = 18,
-    fontFamily = "PolySans",
-    lineHeightRatio = 1.625,
-    maxLinesPerParagraph = 6,
-  } = options;
+  const { minSize = 12, maxSize = 18, maxLinesPerParagraph = 6 } = options;
 
   const [fontSize, setFontSize] = useState(maxSize);
+  const preparedCacheRef = useRef<Map<string, ReturnType<typeof prepare>>>(new Map());
 
   useEffect(() => {
     let cancelled = false;
-    const texts = paragraphTexts.filter(Boolean);
-    if (!texts.length) return;
 
     const measure = () => {
-      const width = containerRef.current?.clientWidth ?? 0;
-      if (!width || cancelled) return;
+      const container = containerRef.current;
+      const width = container?.clientWidth ?? 0;
+      if (!container || !width || cancelled) return;
+
+      const paragraphElements = Array.from(container.querySelectorAll<HTMLParagraphElement>("p"));
+      const preparedParagraphs: PreparedParagraph[] = paragraphElements
+        .map((paragraph) => {
+          const text = paragraph.textContent?.replace(/\s+/g, " ").trim() ?? "";
+          if (!text) return null;
+
+          const style = window.getComputedStyle(paragraph);
+          const baseFontSize = Number.parseFloat(style.fontSize) || maxSize;
+          const lineHeightRatio = getLineHeightRatio(style, baseFontSize);
+
+          return {
+            text,
+            lineHeightRatio,
+            getPrepared(nextFontSize: number) {
+              const font = buildFont(style, nextFontSize);
+              const cacheKey = `${font}__${text}`;
+              const cached = preparedCacheRef.current.get(cacheKey);
+              if (cached) return cached;
+
+              const prepared = prepare(text, font);
+              preparedCacheRef.current.set(cacheKey, prepared);
+              return prepared;
+            },
+          };
+        })
+        .filter((paragraph): paragraph is PreparedParagraph => paragraph !== null);
+
+      if (!preparedParagraphs.length) return;
 
       let lo = minSize;
       let hi = maxSize;
@@ -37,16 +84,15 @@ export function usePostContentFontSize(
 
       while (lo <= hi) {
         const mid = Math.floor((lo + hi) / 2);
-        const font = `${mid}px ${fontFamily}`;
-        const lh = mid * lineHeightRatio;
 
         let totalLines = 0;
-        for (const text of texts) {
-          const prepared = prepare(text, font);
-          const { lineCount } = layout(prepared, width, lh);
+        for (const paragraph of preparedParagraphs) {
+          const prepared = paragraph.getPrepared(mid);
+          const lineHeight = mid * paragraph.lineHeightRatio;
+          const { lineCount } = layout(prepared, width, lineHeight);
           totalLines += lineCount;
         }
-        const avg = totalLines / texts.length;
+        const avg = totalLines / preparedParagraphs.length;
 
         if (avg <= maxLinesPerParagraph) {
           optimal = mid;
@@ -61,15 +107,25 @@ export function usePostContentFontSize(
 
     document.fonts.ready.then(measure);
 
-    const el = containerRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
+    const container = containerRef.current;
+    if (!container) return;
+
+    const resizeObserver = new ResizeObserver(measure);
+    resizeObserver.observe(container);
+
+    const mutationObserver = new MutationObserver(measure);
+    mutationObserver.observe(container, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+
     return () => {
       cancelled = true;
-      ro.disconnect();
+      resizeObserver.disconnect();
+      mutationObserver.disconnect();
     };
-  }, [paragraphTexts, minSize, maxSize, fontFamily, lineHeightRatio, maxLinesPerParagraph]);
+  }, [containerRef, minSize, maxSize, maxLinesPerParagraph]);
 
   return fontSize;
 }
