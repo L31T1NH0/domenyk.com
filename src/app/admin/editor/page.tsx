@@ -29,6 +29,8 @@ type MetadataPanelProps = {
   onToggleHasAudio: (value: boolean) => void;
   onAudioUrlChange: (value: string) => void;
   onCapeChange: (value: string) => void;
+  onCapeUpload: (file: File) => Promise<void>;
+  isUploading: boolean;
   onTagsChange: (value: string) => void;
   onPostIdChange: (value: string) => void;
   onSelectCoAuthor: (value: string) => void;
@@ -56,6 +58,8 @@ function MetadataPanel({
   onToggleHasAudio,
   onAudioUrlChange,
   onCapeChange,
+  onCapeUpload,
+  isUploading,
   onTagsChange,
   onPostIdChange,
   onSelectCoAuthor,
@@ -102,7 +106,7 @@ function MetadataPanel({
           />
         </div>
 
-        <label className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2">
           <span className={labelStyle}>Capa</span>
           <input
             name="cape"
@@ -112,8 +116,22 @@ function MetadataPanel({
             value={cape}
             onChange={(e) => onCapeChange(e.target.value)}
           />
+          <label className={`inline-flex cursor-pointer items-center justify-center rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:border-zinc-500 hover:text-zinc-100 ${isUploading ? "pointer-events-none opacity-50" : ""}`}>
+            {isUploading ? "Enviando…" : "Enviar imagem"}
+            <input
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              disabled={isUploading}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) onCapeUpload(file);
+                e.target.value = "";
+              }}
+            />
+          </label>
           {validationErrors.cape && <span className="text-xs text-red-400">{validationErrors.cape}</span>}
-        </label>
+        </div>
 
         <label className="flex flex-col gap-2">
           <span className={labelStyle}>Co-autor</span>
@@ -221,6 +239,23 @@ export default function Editor() {
   const [coAuthorError, setCoAuthorError] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [isMetadataOpen, setIsMetadataOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleCapeUpload = useCallback(async (file: File) => {
+    setIsUploading(true);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const res = await fetch("/admin/api/upload", { method: "POST", body });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Falha no upload");
+      setCape(data.url);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setIsUploading(false);
+    }
+  }, []);
   const [, setIsEditorFocused] = useState(false);
   const markDirty = useCallback(() => setIsDirty(true), []);
   const clearFieldError = useCallback((field: string) => {
@@ -565,6 +600,8 @@ export default function Editor() {
             clearFieldError("cape");
             setCape(value);
           }}
+          onCapeUpload={handleCapeUpload}
+          isUploading={isUploading}
           onTagsChange={(value) => {
             markDirty();
             setTags(value);
