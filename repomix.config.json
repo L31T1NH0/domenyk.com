@@ -1,0 +1,15 @@
+{
+  "output": {
+    "filePath": "repomix-output.txt",
+    "style": "markdown"
+  },
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": [
+      ".claude/**",
+      "node_modules/**",
+      "repomix-output.txt"
+    ]
+  }
+}
