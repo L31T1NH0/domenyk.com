@@ -57,8 +57,7 @@ export function getRoleFromUser(
   }
   return (
     extractRole(user.publicMetadata) ||
-    extractRole(user.privateMetadata) ||
-    extractRole(user.unsafeMetadata)
+    extractRole(user.privateMetadata)
   );
 }
 

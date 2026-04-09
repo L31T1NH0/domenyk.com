@@ -5,6 +5,7 @@ import {
   ANALYTICS_SESSION_COOKIE_NAME,
   ANALYTICS_SESSION_MAX_AGE,
   generateSessionId,
+  isValidSessionId,
 } from "@lib/analytics/session";
 import { getRoleFromSessionClaims, roleHasPrivilege } from "@lib/admin";
 
@@ -60,7 +61,8 @@ export default clerkMiddleware(async (auth, req) => {
 
   const response = NextResponse.next();
 
-  if (!req.cookies.get(ANALYTICS_SESSION_COOKIE_NAME)) {
+  const analyticsSessionCookie = req.cookies.get(ANALYTICS_SESSION_COOKIE_NAME)?.value;
+  if (!analyticsSessionCookie || !isValidSessionId(analyticsSessionCookie)) {
     response.cookies.set({
       name: ANALYTICS_SESSION_COOKIE_NAME,
       value: generateSessionId(),

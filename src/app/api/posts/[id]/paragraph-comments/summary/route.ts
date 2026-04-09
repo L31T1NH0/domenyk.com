@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getMongoDb } from "../../../../../../lib/mongo";
+import { resolveAdminStatus } from "../../../../../../lib/admin";
 
 const COLLECTION_NAME = "paragraph-comments";
 
@@ -21,14 +22,19 @@ export async function GET(
   }
 
   try {
+    const { isAdmin } = await resolveAdminStatus();
     const db = await getMongoDb();
     const postsCollection = db.collection("posts");
     const post = await postsCollection.findOne(
       { postId },
-      { projection: { _id: 1, paragraphCommentsEnabled: 1 } }
+      { projection: { _id: 1, hidden: 1, paragraphCommentsEnabled: 1 } }
     );
 
     if (!post) {
+      return NextResponse.json({ error: "Post não encontrado." }, { status: 404 });
+    }
+
+    if ((post as any).hidden === true && !isAdmin) {
       return NextResponse.json({ error: "Post não encontrado." }, { status: 404 });
     }
 

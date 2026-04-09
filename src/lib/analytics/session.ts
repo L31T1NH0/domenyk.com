@@ -8,6 +8,27 @@ export const ANALYTICS_SESSION_COOKIE_NAME = "dy.sid";
 export const ANALYTICS_SESSION_MAX_AGE = 60 * 60 * 6; // 6 horas
 
 const textEncoder = new TextEncoder();
+const SESSION_SIGNATURE_SEPARATOR = ".";
+const SESSION_SIGNATURE_LENGTH = 24;
+
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i += 1) {
+    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return mismatch === 0;
+}
+
+function signSessionPayload(payload: string): string {
+  const key = textEncoder.encode(`${getSalt()}::session-signature`);
+  const payloadBytes = textEncoder.encode(payload);
+  const digest = hmac(sha256, key, payloadBytes);
+  return bytesToHex(digest).slice(0, SESSION_SIGNATURE_LENGTH);
+}
 
 function getSalt(): string {
   const salt = process.env.ANALYTICS_SESSION_SALT;
@@ -35,14 +56,39 @@ function getSalt(): string {
 }
 
 export function generateSessionId(): string {
+  let payload = "";
   try {
     if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-      return crypto.randomUUID();
+      payload = crypto.randomUUID();
     }
   } catch {
   }
 
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  if (!payload) {
+    payload = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  return `${payload}${SESSION_SIGNATURE_SEPARATOR}${signSessionPayload(payload)}`;
+}
+
+export function isValidSessionId(sessionId: string | null | undefined): boolean {
+  if (!sessionId || typeof sessionId !== "string") {
+    return false;
+  }
+
+  const separatorIndex = sessionId.lastIndexOf(SESSION_SIGNATURE_SEPARATOR);
+  if (separatorIndex <= 0 || separatorIndex === sessionId.length - 1) {
+    return false;
+  }
+
+  const payload = sessionId.slice(0, separatorIndex);
+  const signature = sessionId.slice(separatorIndex + 1);
+  if (!payload || !signature) {
+    return false;
+  }
+
+  const expectedSignature = signSessionPayload(payload);
+  return timingSafeEqual(signature, expectedSignature);
 }
 
 export function hashSessionId(sessionId: string): string {

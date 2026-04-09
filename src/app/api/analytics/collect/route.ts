@@ -7,6 +7,7 @@ import {
   ANALYTICS_SESSION_COOKIE_NAME,
   anonymizeNetworkIdentifier,
   hashSessionId,
+  isValidSessionId,
 } from "@lib/analytics/session";
 import { AnalyticsEventName, isKnownEvent } from "@lib/analytics/events";
 import { isLikelyBotUserAgent } from "@lib/analytics/bot";
@@ -16,21 +17,17 @@ const serverConfig = getAnalyticsServerConfig();
 
 function isAllowedOrigin(req: NextRequest): boolean {
   const { allowedOrigins } = serverConfig;
-  if (allowedOrigins.length === 0) {
-    return true;
-  }
-
   const origin = req.headers.get("origin");
-  if (origin && allowedOrigins.includes(origin)) {
-    return true;
+
+  if (allowedOrigins.length === 0) {
+    return !origin || origin === req.nextUrl.origin;
   }
 
-  const requestOrigin = req.nextUrl.origin;
-  if (allowedOrigins.includes(requestOrigin)) {
-    return true;
+  if (!origin) {
+    return false;
   }
 
-  return false;
+  return allowedOrigins.includes(origin);
 }
 
 type IncomingEvent = {
@@ -417,6 +414,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return new NextResponse(null, { status: 204 });
   }
 
+  if (!isValidSessionId(sessionCookie)) {
+    return new NextResponse(null, { status: 204 });
+  }
+
   const origin = req.headers.get("origin");
 
   const sessionHash = hashSessionId(sessionCookie);
@@ -438,9 +439,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   const permitted: NormalizedEvent[] = [];
+  const rateLimitKey = ipHash ? `${sessionHash}:${ipHash}` : sessionHash;
   for (const event of events) {
     const limit = await consumeAnalyticsRateLimit({
-      key: sessionHash,
+      key: rateLimitKey,
       windowSeconds: serverConfig.rateLimit.windowSeconds,
       maxEvents: serverConfig.rateLimit.maxEvents,
     });

@@ -1,4 +1,6 @@
 import { Redis } from "@upstash/redis";
+import { createHash } from "crypto";
+import { isIP } from "node:net";
 
 export type RateLimitResult = {
   allowed: boolean;
@@ -108,18 +110,64 @@ export function getRequestIdentifier(
   req: Request,
   fallback: string = "anonymous"
 ): string {
-  const forwardedFor = req.headers.get("x-forwarded-for");
-  if (forwardedFor) {
-    const [first] = forwardedFor.split(",");
-    if (first?.trim()) {
-      return first.trim();
+  const normalizeIp = (value: string | null | undefined): string | null => {
+    if (!value || typeof value !== "string") {
+      return null;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    const normalized = trimmed.startsWith("::ffff:") ? trimmed.slice(7) : trimmed;
+    return isIP(normalized) ? normalized : null;
+  };
+
+  const fromNextRequest = normalizeIp((req as Request & { ip?: string | null }).ip);
+  if (fromNextRequest) {
+    return fromNextRequest;
+  }
+
+  const cloudflareIp = normalizeIp(req.headers.get("cf-connecting-ip"));
+  if (cloudflareIp) {
+    return cloudflareIp;
+  }
+
+  const isVercelRequest = Boolean(req.headers.get("x-vercel-id"));
+  if (isVercelRequest) {
+    const vercelForwarded = req.headers.get("x-vercel-forwarded-for");
+    if (vercelForwarded) {
+      const first = vercelForwarded.split(",")[0]?.trim();
+      const normalized = normalizeIp(first);
+      if (normalized) {
+        return normalized;
+      }
+    }
+
+    const forwardedFor = req.headers.get("x-forwarded-for");
+    if (forwardedFor) {
+      const first = forwardedFor.split(",")[0]?.trim();
+      const normalized = normalizeIp(first);
+      if (normalized) {
+        return normalized;
+      }
+    }
+
+    const realIp = normalizeIp(req.headers.get("x-real-ip"));
+    if (realIp) {
+      return realIp;
     }
   }
 
-  const realIp = req.headers.get("x-real-ip");
-  if (realIp) {
-    return realIp;
-  }
+  const userAgent = (req.headers.get("user-agent") ?? "").slice(0, 160);
+  const acceptLanguage = (req.headers.get("accept-language") ?? "").slice(0, 80);
+  const secChUa = (req.headers.get("sec-ch-ua") ?? "").slice(0, 80);
+  const fingerprintSource = `${fallback}|${userAgent}|${acceptLanguage}|${secChUa}`;
+  const fingerprint = createHash("sha256")
+    .update(fingerprintSource)
+    .digest("hex")
+    .slice(0, 32);
 
-  return fallback;
+  return `fp:${fingerprint}`;
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getPostReferenceMetadata } from "../../../../lib/posts";
+import { resolveAdminStatus } from "../../../../lib/admin";
 
 export async function GET(
   _req: Request,
@@ -17,7 +18,10 @@ export async function GET(
   }
 
   try {
-    const metadata = await getPostReferenceMetadata(slug);
+    const { isAdmin } = await resolveAdminStatus();
+    const metadata = await getPostReferenceMetadata(slug, {
+      includeHidden: isAdmin,
+    });
 
     if (!metadata) {
       return NextResponse.json(

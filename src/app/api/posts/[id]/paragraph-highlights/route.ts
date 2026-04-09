@@ -7,6 +7,29 @@ import { resolveAdminStatus } from "@lib/admin";
 
 const COLLECTION = "paragraph-highlights";
 
+async function getDbWithPostAccess(postId: string, isAdmin: boolean) {
+  const db = await getMongoDb();
+  const post = await db
+    .collection("posts")
+    .findOne({ postId }, { projection: { _id: 1, hidden: 1 } });
+
+  if (!post) {
+    return {
+      db,
+      error: NextResponse.json({ error: "Post não encontrado." }, { status: 404 }),
+    };
+  }
+
+  if ((post as any).hidden === true && !isAdmin) {
+    return {
+      db,
+      error: NextResponse.json({ error: "Post não encontrado." }, { status: 404 }),
+    };
+  }
+
+  return { db, error: null as NextResponse | null };
+}
+
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -16,7 +39,12 @@ export async function GET(
     return NextResponse.json({ error: "postId required" }, { status: 400 });
   }
 
-  const db = await getMongoDb();
+  const { isAdmin } = await resolveAdminStatus();
+  const { db, error } = await getDbWithPostAccess(postId, isAdmin);
+  if (error) {
+    return error;
+  }
+
   const docs = await db
     .collection(COLLECTION)
     .find({ postId })
@@ -44,7 +72,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: postId } = await params;
-  const { userId } = await auth();
+  const { userId, sessionClaims } = await auth();
+  const { isAdmin } = await resolveAdminStatus({ sessionClaims, userId });
   if (!userId) {
     return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
   }
@@ -79,7 +108,10 @@ export async function POST(
     );
   }
 
-  const db = await getMongoDb();
+  const { db, error } = await getDbWithPostAccess(postId, isAdmin);
+  if (error) {
+    return error;
+  }
 
   await db.collection(COLLECTION).deleteOne({ postId, paragraphId, userId });
 
@@ -107,12 +139,12 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: postId } = await params;
-  const { userId } = await auth();
+  const { userId, sessionClaims } = await auth();
   if (!userId) {
     return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
   }
 
-  const { isAdmin } = await resolveAdminStatus();
+  const { isAdmin } = await resolveAdminStatus({ sessionClaims, userId });
   let body: unknown;
   try {
     body = await req.json();
@@ -125,7 +157,10 @@ export async function DELETE(
     return NextResponse.json({ error: "highlightId required." }, { status: 400 });
   }
 
-  const db = await getMongoDb();
+  const { db, error } = await getDbWithPostAccess(postId, isAdmin);
+  if (error) {
+    return error;
+  }
   let objectId: ObjectId;
   try {
     objectId = new ObjectId(highlightId);

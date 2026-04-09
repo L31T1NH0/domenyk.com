@@ -4,6 +4,7 @@ import { getMongoDb } from "../../../../lib/mongo";
 import { Redis } from "@upstash/redis";
 import { ObjectId } from "mongodb";
 import { randomUUID } from "crypto";
+import { isIP } from "node:net";
 import { resolveAdminStatus } from "../../../../lib/admin";
 import { deriveRateLimitIdentifier } from "./rate-limit";
 import {
@@ -13,8 +14,46 @@ import {
 
 type NextRequestWithOptionalIp = NextRequest & { ip?: string | null };
 
+function normalizeIp(value: string | null | undefined): string | null {
+  if (!value || typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const normalized = trimmed.startsWith("::ffff:") ? trimmed.slice(7) : trimmed;
+  return isIP(normalized) ? normalized : null;
+}
+
 function getRequestIp(req: NextRequest): string | null {
-  return (req as NextRequestWithOptionalIp).ip ?? null;
+  const directIp = normalizeIp((req as NextRequestWithOptionalIp).ip ?? null);
+  if (directIp) {
+    return directIp;
+  }
+
+  const forwardedCandidates = [
+    req.headers.get("cf-connecting-ip"),
+    req.headers.get("x-real-ip"),
+    req.headers.get("x-vercel-forwarded-for"),
+    req.headers.get("x-forwarded-for"),
+  ];
+
+  for (const candidate of forwardedCandidates) {
+    if (!candidate) {
+      continue;
+    }
+
+    const first = candidate.split(",")[0]?.trim();
+    const normalized = normalizeIp(first);
+    if (normalized) {
+      return normalized;
+    }
+  }
+
+  return null;
 }
 
 // Configuração do Redis Upstash
@@ -115,7 +154,22 @@ export async function GET(
   }
 
   try {
+    const { isAdmin } = await resolveAdminStatus();
     const db = await getMongoDb();
+    const postsCollection = db.collection("posts");
+    const post = await postsCollection.findOne(
+      { postId },
+      { projection: { _id: 1, hidden: 1 } }
+    );
+
+    if (!post) {
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    }
+
+    if ((post as any).hidden === true && !isAdmin) {
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    }
+
     const commentsCollection = db.collection("comments");
     const authCommentsCollection = db.collection("auth-comments");
 
@@ -348,14 +402,25 @@ export async function POST(
     );
   }
 
-  const body = await req.json();
+  let body: Record<string, unknown>;
+  try {
+    const parsed = await req.json();
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    }
+    body = parsed as Record<string, unknown>;
+  } catch {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
+
   debugLog("Request body:", body);
 
   // Validação estrita de campos
   const allowedFieldsLoggedIn = ["comentario", "parentId"];
   const allowedFieldsNotLoggedIn = ["comentario", "parentId", "nome"];
   const receivedFields = Object.keys(body);
-  const { userId } = await auth();
+  const { userId, sessionClaims } = await auth();
+  const { isAdmin } = await resolveAdminStatus({ sessionClaims, userId });
 
   if (userId) {
     const invalidFields = receivedFields.filter(
@@ -396,6 +461,22 @@ export async function POST(
     );
   }
 
+  if (
+    typeof parentId !== "undefined" &&
+    parentId !== null &&
+    typeof parentId !== "string"
+  ) {
+    return NextResponse.json(
+      { error: "Parent ID must be a string when provided" },
+      { status: 400 }
+    );
+  }
+
+  const normalizedParentId =
+    typeof parentId === "string" && parentId.trim() !== ""
+      ? parentId
+      : null;
+
   const htmlComentario = await renderMarkdownToSafeHtml(comentario);
 
   // Rate Limiting
@@ -404,12 +485,13 @@ export async function POST(
     ip: getRequestIp(req),
     userId,
     userAgent,
+    acceptLanguage: req.headers.get("accept-language"),
   });
   const rateLimitKeyBase = `rate_limit:${rateLimitIdentifier}:${postId}`;
   const rateLimitKeyComments = `${rateLimitKeyBase}:comments`;
   const rateLimitKeyReplies = `${rateLimitKeyBase}:replies`;
   const multi = redis.multi();
-  if (!parentId) {
+  if (!normalizedParentId) {
     multi.incr(rateLimitKeyComments);
     multi.expire(rateLimitKeyComments, 24 * 60 * 60);
   } else {
@@ -423,7 +505,7 @@ export async function POST(
     return NextResponse.json(
       {
         error: `Too many ${
-          parentId ? "replies" : "comments"
+          normalizedParentId ? "replies" : "comments"
         }. Limit is 25 per day per requester.`,
       },
       { status: 429 }
@@ -434,6 +516,19 @@ export async function POST(
 
   try {
     const db = await getMongoDb();
+    const postsCollection = db.collection("posts");
+    const post = await postsCollection.findOne(
+      { postId },
+      { projection: { _id: 1, hidden: 1 } }
+    );
+
+    if (!post) {
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    }
+
+    if ((post as any).hidden === true && !isAdmin) {
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    }
 
     if (userId && user) {
       const authCommentsCollection = db.collection("auth-comments");
@@ -462,7 +557,7 @@ export async function POST(
         comentario: htmlComentario, // Salvar como HTML
         comentarioOriginal: comentario,
         createdAt: new Date().toISOString().split("T")[0],
-        parentId: parentId || null,
+        parentId: normalizedParentId,
       };
 
       const { insertedId } = await authCommentsCollection.insertOne(newComment);
@@ -472,7 +567,7 @@ export async function POST(
       };
 
       debugLog(
-        `${parentId ? "Reply" : "Comment"} inserted into auth-comments:`,
+        `${normalizedParentId ? "Reply" : "Comment"} inserted into auth-comments:`,
         insertedComment
       );
 
@@ -480,10 +575,10 @@ export async function POST(
 
       return NextResponse.json(
         {
-          message: parentId
+          message: normalizedParentId
             ? "Reply added successfully"
             : "Comment added successfully",
-          ...(parentId
+          ...(normalizedParentId
             ? { reply: sanitizedComment }
             : { comment: sanitizedComment }),
         },
@@ -500,7 +595,7 @@ export async function POST(
         comentario: htmlComentario, // Salvar como HTML
         comentarioOriginal: comentario,
         createdAt: new Date().toISOString().split("T")[0],
-        parentId: parentId || null,
+        parentId: normalizedParentId,
       };
 
       const { insertedId } = await commentsCollection.insertOne(newComment);
@@ -510,7 +605,7 @@ export async function POST(
       };
 
       debugLog(
-        `${parentId ? "Reply" : "Comment"} inserted into comments:`,
+        `${normalizedParentId ? "Reply" : "Comment"} inserted into comments:`,
         insertedComment
       );
 
@@ -518,10 +613,10 @@ export async function POST(
 
       return NextResponse.json(
         {
-          message: parentId
+          message: normalizedParentId
             ? "Reply added successfully"
             : "Comment added successfully",
-          ...(parentId
+          ...(normalizedParentId
             ? { reply: sanitizedComment }
             : { comment: sanitizedComment }),
         },
@@ -551,19 +646,12 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  console.log("Admin check:", {
-    userId,
-    sessionClaimsRole: sessionClaims?.metadata?.role,
-    isAdmin,
-  });
-
   try {
     const db = await getMongoDb();
     const authCommentsCollection = db.collection("auth-comments");
     const commentsCollection = db.collection("comments");
 
     const body = await req.json();
-    console.log("DELETE request body:", body); // Log para depurar
     const { postId, isReply, parentId } = body;
 
     if (!commentId || typeof commentId !== "string") {
@@ -625,7 +713,6 @@ export async function DELETE(
 
       const replyKey = `${postId}:${parentId}:replies`;
       const replies = await redis.zrange(replyKey, 0, -1);
-      console.log("Replies fetched from Redis:", replies); // Log para depurar o formato dos dados
 
       let fallbackReply: (Comment | AuthComment) | null = null;
       let replyToRemove: string | null = null;
@@ -732,11 +819,6 @@ export async function DELETE(
     }
 
     const isAuthor = "userId" in comment && comment.userId === userId;
-    console.log("Permission check:", {
-      isAdmin,
-      isAuthor,
-      commentUserId: comment.userId,
-    });
     if (!isAdmin && !isAuthor) {
       return NextResponse.json({ error: "Not Authorized" }, { status: 403 });
     }
@@ -756,7 +838,7 @@ export async function DELETE(
       stack: (error as Error).stack,
     });
     return NextResponse.json(
-      { error: "Internal server error: " + (error as Error).message },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

@@ -189,7 +189,8 @@ export async function getPostsCached(args: FetchPostsArgs) {
 }
 
 export async function getPostReferenceMetadata(
-  slug: string
+  slug: string,
+  options: { includeHidden?: boolean } = {}
 ): Promise<PostReferenceMetadata | null> {
   if (!slug) {
     return null;
@@ -198,8 +199,13 @@ export async function getPostReferenceMetadata(
   const db = await getMongoDb();
   const collection = db.collection("posts");
 
+  const filter: Record<string, unknown> = { postId: slug };
+  if (!options.includeHidden) {
+    filter.hidden = { $ne: true };
+  }
+
   const record = await collection.findOne(
-    { postId: slug },
+    filter,
     {
       projection: {
         _id: 0,

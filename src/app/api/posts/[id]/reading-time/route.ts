@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getMongoDb } from "@lib/mongo";
+import { resolveAdminStatus } from "@lib/admin";
 
 const MIN_SESSIONS = 25;
 const SECTIONS = 10;
@@ -14,7 +15,20 @@ export async function GET(
     return NextResponse.json({ error: "postId required" }, { status: 400 });
   }
 
+  const { isAdmin } = await resolveAdminStatus();
   const db = await getMongoDb();
+  const post = await db
+    .collection("posts")
+    .findOne({ postId }, { projection: { _id: 1, hidden: 1 } });
+
+  if (!post) {
+    return NextResponse.json({ error: "Post not found" }, { status: 404 });
+  }
+
+  if ((post as any).hidden === true && !isAdmin) {
+    return NextResponse.json({ error: "Post not found" }, { status: 404 });
+  }
+
   const events = db.collection("analytics_events");
 
   // Conta sessões distintas com dados de atenção para este post
