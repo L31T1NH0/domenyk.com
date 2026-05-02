@@ -158,6 +158,7 @@ export function HomeTimeline({ posts, totalPosts, initialNotes, initialCursor, i
   const [timelinePosts, setTimelinePosts] = useState(posts)
   const [postCount, setPostCount] = useState(totalPosts)
   const [notes, setNotes] = useState(initialNotes)
+  const timelineCount = postCount + notes.length
   const [cursor, setCursor] = useState(initialCursor)
   const [loading, setLoading] = useState(false)
   const [hidingPostId, setHidingPostId] = useState<string | null>(null)
@@ -256,7 +257,7 @@ export function HomeTimeline({ posts, totalPosts, initialNotes, initialCursor, i
     <section aria-label="Timeline" className="flex flex-col gap-4">
       <h1 className="flex items-center gap-1 text-sm font-semibold uppercase tracking-wide text-[#f1f1f1]">
         Timeline
-        <span className="tabular-nums font-normal">({postCount})</span>
+        <span className="tabular-nums font-normal">({timelineCount})</span>
       </h1>
 
       {isAdmin && <NoteComposer onPosted={handlePosted} />}
