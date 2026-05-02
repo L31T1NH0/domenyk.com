@@ -1,0 +1,277 @@
+"use client"
+
+import { useState, useCallback, useRef } from "react"
+import { useRouter } from "next/navigation"
+import { LexicalEditor } from "./LexicalEditor"
+
+type PostData = {
+  id?: string
+  title: string
+  content: string
+  slug: string
+  excerpt?: string
+  tags: string[]
+  style: "standard" | "editorial" | "opinion"
+  cover?: { url: string; alt?: string }
+  showCoverInTimeline?: boolean
+  hiddenFromTimeline?: boolean
+  audioUrl?: string
+}
+
+type Props = {
+  post?: PostData
+}
+
+function slugify(text: string) {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+}
+
+export function PostEditor({ post }: Props) {
+  const router = useRouter()
+  const isEditing = !!post?.id
+
+  const [title, setTitle] = useState(post?.title ?? "")
+  const [slug, setSlug] = useState(post?.slug ?? "")
+  const [slugEdited, setSlugEdited] = useState(isEditing)
+  const [excerpt, setExcerpt] = useState(post?.excerpt ?? "")
+  const [tags, setTags] = useState(post?.tags.join(", ") ?? "")
+  const [style, setStyle] = useState<PostData["style"]>(post?.style ?? "standard")
+  const [visibleInTimeline, setVisibleInTimeline] = useState(post?.hiddenFromTimeline !== true)
+  const [coverUrl, setCoverUrl] = useState(post?.cover?.url ?? "")
+  const [coverAlt, setCoverAlt] = useState(post?.cover?.alt ?? "")
+  const [showCoverInTimeline, setShowCoverInTimeline] = useState(post?.showCoverInTimeline ?? true)
+  const [audioUrl, setAudioUrl] = useState(post?.audioUrl ?? "")
+  const [content, setContent] = useState(post?.content ?? "")
+  const [saving, setSaving] = useState(false)
+  const [uploadingCover, setUploadingCover] = useState(false)
+  const [error, setError] = useState("")
+  const coverFileRef = useRef<HTMLInputElement>(null)
+
+  function handleTitleChange(value: string) {
+    setTitle(value)
+    if (!slugEdited) setSlug(slugify(value))
+  }
+
+  const handleContentChange = useCallback((markdown: string) => {
+    setContent(markdown)
+  }, [])
+
+  async function uploadCover(file: File) {
+    setUploadingCover(true)
+    setError("")
+    try {
+      const form = new FormData()
+      form.append("file", file)
+      const res = await fetch("/api/admin/media", { method: "POST", body: form })
+      const data = await res.json()
+      if (!res.ok || !data.url) throw new Error(data.error ?? "Erro ao enviar imagem.")
+      setCoverUrl(data.url)
+      if (!coverAlt) setCoverAlt(title)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao enviar imagem.")
+    } finally {
+      setUploadingCover(false)
+    }
+  }
+
+  async function save(publish?: boolean) {
+    if (!title || !slug || !content) {
+      setError("Título, slug e conteúdo são obrigatórios.")
+      return
+    }
+
+    setSaving(true)
+    setError("")
+
+    const body = {
+      title,
+      slug,
+      content,
+      excerpt: excerpt || undefined,
+      tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
+      style,
+      hiddenFromTimeline: !visibleInTimeline,
+      cover: coverUrl.trim() ? { url: coverUrl.trim(), alt: coverAlt || title } : null,
+      showCoverInTimeline: Boolean(coverUrl.trim()) && showCoverInTimeline,
+      audioUrl: audioUrl.trim() || undefined,
+    }
+
+    let res: Response
+    if (isEditing) {
+      res = await fetch(`/api/admin/posts/${post!.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(publish !== undefined ? { ...body, published: publish } : body),
+      })
+    } else {
+      res = await fetch("/api/admin/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(publish !== undefined ? { ...body, published: publish } : body),
+      })
+    }
+
+    if (res.ok) {
+      router.push("/admin/posts")
+    } else {
+      const data = await res.json()
+      setError(data.error ?? "Erro ao salvar.")
+    }
+
+    setSaving(false)
+  }
+
+  return (
+    <div className="flex flex-col gap-6 max-w-3xl">
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold">{isEditing ? "Editar post" : "Novo post"}</h1>
+        <div className="flex gap-2">
+          {!isEditing && (
+            <button
+              onClick={() => save()}
+              disabled={saving}
+              className="px-3 py-1.5 text-sm rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40"
+            >
+              Salvar rascunho
+            </button>
+          )}
+          <button
+            onClick={() => save(isEditing ? undefined : true)}
+            disabled={saving}
+            className="px-3 py-1.5 text-sm rounded-lg bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 disabled:opacity-40"
+          >
+            {isEditing ? "Aplicar edições" : "Publicar"}
+          </button>
+        </div>
+      </div>
+
+      {error && <p className="text-sm text-red-500">{error}</p>}
+
+      <div className="flex flex-col gap-4">
+        <input
+          value={title}
+          onChange={(e) => handleTitleChange(e.target.value)}
+          placeholder="Título"
+          className="text-2xl font-semibold bg-transparent border-b border-neutral-200 dark:border-neutral-800 pb-2 outline-none placeholder:text-neutral-300"
+        />
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-neutral-400">Slug</label>
+            <input
+              value={slug}
+              onChange={(e) => { setSlug(e.target.value); setSlugEdited(true) }}
+              className="text-sm bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-neutral-300"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-neutral-400">Estilo</label>
+            <select
+              value={style}
+              onChange={(e) => setStyle(e.target.value as PostData["style"])}
+              className="text-sm bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1 outline-none"
+            >
+              <option value="standard">Standard</option>
+              <option value="editorial">Editorial</option>
+              <option value="opinion">Opinion</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-neutral-400">Tags (separadas por vírgula)</label>
+            <input
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              className="text-sm bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-neutral-300"
+            />
+          </div>
+          <label className="flex items-center gap-2 rounded border border-neutral-200 px-2 py-1 text-sm text-neutral-700 dark:border-neutral-700 dark:text-neutral-300">
+            <input
+              type="checkbox"
+              checked={visibleInTimeline}
+              onChange={(e) => setVisibleInTimeline(e.target.checked)}
+              className="size-4 rounded border-neutral-300"
+            />
+            Aparecer na timeline
+          </label>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-neutral-400">Resumo (excerpt)</label>
+          <textarea
+            value={excerpt}
+            onChange={(e) => setExcerpt(e.target.value)}
+            rows={2}
+            className="text-sm bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-neutral-300 resize-none"
+          />
+        </div>
+
+        <div className="grid gap-3 rounded-xl border border-neutral-200 p-3 dark:border-neutral-800">
+          <div className="flex items-center justify-between gap-3">
+            <label className="text-xs text-neutral-400">Capa / asset de imagem</label>
+            <button
+              type="button"
+              onClick={() => coverFileRef.current?.click()}
+              disabled={uploadingCover}
+              className="text-xs px-2 py-1 rounded border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40"
+            >
+              {uploadingCover ? "enviando..." : "Upload para Blob"}
+            </button>
+          </div>
+          <input
+            ref={coverFileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => { if (e.target.files?.[0]) uploadCover(e.target.files[0]) }}
+          />
+          <input
+            value={coverUrl}
+            onChange={(e) => setCoverUrl(e.target.value)}
+            placeholder="URL da imagem de capa"
+            className="text-sm bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-neutral-300"
+          />
+          <input
+            value={coverAlt}
+            onChange={(e) => setCoverAlt(e.target.value)}
+            placeholder="Texto alternativo"
+            className="text-sm bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-neutral-300"
+          />
+          <label className="flex items-start gap-2 rounded-lg border border-neutral-200 px-3 py-2 text-sm text-neutral-700 dark:border-neutral-800 dark:text-neutral-300">
+            <input
+              type="checkbox"
+              checked={showCoverInTimeline}
+              onChange={(e) => setShowCoverInTimeline(e.target.checked)}
+              disabled={!coverUrl.trim()}
+              className="mt-0.5 size-4 rounded border-neutral-300 text-neutral-900 disabled:opacity-40"
+            />
+            <span className="flex flex-col gap-0.5">
+              <span className="font-medium">Mostrar capa na timeline</span>
+              <span className="text-xs text-neutral-500">
+                A capa continua visível dentro do post mesmo quando esta opção está desligada.
+              </span>
+            </span>
+          </label>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-neutral-400">URL do áudio</label>
+          <input
+            value={audioUrl}
+            onChange={(e) => setAudioUrl(e.target.value)}
+            placeholder="https://..."
+            className="text-sm bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-neutral-300"
+          />
+        </div>
+      </div>
+
+      <div className="border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden">
+        <LexicalEditor initialMarkdown={content} onChange={handleContentChange} />
+      </div>
+    </div>
+  )
+}

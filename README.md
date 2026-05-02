@@ -1,139 +1,36 @@
-# Domenyk.com
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-A modern, interactive blog platform built with **Next.js 15** and **React 19**. Features rich Markdown/MDX content rendering, real-time comments, paragraph-level annotations, and analytics tracking.
+## Getting Started
 
-## ✨ Features
+First, run the development server:
 
-- **Interactive Posts** — Markdown/MDX rendering with support for embeds, audio players, and custom widgets
-- **Dual Comment Systems** — Global threaded comments + paragraph-level inline comments with Clerk authentication
-- **Reading Analytics** — Automatic view tracking, reading progress, estimated reading time, and Vercel analytics
-- **Content Organization** — Search, filtering, pagination, and metadata management (cover images, audio)
-- **Permission System** — Support for visitor, authenticated user, and admin/staff roles
-- **Dynamic Minimap** — Auto-generated table of contents and internal reference linking
-- **Admin Dashboard** — Control analytics collection and manage site settings in real-time
-
-## 🚀 Tech Stack
-
-- **Framework** — [Next.js 15](https://nextjs.org) with App Router
-- **UI** — [React 19](https://react.dev) + [TailwindCSS 4](https://tailwindcss.com)
-- **Content** — [MDX](https://mdxjs.com), [Remark](https://remark.js.org), [Rehype](https://rehype.js.org)
-- **Database** — [MongoDB](https://mongodb.com) (primary) + [Redis](https://redis.io) (legacy)
-- **Authentication** — [Clerk](https://clerk.com)
-- **Observability** — [Vercel Analytics](https://vercel.com/analytics) + [Speed Insights](https://vercel.com/insights)
-
-## 📦 Getting Started
-
-### Prerequisites
-- Node.js 18+ 
-- npm, yarn, or pnpm
-- MongoDB and Redis instances (or connection strings)
-- Clerk application credentials
-
-### Local Development
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/l31t1nh0/domenyk.com.git
-   cd domenyk.com
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   # or: yarn install / pnpm install
-   ```
-
-3. **Configure environment variables**
-   
-   Create a `.env.local` file in the root directory:
-   ```env
-   # Database
-   MONGODB_URI=mongodb+srv://...
-   REDIS_URL=redis://...
-   
-   # Authentication (Clerk)
-   CLERK_PUBLISHABLE_KEY=pk_test_...
-   CLERK_SECRET_KEY=sk_test_...
-   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
-   
-   # Site Configuration
-   NEXT_PUBLIC_SITE_URL=http://localhost:3000
-   
-   # Analytics (optional, defaults to true)
-   ANALYTICS_ENABLED=true
-   ```
-
-4. **Run the development server**
-   ```bash
-   npm run dev
-   ```
-   
-   Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-## 🔨 Build & Deploy
-
-**Development:**
 ```bash
 npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-**Production build:**
-```bash
-npm run build
-npm start
-```
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## ⚙️ Configuration
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-### Analytics Settings
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-Analytics collection is controlled by the `analyticsEnabled` flag in MongoDB:
-- **Source of truth** — `settings` collection in MongoDB, key `analyticsEnabled`
-- **Default fallback** — Environment variable `ANALYTICS_ENABLED` (defaults to `true`)
-- **Admin control** — Toggle real-time from `/admin/analytics` page
-- **API endpoint** — `POST /api/admin/analytics/toggle` (admin-only)
+## Learn More
 
-This allows you to enable/disable analytics collection without redeploying.
+To learn more about Next.js, take a look at the following resources:
 
-## 📋 Project Structure
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-```
-├── app/                 # Next.js App Router
-├── components/          # React components
-├── lib/                 # Utilities, API clients, database helpers
-├── public/              # Static assets
-├── styles/              # Global CSS and Tailwind configuration
-└── content/             # Blog posts in Markdown/MDX
-```
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## 🔐 Permissions & Access Control
+## Deploy on Vercel
 
-Three permission levels:
-- **Visitor** — Read-only access to posts and public features
-- **Authenticated User** — Can comment, create paragraph annotations, mark progress
-- **Admin/Staff** — Full access to settings, analytics, and moderation tools
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-## 💬 Comment System Details
-
-### Global Comments
-- Tree-structured threaded comments
-- Stored in MongoDB
-- Legacy data also pulled from Redis
-
-### Paragraph Comments
-- Inline annotations on specific paragraphs
-- Requires Clerk authentication
-- Features soft-delete with undo capability
-- Attached to exact paragraph anchors
-
-## 📝 Contributing
-
-Contributions are welcome! Please feel free to submit a pull request.
-
-## 📄 License
-
-Open source for educational purposes. All rights reserved to the author.
-
----
-
-**Built with ❤️ using Next.js & React**
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
