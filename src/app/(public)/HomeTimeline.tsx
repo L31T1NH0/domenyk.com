@@ -94,7 +94,7 @@ function PostTimelineItem({
               width={1920}
               height={1080}
               sizes="(max-width: 640px) calc(100vw - 2rem), 34rem"
-              className="banner h-auto w-full rounded-2xl object-cover !grayscale-0 transition-[filter] duration-300 md:!grayscale md:hover:!grayscale-0"
+              className="banner h-auto w-full rounded-2xl object-cover"
             />
             <span className="pointer-events-none absolute inset-0 rounded-2xl">
               <span className="absolute left-0 top-0 h-1/2 w-full bg-gradient-to-b from-[#040404] via-[#040404]/80 to-transparent" />
