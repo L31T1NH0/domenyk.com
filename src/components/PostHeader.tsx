@@ -18,6 +18,8 @@ function Avatar({
   alt: string
   size: "post" | "large"
 }) {
+  const isProfileImage = src === "/images/profile.jpg"
+
   return (
     <Link href="/">
       <Image
@@ -27,10 +29,10 @@ function Avatar({
         width={size === "post" ? 56 : 148}
         alt={alt}
         className={[
-          "!rounded-full brightness-125 hover:z-30 hover:opacity-90 transition-all object-cover",
+          "!rounded-full hover:z-30 hover:opacity-90 transition-all object-cover",
+          isProfileImage ? "!grayscale !brightness-125" : "",
           size === "post" ? "w-10 h-10" : "w-[148px] h-[148px]",
         ].join(" ")}
-        style={{ filter: "none" }}
       />
     </Link>
   )

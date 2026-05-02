@@ -87,6 +87,12 @@ export async function getNotes(opts: { cursor?: string; limit?: number } = {}): 
   return { notes, nextCursor: hasMore ? notes[notes.length - 1]._id.toString() : null }
 }
 
+export async function getNote(id: string): Promise<Note | null> {
+  const objectId = toObjectId(id)
+  if (!objectId) return null
+  return (await collection()).findOne({ _id: objectId })
+}
+
 export async function createNote(data: { content: string; images?: string[] }): Promise<Note> {
   const col = await collection()
   const now = new Date()

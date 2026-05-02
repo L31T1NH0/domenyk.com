@@ -17,11 +17,10 @@ export function Header() {
           <Image
             priority
             src="/images/profile.jpg"
-            className="!rounded-full brightness-125"
+            className="!rounded-full !grayscale !brightness-125"
             height={148}
             width={148}
             alt={name}
-            style={{ filter: "none" }}
           />
           <strong className="text-2xl font-semibold tracking-tight text-[#f1f1f1]">
             {name}
@@ -33,11 +32,10 @@ export function Header() {
             <Image
               priority
               src="/images/profile.jpg"
-              className="!rounded-full brightness-125 transition-opacity hover:opacity-80"
+              className="!rounded-full !grayscale !brightness-125 transition-opacity hover:opacity-80"
               height={148}
               width={148}
               alt={name}
-              style={{ filter: "none" }}
             />
           </Link>
           <strong className="text-2xl font-semibold tracking-tight text-[#f1f1f1]">
