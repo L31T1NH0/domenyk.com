@@ -1,9 +1,10 @@
 "use client"
 
-import { useCallback } from "react"
+import { useCallback, useEffect, useRef, type MutableRefObject } from "react"
 import { LexicalComposer } from "@lexical/react/LexicalComposer"
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin"
 import { ContentEditable } from "@lexical/react/LexicalContentEditable"
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext"
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin"
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin"
 import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin"
@@ -13,7 +14,7 @@ import { ListNode, ListItemNode } from "@lexical/list"
 import { CodeNode, CodeHighlightNode } from "@lexical/code"
 import { LinkNode } from "@lexical/link"
 import { $convertFromMarkdownString, $convertToMarkdownString } from "@lexical/markdown"
-import { type EditorState } from "lexical"
+import { type EditorState, type LexicalEditor as LexicalEditorInstance } from "lexical"
 import { ToolbarPlugin } from "./ToolbarPlugin"
 import { IMAGE_TRANSFORMER, ImageNode } from "./ImageNode"
 import { ImagePlugin } from "./ImagePlugin"
@@ -50,6 +51,30 @@ type Props = {
   shellClassName?: string
   toolbarVariant?: "default" | "compact"
   toolbarPlacement?: "top" | "bottom"
+  onChangeDelayMs?: number
+  editorRef?: MutableRefObject<LexicalEditorInstance | null>
+}
+
+export function readMarkdownFromEditor(editor: LexicalEditorInstance) {
+  let markdown = ""
+  editor.getEditorState().read(() => {
+    markdown = $convertToMarkdownString(MARKDOWN_TRANSFORMERS).trim()
+  })
+  return markdown
+}
+
+function EditorRefPlugin({ editorRef }: { editorRef?: MutableRefObject<LexicalEditorInstance | null> }) {
+  const [editor] = useLexicalComposerContext()
+
+  useEffect(() => {
+    if (!editorRef) return
+    editorRef.current = editor
+    return () => {
+      if (editorRef.current === editor) editorRef.current = null
+    }
+  }, [editor, editorRef])
+
+  return null
 }
 
 export function LexicalEditor({
@@ -61,7 +86,17 @@ export function LexicalEditor({
   shellClassName = "min-h-64 p-4",
   toolbarVariant = "default",
   toolbarPlacement = "top",
+  onChangeDelayMs = 0,
+  editorRef,
 }: Props) {
+  const changeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (changeTimerRef.current) clearTimeout(changeTimerRef.current)
+    }
+  }, [])
+
   const initialConfig = {
     namespace,
     theme,
@@ -74,15 +109,30 @@ export function LexicalEditor({
 
   const handleChange = useCallback(
     (state: EditorState) => {
-      state.read(() => {
-        onChange($convertToMarkdownString(MARKDOWN_TRANSFORMERS).trim())
-      })
+      if (changeTimerRef.current) clearTimeout(changeTimerRef.current)
+
+      const emitChange = () => {
+        state.read(() => {
+          onChange($convertToMarkdownString(MARKDOWN_TRANSFORMERS).trim())
+        })
+      }
+
+      if (onChangeDelayMs > 0) {
+        changeTimerRef.current = setTimeout(() => {
+          changeTimerRef.current = null
+          emitChange()
+        }, onChangeDelayMs)
+        return
+      }
+
+      emitChange()
     },
-    [onChange]
+    [onChange, onChangeDelayMs]
   )
 
   return (
     <LexicalComposer initialConfig={initialConfig}>
+      <EditorRefPlugin editorRef={editorRef} />
       {toolbarPlacement === "top" && <ToolbarPlugin variant={toolbarVariant} />}
       <div className={`relative ${shellClassName}`}>
         <RichTextPlugin
@@ -98,7 +148,7 @@ export function LexicalEditor({
         />
         <HistoryPlugin />
         <MarkdownShortcutPlugin transformers={MARKDOWN_TRANSFORMERS} />
-        <OnChangePlugin onChange={handleChange} />
+        <OnChangePlugin onChange={handleChange} ignoreSelectionChange />
         <ImagePlugin />
       </div>
       {toolbarPlacement === "bottom" && <ToolbarPlugin variant={toolbarVariant} />}

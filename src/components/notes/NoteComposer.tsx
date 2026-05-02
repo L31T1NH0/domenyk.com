@@ -1,8 +1,9 @@
 "use client"
 
 import { PaperAirplaneIcon } from "@heroicons/react/24/outline"
-import { useCallback, useState } from "react"
-import { LexicalEditor } from "@/components/editor/LexicalEditor"
+import { useCallback, useRef, useState } from "react"
+import type { LexicalEditor as LexicalEditorInstance } from "lexical"
+import { LexicalEditor, readMarkdownFromEditor } from "@/components/editor/LexicalEditor"
 import type { SerializedNote } from "@/lib/db/notes"
 
 type Props = {
@@ -18,19 +19,24 @@ export function NoteComposer({
   const [editorKey, setEditorKey] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
+  const lexicalEditorRef = useRef<LexicalEditorInstance | null>(null)
 
   const handleContentChange = useCallback((markdown: string) => {
     setContent(markdown)
   }, [])
 
   async function submit() {
-    if (!content.trim() || submitting) return
+    const currentContent = lexicalEditorRef.current
+      ? readMarkdownFromEditor(lexicalEditorRef.current)
+      : content.trim()
+
+    if (!currentContent || submitting) return
     setSubmitting(true)
     setError("")
     const res = await fetch(submitEndpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: content.trim() }),
+      body: JSON.stringify({ content: currentContent }),
     })
     if (res.ok) {
       const note = await res.json()
@@ -62,6 +68,8 @@ export function NoteComposer({
               editorClassName="min-h-28 text-[15px]"
               toolbarVariant="compact"
               toolbarPlacement="bottom"
+              onChangeDelayMs={160}
+              editorRef={lexicalEditorRef}
             />
           </div>
 
