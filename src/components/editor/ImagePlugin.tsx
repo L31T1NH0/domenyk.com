@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react"
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext"
-import { $insertNodes } from "lexical"
+import { $createParagraphNode, $insertNodes } from "lexical"
 import { PhotoIcon, Squares2X2Icon, XMarkIcon } from "@heroicons/react/24/outline"
 import { $createImageNode } from "./ImageNode"
 
@@ -25,7 +25,9 @@ export function ImagePlugin() {
 
   function insertImage(url: string) {
     editor.update(() => {
-      $insertNodes([$createImageNode(url)])
+      const paragraph = $createParagraphNode()
+      paragraph.append($createImageNode(url))
+      $insertNodes([paragraph])
     })
     setOpen(false)
     setError("")

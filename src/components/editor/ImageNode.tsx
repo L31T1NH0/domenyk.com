@@ -2,6 +2,7 @@
 
 import {
   DecoratorNode,
+  $isParagraphNode,
   $createParagraphNode,
   type LexicalNode,
   type NodeKey,
@@ -66,8 +67,16 @@ export function $isImageNode(node: LexicalNode | null | undefined): node is Imag
 export const IMAGE_TRANSFORMER: ElementTransformer = {
   dependencies: [ImageNode],
   export: (node) => {
-    if (!$isImageNode(node)) return null
-    return `![${node.getAlt()}](${node.getSrc()})`
+    if ($isImageNode(node)) {
+      return `![${node.getAlt()}](${node.getSrc()})`
+    }
+
+    if (!$isParagraphNode(node) || node.getChildrenSize() !== 1) return null
+
+    const child = node.getFirstChild()
+    if (!$isImageNode(child)) return null
+
+    return `![${child.getAlt()}](${child.getSrc()})`
   },
   regExp: /^!\[([^\]]*)\]\(([^)]+)\)$/,
   replace: (parentNode, _children, match) => {
