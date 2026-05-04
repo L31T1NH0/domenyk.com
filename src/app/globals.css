@@ -244,6 +244,10 @@ img:hover { filter: grayscale(0); }
   @apply m-0;
 }
 
+.note-content img {
+  @apply h-auto w-full cursor-zoom-in;
+}
+
 .note-content h1,
 .note-content h2,
 .note-content h3,

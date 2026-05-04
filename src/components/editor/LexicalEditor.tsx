@@ -17,7 +17,6 @@ import { $convertFromMarkdownString, $convertToMarkdownString } from "@lexical/m
 import { type EditorState, type LexicalEditor as LexicalEditorInstance } from "lexical"
 import { ToolbarPlugin } from "./ToolbarPlugin"
 import { IMAGE_TRANSFORMER, ImageNode } from "./ImageNode"
-import { ImagePlugin } from "./ImagePlugin"
 
 const MARKDOWN_TRANSFORMERS = [IMAGE_TRANSFORMER, ...TRANSFORMERS]
 
@@ -133,7 +132,7 @@ export function LexicalEditor({
   return (
     <LexicalComposer initialConfig={initialConfig}>
       <EditorRefPlugin editorRef={editorRef} />
-      {toolbarPlacement === "top" && <ToolbarPlugin variant={toolbarVariant} />}
+      {toolbarPlacement === "top" && <ToolbarPlugin variant={toolbarVariant} placement="top" />}
       <div className={`relative ${shellClassName}`}>
         <RichTextPlugin
           contentEditable={
@@ -149,9 +148,8 @@ export function LexicalEditor({
         <HistoryPlugin />
         <MarkdownShortcutPlugin transformers={MARKDOWN_TRANSFORMERS} />
         <OnChangePlugin onChange={handleChange} ignoreSelectionChange />
-        <ImagePlugin />
       </div>
-      {toolbarPlacement === "bottom" && <ToolbarPlugin variant={toolbarVariant} />}
+      {toolbarPlacement === "bottom" && <ToolbarPlugin variant={toolbarVariant} placement="bottom" />}
     </LexicalComposer>
   )
 }

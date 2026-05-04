@@ -24,6 +24,16 @@ type TimelineItem =
   | { type: "note"; id: string; date: string; note: SerializedNote }
   | { type: "post"; id: string; date: string; post: SerializedPostSummary }
 
+type TimelineDisplayItem =
+  | TimelineItem
+  | { type: "collapsed-notes"; id: string; groupId: string; date: string; notes: SerializedNote[]; expandedCount: number }
+  | { type: "notes-collapse-control"; id: string; groupId: string; date: string }
+
+type FeedMode = "all" | "posts" | "notes"
+type NoteTimelineItem = Extract<TimelineItem, { type: "note" }>
+
+const MAX_NOTES_BETWEEN_POSTS = 3
+
 function postDate(post: SerializedPostSummary) {
   return post.publishedAt ?? post.createdAt
 }
@@ -36,16 +46,136 @@ function postShowsTimelineCover(post: SerializedPostSummary) {
   return Boolean(post.cover?.url) && post.showCoverInTimeline !== false
 }
 
-function itemHasCoverPost(item: TimelineItem | undefined) {
+function itemHasCoverPost(item: TimelineDisplayItem | undefined) {
   return item?.type === "post" && postShowsTimelineCover(item.post)
 }
 
-function itemNeedsTextSeparator(item: TimelineItem | undefined) {
-  return item?.type === "note" || (item?.type === "post" && !postShowsTimelineCover(item.post))
+function itemNeedsTextSeparator(item: TimelineDisplayItem | undefined) {
+  return item?.type === "note" || item?.type === "collapsed-notes" || (item?.type === "post" && !postShowsTimelineCover(item.post))
 }
 
-function itemShouldHaveTopSeparator(item: TimelineItem | undefined, previousItem: TimelineItem | undefined) {
-  return itemNeedsTextSeparator(item) && Boolean(previousItem) && (previousItem?.type === "note" || itemHasCoverPost(previousItem))
+function itemShouldHaveTopSeparator(item: TimelineDisplayItem | undefined, previousItem: TimelineDisplayItem | undefined) {
+  return itemNeedsTextSeparator(item) && Boolean(previousItem) && (previousItem?.type === "note" || previousItem?.type === "collapsed-notes" || itemHasCoverPost(previousItem))
+}
+
+function limitNotesBetweenPosts(items: TimelineItem[], expandedGroups: Record<string, number>) {
+  const hasPosts = items.some((item) => item.type === "post")
+  if (!hasPosts) return { items, hiddenNoteCount: 0 }
+
+  const visible: TimelineDisplayItem[] = []
+  let pendingNotes: NoteTimelineItem[] = []
+  let hiddenNoteCount = 0
+
+  function flushPendingNotes() {
+    if (pendingNotes.length === 0) return
+
+    const groupId = `notes:${pendingNotes[0].note._id}`
+    const expandedCount = expandedGroups[groupId] ?? 0
+    const visibleCount = MAX_NOTES_BETWEEN_POSTS + expandedCount
+    const visibleNotes = pendingNotes.slice(0, visibleCount)
+    const hiddenNotes = pendingNotes.slice(visibleCount)
+
+    visible.push(...visibleNotes)
+
+    if (hiddenNotes.length > 0) {
+      hiddenNoteCount += hiddenNotes.length
+      visible.push({
+        type: "collapsed-notes",
+        id: `collapsed:${hiddenNotes[0].note._id}`,
+        groupId,
+        date: hiddenNotes[0].date,
+        notes: hiddenNotes.map((item) => item.note),
+        expandedCount,
+      })
+    } else if (expandedCount > 0) {
+      visible.push({
+        type: "notes-collapse-control",
+        id: `collapse:${groupId}`,
+        groupId,
+        date: visibleNotes[visibleNotes.length - 1].date,
+      })
+    }
+
+    pendingNotes = []
+  }
+
+  for (const item of items) {
+    if (item.type === "note") {
+      pendingNotes.push(item)
+      continue
+    }
+
+    flushPendingNotes()
+    visible.push(item)
+  }
+
+  flushPendingNotes()
+
+  return { items: visible, hiddenNoteCount }
+}
+
+function CollapsedNotesPreview({
+  notes,
+  expandedCount,
+  onShowMore,
+  onCollapse,
+}: {
+  notes: SerializedNote[]
+  expandedCount: number
+  onShowMore: () => void
+  onCollapse: () => void
+}) {
+  const previewNote = notes[0]
+  const revealCount = Math.min(MAX_NOTES_BETWEEN_POSTS, notes.length)
+
+  return (
+    <li className="border-b border-white/10 pb-5">
+      <div className="relative max-h-36 overflow-hidden">
+        <div className="border-y border-white/10 pb-6 pt-5 opacity-65">
+          <time className="text-xs text-[#A8A095]/75">
+            {format(new Date(previewNote.publishedAt), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}
+          </time>
+          <div
+            className="note-content mt-3 text-[15px] leading-relaxed text-[#f1f1f1]"
+            dangerouslySetInnerHTML={{ __html: previewNote.contentHtml }}
+          />
+        </div>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent via-[#040404]/85 to-[#040404]" />
+      </div>
+      <div className="relative -mt-7 flex justify-center gap-2">
+        <button
+          type="button"
+          onClick={onShowMore}
+          className="inline-flex h-8 items-center rounded-full border border-white/10 bg-[#040404]/90 px-3 text-xs font-medium text-[#A8A095] shadow-sm shadow-black/20 backdrop-blur transition-colors hover:bg-white/10 hover:text-[#f1f1f1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A8A095]/35"
+        >
+          Mostrar mais {revealCount === 1 ? "1 nota" : `${revealCount} notas`}
+        </button>
+        {expandedCount > 0 && (
+          <button
+            type="button"
+            onClick={onCollapse}
+            className="inline-flex h-8 items-center rounded-full bg-[#040404]/80 px-3 text-xs font-medium text-[#A8A095]/80 backdrop-blur transition-colors hover:bg-white/10 hover:text-[#f1f1f1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A8A095]/35"
+          >
+            Compactar
+          </button>
+        )}
+      </div>
+    </li>
+  )
+}
+
+function NotesCollapseControl({ onCollapse }: { onCollapse: () => void }) {
+  return (
+    <li className="flex justify-center border-b border-white/10 py-3">
+      <button
+        type="button"
+        onClick={onCollapse}
+        className="inline-flex h-8 items-center rounded-full px-3 text-xs font-medium text-[#A8A095]/80 transition-colors hover:bg-white/10 hover:text-[#f1f1f1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A8A095]/35"
+      >
+        Compactar notas
+      </button>
+    </li>
+  )
 }
 
 function PostTimelineItem({
@@ -87,14 +217,14 @@ function PostTimelineItem({
       )}
       <Link href={`/posts/${post.publicId}`} prefetch={false} className="block text-left focus-visible:outline-none">
         {showCover ? (
-          <span className="relative block w-full overflow-hidden rounded-2xl bg-white/5">
+          <span className="relative block aspect-video w-full overflow-hidden rounded-2xl bg-white/5">
             <Image
               src={post.cover!.url}
               alt={post.cover!.alt ?? post.title}
               width={1920}
               height={1080}
               sizes="(max-width: 640px) calc(100vw - 2rem), 34rem"
-              className="banner h-auto w-full rounded-2xl object-cover"
+              className="h-full w-full rounded-2xl object-cover !grayscale-0"
             />
             <span className="pointer-events-none absolute inset-0 rounded-2xl">
               <span className="absolute left-0 top-0 h-1/2 w-full bg-gradient-to-b from-[#040404] via-[#040404]/80 to-transparent" />
@@ -159,6 +289,8 @@ export function HomeTimeline({ posts, totalPosts, initialNotes, initialCursor, i
   const [postCount, setPostCount] = useState(totalPosts)
   const [notes, setNotes] = useState(initialNotes)
   const timelineCount = postCount + notes.length
+  const [feedMode, setFeedMode] = useState<FeedMode>("all")
+  const [expandedNoteGroups, setExpandedNoteGroups] = useState<Record<string, number>>({})
   const [cursor, setCursor] = useState(initialCursor)
   const [loading, setLoading] = useState(false)
   const [hidingPostId, setHidingPostId] = useState<string | null>(null)
@@ -188,7 +320,7 @@ export function HomeTimeline({ posts, totalPosts, initialNotes, initialCursor, i
     }
   }, [])
 
-  const items = useMemo<TimelineItem[]>(() => {
+  const allItems = useMemo<TimelineItem[]>(() => {
     return [
       ...notes.map((note) => ({ type: "note" as const, id: `note:${note._id}`, date: note.publishedAt, note })),
       ...timelinePosts.map((post) => ({ type: "post" as const, id: `post:${post.publicId}`, date: postDate(post), post })),
@@ -200,6 +332,34 @@ export function HomeTimeline({ posts, totalPosts, initialNotes, initialCursor, i
       return new Date(b.date).getTime() - new Date(a.date).getTime()
     })
   }, [notes, timelinePosts])
+
+  const { visibleItems } = useMemo(() => {
+    if (feedMode === "posts") {
+      return { visibleItems: allItems.filter((item) => item.type === "post"), hiddenNoteCount: 0 }
+    }
+
+    if (feedMode === "notes") {
+      return { visibleItems: allItems.filter((item) => item.type === "note"), hiddenNoteCount: 0 }
+    }
+
+    const limited = limitNotesBetweenPosts(allItems, expandedNoteGroups)
+    return { visibleItems: limited.items, hiddenNoteCount: limited.hiddenNoteCount }
+  }, [allItems, expandedNoteGroups, feedMode])
+
+  function showMoreNotesInGroup(groupId: string) {
+    setExpandedNoteGroups((current) => ({
+      ...current,
+      [groupId]: (current[groupId] ?? 0) + MAX_NOTES_BETWEEN_POSTS,
+    }))
+  }
+
+  function collapseNoteGroup(groupId: string) {
+    setExpandedNoteGroups((current) => {
+      const next = { ...current }
+      delete next[groupId]
+      return next
+    })
+  }
 
   function handlePosted(note: SerializedNote) {
     setNotes((prev) => [note, ...prev])
@@ -253,54 +413,98 @@ export function HomeTimeline({ posts, totalPosts, initialNotes, initialCursor, i
     setLoading(false)
   }
 
+  const modeOptions = [
+    { mode: "all" as const, label: "Tudo", count: timelineCount },
+    { mode: "posts" as const, label: "Posts", count: postCount },
+    { mode: "notes" as const, label: "Notas", count: notes.length },
+  ]
+
   return (
-    <section aria-label="Timeline" className="flex flex-col gap-4">
-      <h1 className="flex items-center gap-1 text-sm font-semibold uppercase tracking-wide text-[#f1f1f1]">
-        Timeline
-        <span className="tabular-nums font-normal">({timelineCount})</span>
-      </h1>
+    <section aria-label="Timeline" className="flex w-full flex-col gap-4 self-center">
+      <div className="flex min-w-0 flex-col gap-4">
+        <div className="flex flex-col gap-4">
+          <h1 className="flex items-center gap-1 text-sm font-semibold uppercase tracking-wide text-[#f1f1f1]">
+            Timeline
+            <span className="tabular-nums font-normal">({timelineCount})</span>
+          </h1>
 
-      {isAdmin && <NoteComposer onPosted={handlePosted} />}
-      {hideError && <p className="text-sm text-red-400">{hideError}</p>}
-
-      {items.length === 0 ? (
-        <div className="text-sm text-zinc-400">
-          <p>Nenhum post ou nota publicado ainda.</p>
+          <div className="flex flex-wrap items-center gap-2">
+            {modeOptions.map((option) => {
+              const active = feedMode === option.mode
+              return (
+                <button
+                  key={option.mode}
+                  type="button"
+                  onClick={() => setFeedMode(option.mode)}
+                  className={[
+                    "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors",
+                    active
+                      ? "border-[#A8A095]/60 bg-[#A8A095]/15 text-[#f1f1f1]"
+                      : "border-white/10 text-[#A8A095] hover:bg-white/10 hover:text-[#f1f1f1]",
+                  ].join(" ")}
+                >
+                  {option.label}
+                  <span className="tabular-nums opacity-70">{option.count}</span>
+                </button>
+              )
+            })}
+          </div>
         </div>
-      ) : (
-        <ul className="ml-0">
-          {items.map((item, index) => (
-            item.type === "note" ? (
-              <li key={item.id}>
-                <NoteCard note={item.note} isAdmin={isAdmin} onDelete={handleDelete} />
-              </li>
-            ) : (
-              <PostTimelineItem
-                key={item.id}
-                post={item.post}
-                isAdmin={isAdmin}
-                onHide={handleHidePost}
-                hiding={hidingPostId === item.post._id}
-                pendingHide={pendingHidePostId === item.post._id}
-                showTopSeparator={itemShouldHaveTopSeparator(item, items[index - 1])}
-                showBottomSeparator={itemNeedsTextSeparator(item)}
-              />
-            )
-          ))}
-        </ul>
-      )}
 
-      {cursor && (
-        <button
-          type="button"
-          onClick={loadMoreNotes}
-          disabled={loading}
-          className="self-center text-sm text-neutral-400 transition-colors hover:text-neutral-200 disabled:opacity-40"
-        >
-          {loading ? "carregando..." : "carregar mais notas"}
-        </button>
-      )}
+        {isAdmin && <NoteComposer onPosted={handlePosted} />}
+        {hideError && <p className="text-sm text-red-400">{hideError}</p>}
 
+        {visibleItems.length === 0 ? (
+          <div className="text-sm text-zinc-400">
+            <p>Nenhum post ou nota publicado ainda.</p>
+          </div>
+        ) : (
+          <ul className="ml-0">
+            {visibleItems.map((item, index) => (
+              item.type === "note" ? (
+                <li key={item.id}>
+                  <NoteCard note={item.note} isAdmin={isAdmin} onDelete={handleDelete} />
+                </li>
+              ) : item.type === "collapsed-notes" ? (
+                <CollapsedNotesPreview
+                  key={item.id}
+                  notes={item.notes}
+                  expandedCount={item.expandedCount}
+                  onShowMore={() => showMoreNotesInGroup(item.groupId)}
+                  onCollapse={() => collapseNoteGroup(item.groupId)}
+                />
+              ) : item.type === "notes-collapse-control" ? (
+                <NotesCollapseControl
+                  key={item.id}
+                  onCollapse={() => collapseNoteGroup(item.groupId)}
+                />
+              ) : (
+                <PostTimelineItem
+                  key={item.id}
+                  post={item.post}
+                  isAdmin={isAdmin}
+                  onHide={handleHidePost}
+                  hiding={hidingPostId === item.post._id}
+                  pendingHide={pendingHidePostId === item.post._id}
+                  showTopSeparator={itemShouldHaveTopSeparator(item, visibleItems[index - 1])}
+                  showBottomSeparator={itemNeedsTextSeparator(item)}
+                />
+              )
+            ))}
+          </ul>
+        )}
+
+        {cursor && (
+          <button
+            type="button"
+            onClick={loadMoreNotes}
+            disabled={loading}
+            className="self-center text-sm text-neutral-400 transition-colors hover:text-neutral-200 disabled:opacity-40"
+          >
+            {loading ? "carregando..." : "carregar mais notas"}
+          </button>
+        )}
+      </div>
     </section>
   )
 }

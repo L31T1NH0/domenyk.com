@@ -4,6 +4,7 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { FORMAT_TEXT_COMMAND, $getSelection, $isRangeSelection } from "lexical"
 import { $setBlocksType } from "@lexical/selection"
 import { $createHeadingNode, $createQuoteNode } from "@lexical/rich-text"
+import { ImagePlugin } from "./ImagePlugin"
 
 type ToolbarButtonProps = {
   onClick: () => void
@@ -31,9 +32,10 @@ function ToolbarButton({ onClick, title, compact = false, children }: ToolbarBut
 
 type Props = {
   variant?: "default" | "compact"
+  placement?: "top" | "bottom"
 }
 
-export function ToolbarPlugin({ variant = "default" }: Props) {
+export function ToolbarPlugin({ variant = "default", placement = "top" }: Props) {
   const [editor] = useLexicalComposerContext()
   const compact = variant === "compact"
 
@@ -77,6 +79,7 @@ export function ToolbarPlugin({ variant = "default" }: Props) {
       <ToolbarButton compact={compact} onClick={() => formatHeading("h2")} title="Título 2">H2</ToolbarButton>
       <ToolbarButton compact={compact} onClick={() => formatHeading("h3")} title="Título 3">H3</ToolbarButton>
       <ToolbarButton compact={compact} onClick={formatQuote} title="Citação">&quot;</ToolbarButton>
+      <ImagePlugin compact={compact} menuPlacement={placement === "bottom" ? "above" : "below"} />
     </div>
   )
 }

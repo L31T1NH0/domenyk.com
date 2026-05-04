@@ -115,7 +115,7 @@ export function PostContentShell({ html, className }: Props) {
             }}
           />
           <span
-            className="absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-white/10 px-3 py-1 text-xs text-white/70 backdrop-blur-sm pointer-events-none"
+            className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white mix-blend-difference backdrop-blur-sm"
             style={{ opacity: visible ? 1 : 0, transition: "opacity 400ms ease" }}
           >
             Scroll ou Esc para fechar

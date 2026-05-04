@@ -13,7 +13,12 @@ type MediaAsset = {
   uploadedAt: string
 }
 
-export function ImagePlugin() {
+type Props = {
+  compact?: boolean
+  menuPlacement?: "above" | "below"
+}
+
+export function ImagePlugin({ compact = false, menuPlacement = "above" }: Props) {
   const [editor] = useLexicalComposerContext()
   const [open, setOpen] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -73,12 +78,20 @@ export function ImagePlugin() {
     }
   }
 
+  const buttonClassName = compact
+    ? "grid size-8 place-items-center rounded-full text-[#A8A095] transition-colors hover:bg-white/10 hover:text-[#f1f1f1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A8A095]/35 disabled:opacity-40"
+    : "grid size-8 place-items-center rounded-md text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400/35 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100 disabled:opacity-40"
+  const panelClassName = [
+    "absolute right-0 w-[min(23rem,calc(100vw-2rem))] rounded-xl border border-neutral-200/80 bg-white/95 p-3 shadow-xl shadow-black/10 backdrop-blur dark:border-white/10 dark:bg-neutral-950/95 dark:shadow-black/40",
+    menuPlacement === "above" ? "bottom-10" : "top-10",
+  ].join(" ")
+
   return (
-    <div className="absolute bottom-3 right-3 z-20">
+    <div className="relative z-20 ml-auto">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="grid size-9 place-items-center rounded-full border border-neutral-200/80 bg-white/95 text-neutral-600 shadow-sm shadow-black/5 backdrop-blur transition-colors hover:border-neutral-300 hover:bg-white hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400/40 dark:border-white/10 dark:bg-neutral-950/90 dark:text-[#A8A095] dark:shadow-black/30 dark:hover:bg-white/10 dark:hover:text-[#f1f1f1]"
+        className={buttonClassName}
         aria-label="Adicionar imagem"
         title="Adicionar imagem"
       >
@@ -86,7 +99,7 @@ export function ImagePlugin() {
       </button>
 
       {open && (
-        <div className="absolute bottom-11 right-0 w-[min(23rem,calc(100vw-2rem))] rounded-xl border border-neutral-200/80 bg-white/95 p-3 shadow-xl shadow-black/10 backdrop-blur dark:border-white/10 dark:bg-neutral-950/95 dark:shadow-black/40">
+        <div className={panelClassName}>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Adicionar imagem</p>

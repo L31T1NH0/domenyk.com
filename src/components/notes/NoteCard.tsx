@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react"
 import { useUser } from "@clerk/nextjs"
 import { ChatBubbleLeftEllipsisIcon, XMarkIcon } from "@heroicons/react/24/outline"
 import { formatDistanceToNow } from "date-fns"
@@ -20,6 +20,11 @@ type Props = {
   note: SerializedNote
   isAdmin?: boolean
   onDelete?: (id: string) => void
+}
+
+type ActiveImage = {
+  src: string
+  alt: string
 }
 
 type NoteCommentsPanelProps = {
@@ -149,8 +154,18 @@ function NoteCommentsPanel({ noteId, comments, isAdmin, onCommentsChange, onClos
 }
 
 export function NoteCard({ note, isAdmin, onDelete }: Props) {
+  const contentRef = useRef<HTMLDivElement>(null)
   const [comments, setComments] = useState<Comment[]>([])
   const [commentsOpen, setCommentsOpen] = useState(false)
+  const [activeImage, setActiveImage] = useState<ActiveImage | null>(null)
+  const [lightboxVisible, setLightboxVisible] = useState(false)
+  const touchStartRef = useRef(0)
+  const closeThreshold = 80
+
+  const closeLightbox = useCallback(() => {
+    setLightboxVisible(false)
+    window.setTimeout(() => setActiveImage(null), 250)
+  }, [])
 
   const ago = formatDistanceToNow(new Date(note.publishedAt), {
     addSuffix: true,
@@ -174,6 +189,51 @@ export function NoteCard({ note, isAdmin, onDelete }: Props) {
     }
   }, [note._id])
 
+  useEffect(() => {
+    if (!activeImage) return
+    requestAnimationFrame(() => requestAnimationFrame(() => setLightboxVisible(true)))
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeLightbox()
+    }
+    const onWheel = (event: WheelEvent) => {
+      if (Math.abs(event.deltaY) > closeThreshold) closeLightbox()
+    }
+    const onTouchStart = (event: TouchEvent) => {
+      touchStartRef.current = event.touches[0]?.clientY ?? 0
+    }
+    const onTouchMove = (event: TouchEvent) => {
+      const delta = Math.abs((event.touches[0]?.clientY ?? 0) - touchStartRef.current)
+      if (delta > closeThreshold) closeLightbox()
+    }
+
+    document.addEventListener("keydown", onKey)
+    window.addEventListener("wheel", onWheel, { passive: true })
+    window.addEventListener("touchstart", onTouchStart, { passive: true })
+    window.addEventListener("touchmove", onTouchMove, { passive: true })
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener("keydown", onKey)
+      window.removeEventListener("wheel", onWheel)
+      window.removeEventListener("touchstart", onTouchStart)
+      window.removeEventListener("touchmove", onTouchMove)
+    }
+  }, [activeImage, closeLightbox])
+
+  function openLightbox(src: string, alt = "") {
+    setActiveImage({ src, alt })
+  }
+
+  function handleContentClick(event: MouseEvent<HTMLDivElement>) {
+    const image = (event.target as HTMLElement).closest("img")
+    if (!image || !contentRef.current?.contains(image)) return
+    openLightbox(image.getAttribute("src") ?? "", image.getAttribute("alt") ?? "")
+  }
+
   const commentActionLabel = comments.length > 0 ? "ver comentários" : "comentar"
 
   return (
@@ -191,7 +251,9 @@ export function NoteCard({ note, isAdmin, onDelete }: Props) {
       </div>
 
       <div
+        ref={contentRef}
         className="note-content text-[15px] leading-relaxed text-[#f1f1f1]"
+        onClick={handleContentClick}
         dangerouslySetInnerHTML={{ __html: note.contentHtml }}
       />
 
@@ -202,7 +264,8 @@ export function NoteCard({ note, isAdmin, onDelete }: Props) {
               key={url}
               src={url}
               alt=""
-              className="aspect-square w-full rounded-xl border border-white/10 object-cover"
+              onClick={() => openLightbox(url)}
+              className="aspect-square w-full cursor-zoom-in rounded-xl border border-white/10 object-cover"
             />
           ))}
         </div>
@@ -229,6 +292,46 @@ export function NoteCard({ note, isAdmin, onDelete }: Props) {
           onCommentsChange={setComments}
           onClose={() => setCommentsOpen(false)}
         />
+      )}
+
+      {activeImage && (
+        <div
+          onClick={closeLightbox}
+          className="fixed inset-0 z-[9999] flex items-center justify-center"
+          style={{
+            backgroundColor: `rgba(0,0,0,${lightboxVisible ? 0.92 : 0})`,
+            backdropFilter: `blur(${lightboxVisible ? 8 : 0}px)`,
+            transition: "background-color 250ms ease, backdrop-filter 250ms ease",
+          }}
+        >
+          <button
+            type="button"
+            onClick={closeLightbox}
+            aria-label="Fechar"
+            className="absolute right-4 top-4 z-10 flex items-center justify-center rounded-full bg-white/10 p-2 transition-colors hover:bg-white/20"
+            style={{ opacity: lightboxVisible ? 1 : 0, transition: "opacity 250ms ease" }}
+          >
+            <XMarkIcon className="h-5 w-5 text-white" />
+          </button>
+          <img
+            src={activeImage.src}
+            alt={activeImage.alt}
+            onClick={(event) => event.stopPropagation()}
+            className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain shadow-2xl"
+            style={{
+              filter: "grayscale(0)",
+              opacity: lightboxVisible ? 1 : 0,
+              transform: lightboxVisible ? "scale(1)" : "scale(0.92)",
+              transition: "opacity 250ms ease, transform 250ms ease",
+            }}
+          />
+          <span
+            className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white mix-blend-difference backdrop-blur-sm"
+            style={{ opacity: lightboxVisible ? 1 : 0, transition: "opacity 400ms ease" }}
+          >
+            Scroll ou Esc para fechar
+          </span>
+        </div>
       )}
     </article>
   )
