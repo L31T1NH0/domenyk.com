@@ -23,8 +23,8 @@ export function AdminNotesTable({ notes: initial }: Props) {
       <div className="divide-y divide-neutral-100 dark:divide-neutral-900">
       {notes.map((note) => (
         <div key={note._id} className="flex gap-3 px-4 py-3 transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-900/60">
-          <div className="flex-1 min-w-0">
-            <p className="text-sm truncate">{note.content}</p>
+          <div className="min-w-0 flex-1">
+            <p className="line-clamp-3 break-words text-sm sm:truncate">{note.content}</p>
             <time className="text-xs text-neutral-400">
               {formatDistanceToNow(new Date(note.publishedAt), { addSuffix: true, locale: ptBR })}
             </time>

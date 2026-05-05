@@ -127,15 +127,15 @@ export function PostEditor({ post }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-6 max-w-3xl">
-      <div className="flex items-center justify-between">
+    <div className="flex w-full max-w-3xl flex-col gap-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-lg font-semibold">{isEditing ? "Editar post" : "Novo post"}</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           {!isEditing && (
             <button
               onClick={() => save()}
               disabled={saving}
-              className="px-3 py-1.5 text-sm rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40"
+              className="rounded-lg border border-neutral-200 px-3 py-2 text-sm hover:bg-neutral-50 disabled:opacity-40 dark:border-neutral-700 dark:hover:bg-neutral-800 sm:py-1.5"
             >
               Salvar rascunho
             </button>
@@ -143,7 +143,7 @@ export function PostEditor({ post }: Props) {
           <button
             onClick={() => save(isEditing ? undefined : true)}
             disabled={saving}
-            className="px-3 py-1.5 text-sm rounded-lg bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 disabled:opacity-40"
+            className="rounded-lg bg-neutral-900 px-3 py-2 text-sm text-white disabled:opacity-40 dark:bg-white dark:text-neutral-900 sm:py-1.5"
           >
             {isEditing ? "Aplicar edições" : "Publicar"}
           </button>
@@ -157,10 +157,10 @@ export function PostEditor({ post }: Props) {
           value={title}
           onChange={(e) => handleTitleChange(e.target.value)}
           placeholder="Título"
-          className="text-2xl font-semibold bg-transparent border-b border-neutral-200 dark:border-neutral-800 pb-2 outline-none placeholder:text-neutral-300"
+          className="w-full border-b border-neutral-200 bg-transparent pb-2 text-2xl font-semibold outline-none placeholder:text-neutral-300 dark:border-neutral-800"
         />
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1">
             <label className="text-xs text-neutral-400">Slug</label>
             <input
@@ -211,13 +211,13 @@ export function PostEditor({ post }: Props) {
         </div>
 
         <div className="grid gap-3 rounded-xl border border-neutral-200 p-3 dark:border-neutral-800">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <label className="text-xs text-neutral-400">Capa / asset de imagem</label>
             <button
               type="button"
               onClick={() => coverFileRef.current?.click()}
               disabled={uploadingCover}
-              className="text-xs px-2 py-1 rounded border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40"
+              className="rounded border border-neutral-200 px-2 py-1.5 text-xs hover:bg-neutral-50 disabled:opacity-40 dark:border-neutral-700 dark:hover:bg-neutral-800 sm:py-1"
             >
               {uploadingCover ? "enviando..." : "Upload para Blob"}
             </button>

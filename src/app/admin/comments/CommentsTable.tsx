@@ -30,17 +30,17 @@ export function CommentsTable({ comments: initial }: Props) {
               {c.authorName.slice(0, 1).toUpperCase()}
             </div>
           )}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-baseline gap-2">
-              <span className="text-sm font-medium">{c.authorName}</span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+              <span className="min-w-0 break-words text-sm font-medium">{c.authorName}</span>
               {c.paragraphId && (
                 <span className="text-xs text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-1.5 rounded">parágrafo</span>
               )}
-              <time className="text-xs text-neutral-400 ml-auto">
+              <time className="text-xs text-neutral-400 sm:ml-auto">
                 {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true, locale: ptBR })}
               </time>
             </div>
-            <p className="text-sm text-neutral-600 dark:text-neutral-400 truncate">{c.content}</p>
+            <p className="line-clamp-3 break-words text-sm text-neutral-600 dark:text-neutral-400 sm:truncate">{c.content}</p>
           </div>
           <button onClick={() => remove(c._id)} className="shrink-0 rounded-md px-2 py-1 text-sm text-neutral-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-300">
             ✕

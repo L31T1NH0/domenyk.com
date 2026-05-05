@@ -16,7 +16,7 @@ export function AdminNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="flex flex-col gap-1" aria-label="Admin">
+    <nav className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0 lg:pb-0" aria-label="Admin">
       {navItems.map((item) => {
         const active = item.href === "/admin"
           ? pathname === item.href
@@ -28,7 +28,7 @@ export function AdminNav() {
             href={item.href}
             aria-current={active ? "page" : undefined}
             className={[
-              "rounded-md px-3 py-2 text-sm transition-colors",
+              "shrink-0 rounded-md px-3 py-2 text-sm transition-colors",
               active
                 ? "bg-neutral-950 text-white dark:bg-white dark:text-neutral-950"
                 : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-950 dark:text-neutral-400 dark:hover:bg-neutral-900 dark:hover:text-neutral-100",

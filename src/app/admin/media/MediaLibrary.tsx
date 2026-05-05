@@ -64,7 +64,7 @@ export function MediaLibrary({ initialMedia }: Props) {
   return (
     <div className="flex flex-col gap-4">
       <div
-        className="flex cursor-pointer flex-col items-center gap-3 rounded-lg border border-dashed border-neutral-300 bg-white p-8 shadow-sm transition-colors hover:border-neutral-500 dark:border-neutral-800 dark:bg-neutral-950 dark:hover:border-neutral-600"
+        className="flex cursor-pointer flex-col items-center gap-3 rounded-lg border border-dashed border-neutral-300 bg-white p-5 text-center shadow-sm transition-colors hover:border-neutral-500 dark:border-neutral-800 dark:bg-neutral-950 dark:hover:border-neutral-600 sm:p-8"
         onClick={() => fileRef.current?.click()}
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
@@ -91,7 +91,7 @@ export function MediaLibrary({ initialMedia }: Props) {
       </div>
       {error && <p className="text-sm text-red-500">{error}</p>}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
         {media.map((item) => (
           <div
             key={item.url}
