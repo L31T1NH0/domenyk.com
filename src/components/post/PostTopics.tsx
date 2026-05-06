@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { AutoFitText } from "@/components/text/AutoFitText"
 
 type HeadingEntry = {
   id: string
@@ -151,7 +152,7 @@ export function PostTopics({ containerSelector = "[data-post-content]" }: Props)
                 })
               }}
               className={[
-                "w-full truncate rounded-md px-2 py-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E00070]/70",
+                "w-full rounded-md px-2 py-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E00070]/70",
                 heading.level > 2 ? "pl-4 text-xs" : "",
                 active
                   ? "bg-neutral-950/10 text-neutral-950 dark:bg-white/10 dark:text-[#f1f1f1]"
@@ -160,7 +161,13 @@ export function PostTopics({ containerSelector = "[data-post-content]" }: Props)
                 .filter(Boolean)
                 .join(" ")}
             >
-              {heading.text}
+              <AutoFitText
+                text={heading.text}
+                minSize={11}
+                maxSize={heading.level > 2 ? 12 : 14}
+                maxLines={2}
+                className="block leading-snug"
+              />
             </button>
           )
         })}

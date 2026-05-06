@@ -9,6 +9,8 @@ import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { NoteCard } from "@/components/notes/NoteCard"
 import { NoteComposer } from "@/components/notes/NoteComposer"
+import { AutoFitText } from "@/components/text/AutoFitText"
+import { usePretextContentFontSize } from "@/components/text/usePretextTextMetrics"
 import type { SerializedNote } from "@/lib/db/notes"
 import type { SerializedPostSummary } from "@/lib/db/posts"
 
@@ -127,6 +129,13 @@ function CollapsedNotesPreview({
 }) {
   const previewNote = notes[0]
   const revealCount = Math.min(MAX_NOTES_BETWEEN_POSTS, notes.length)
+  const previewRef = useRef<HTMLDivElement>(null)
+  const previewFontSize = usePretextContentFontSize(previewRef, {
+    minSize: 13,
+    maxSize: 15,
+    maxLinesPerBlock: 4,
+    blockSelector: "p, li, blockquote",
+  })
 
   return (
     <li className="border-b border-neutral-200 pb-5 dark:border-white/10">
@@ -136,7 +145,9 @@ function CollapsedNotesPreview({
             {format(new Date(previewNote.publishedAt), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}
           </time>
           <div
+            ref={previewRef}
             className="note-content mt-3 text-[15px] leading-relaxed text-neutral-900 dark:text-[#f1f1f1]"
+            style={{ fontSize: previewFontSize }}
             dangerouslySetInnerHTML={{ __html: previewNote.contentHtml }}
           />
         </div>
@@ -231,7 +242,13 @@ function PostTimelineItem({
               <span className="absolute bottom-0 left-0 h-1/2 w-full bg-gradient-to-t from-[#040404] via-[#040404]/80 to-transparent" />
             </span>
             <span className="absolute bottom-2 left-3 right-3 flex flex-col gap-2 sm:bottom-3">
-              <span className="text-xl font-normal leading-snug text-white">{post.title}</span>
+              <AutoFitText
+                text={post.title}
+                minSize={15}
+                maxSize={20}
+                maxLines={2}
+                className="font-normal leading-snug text-white"
+              />
               <span className="flex flex-wrap items-center gap-3">
                 <span className="text-xs text-zinc-300 drop-shadow">{postDateLabel(post)}</span>
                 <span aria-hidden className="text-zinc-300/50">·</span>
@@ -242,7 +259,13 @@ function PostTimelineItem({
           </span>
         ) : (
           <span className="flex min-w-0 flex-col gap-2">
-            <span className="text-lg font-normal leading-snug text-neutral-950 dark:text-[#f1f1f1]">{post.title}</span>
+            <AutoFitText
+              text={post.title}
+              minSize={14}
+              maxSize={18}
+              maxLines={2}
+              className="font-normal leading-snug text-neutral-950 dark:text-[#f1f1f1]"
+            />
             <span className="flex flex-wrap items-center gap-3">
               <span className="text-xs text-[#A8A095]">{postDateLabel(post)}</span>
               <span aria-hidden className="text-[#A8A095]/40">·</span>

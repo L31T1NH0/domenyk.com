@@ -7,6 +7,8 @@ import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import type { LexicalEditor as LexicalEditorInstance } from "lexical"
 import { LexicalEditor, readMarkdownFromEditor } from "@/components/editor/LexicalEditor"
+import { ExpandableText } from "@/components/text/ExpandableText"
+import { usePretextContentFontSize } from "@/components/text/usePretextTextMetrics"
 import type { SerializedNote } from "@/lib/db/notes"
 
 type Comment = {
@@ -113,7 +115,12 @@ function NoteCommentsPanel({ noteId, comments, loading = false, isAdmin, onComme
                       {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true, locale: ptBR })}
                     </time>
                   </div>
-                  <p className="mt-0.5 whitespace-pre-wrap break-words leading-relaxed text-neutral-700 dark:text-[#d8d4ce]">{comment.content}</p>
+                  <ExpandableText
+                    text={comment.content}
+                    maxLines={5}
+                    whiteSpace="pre-wrap"
+                    className="mt-0.5 break-words leading-relaxed text-neutral-700 dark:text-[#d8d4ce]"
+                  />
                 </div>
                 {(isAdmin || user?.id === comment.authorId) && (
                   <button
@@ -163,6 +170,12 @@ function NoteCommentsPanel({ noteId, comments, loading = false, isAdmin, onComme
 export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = false }: Props) {
   const contentRef = useRef<HTMLDivElement>(null)
   const editEditorRef = useRef<LexicalEditorInstance | null>(null)
+  const contentFontSize = usePretextContentFontSize(contentRef, {
+    minSize: 13,
+    maxSize: 15,
+    maxLinesPerBlock: 5,
+    blockSelector: "p, li, blockquote",
+  })
   const [comments, setComments] = useState<Comment[]>([])
   const [commentsLoaded, setCommentsLoaded] = useState(false)
   const [loadingComments, setLoadingComments] = useState(false)
@@ -411,6 +424,7 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
             "note-content text-[15px] leading-relaxed text-neutral-900 dark:text-[#f1f1f1]",
             cropTallImages ? "note-content-timeline" : "",
           ].filter(Boolean).join(" ")}
+          style={{ fontSize: contentFontSize }}
           onClick={handleContentClick}
           dangerouslySetInnerHTML={{ __html: note.contentHtml }}
         />

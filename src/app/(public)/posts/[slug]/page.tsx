@@ -15,6 +15,7 @@ import { AudioPlayer } from "@/components/AudioPlayer"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import type { PostStyle } from "@/lib/db/posts"
+import { absoluteUrl, buildPageMetadata, jsonLd, siteConfig } from "@/lib/seo"
 
 type Props = { params: Promise<{ slug: string }> }
 
@@ -55,15 +56,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug: publicId } = await params
   const post = (await getPostByPublicId(publicId)) ?? (await getPostBySlug(publicId))
   if (!post) return {}
-  return {
+  const canonicalPath = `/posts/${post.publicId}`
+  const description = post.excerpt ?? post.subtitle ?? siteConfig.description
+
+  return buildPageMetadata({
     title: post.title,
-    description: post.excerpt,
-    openGraph: {
-      title: post.title,
-      description: post.excerpt,
-      images: post.cover ? [post.cover.url] : ["/images/profile.jpg"],
-    },
-  }
+    description,
+    path: canonicalPath,
+    image: post.cover?.url ?? siteConfig.image,
+    type: "article",
+    publishedTime: post.publishedAt?.toISOString(),
+    modifiedTime: post.updatedAt.toISOString(),
+    tags: post.tags,
+    noIndex: !post.published,
+  })
 }
 
 export default async function PostPage({ params }: Props) {
@@ -83,9 +89,33 @@ export default async function PostPage({ params }: Props) {
   const subtitle = post.subtitle ?? post.excerpt
   const styleClasses = getPostStyleClasses(post.style ?? "standard")
   const styleLabel = styleLabels[post.style ?? "standard"]
+  const postUrl = absoluteUrl(`/posts/${post.publicId}`)
+  const postImage = post.cover?.url ? absoluteUrl(post.cover.url) : absoluteUrl(siteConfig.image)
 
   return (
     <div className={styleClasses.page}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: jsonLd({
+            "@context": "https://schema.org",
+            "@type": "BlogPosting",
+            "@id": `${postUrl}#article`,
+            mainEntityOfPage: postUrl,
+            headline: post.title,
+            description: post.excerpt ?? subtitle ?? siteConfig.description,
+            image: [postImage],
+            datePublished: post.publishedAt?.toISOString(),
+            dateModified: post.updatedAt.toISOString(),
+            author: { "@id": `${siteConfig.url}/#person` },
+            publisher: { "@id": `${siteConfig.url}/#person` },
+            inLanguage: "pt-BR",
+            keywords: post.tags,
+            timeRequired: `PT${post.readingTimeMinutes}M`,
+            isAccessibleForFree: true,
+          }),
+        }}
+      />
       <PostHeader
         title={post.title}
         subtitle={subtitle}

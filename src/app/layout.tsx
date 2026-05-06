@@ -2,11 +2,46 @@ import type { Metadata } from "next"
 import { ClerkProvider } from "@clerk/nextjs"
 import { Analytics } from "@vercel/analytics/next"
 import Script from "next/script"
+import { jsonLd, siteConfig } from "@/lib/seo"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: { default: "domenyk", template: "%s — domenyk" },
-  description: "Blog pessoal",
+  metadataBase: new URL(siteConfig.url),
+  applicationName: siteConfig.name,
+  title: { default: siteConfig.title, template: `%s — ${siteConfig.name}` },
+  description: siteConfig.description,
+  authors: [{ name: siteConfig.author, url: siteConfig.url }],
+  creator: siteConfig.author,
+  publisher: siteConfig.author,
+  category: "personal blog",
+  keywords: ["Domenyk", "blog pessoal", "opinião", "tecnologia", "cultura", "internet"],
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: siteConfig.title,
+    description: siteConfig.description,
+    url: siteConfig.url,
+    siteName: siteConfig.name,
+    locale: siteConfig.locale,
+    type: "website",
+    images: [{ url: siteConfig.image, width: 1200, height: 630, alt: siteConfig.author }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteConfig.title,
+    description: siteConfig.description,
+    images: [siteConfig.image],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -18,6 +53,34 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 	          strategy="beforeInteractive"
 	          dangerouslySetInnerHTML={{
 		            __html: `(function(){try{var d=localStorage.getItem('theme')!=='light';var e=document.documentElement;e.classList.toggle('dark-mode',d);e.classList.toggle('light-mode',!d);if(document.body){document.body.classList.toggle('dark-mode',d);document.body.classList.toggle('light-mode',!d)}}catch(e){document.documentElement.classList.add('dark-mode')}})()`,
+	          }}
+	        />
+	        <Script
+	          id="website-person-json-ld"
+	          type="application/ld+json"
+	          strategy="beforeInteractive"
+	          dangerouslySetInnerHTML={{
+		            __html: jsonLd({
+		              "@context": "https://schema.org",
+		              "@graph": [
+		                {
+		                  "@type": "WebSite",
+		                  "@id": `${siteConfig.url}/#website`,
+		                  url: siteConfig.url,
+		                  name: siteConfig.name,
+		                  description: siteConfig.description,
+		                  inLanguage: "pt-BR",
+		                  publisher: { "@id": `${siteConfig.url}/#person` },
+		                },
+		                {
+		                  "@type": "Person",
+		                  "@id": `${siteConfig.url}/#person`,
+		                  name: siteConfig.author,
+		                  url: siteConfig.url,
+		                  image: `${siteConfig.url}${siteConfig.image}`,
+		                },
+		              ],
+		            }),
 	          }}
 	        />
         <ClerkProvider>

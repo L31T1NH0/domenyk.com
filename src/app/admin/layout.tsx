@@ -1,8 +1,14 @@
 export const dynamic = "force-dynamic"
 
+import type { Metadata } from "next"
 import Link from "next/link"
 import { AdminNav } from "./AdminNav"
 import { ClerkButton } from "@/components/ClerkButton"
+
+export const metadata: Metadata = {
+  title: "Admin",
+  robots: { index: false, follow: false },
+}
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (

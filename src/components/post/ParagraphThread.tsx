@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react"
 import { useUser } from "@clerk/nextjs"
+import { ExpandableText } from "@/components/text/ExpandableText"
 
 type Comment = {
   _id: string
@@ -93,7 +94,11 @@ export function ParagraphThread({ postId, paragraphId, isAdmin = false, autoFocu
             )}
             <div className="flex-1">
               <span className="font-medium">{c.authorName}</span>
-              <p className="text-neutral-600 dark:text-neutral-400">{c.content}</p>
+              <ExpandableText
+                text={c.content}
+                maxLines={4}
+                className="text-neutral-600 dark:text-neutral-400"
+              />
             </div>
             {(isAdmin || user?.id === c.authorId) && (
               <button onClick={() => remove(c._id)} className="text-neutral-300 hover:text-red-400 shrink-0">✕</button>

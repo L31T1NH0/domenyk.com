@@ -1,5 +1,6 @@
 import Image from "next/image"
 import Link from "next/link"
+import { AutoFitText } from "@/components/text/AutoFitText"
 
 type Props = {
   title: string
@@ -60,8 +61,17 @@ export function PostHeader({ title, subtitle, cover, secondaryImage, background 
             <Avatar src="/images/profile.jpg" alt="Domenyk" size="post" />
             {secondaryImage && <Avatar src={secondaryImage} alt="Coautor" size="post" />}
           </div>
-          <h1 className="text-xl text-white">{title}</h1>
-          {subtitle && <p className="text-xs text-zinc-300 drop-shadow">{subtitle}</p>}
+          <AutoFitText as="h1" text={title} minSize={14} maxSize={20} maxLines={2} className="text-white" />
+          {subtitle && (
+            <AutoFitText
+              as="p"
+              text={subtitle}
+              minSize={10}
+              maxSize={12}
+              maxLines={2}
+              className="text-zinc-300 drop-shadow"
+            />
+          )}
         </div>
       </div>
     )
@@ -76,8 +86,24 @@ export function PostHeader({ title, subtitle, cover, secondaryImage, background 
         <Avatar src="/images/profile.jpg" alt="Domenyk" size="large" />
         {secondaryImage && <Avatar src={secondaryImage} alt="Coautor" size="large" />}
       </div>
-      <h1 className="text-center text-neutral-950 dark:text-[#f1f1f1]">{title}</h1>
-      {subtitle && <p className="text-center text-sm text-neutral-600 dark:text-zinc-300">{subtitle}</p>}
+      <AutoFitText
+        as="h1"
+        text={title}
+        minSize={16}
+        maxSize={20}
+        maxLines={3}
+        className="w-full text-center text-neutral-950 dark:text-[#f1f1f1]"
+      />
+      {subtitle && (
+        <AutoFitText
+          as="p"
+          text={subtitle}
+          minSize={12}
+          maxSize={14}
+          maxLines={3}
+          className="w-full text-center text-neutral-600 dark:text-zinc-300"
+        />
+      )}
     </div>
   )
 }

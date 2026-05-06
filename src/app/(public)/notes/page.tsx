@@ -3,8 +3,13 @@ import { getNotes, serializeNote } from "@/lib/db/notes"
 import { isAdmin } from "@/lib/auth"
 import { Header } from "@/components/Header"
 import { NotesTimeline } from "./NotesTimeline"
+import { buildPageMetadata } from "@/lib/seo"
 
-export const metadata: Metadata = { title: "Notes" }
+export const metadata: Metadata = buildPageMetadata({
+  title: "Notes",
+  description: "Notas rápidas e registros curtos de Domenyk.",
+  path: "/notes",
+})
 
 export default async function NotesPage() {
   const admin = await isAdmin()

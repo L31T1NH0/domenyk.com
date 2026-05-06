@@ -1,0 +1,81 @@
+import type { Metadata } from "next"
+
+export const siteConfig = {
+  name: "domenyk",
+  author: "Domenyk",
+  title: "domenyk",
+  description: "Blog pessoal de Domenyk com textos, notas e opiniões sobre tecnologia, cultura e internet.",
+  url: getSiteUrl(),
+  locale: "pt_BR",
+  image: "/images/profile.jpg",
+}
+
+function getSiteUrl() {
+  const rawUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ??
+    process.env.VERCEL_URL ??
+    "https://domenyk.com"
+
+  const url = rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`
+  return url.replace(/\/$/, "")
+}
+
+export function absoluteUrl(path = "/") {
+  if (/^https?:\/\//.test(path)) return path
+  return `${siteConfig.url}${path.startsWith("/") ? path : `/${path}`}`
+}
+
+export function buildPageMetadata({
+  title,
+  description = siteConfig.description,
+  path = "/",
+  image = siteConfig.image,
+  type = "website",
+  publishedTime,
+  modifiedTime,
+  tags,
+  noIndex = false,
+}: {
+  title?: string
+  description?: string
+  path?: string
+  image?: string
+  type?: "website" | "article"
+  publishedTime?: string
+  modifiedTime?: string
+  tags?: string[]
+  noIndex?: boolean
+} = {}): Metadata {
+  const url = absoluteUrl(path)
+  const images = [{ url: image, width: 1200, height: 630, alt: title ?? siteConfig.title }]
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    robots: noIndex ? { index: false, follow: false } : { index: true, follow: true },
+    openGraph: {
+      title: title ?? siteConfig.title,
+      description,
+      url,
+      siteName: siteConfig.name,
+      locale: siteConfig.locale,
+      type,
+      images,
+      publishedTime,
+      modifiedTime,
+      tags,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: title ?? siteConfig.title,
+      description,
+      images: [image],
+    },
+  }
+}
+
+export function jsonLd(data: Record<string, unknown>) {
+  return JSON.stringify(data).replace(/</g, "\\u003c")
+}

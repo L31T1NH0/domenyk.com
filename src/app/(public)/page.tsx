@@ -1,8 +1,12 @@
+import type { Metadata } from "next"
 import { getPosts, serializePostSummary } from "@/lib/db/posts"
 import { getNotes, serializeNote } from "@/lib/db/notes"
 import { isAdmin } from "@/lib/auth"
 import { Header } from "@/components/Header"
 import { HomeTimeline } from "./HomeTimeline"
+import { buildPageMetadata } from "@/lib/seo"
+
+export const metadata: Metadata = buildPageMetadata()
 
 export default async function HomePage() {
   const admin = await isAdmin()

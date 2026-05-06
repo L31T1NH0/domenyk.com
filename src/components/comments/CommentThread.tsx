@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useUser } from "@clerk/nextjs"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import { ExpandableText } from "@/components/text/ExpandableText"
 
 type Comment = {
   _id: string
@@ -75,7 +76,11 @@ export function CommentThread({ postId, isAdmin = false }: Props) {
                   </button>
                 )}
               </div>
-              <p className="text-sm text-neutral-700 dark:text-neutral-300 mt-0.5">{c.content}</p>
+              <ExpandableText
+                text={c.content}
+                maxLines={5}
+                className="mt-0.5 text-sm text-neutral-700 dark:text-neutral-300"
+              />
             </div>
           </div>
         ))}
