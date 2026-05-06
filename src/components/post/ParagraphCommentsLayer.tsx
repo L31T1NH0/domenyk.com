@@ -51,24 +51,26 @@ export function ParagraphCommentsLayer({ postId, isAdmin = false, containerSelec
     return () => ro.disconnect()
   }, [containerSelector])
 
-  useEffect(() => {
-    const pids = Object.keys(positions)
-    if (pids.length === 0) return
-
-    let cancelled = false
-    Promise.all(
-      pids.map((pid) =>
-        fetch(`/api/comments/${postId}/paragraph/${pid}`)
-          .then((r) => r.json())
-          .then((comments: unknown[]) => [pid, comments.length] as const)
-          .catch(() => [pid, 0] as const)
-      )
-    ).then((results) => {
-      if (!cancelled) setCounts(Object.fromEntries(results))
-    })
-
-    return () => {
-      cancelled = true
+	  useEffect(() => {
+	    const pids = Object.keys(positions)
+	    if (pids.length === 0) return
+	
+	    let cancelled = false
+	    fetch(`/api/comments/${postId}/paragraph-counts`, {
+	      method: "POST",
+	      headers: { "Content-Type": "application/json" },
+	      body: JSON.stringify({ paragraphIds: pids }),
+	    })
+	      .then((r) => r.ok ? r.json() : {})
+	      .then((next: Record<string, number>) => {
+	        if (!cancelled) setCounts(next)
+	      })
+	      .catch(() => {
+	        if (!cancelled) setCounts({})
+	      })
+	
+	    return () => {
+	      cancelled = true
     }
   }, [postId, positions])
 

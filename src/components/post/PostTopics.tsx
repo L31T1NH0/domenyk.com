@@ -130,8 +130,8 @@ export function PostTopics({ containerSelector = "[data-post-content]" }: Props)
   if (visibleHeadings.length === 0) return null
 
   return (
-    <aside className="fixed top-24 left-[calc(50%+20rem)] z-20 hidden max-h-[calc(100vh-7rem)] w-56 flex-col overflow-y-auto rounded-lg border border-white/10 bg-[#040404]/80 p-3 text-sm text-[#A8A095] shadow-xl shadow-black/20 backdrop-blur-xl xl:flex">
-      <span className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#f1f1f1]">
+    <aside className="fixed top-24 left-[calc(50%+20rem)] z-20 hidden max-h-[calc(100vh-7rem)] w-56 flex-col overflow-y-auto rounded-lg border border-neutral-200 bg-white/85 p-3 text-sm text-neutral-600 shadow-xl shadow-black/10 backdrop-blur-xl dark:border-white/10 dark:bg-[#040404]/80 dark:text-[#A8A095] dark:shadow-black/20 xl:flex">
+      <span className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-950 dark:text-[#f1f1f1]">
         Neste artigo
       </span>
       <nav className="flex flex-col gap-1" aria-label="Tópicos do artigo">
@@ -154,8 +154,8 @@ export function PostTopics({ containerSelector = "[data-post-content]" }: Props)
                 "w-full truncate rounded-md px-2 py-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E00070]/70",
                 heading.level > 2 ? "pl-4 text-xs" : "",
                 active
-                  ? "bg-white/10 text-[#f1f1f1]"
-                  : "hover:bg-white/5 hover:text-[#f1f1f1]",
+                  ? "bg-neutral-950/10 text-neutral-950 dark:bg-white/10 dark:text-[#f1f1f1]"
+                  : "hover:bg-neutral-950/5 hover:text-neutral-950 dark:hover:bg-white/5 dark:hover:text-[#f1f1f1]",
               ]
                 .filter(Boolean)
                 .join(" ")}

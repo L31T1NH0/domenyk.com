@@ -33,14 +33,17 @@ export function ParagraphThread({ postId, paragraphId, isAdmin = false, autoFocu
     onCountChangeRef.current = onCountChange
   }, [onCountChange])
 
-  useEffect(() => {
-    fetch(`/api/comments/${postId}/paragraph/${paragraphId}`)
-      .then((r) => r.json())
-      .then((next: Comment[]) => {
-        setComments(next)
-        onCountChangeRef.current?.(next.length)
-      })
-  }, [postId, paragraphId])
+	  useEffect(() => {
+	    fetch(`/api/comments/${postId}/paragraph/${paragraphId}`)
+	      .then((r) => r.json())
+	      .then((next: Comment[]) => {
+	        setComments(next)
+	      })
+	  }, [postId, paragraphId])
+
+	  useEffect(() => {
+	    onCountChangeRef.current?.(comments.length)
+	  }, [comments.length])
 
   useEffect(() => {
     if (!autoFocus) return
@@ -55,26 +58,18 @@ export function ParagraphThread({ postId, paragraphId, isAdmin = false, autoFocu
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content: draft.trim() }),
     })
-    if (res.ok) {
-      const comment = await res.json()
-      setComments((prev) => {
-        const next = [...prev, comment]
-        onCountChangeRef.current?.(next.length)
-        return next
-      })
-      setDraft("")
-    }
+	    if (res.ok) {
+	      const comment = await res.json()
+	      setComments((prev) => [...prev, comment])
+	      setDraft("")
+	    }
     setSubmitting(false)
   }
 
-  async function remove(id: string) {
-    await fetch(`/api/admin/comments/${id}`, { method: "DELETE" })
-    setComments((prev) => {
-      const next = prev.filter((c) => c._id !== id)
-      onCountChangeRef.current?.(next.length)
-      return next
-    })
-  }
+	  async function remove(id: string) {
+	    await fetch(`/api/admin/comments/${id}`, { method: "DELETE" })
+	    setComments((prev) => prev.filter((c) => c._id !== id))
+	  }
 
   return (
     <div className="absolute right-0 z-50 w-72 rounded-lg border border-neutral-200 bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-900 p-3 flex flex-col gap-2">

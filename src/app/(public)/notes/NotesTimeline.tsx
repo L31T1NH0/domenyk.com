@@ -47,7 +47,7 @@ export function NotesTimeline({
     <div className="flex flex-col gap-4">
       {(isAdmin || showComposer) && <NoteComposer onPosted={handlePosted} />}
       {!isAdmin && !showComposer && showAdminHint && (
-        <div className="rounded-lg border border-white/10 px-3 py-2 text-sm text-[#A8A095]">
+        <div className="rounded-lg border border-neutral-200 px-3 py-2 text-sm text-neutral-600 dark:border-white/10 dark:text-[#A8A095]">
           Entre com a conta admin para escrever uma nota.
         </div>
       )}
@@ -59,6 +59,7 @@ export function NotesTimeline({
             note={note}
             isAdmin={isAdmin}
             onDelete={handleDelete}
+            cropTallImages
           />
         ))}
       </div>
@@ -67,7 +68,7 @@ export function NotesTimeline({
         <button
           onClick={loadMore}
           disabled={loading}
-          className="text-sm text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 disabled:opacity-40 self-center"
+          className="self-center text-sm text-neutral-500 hover:text-neutral-900 disabled:opacity-40 dark:text-neutral-400 dark:hover:text-neutral-200"
         >
           {loading ? "carregando..." : "carregar mais"}
         </button>

@@ -13,13 +13,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt-BR" className="h-full antialiased" suppressHydrationWarning>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
-        <Script
-          id="theme-bootstrap"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('theme');var c=t==='light'?'light-mode':'dark-mode';document.documentElement.classList.add(c)}catch(e){document.documentElement.classList.add('dark-mode')}})()`,
-          }}
-        />
+	        <Script
+	          id="theme-bootstrap"
+	          strategy="beforeInteractive"
+	          dangerouslySetInnerHTML={{
+	            __html: `(function(){try{var t=localStorage.getItem('theme');var c=t==='light'?'light-mode':'dark-mode';document.documentElement.classList.add(c);document.body&&document.body.classList.add(c)}catch(e){document.documentElement.classList.add('dark-mode')}})()`,
+	          }}
+	        />
         <ClerkProvider>
           {children}
           <Analytics />

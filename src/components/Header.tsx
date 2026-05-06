@@ -22,7 +22,7 @@ export function Header() {
             width={148}
             alt={name}
           />
-          <strong className="text-2xl font-semibold tracking-tight text-[#f1f1f1]">
+          <strong className="text-2xl font-semibold tracking-tight text-neutral-950 dark:text-[#f1f1f1]">
             {name}
           </strong>
         </>
@@ -38,7 +38,7 @@ export function Header() {
               alt={name}
             />
           </Link>
-          <strong className="text-2xl font-semibold tracking-tight text-[#f1f1f1]">
+          <strong className="text-2xl font-semibold tracking-tight text-neutral-950 dark:text-[#f1f1f1]">
             {name}
           </strong>
         </>

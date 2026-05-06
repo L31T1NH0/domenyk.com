@@ -55,7 +55,7 @@ export function NoteComposer({
       <div className="flex">
         <div className="min-w-0 flex-1">
           <div
-            className="rounded-2xl border border-white/10 bg-white/[0.03] shadow-[0_1px_0_rgba(255,255,255,0.05)_inset] transition-colors focus-within:border-[#A8A095]/45 focus-within:bg-white/[0.045]"
+            className="rounded-2xl border border-neutral-200 bg-white shadow-[0_1px_0_rgba(0,0,0,0.04)_inset] transition-colors focus-within:border-neutral-400 focus-within:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:shadow-[0_1px_0_rgba(255,255,255,0.05)_inset] dark:focus-within:border-[#A8A095]/45 dark:focus-within:bg-white/[0.045]"
             onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit() }}
           >
             <LexicalEditor
@@ -78,7 +78,7 @@ export function NoteComposer({
               type="button"
               onClick={submit}
               disabled={submitting || !content.trim()}
-              className="inline-flex h-9 items-center gap-2 rounded-full bg-[#f1f1f1] px-4 text-sm font-semibold text-[#040404] transition-colors hover:bg-[#A8A095] disabled:cursor-not-allowed disabled:bg-white/25 disabled:text-white/50"
+              className="inline-flex h-9 items-center gap-2 rounded-full bg-neutral-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-neutral-700 disabled:cursor-not-allowed disabled:bg-neutral-200 disabled:text-neutral-400 dark:bg-[#f1f1f1] dark:text-[#040404] dark:hover:bg-[#A8A095] dark:disabled:bg-white/25 dark:disabled:text-white/50"
             >
               <PaperAirplaneIcon className="size-4" aria-hidden />
               {submitting ? "Postando" : "Postar"}

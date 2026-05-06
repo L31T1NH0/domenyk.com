@@ -6,7 +6,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
   const currentYear = new Date().getFullYear()
 
   return (
-    <div data-scroll-progress-root className="w-full max-w-[36rem] flex flex-col mx-auto px-4 mb-4">
+    <div data-public-shell data-scroll-progress-root className="w-full max-w-[36rem] flex flex-col mx-auto px-4 mb-4">
       <div aria-hidden data-scroll-progress-bar />
       <ScrollProgressEffect />
       <header className="flex justify-between items-center py-1">

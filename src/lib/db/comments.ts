@@ -170,6 +170,24 @@ export async function getCommentCountsByAuthor(authorIds: string[]): Promise<Map
   return new Map(counts.map((item) => [item._id, item.count]))
 }
 
+export async function getParagraphCommentCounts(
+  postId: string,
+  paragraphIds: string[]
+): Promise<Map<string, number>> {
+  const objectId = toObjectId(postId)
+  if (!objectId || paragraphIds.length === 0) return new Map()
+
+  const col = await collection()
+  const counts = await col
+    .aggregate<{ _id: string; count: number }>([
+      { $match: { postId: objectId, paragraphId: { $in: paragraphIds } } },
+      { $group: { _id: "$paragraphId", count: { $sum: 1 } } },
+    ])
+    .toArray()
+
+  return new Map(counts.map((item) => [item._id, item.count]))
+}
+
 export async function ensureIndexes(): Promise<void> {
   const col = await collectionRaw()
   await col.createIndex({ postId: 1, paragraphId: 1 })

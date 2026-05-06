@@ -76,8 +76,8 @@ export function PostHeader({ title, subtitle, cover, secondaryImage, background 
         <Avatar src="/images/profile.jpg" alt="Domenyk" size="large" />
         {secondaryImage && <Avatar src={secondaryImage} alt="Coautor" size="large" />}
       </div>
-      <h1 className="text-[#f1f1f1] text-center">{title}</h1>
-      {subtitle && <p className="text-sm text-zinc-300 text-center">{subtitle}</p>}
+      <h1 className="text-center text-neutral-950 dark:text-[#f1f1f1]">{title}</h1>
+      {subtitle && <p className="text-center text-sm text-neutral-600 dark:text-zinc-300">{subtitle}</p>}
     </div>
   )
 }

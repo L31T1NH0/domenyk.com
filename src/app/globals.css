@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@plugin "@tailwindcss/typography";
+@custom-variant dark (&:where(.dark-mode, .dark-mode *));
 
 :root {
   --scroll-progress: 0%;
@@ -236,6 +236,33 @@ img:hover { filter: grayscale(0); }
   color: #ffffff;
 }
 
+html.light-mode [data-public-shell] .post-style-editorial {
+  --link-color: #7a684d;
+}
+
+html.light-mode [data-public-shell] .post-content-editorial > p:first-of-type,
+html.light-mode [data-public-shell] .post-content-editorial h2,
+html.light-mode [data-public-shell] .post-content-editorial h3,
+html.light-mode [data-public-shell] .post-content-editorial blockquote {
+  color: #171717;
+}
+
+html.light-mode [data-public-shell] .post-content-editorial p:hover {
+  background: rgb(168 160 149 / 16%);
+}
+
+html.light-mode [data-public-shell] .post-style-opinion {
+  --link-color: #b00058;
+}
+
+html.light-mode [data-public-shell] .post-content-opinion > p:first-of-type,
+html.light-mode [data-public-shell] .post-content-opinion h2,
+html.light-mode [data-public-shell] .post-content-opinion h3,
+html.light-mode [data-public-shell] .post-content-opinion blockquote,
+html.light-mode [data-public-shell] .post-content-opinion strong {
+  color: #171717;
+}
+
 .note-content {
   @apply flex flex-col gap-2 break-words;
 }
@@ -248,6 +275,47 @@ img:hover { filter: grayscale(0); }
   @apply h-auto w-full cursor-zoom-in;
 }
 
+.note-content-timeline [data-timeline-crop-frame] {
+  height: 525px;
+  overflow: hidden;
+  border-radius: 0.375rem;
+}
+
+.note-content-timeline [data-timeline-crop-frame] > img[data-timeline-cropped="true"] {
+  position: relative;
+  top: calc(50% + 37.5px);
+  transform: translateY(-50%);
+}
+
+.note-content-timeline img[data-timeline-cropped="true"] {
+  height: auto;
+}
+
+.note-content-timeline [data-timeline-crop-frame]:has(> img[data-timeline-cropped="true"]:only-child) {
+  @apply relative overflow-hidden;
+}
+
+.note-content-timeline [data-timeline-crop-frame]:has(> img[data-timeline-cropped="true"]:only-child)::after {
+  content: "+";
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  background: rgb(0 0 0 / 60%);
+  color: white;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+.note-content-timeline [data-timeline-crop-frame]:has(> img[data-timeline-cropped="true"]:only-child):hover::after {
+  opacity: 1;
+}
+
 .note-content h1,
 .note-content h2,
 .note-content h3,
@@ -255,6 +323,15 @@ img:hover { filter: grayscale(0); }
 .note-content h5,
 .note-content h6 {
   @apply m-0 text-[#f1f1f1];
+}
+
+html.light-mode [data-public-shell] .note-content h1,
+html.light-mode [data-public-shell] .note-content h2,
+html.light-mode [data-public-shell] .note-content h3,
+html.light-mode [data-public-shell] .note-content h4,
+html.light-mode [data-public-shell] .note-content h5,
+html.light-mode [data-public-shell] .note-content h6 {
+  color: #171717;
 }
 
 .note-content h1 {
@@ -283,6 +360,16 @@ img:hover { filter: grayscale(0); }
   @apply text-zinc-200;
 }
 
+html.light-mode [data-public-shell] .note-content strong {
+  color: #171717;
+}
+
+html.light-mode [data-public-shell] .note-content em,
+html.light-mode [data-public-shell] .note-content ul,
+html.light-mode [data-public-shell] .note-content ol {
+  color: #404040;
+}
+
 .note-content ul {
   @apply my-0 list-disc pl-5 text-zinc-200;
 }
@@ -307,12 +394,31 @@ img:hover { filter: grayscale(0); }
   @apply m-0 overflow-x-auto rounded-lg border border-white/10 bg-white/[0.04] p-3 text-xs text-zinc-100;
 }
 
+html.light-mode [data-public-shell] .note-content code {
+  background: rgb(0 0 0 / 8%);
+  color: #171717;
+}
+
+html.light-mode [data-public-shell] .note-content pre {
+  border-color: rgb(0 0 0 / 10%);
+  background: rgb(0 0 0 / 4%);
+  color: #171717;
+}
+
 .note-content pre code {
   @apply bg-transparent p-0;
 }
 
 .note-content a {
   @apply text-[#A8A095] underline underline-offset-2 transition-colors hover:text-[#f1f1f1];
+}
+
+html.light-mode [data-public-shell] .note-content a {
+  color: #6f604d;
+}
+
+html.light-mode [data-public-shell] .note-content a:hover {
+  color: #171717;
 }
 
 .note-content h1 a,
@@ -339,25 +445,4 @@ img:hover { filter: grayscale(0); }
 
 @media (prefers-reduced-motion: reduce) {
   [data-scroll-progress-bar] { transition: none; }
-}
-
-/* Prose usa invert (dark) por padrão; light-mode sobrescreve */
-html.light-mode body .prose,
-body.light-mode .prose {
-  --tw-prose-body: #404040;
-  --tw-prose-headings: #171717;
-  --tw-prose-lead: #525252;
-  --tw-prose-links: #171717;
-  --tw-prose-bold: #171717;
-  --tw-prose-counters: #737373;
-  --tw-prose-bullets: #d4d4d4;
-  --tw-prose-hr: #e5e5e5;
-  --tw-prose-quotes: #171717;
-  --tw-prose-quote-borders: #e5e5e5;
-  --tw-prose-captions: #737373;
-  --tw-prose-code: #171717;
-  --tw-prose-pre-code: #e5e5e5;
-  --tw-prose-pre-bg: #1f2937;
-  --tw-prose-th-borders: #d4d4d4;
-  --tw-prose-td-borders: #e5e5e5;
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react"
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from "react"
 import { useUser } from "@clerk/nextjs"
 import { ChatBubbleLeftEllipsisIcon, XMarkIcon } from "@heroicons/react/24/outline"
 import { formatDistanceToNow } from "date-fns"
@@ -20,6 +20,7 @@ type Props = {
   note: SerializedNote
   isAdmin?: boolean
   onDelete?: (id: string) => void
+  cropTallImages?: boolean
 }
 
 type ActiveImage = {
@@ -30,12 +31,13 @@ type ActiveImage = {
 type NoteCommentsPanelProps = {
   noteId: string
   comments: Comment[]
+  loading?: boolean
   isAdmin?: boolean
   onCommentsChange: (comments: Comment[]) => void
   onClose: () => void
 }
 
-function NoteCommentsPanel({ noteId, comments, isAdmin, onCommentsChange, onClose }: NoteCommentsPanelProps) {
+function NoteCommentsPanel({ noteId, comments, loading = false, isAdmin, onCommentsChange, onClose }: NoteCommentsPanelProps) {
   const { user } = useUser()
   const [draft, setDraft] = useState("")
   const [submitting, setSubmitting] = useState(false)
@@ -67,22 +69,24 @@ function NoteCommentsPanel({ noteId, comments, isAdmin, onCommentsChange, onClos
   }
 
   return (
-    <aside className="fixed inset-x-4 bottom-4 z-50 flex max-h-[70vh] flex-col rounded-lg border border-white/10 bg-[#080808] p-3 sm:absolute sm:inset-x-auto sm:inset-y-0 sm:left-[calc(100%+1rem)] sm:bottom-auto sm:w-80 sm:max-h-full">
-      <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-2">
-        <span className="text-xs font-medium text-[#A8A095]">Comentários</span>
+    <aside className="fixed inset-x-4 bottom-4 z-50 flex max-h-[70vh] flex-col rounded-lg border border-neutral-200 bg-white p-3 shadow-xl shadow-black/10 dark:border-white/10 dark:bg-[#080808] sm:absolute sm:inset-x-auto sm:inset-y-0 sm:left-[calc(100%+1rem)] sm:bottom-auto sm:w-80 sm:max-h-full">
+      <div className="flex items-center justify-between gap-3 border-b border-neutral-200 pb-2 dark:border-white/10">
+        <span className="text-xs font-medium text-neutral-700 dark:text-[#A8A095]">Comentários</span>
         <button
           type="button"
           onClick={onClose}
           aria-label="Fechar comentários"
-          className="grid size-7 place-items-center rounded-full text-[#A8A095] transition-colors hover:bg-white/10 hover:text-[#f1f1f1]"
+          className="grid size-7 place-items-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-950 dark:text-[#A8A095] dark:hover:bg-white/10 dark:hover:text-[#f1f1f1]"
         >
           <XMarkIcon className="size-4" aria-hidden />
         </button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto py-3">
-        {comments.length === 0 ? (
-          <p className="text-xs text-[#A8A095]/75">Nenhum comentário ainda.</p>
+        {loading ? (
+          <p className="text-xs text-neutral-500 dark:text-[#A8A095]/75">Carregando comentários...</p>
+        ) : comments.length === 0 ? (
+          <p className="text-xs text-neutral-500 dark:text-[#A8A095]/75">Nenhum comentário ainda.</p>
         ) : (
           <div className="flex flex-col gap-3">
             {comments.map((comment) => (
@@ -95,25 +99,25 @@ function NoteCommentsPanel({ noteId, comments, isAdmin, onCommentsChange, onClos
                     style={{ filter: "none" }}
                   />
                 ) : (
-                  <div className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-white/10 text-[10px] text-[#f1f1f1]">
+                  <div className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-neutral-100 text-[10px] text-neutral-700 dark:bg-white/10 dark:text-[#f1f1f1]">
                     {comment.authorName.slice(0, 1).toUpperCase()}
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline gap-2">
-                    <span className="font-medium text-[#f1f1f1]">{comment.authorName}</span>
-                    <time className="shrink-0 text-[11px] text-[#A8A095]/70">
+                    <span className="font-medium text-neutral-950 dark:text-[#f1f1f1]">{comment.authorName}</span>
+                    <time className="shrink-0 text-[11px] text-neutral-500 dark:text-[#A8A095]/70">
                       {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true, locale: ptBR })}
                     </time>
                   </div>
-                  <p className="mt-0.5 whitespace-pre-wrap break-words leading-relaxed text-[#d8d4ce]">{comment.content}</p>
+                  <p className="mt-0.5 whitespace-pre-wrap break-words leading-relaxed text-neutral-700 dark:text-[#d8d4ce]">{comment.content}</p>
                 </div>
                 {(isAdmin || user?.id === comment.authorId) && (
                   <button
                     type="button"
                     onClick={() => remove(comment._id)}
                     aria-label="Deletar comentário"
-                    className="grid size-5 shrink-0 place-items-center text-[#A8A095]/50 transition-colors hover:text-red-400"
+                    className="grid size-5 shrink-0 place-items-center text-neutral-400 transition-colors hover:text-red-500 dark:text-[#A8A095]/50 dark:hover:text-red-400"
                   >
                     <XMarkIcon className="size-3" aria-hidden />
                   </button>
@@ -125,7 +129,7 @@ function NoteCommentsPanel({ noteId, comments, isAdmin, onCommentsChange, onClos
       </div>
 
       {user ? (
-        <div className="flex gap-2 border-t border-white/10 pt-2">
+        <div className="flex gap-2 border-t border-neutral-200 pt-2 dark:border-white/10">
           <textarea
             ref={textareaRef}
             value={draft}
@@ -135,27 +139,29 @@ function NoteCommentsPanel({ noteId, comments, isAdmin, onCommentsChange, onClos
             }}
             rows={2}
             placeholder="Escreva um comentário..."
-            className="min-w-0 flex-1 resize-none rounded-md border border-white/10 bg-transparent p-2 text-xs text-[#f1f1f1] outline-none placeholder:text-[#A8A095]/60 focus:ring-1 focus:ring-[#A8A095]/40"
+            className="min-w-0 flex-1 resize-none rounded-md border border-neutral-200 bg-transparent p-2 text-xs text-neutral-900 outline-none placeholder:text-neutral-400 focus:ring-1 focus:ring-neutral-300 dark:border-white/10 dark:text-[#f1f1f1] dark:placeholder:text-[#A8A095]/60 dark:focus:ring-[#A8A095]/40"
           />
           <button
             type="button"
             onClick={submit}
             disabled={submitting || !draft.trim()}
-            className="self-end rounded-md bg-[#f1f1f1] px-3 py-1.5 text-xs font-medium text-[#080808] transition-opacity disabled:opacity-40"
+            className="self-end rounded-md bg-neutral-950 px-3 py-1.5 text-xs font-medium text-white transition-opacity disabled:opacity-40 dark:bg-[#f1f1f1] dark:text-[#080808]"
           >
             {submitting ? "..." : "Enviar"}
           </button>
         </div>
       ) : (
-        <p className="border-t border-white/10 pt-2 text-xs text-[#A8A095]/75">Faça login para comentar.</p>
+        <p className="border-t border-neutral-200 pt-2 text-xs text-neutral-500 dark:border-white/10 dark:text-[#A8A095]/75">Faça login para comentar.</p>
       )}
     </aside>
   )
 }
 
-export function NoteCard({ note, isAdmin, onDelete }: Props) {
+export function NoteCard({ note, isAdmin, onDelete, cropTallImages = false }: Props) {
   const contentRef = useRef<HTMLDivElement>(null)
   const [comments, setComments] = useState<Comment[]>([])
+  const [commentsLoaded, setCommentsLoaded] = useState(false)
+  const [loadingComments, setLoadingComments] = useState(false)
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [activeImage, setActiveImage] = useState<ActiveImage | null>(null)
   const [lightboxVisible, setLightboxVisible] = useState(false)
@@ -172,22 +178,26 @@ export function NoteCard({ note, isAdmin, onDelete }: Props) {
     locale: ptBR,
   })
 
-  useEffect(() => {
-    let cancelled = false
+  async function loadComments() {
+    if (commentsLoaded || loadingComments) return
 
-    fetch(`/api/notes/${note._id}/comments`)
-      .then((response) => response.ok ? response.json() : [])
-      .then((next: Comment[]) => {
-        if (!cancelled) setComments(next)
-      })
-      .catch(() => {
-        if (!cancelled) setComments([])
-      })
-
-    return () => {
-      cancelled = true
+    setLoadingComments(true)
+    try {
+      const response = await fetch(`/api/notes/${note._id}/comments`)
+      const next = response.ok ? await response.json() as Comment[] : []
+      setComments(next)
+      setCommentsLoaded(true)
+    } catch {
+      setComments([])
+    } finally {
+      setLoadingComments(false)
     }
-  }, [note._id])
+  }
+
+  function openComments() {
+    setCommentsOpen(true)
+    void loadComments()
+  }
 
   useEffect(() => {
     if (!activeImage) return
@@ -224,6 +234,34 @@ export function NoteCard({ note, isAdmin, onDelete }: Props) {
     }
   }, [activeImage, closeLightbox])
 
+  useLayoutEffect(() => {
+    const content = contentRef.current
+    if (!content) return
+
+    const images = Array.from(content.querySelectorAll("img"))
+
+    function updateImageCrop(image: HTMLImageElement) {
+      const isTall = cropTallImages && image.naturalHeight > image.naturalWidth
+      image.dataset.timelineCropped = isTall ? "true" : "false"
+      image.parentElement?.toggleAttribute("data-timeline-crop-frame", isTall)
+    }
+
+    const cleanups = images.map((image) => {
+      if (image.complete) {
+        updateImageCrop(image)
+        return () => {}
+      }
+
+      const onLoad = () => updateImageCrop(image)
+      image.addEventListener("load", onLoad)
+      return () => image.removeEventListener("load", onLoad)
+    })
+
+    return () => {
+      cleanups.forEach((cleanup) => cleanup())
+    }
+  })
+
   function openLightbox(src: string, alt = "") {
     setActiveImage({ src, alt })
   }
@@ -234,16 +272,16 @@ export function NoteCard({ note, isAdmin, onDelete }: Props) {
     openLightbox(image.getAttribute("src") ?? "", image.getAttribute("alt") ?? "")
   }
 
-  const commentActionLabel = comments.length > 0 ? "ver comentários" : "comentar"
+  const commentActionLabel = commentsLoaded && comments.length > 0 ? "ver comentários" : "comentar"
 
   return (
-    <article className="group relative flex flex-col gap-3 border-y border-white/10 pb-6 pt-5">
+    <article className="group relative flex flex-col gap-3 border-y border-neutral-200 pb-6 pt-5 dark:border-white/10">
       <div className="flex items-center justify-between gap-3">
-        <time className="text-xs text-[#A8A095]/75">{ago}</time>
+        <time className="text-xs text-neutral-500 dark:text-[#A8A095]/75">{ago}</time>
         {isAdmin && onDelete && (
           <button
             onClick={() => onDelete(note._id)}
-            className="text-xs text-[#A8A095]/50 opacity-100 transition-colors hover:text-red-400 sm:opacity-0 sm:group-hover:opacity-100"
+            className="text-xs text-neutral-400 opacity-100 transition-colors hover:text-red-500 dark:text-[#A8A095]/50 dark:hover:text-red-400 sm:opacity-0 sm:group-hover:opacity-100"
           >
             deletar
           </button>
@@ -252,7 +290,10 @@ export function NoteCard({ note, isAdmin, onDelete }: Props) {
 
       <div
         ref={contentRef}
-        className="note-content text-[15px] leading-relaxed text-[#f1f1f1]"
+        className={[
+          "note-content text-[15px] leading-relaxed text-neutral-900 dark:text-[#f1f1f1]",
+          cropTallImages ? "note-content-timeline" : "",
+        ].filter(Boolean).join(" ")}
         onClick={handleContentClick}
         dangerouslySetInnerHTML={{ __html: note.contentHtml }}
       />
@@ -265,7 +306,7 @@ export function NoteCard({ note, isAdmin, onDelete }: Props) {
               src={url}
               alt=""
               onClick={() => openLightbox(url)}
-              className="aspect-square w-full cursor-zoom-in rounded-xl border border-white/10 object-cover"
+              className="aspect-square w-full cursor-zoom-in rounded-xl border border-neutral-200 object-cover dark:border-white/10"
             />
           ))}
         </div>
@@ -274,24 +315,28 @@ export function NoteCard({ note, isAdmin, onDelete }: Props) {
       <div className="pointer-events-none absolute bottom-0 left-0">
         <button
           type="button"
-          onClick={() => setCommentsOpen(true)}
+          onClick={openComments}
           aria-expanded={commentsOpen}
-          className="pointer-events-auto inline-flex items-center gap-1.5 text-xs text-[#A8A095]/70 opacity-100 transition-colors hover:text-[#f1f1f1] sm:opacity-0 sm:group-hover:opacity-100"
+          className="pointer-events-auto inline-flex items-center gap-1.5 text-xs text-neutral-500 opacity-100 transition-colors hover:text-neutral-950 dark:text-[#A8A095]/70 dark:hover:text-[#f1f1f1] sm:opacity-0 sm:group-hover:opacity-100"
         >
           <ChatBubbleLeftEllipsisIcon className="size-4" aria-hidden />
           <span>{commentActionLabel}</span>
-          {comments.length > 0 && <span className="tabular-nums">({comments.length})</span>}
+          {commentsLoaded && comments.length > 0 && <span className="tabular-nums">({comments.length})</span>}
         </button>
       </div>
 
       {commentsOpen && (
-        <NoteCommentsPanel
-          noteId={note._id}
-          comments={comments}
-          isAdmin={isAdmin}
-          onCommentsChange={setComments}
-          onClose={() => setCommentsOpen(false)}
-        />
+          <NoteCommentsPanel
+            noteId={note._id}
+            comments={comments}
+            loading={loadingComments}
+            isAdmin={isAdmin}
+            onCommentsChange={(next) => {
+              setComments(next)
+              setCommentsLoaded(true)
+            }}
+            onClose={() => setCommentsOpen(false)}
+          />
       )}
 
       {activeImage && (

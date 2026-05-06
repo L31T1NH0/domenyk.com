@@ -129,24 +129,24 @@ function CollapsedNotesPreview({
   const revealCount = Math.min(MAX_NOTES_BETWEEN_POSTS, notes.length)
 
   return (
-    <li className="border-b border-white/10 pb-5">
+    <li className="border-b border-neutral-200 pb-5 dark:border-white/10">
       <div className="relative max-h-36 overflow-hidden">
-        <div className="border-y border-white/10 pb-6 pt-5 opacity-65">
+        <div className="border-y border-neutral-200 pb-6 pt-5 opacity-65 dark:border-white/10">
           <time className="text-xs text-[#A8A095]/75">
             {format(new Date(previewNote.publishedAt), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}
           </time>
           <div
-            className="note-content mt-3 text-[15px] leading-relaxed text-[#f1f1f1]"
+            className="note-content mt-3 text-[15px] leading-relaxed text-neutral-900 dark:text-[#f1f1f1]"
             dangerouslySetInnerHTML={{ __html: previewNote.contentHtml }}
           />
         </div>
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent via-[#040404]/85 to-[#040404]" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent via-[#f4f4f4]/85 to-[#f4f4f4] dark:via-[#040404]/85 dark:to-[#040404]" />
       </div>
       <div className="relative -mt-7 flex justify-center gap-2">
         <button
           type="button"
           onClick={onShowMore}
-          className="inline-flex h-8 items-center rounded-full border border-white/10 bg-[#040404]/90 px-3 text-xs font-medium text-[#A8A095] shadow-sm shadow-black/20 backdrop-blur transition-colors hover:bg-white/10 hover:text-[#f1f1f1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A8A095]/35"
+          className="inline-flex h-8 items-center rounded-full border border-neutral-300 bg-white/90 px-3 text-xs font-medium text-neutral-700 shadow-sm shadow-black/10 backdrop-blur transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A8A095]/35 dark:border-white/10 dark:bg-[#040404]/90 dark:text-[#A8A095] dark:shadow-black/20 dark:hover:bg-white/10 dark:hover:text-[#f1f1f1]"
         >
           Mostrar mais {revealCount === 1 ? "1 nota" : `${revealCount} notas`}
         </button>
@@ -154,7 +154,7 @@ function CollapsedNotesPreview({
           <button
             type="button"
             onClick={onCollapse}
-            className="inline-flex h-8 items-center rounded-full bg-[#040404]/80 px-3 text-xs font-medium text-[#A8A095]/80 backdrop-blur transition-colors hover:bg-white/10 hover:text-[#f1f1f1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A8A095]/35"
+            className="inline-flex h-8 items-center rounded-full bg-white/80 px-3 text-xs font-medium text-neutral-600 backdrop-blur transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A8A095]/35 dark:bg-[#040404]/80 dark:text-[#A8A095]/80 dark:hover:bg-white/10 dark:hover:text-[#f1f1f1]"
           >
             Compactar
           </button>
@@ -166,11 +166,11 @@ function CollapsedNotesPreview({
 
 function NotesCollapseControl({ onCollapse }: { onCollapse: () => void }) {
   return (
-    <li className="flex justify-center border-b border-white/10 py-3">
+    <li className="flex justify-center border-b border-neutral-200 py-3 dark:border-white/10">
       <button
         type="button"
         onClick={onCollapse}
-        className="inline-flex h-8 items-center rounded-full px-3 text-xs font-medium text-[#A8A095]/80 transition-colors hover:bg-white/10 hover:text-[#f1f1f1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A8A095]/35"
+        className="inline-flex h-8 items-center rounded-full px-3 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-950/5 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A8A095]/35 dark:text-[#A8A095]/80 dark:hover:bg-white/10 dark:hover:text-[#f1f1f1]"
       >
         Compactar notas
       </button>
@@ -201,8 +201,8 @@ function PostTimelineItem({
     <li
       className={[
         "group relative py-5 first:pt-0",
-        showTopSeparator ? "border-t border-white/10" : "",
-        showBottomSeparator ? "border-b border-white/10" : "",
+        showTopSeparator ? "border-t border-neutral-200 dark:border-white/10" : "",
+        showBottomSeparator ? "border-b border-neutral-200 dark:border-white/10" : "",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -217,7 +217,7 @@ function PostTimelineItem({
       )}
       <Link href={`/posts/${post.publicId}`} prefetch={false} className="block text-left focus-visible:outline-none">
         {showCover ? (
-          <span className="relative block aspect-video w-full overflow-hidden rounded-2xl bg-white/5">
+          <span className="relative block aspect-video w-full overflow-hidden rounded-2xl bg-neutral-200 dark:bg-white/5">
             <Image
               src={post.cover!.url}
               alt={post.cover!.alt ?? post.title}
@@ -242,7 +242,7 @@ function PostTimelineItem({
           </span>
         ) : (
           <span className="flex min-w-0 flex-col gap-2">
-            <span className="text-lg font-normal leading-snug text-[#f1f1f1]">{post.title}</span>
+            <span className="text-lg font-normal leading-snug text-neutral-950 dark:text-[#f1f1f1]">{post.title}</span>
             <span className="flex flex-wrap items-center gap-3">
               <span className="text-xs text-[#A8A095]">{postDateLabel(post)}</span>
               <span aria-hidden className="text-[#A8A095]/40">·</span>
@@ -263,7 +263,7 @@ function PostTimelineItem({
             "absolute right-0 z-10 inline-flex min-h-8 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium opacity-100 shadow-sm backdrop-blur transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:opacity-40 sm:opacity-0 sm:group-hover:opacity-100",
             pendingHide
               ? "border-red-500/40 bg-red-500/15 text-red-200 hover:bg-red-500/25 focus-visible:ring-red-500/40"
-              : "border-white/10 bg-black/45 text-[#A8A095] hover:bg-white/10 hover:text-[#f1f1f1] focus-visible:ring-[#A8A095]/40",
+              : "border-neutral-300 bg-white/80 text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950 focus-visible:ring-[#A8A095]/40 dark:border-white/10 dark:bg-black/45 dark:text-[#A8A095] dark:hover:bg-white/10 dark:hover:text-[#f1f1f1]",
             showCover ? "top-7" : "top-4",
           ].join(" ")}
         >
@@ -423,7 +423,7 @@ export function HomeTimeline({ posts, totalPosts, initialNotes, initialCursor, i
     <section aria-label="Timeline" className="flex w-full flex-col gap-4 self-center">
       <div className="flex min-w-0 flex-col gap-4">
         <div className="flex flex-col gap-4">
-          <h1 className="flex items-center gap-1 text-sm font-semibold uppercase tracking-wide text-[#f1f1f1]">
+          <h1 className="flex items-center gap-1 text-sm font-semibold uppercase tracking-wide text-neutral-950 dark:text-[#f1f1f1]">
             Timeline
             <span className="tabular-nums font-normal">({timelineCount})</span>
           </h1>
@@ -439,8 +439,8 @@ export function HomeTimeline({ posts, totalPosts, initialNotes, initialCursor, i
                   className={[
                     "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors",
                     active
-                      ? "border-[#A8A095]/60 bg-[#A8A095]/15 text-[#f1f1f1]"
-                      : "border-white/10 text-[#A8A095] hover:bg-white/10 hover:text-[#f1f1f1]",
+                      ? "border-neutral-400 bg-neutral-950/10 text-neutral-950 dark:border-[#A8A095]/60 dark:bg-[#A8A095]/15 dark:text-[#f1f1f1]"
+                      : "border-neutral-300 text-neutral-600 hover:bg-neutral-950/5 hover:text-neutral-950 dark:border-white/10 dark:text-[#A8A095] dark:hover:bg-white/10 dark:hover:text-[#f1f1f1]",
                   ].join(" ")}
                 >
                   {option.label}
@@ -463,7 +463,7 @@ export function HomeTimeline({ posts, totalPosts, initialNotes, initialCursor, i
             {visibleItems.map((item, index) => (
               item.type === "note" ? (
                 <li key={item.id}>
-                  <NoteCard note={item.note} isAdmin={isAdmin} onDelete={handleDelete} />
+                  <NoteCard note={item.note} isAdmin={isAdmin} onDelete={handleDelete} cropTallImages />
                 </li>
               ) : item.type === "collapsed-notes" ? (
                 <CollapsedNotesPreview
@@ -499,7 +499,7 @@ export function HomeTimeline({ posts, totalPosts, initialNotes, initialCursor, i
             type="button"
             onClick={loadMoreNotes}
             disabled={loading}
-            className="self-center text-sm text-neutral-400 transition-colors hover:text-neutral-200 disabled:opacity-40"
+            className="self-center text-sm text-neutral-500 transition-colors hover:text-neutral-900 disabled:opacity-40 dark:text-neutral-400 dark:hover:text-neutral-200"
           >
             {loading ? "carregando..." : "carregar mais notas"}
           </button>
