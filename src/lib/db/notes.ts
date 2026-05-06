@@ -103,6 +103,20 @@ export async function createNote(data: { content: string; images?: string[] }): 
   return { ...note, _id: result.insertedId }
 }
 
+export async function updateNote(id: string, data: { content: string; images?: string[] }): Promise<Note | null> {
+  const objectId = toObjectId(id)
+  if (!objectId) return null
+
+  const update: Partial<Note> = { content: normalizeNoteContent(data.content) }
+  if (data.images !== undefined) update.images = data.images
+
+  return (await collection()).findOneAndUpdate(
+    { _id: objectId },
+    { $set: update },
+    { returnDocument: "after" }
+  )
+}
+
 export async function deleteNote(id: string): Promise<void> {
   const objectId = toObjectId(id)
   if (!objectId) return

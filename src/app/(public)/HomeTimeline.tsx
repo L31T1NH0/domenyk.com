@@ -370,6 +370,10 @@ export function HomeTimeline({ posts, totalPosts, initialNotes, initialCursor, i
     setNotes((prev) => prev.filter((note) => note._id !== id))
   }
 
+  function handleUpdate(updatedNote: SerializedNote) {
+    setNotes((prev) => prev.map((note) => note._id === updatedNote._id ? updatedNote : note))
+  }
+
   async function handleHidePost(postToHide: SerializedPostSummary) {
     if (!isAdmin || hidingPostId) return
     if (pendingHidePostId !== postToHide._id) {
@@ -463,7 +467,13 @@ export function HomeTimeline({ posts, totalPosts, initialNotes, initialCursor, i
             {visibleItems.map((item, index) => (
               item.type === "note" ? (
                 <li key={item.id}>
-                  <NoteCard note={item.note} isAdmin={isAdmin} onDelete={handleDelete} cropTallImages />
+                  <NoteCard
+                    note={item.note}
+                    isAdmin={isAdmin}
+                    onDelete={handleDelete}
+                    onUpdate={handleUpdate}
+                    cropTallImages
+                  />
                 </li>
               ) : item.type === "collapsed-notes" ? (
                 <CollapsedNotesPreview

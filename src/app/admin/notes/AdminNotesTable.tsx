@@ -11,6 +11,7 @@ export function AdminNotesTable({ notes: initial }: Props) {
   const [notes, setNotes] = useState(initial)
 
   async function remove(id: string) {
+    if (!window.confirm("Deletar esta nota? Esta ação não pode ser desfeita.")) return
     await fetch(`/api/admin/notes/${id}`, { method: "DELETE" })
     setNotes((prev) => prev.filter((n) => n._id !== id))
   }

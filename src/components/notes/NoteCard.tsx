@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from "react"
 import { useUser } from "@clerk/nextjs"
-import { ChatBubbleLeftEllipsisIcon, XMarkIcon } from "@heroicons/react/24/outline"
+import { ChatBubbleLeftEllipsisIcon, PencilIcon, XMarkIcon } from "@heroicons/react/24/outline"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import type { LexicalEditor as LexicalEditorInstance } from "lexical"
+import { LexicalEditor, readMarkdownFromEditor } from "@/components/editor/LexicalEditor"
 import type { SerializedNote } from "@/lib/db/notes"
 
 type Comment = {
@@ -20,6 +22,7 @@ type Props = {
   note: SerializedNote
   isAdmin?: boolean
   onDelete?: (id: string) => void
+  onUpdate?: (note: SerializedNote) => void
   cropTallImages?: boolean
 }
 
@@ -157,14 +160,20 @@ function NoteCommentsPanel({ noteId, comments, loading = false, isAdmin, onComme
   )
 }
 
-export function NoteCard({ note, isAdmin, onDelete, cropTallImages = false }: Props) {
+export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = false }: Props) {
   const contentRef = useRef<HTMLDivElement>(null)
+  const editEditorRef = useRef<LexicalEditorInstance | null>(null)
   const [comments, setComments] = useState<Comment[]>([])
   const [commentsLoaded, setCommentsLoaded] = useState(false)
   const [loadingComments, setLoadingComments] = useState(false)
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [activeImage, setActiveImage] = useState<ActiveImage | null>(null)
   const [lightboxVisible, setLightboxVisible] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editContent, setEditContent] = useState(note.content)
+  const [editSession, setEditSession] = useState(0)
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [editError, setEditError] = useState("")
   const touchStartRef = useRef(0)
   const closeThreshold = 80
 
@@ -197,6 +206,50 @@ export function NoteCard({ note, isAdmin, onDelete, cropTallImages = false }: Pr
   function openComments() {
     setCommentsOpen(true)
     void loadComments()
+  }
+
+  function startEditing() {
+    setEditContent(note.content)
+    setEditError("")
+    setEditSession((current) => current + 1)
+    setEditing(true)
+  }
+
+  function cancelEditing() {
+    setEditing(false)
+    setEditError("")
+  }
+
+  async function saveEdit() {
+    const currentContent = editEditorRef.current
+      ? readMarkdownFromEditor(editEditorRef.current)
+      : editContent.trim()
+
+    if (!currentContent || savingEdit) return
+    setSavingEdit(true)
+    setEditError("")
+
+    const response = await fetch(`/api/admin/notes/${note._id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: currentContent }),
+    })
+
+    if (response.ok) {
+      const updatedNote = await response.json() as SerializedNote
+      onUpdate?.(updatedNote)
+      setEditing(false)
+    } else {
+      const data = await response.json().catch(() => null)
+      setEditError(data?.error ?? "Não foi possível salvar a nota.")
+    }
+
+    setSavingEdit(false)
+  }
+
+  function confirmDelete() {
+    if (!window.confirm("Deletar esta nota? Esta ação não pode ser desfeita.")) return
+    onDelete?.(note._id)
   }
 
   useEffect(() => {
@@ -242,8 +295,13 @@ export function NoteCard({ note, isAdmin, onDelete, cropTallImages = false }: Pr
 
     function updateImageCrop(image: HTMLImageElement) {
       const isTall = cropTallImages && image.naturalHeight > image.naturalWidth
-      image.dataset.timelineCropped = isTall ? "true" : "false"
-      image.parentElement?.toggleAttribute("data-timeline-crop-frame", isTall)
+      const renderedWidth = image.parentElement?.clientWidth || image.clientWidth
+      const renderedHeight = renderedWidth > 0 && image.naturalWidth > 0
+        ? renderedWidth * (image.naturalHeight / image.naturalWidth)
+        : 0
+      const shouldCrop = isTall && renderedHeight > 525
+      image.dataset.timelineCropped = shouldCrop ? "true" : "false"
+      image.parentElement?.toggleAttribute("data-timeline-crop-frame", shouldCrop)
     }
 
     const cleanups = images.map((image) => {
@@ -276,27 +334,87 @@ export function NoteCard({ note, isAdmin, onDelete, cropTallImages = false }: Pr
 
   return (
     <article className="group relative flex flex-col gap-3 border-y border-neutral-200 pb-6 pt-5 dark:border-white/10">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center">
         <time className="text-xs text-neutral-500 dark:text-[#A8A095]/75">{ago}</time>
-        {isAdmin && onDelete && (
-          <button
-            onClick={() => onDelete(note._id)}
-            className="text-xs text-neutral-400 opacity-100 transition-colors hover:text-red-500 dark:text-[#A8A095]/50 dark:hover:text-red-400 sm:opacity-0 sm:group-hover:opacity-100"
-          >
-            deletar
-          </button>
+        {isAdmin && (
+          <div className="absolute right-0 top-5 flex items-center gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+            {onUpdate && !editing && (
+              <button
+                type="button"
+                onClick={startEditing}
+                aria-label="Editar nota"
+                title="Editar nota"
+                className="grid size-4 place-items-center text-neutral-400 transition-colors hover:text-neutral-950 dark:text-[#A8A095]/60 dark:hover:text-[#f1f1f1]"
+              >
+                <PencilIcon className="size-3.5" aria-hidden />
+              </button>
+            )}
+            {onDelete && !editing && (
+              <button
+                type="button"
+                onClick={confirmDelete}
+                className="text-xs leading-none text-neutral-400 transition-colors hover:text-red-500 dark:text-[#A8A095]/50 dark:hover:text-red-400"
+              >
+                deletar
+              </button>
+            )}
+          </div>
         )}
       </div>
 
-      <div
-        ref={contentRef}
-        className={[
-          "note-content text-[15px] leading-relaxed text-neutral-900 dark:text-[#f1f1f1]",
-          cropTallImages ? "note-content-timeline" : "",
-        ].filter(Boolean).join(" ")}
-        onClick={handleContentClick}
-        dangerouslySetInnerHTML={{ __html: note.contentHtml }}
-      />
+      {editing ? (
+        <div className="rounded-lg border border-neutral-200 bg-white dark:border-white/10 dark:bg-white/[0.03]">
+          <div
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) saveEdit()
+              if (event.key === "Escape") cancelEditing()
+            }}
+          >
+            <LexicalEditor
+              key={`${note._id}:${editSession}`}
+              namespace={`NoteEdit-${note._id}`}
+              initialMarkdown={note.content}
+              onChange={setEditContent}
+              placeholder="Edite a nota..."
+              shellClassName="min-h-28 px-4 py-3"
+              editorClassName="min-h-28 text-[15px]"
+              toolbarVariant="compact"
+              toolbarPlacement="bottom"
+              onChangeDelayMs={160}
+              editorRef={editEditorRef}
+            />
+          </div>
+          <div className="flex items-center justify-end gap-2 border-t border-neutral-200 px-3 py-2 dark:border-white/10">
+            {editError && <p className="mr-auto text-xs text-red-400">{editError}</p>}
+            <button
+              type="button"
+              onClick={cancelEditing}
+              disabled={savingEdit}
+              className="rounded-full px-3 py-1.5 text-xs font-medium text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-950 disabled:opacity-50 dark:text-[#A8A095] dark:hover:bg-white/10 dark:hover:text-[#f1f1f1]"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={saveEdit}
+              disabled={savingEdit || !editContent.trim()}
+              className="rounded-full bg-neutral-950 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-neutral-700 disabled:cursor-not-allowed disabled:bg-neutral-200 disabled:text-neutral-400 dark:bg-[#f1f1f1] dark:text-[#040404] dark:hover:bg-[#A8A095] dark:disabled:bg-white/25 dark:disabled:text-white/50"
+            >
+              {savingEdit ? "Salvando" : "Salvar"}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div
+          ref={contentRef}
+          className={[
+            "note-content text-[15px] leading-relaxed text-neutral-900 dark:text-[#f1f1f1]",
+            cropTallImages ? "note-content-timeline" : "",
+          ].filter(Boolean).join(" ")}
+          onClick={handleContentClick}
+          dangerouslySetInnerHTML={{ __html: note.contentHtml }}
+        />
+      )}
 
       {note.images && note.images.length > 0 && (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">

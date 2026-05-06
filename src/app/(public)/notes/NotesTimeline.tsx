@@ -33,6 +33,10 @@ export function NotesTimeline({
     setNotes((prev) => prev.filter((n) => n._id !== id))
   }
 
+  function handleUpdate(updatedNote: SerializedNote) {
+    setNotes((prev) => prev.map((note) => note._id === updatedNote._id ? updatedNote : note))
+  }
+
   async function loadMore() {
     if (!cursor || loading) return
     setLoading(true)
@@ -59,6 +63,7 @@ export function NotesTimeline({
             note={note}
             isAdmin={isAdmin}
             onDelete={handleDelete}
+            onUpdate={handleUpdate}
             cropTallImages
           />
         ))}
