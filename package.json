@@ -19,6 +19,7 @@
     "@lexical/markdown": "^0.44.0",
     "@lexical/react": "^0.44.0",
     "@lexical/rich-text": "^0.44.0",
+    "@microsoft/clarity": "^1.0.2",
     "@vercel/analytics": "^2.0.1",
     "@vercel/blob": "^2.3.3",
     "date-fns": "^4.1.0",
