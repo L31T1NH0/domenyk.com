@@ -106,6 +106,19 @@ img:hover { filter: grayscale(0); }
   @apply rounded-md w-full h-auto cursor-zoom-in;
 }
 
+.post-content [data-role="author-reference"] {
+  @apply mr-2 inline-flex h-7 w-7 items-center justify-center align-middle;
+}
+
+.post-content [data-role="author-reference"][data-kind="co-author"]:empty {
+  @apply rounded-full bg-zinc-800/60;
+}
+
+.post-content [data-role="author-reference"] > img {
+  @apply h-7 w-7 rounded-full object-cover cursor-default;
+  filter: none;
+}
+
 .post-content p:has(> img:only-child) {
   @apply relative block my-2 p-0 mx-0;
   background: transparent;

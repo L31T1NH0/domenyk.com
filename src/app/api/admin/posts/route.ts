@@ -49,6 +49,8 @@ export async function POST(req: NextRequest) {
       excerpt: asOptionalString(body.excerpt, 500),
       cover,
       showCoverInTimeline: Boolean(cover) && body.showCoverInTimeline !== false,
+      friendImage: asHttpUrl(body.friendImage),
+      coAuthorUserId: asOptionalString(body.coAuthorUserId, 120) ?? null,
       audioUrl: asHttpUrl(body.audioUrl),
       background: parseBackground(body.background),
       tags: asStringArray(body.tags, 20, 40),

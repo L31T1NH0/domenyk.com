@@ -28,6 +28,8 @@ export default async function EditPostPage({ params }: Props) {
         hiddenFromTimeline: post.hiddenFromTimeline,
         cover: post.cover,
         showCoverInTimeline: post.showCoverInTimeline,
+        friendImage: post.friendImage,
+        coAuthorUserId: post.coAuthorUserId,
         audioUrl: post.audioUrl,
       }}
     />

@@ -52,6 +52,8 @@ function parsePostPatch(body: Record<string, unknown>) {
   if ("pinned" in body) data.pinned = body.pinned === true
   if ("cover" in body) data.cover = body.cover === null ? undefined : parseCover(body.cover)
   if ("showCoverInTimeline" in body) data.showCoverInTimeline = body.showCoverInTimeline === true
+  if ("friendImage" in body) data.friendImage = asHttpUrl(body.friendImage)
+  if ("coAuthorUserId" in body) data.coAuthorUserId = asOptionalString(body.coAuthorUserId, 120) ?? null
   if ("audioUrl" in body) data.audioUrl = asHttpUrl(body.audioUrl)
   if ("background" in body) data.background = parseBackground(body.background)
 

@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { clerkClient } from "@clerk/nextjs/server"
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 import { getPostByPublicId, getPostBySlug } from "@/lib/db/posts"
@@ -81,8 +82,19 @@ export default async function PostPage({ params }: Props) {
   const admin = await isAdmin()
   if (!post.published && !admin) notFound()
 
+  let coAuthorImageUrl = post.friendImage ?? null
+  if (post.coAuthorUserId) {
+    try {
+      const client = await clerkClient()
+      const user = await client.users.getUser(post.coAuthorUserId)
+      coAuthorImageUrl = user.imageUrl ?? coAuthorImageUrl
+    } catch {
+      coAuthorImageUrl = post.friendImage ?? null
+    }
+  }
+
   const postId = post._id.toString()
-  const html = await renderMarkdown(post.content)
+  const html = await renderMarkdown(post.content, { coAuthorImageUrl })
   const dateLabel = post.publishedAt
     ? format(new Date(post.publishedAt), "d 'de' MMMM 'de' yyyy", { locale: ptBR })
     : undefined
@@ -120,7 +132,7 @@ export default async function PostPage({ params }: Props) {
         title={post.title}
         subtitle={subtitle}
         cover={post.cover}
-        secondaryImage={post.friendImage}
+        secondaryImage={coAuthorImageUrl}
         background={post.background}
       />
 

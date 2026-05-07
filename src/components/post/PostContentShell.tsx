@@ -66,6 +66,7 @@ export function PostContentShell({ html, className }: Props) {
   function handleClick(event: MouseEvent<HTMLDivElement>) {
     const image = (event.target as HTMLElement).closest("img")
     if (!image || !ref.current?.contains(image)) return
+    if (image.closest('[data-role="author-reference"]')) return
     setActiveImage({
       src: image.getAttribute("src") ?? "",
       alt: image.getAttribute("alt") ?? "",

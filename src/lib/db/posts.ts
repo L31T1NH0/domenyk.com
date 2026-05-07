@@ -196,6 +196,8 @@ export async function createPost(data: {
   excerpt?: string
   cover?: Post["cover"]
   showCoverInTimeline?: boolean
+  friendImage?: string
+  coAuthorUserId?: string | null
   audioUrl?: string
   background?: Post["background"]
   tags?: string[]
@@ -212,6 +214,8 @@ export async function createPost(data: {
     excerpt: data.excerpt,
     cover: data.cover,
     showCoverInTimeline: data.showCoverInTimeline ?? true,
+    friendImage: data.friendImage,
+    coAuthorUserId: data.coAuthorUserId ?? null,
     audioUrl: data.audioUrl,
     background: data.background,
     tags: data.tags ?? [],

@@ -1,8 +1,14 @@
 "use client"
 
-import { useState, useCallback, useRef } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { LexicalEditor } from "./LexicalEditor"
+
+type CoAuthorOption = {
+  id: string
+  name: string
+  imageUrl: string | null
+}
 
 type PostData = {
   id?: string
@@ -15,6 +21,8 @@ type PostData = {
   cover?: { url: string; alt?: string }
   showCoverInTimeline?: boolean
   hiddenFromTimeline?: boolean
+  friendImage?: string
+  coAuthorUserId?: string | null
   audioUrl?: string
 }
 
@@ -45,6 +53,10 @@ export function PostEditor({ post }: Props) {
   const [coverUrl, setCoverUrl] = useState(post?.cover?.url ?? "")
   const [coverAlt, setCoverAlt] = useState(post?.cover?.alt ?? "")
   const [showCoverInTimeline, setShowCoverInTimeline] = useState(post?.showCoverInTimeline ?? true)
+  const [friendImage, setFriendImage] = useState(post?.friendImage ?? "")
+  const [coAuthorUserId, setCoAuthorUserId] = useState(post?.coAuthorUserId ?? "")
+  const [coAuthors, setCoAuthors] = useState<CoAuthorOption[]>([])
+  const [loadingCoAuthors, setLoadingCoAuthors] = useState(true)
   const [audioUrl, setAudioUrl] = useState(post?.audioUrl ?? "")
   const [content, setContent] = useState(post?.content ?? "")
   const [saving, setSaving] = useState(false)
@@ -60,6 +72,32 @@ export function PostEditor({ post }: Props) {
   const handleContentChange = useCallback((markdown: string) => {
     setContent(markdown)
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    fetch("/api/admin/users")
+      .then((res) => res.ok ? res.json() : { users: [] })
+      .then((data: { users?: CoAuthorOption[] }) => {
+        if (!cancelled) setCoAuthors(data.users ?? [])
+      })
+      .catch(() => {
+        if (!cancelled) setCoAuthors([])
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingCoAuthors(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  function handleCoAuthorChange(value: string) {
+    setCoAuthorUserId(value)
+    const user = coAuthors.find((item) => item.id === value)
+    setFriendImage(user?.imageUrl ?? "")
+  }
 
   async function uploadCover(file: File) {
     setUploadingCover(true)
@@ -98,6 +136,8 @@ export function PostEditor({ post }: Props) {
       hiddenFromTimeline: !visibleInTimeline,
       cover: coverUrl.trim() ? { url: coverUrl.trim(), alt: coverAlt || title } : null,
       showCoverInTimeline: Boolean(coverUrl.trim()) && showCoverInTimeline,
+      friendImage: friendImage.trim() || undefined,
+      coAuthorUserId: coAuthorUserId.trim() || null,
       audioUrl: audioUrl.trim() || undefined,
     }
 
@@ -208,6 +248,37 @@ export function PostEditor({ post }: Props) {
             rows={2}
             className="text-sm bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-neutral-300 resize-none"
           />
+        </div>
+
+        <div className="grid gap-3 rounded-xl border border-neutral-200 p-3 dark:border-neutral-800">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-neutral-400">Coautor</label>
+            <select
+              value={coAuthorUserId}
+              onChange={(e) => handleCoAuthorChange(e.target.value)}
+              className="text-sm bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1 outline-none"
+            >
+              <option value="">Sem coautor</option>
+              {coAuthors.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.name}
+                </option>
+              ))}
+            </select>
+            <span className="text-xs text-neutral-500">
+              {loadingCoAuthors ? "Carregando usuários..." : "Usado pelo token @co-autor no texto."}
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-neutral-400">Imagem do coautor</label>
+            <input
+              value={friendImage}
+              onChange={(e) => setFriendImage(e.target.value)}
+              placeholder="https://..."
+              className="text-sm bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-neutral-300"
+            />
+          </div>
         </div>
 
         <div className="grid gap-3 rounded-xl border border-neutral-200 p-3 dark:border-neutral-800">
