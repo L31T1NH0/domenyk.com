@@ -107,7 +107,9 @@ img:hover { filter: grayscale(0); }
 }
 
 .post-content [data-role="author-reference"] {
-  @apply mr-2 inline-flex h-7 w-7 items-center justify-center align-middle;
+  @apply mr-1 inline-flex items-center justify-center align-baseline;
+  width: 1em;
+  height: 1em;
 }
 
 .post-content [data-role="author-reference"][data-kind="co-author"]:empty {
@@ -115,8 +117,11 @@ img:hover { filter: grayscale(0); }
 }
 
 .post-content [data-role="author-reference"] > img {
-  @apply h-7 w-7 rounded-full object-cover cursor-default;
+  @apply rounded-full object-cover cursor-default;
+  width: 1em;
+  height: 1em;
   filter: none;
+  vertical-align: -0.125em;
 }
 
 .post-content p:has(> img:only-child) {
