@@ -101,7 +101,7 @@ export async function getComments(
   const col = await collection()
   const filter: Record<string, unknown> = { postId: objectId }
   if (paragraphId !== undefined) filter.paragraphId = paragraphId
-  else filter.paragraphId = { $exists: false }
+  else filter.$or = [{ paragraphId: { $exists: false } }, { paragraphId: null }]
   const comments = await col.find(filter).sort({ createdAt: 1 }).toArray()
   return comments.map(normalizeComment)
 }
@@ -130,7 +130,6 @@ export async function createComment(data: {
   const now = new Date()
   const comment: Omit<Comment, "_id"> = {
     postId: postObjectId,
-    paragraphId: data.paragraphId,
     authorId: data.authorId,
     authorName: data.authorName,
     authorImageUrl: data.authorImageUrl,
@@ -138,6 +137,7 @@ export async function createComment(data: {
     createdAt: now,
     updatedAt: now,
   }
+  if (data.paragraphId !== undefined) comment.paragraphId = data.paragraphId
   const result = await col.insertOne(comment as Comment)
   return { ...comment, _id: result.insertedId }
 }
