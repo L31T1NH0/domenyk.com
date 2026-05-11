@@ -79,7 +79,7 @@ img:hover { filter: grayscale(0); }
 .post-content h3,
 .post-content h4,
 .post-content h5 {
-  @apply mt-6 mb-2 text-[#f1f1f1];
+  @apply m-0 text-[#f1f1f1];
 }
 
 .post-content h1,
@@ -100,7 +100,7 @@ img:hover { filter: grayscale(0); }
 }
 
 .post-content h6 {
-  @apply text-sm font-extralight bg-zinc-950 px-2 py-1 rounded-md max-w-fit;
+  @apply m-0 text-sm font-extralight bg-zinc-950 px-2 py-1 rounded-md max-w-fit;
 }
 
 html.light-mode [data-public-shell] .post-content h1,
@@ -269,6 +269,15 @@ html.light-mode [data-public-shell] .post-content h5 {
 
 .post-content-opinion strong {
   color: #ffffff;
+}
+
+.post-content h1,
+.post-content h2,
+.post-content h3,
+.post-content h4,
+.post-content h5,
+.post-content h6 {
+  margin-block: 0;
 }
 
 html.light-mode [data-public-shell] .post-style-editorial {
