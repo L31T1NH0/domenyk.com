@@ -2,7 +2,8 @@
 
 import { useState, useCallback, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { LexicalEditor } from "./LexicalEditor"
+import type { LexicalEditor as LexicalEditorInstance } from "lexical"
+import { LexicalEditor, readMarkdownFromEditor } from "./LexicalEditor"
 
 type CoAuthorOption = {
   id: string
@@ -63,6 +64,7 @@ export function PostEditor({ post }: Props) {
   const [uploadingCover, setUploadingCover] = useState(false)
   const [error, setError] = useState("")
   const coverFileRef = useRef<HTMLInputElement>(null)
+  const editorRef = useRef<LexicalEditorInstance | null>(null)
 
   function handleTitleChange(value: string) {
     setTitle(value)
@@ -118,7 +120,9 @@ export function PostEditor({ post }: Props) {
   }
 
   async function save(publish?: boolean) {
-    if (!title || !slug || !content) {
+    const latestContent = editorRef.current ? readMarkdownFromEditor(editorRef.current) : content
+
+    if (!title || !slug || !latestContent) {
       setError("Título, slug e conteúdo são obrigatórios.")
       return
     }
@@ -129,7 +133,7 @@ export function PostEditor({ post }: Props) {
     const body = {
       title,
       slug,
-      content,
+      content: latestContent,
       excerpt: excerpt || undefined,
       tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
       style,
@@ -140,6 +144,8 @@ export function PostEditor({ post }: Props) {
       coAuthorUserId: coAuthorUserId.trim() || null,
       audioUrl: audioUrl.trim() || undefined,
     }
+
+    setContent(latestContent)
 
     let res: Response
     if (isEditing) {
@@ -341,7 +347,7 @@ export function PostEditor({ post }: Props) {
       </div>
 
       <div className="border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden">
-        <LexicalEditor initialMarkdown={content} onChange={handleContentChange} />
+        <LexicalEditor initialMarkdown={content} onChange={handleContentChange} editorRef={editorRef} />
       </div>
     </div>
   )
