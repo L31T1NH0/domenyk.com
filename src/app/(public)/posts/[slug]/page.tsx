@@ -16,7 +16,7 @@ import { AudioPlayer } from "@/components/AudioPlayer"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import type { PostStyle } from "@/lib/db/posts"
-import { absoluteUrl, buildPageMetadata, jsonLd, siteConfig } from "@/lib/seo"
+import { absoluteUrl, buildPageMetadata, descriptionFromMarkdown, jsonLd, siteConfig } from "@/lib/seo"
 
 type Props = { params: Promise<{ slug: string }> }
 
@@ -57,14 +57,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug: publicId } = await params
   const post = (await getPostByPublicId(publicId)) ?? (await getPostBySlug(publicId))
   if (!post) return {}
+  const admin = await isAdmin()
+  if (!post.published && !admin) {
+    return { robots: { index: false, follow: false } }
+  }
+
   const canonicalPath = `/posts/${post.publicId}`
-  const description = post.excerpt ?? post.subtitle ?? siteConfig.description
+  const description = (post.excerpt ?? post.subtitle ?? descriptionFromMarkdown(post.content)) || siteConfig.description
 
   return buildPageMetadata({
     title: post.title,
     description,
     path: canonicalPath,
-    image: post.cover?.url ?? siteConfig.image,
+    image: post.cover?.url ?? `/og/posts/${post.publicId}`,
     type: "article",
     publishedTime: post.publishedAt?.toISOString(),
     modifiedTime: post.updatedAt.toISOString(),
@@ -99,6 +104,7 @@ export default async function PostPage({ params }: Props) {
     ? format(new Date(post.publishedAt), "d 'de' MMMM 'de' yyyy", { locale: ptBR })
     : undefined
   const subtitle = post.subtitle ?? post.excerpt
+  const description = (post.excerpt ?? post.subtitle ?? descriptionFromMarkdown(post.content)) || siteConfig.description
   const styleClasses = getPostStyleClasses(post.style ?? "standard")
   const styleLabel = styleLabels[post.style ?? "standard"]
   const postUrl = absoluteUrl(`/posts/${post.publicId}`)
@@ -115,7 +121,7 @@ export default async function PostPage({ params }: Props) {
             "@id": `${postUrl}#article`,
             mainEntityOfPage: postUrl,
             headline: post.title,
-            description: post.excerpt ?? subtitle ?? siteConfig.description,
+            description,
             image: [postImage],
             datePublished: post.publishedAt?.toISOString(),
             dateModified: post.updatedAt.toISOString(),

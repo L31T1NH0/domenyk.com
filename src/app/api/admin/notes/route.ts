@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createNote, normalizeNoteContent, serializeNote } from "@/lib/db/notes"
 import { requireAdmin } from "@/lib/auth"
-import { asString, asStringArray } from "@/lib/validation"
+import { asHttpUrlArray, asString } from "@/lib/validation"
 
 export async function POST(req: NextRequest) {
   await requireAdmin()
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "content é obrigatório" }, { status: 400 })
   }
 
-  const images = asStringArray(body?.images, 6, 2048)
+  const images = asHttpUrlArray(body?.images, 6)
   const note = await createNote({ content: normalizedContent, images })
   return NextResponse.json(serializeNote(note), { status: 201 })
 }

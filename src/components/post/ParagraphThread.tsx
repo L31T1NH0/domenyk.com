@@ -68,8 +68,8 @@ export function ParagraphThread({ postId, paragraphId, isAdmin = false, autoFocu
   }
 
 	  async function remove(id: string) {
-	    await fetch(`/api/admin/comments/${id}`, { method: "DELETE" })
-	    setComments((prev) => prev.filter((c) => c._id !== id))
+	    const res = await fetch(`/api/comments/by-id/${id}`, { method: "DELETE" })
+	    if (res.ok) setComments((prev) => prev.filter((c) => c._id !== id))
 	  }
 
   return (

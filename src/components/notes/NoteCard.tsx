@@ -69,8 +69,8 @@ function NoteCommentsPanel({ noteId, comments, loading = false, isAdmin, onComme
   }
 
   async function remove(id: string) {
-    await fetch(`/api/admin/comments/${id}`, { method: "DELETE" })
-    onCommentsChange(comments.filter((comment) => comment._id !== id))
+    const res = await fetch(`/api/comments/by-id/${id}`, { method: "DELETE" })
+    if (res.ok) onCommentsChange(comments.filter((comment) => comment._id !== id))
   }
 
   return (

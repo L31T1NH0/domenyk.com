@@ -263,24 +263,28 @@ export async function publishPost(id: string, publish: boolean): Promise<void> {
   if (!objectId) throw new Error("Invalid post id")
 
   const col = await collection()
-  await col.updateOne(
-    { _id: objectId },
-    {
-      $set: {
-        published: publish,
-        publishedAt: publish ? new Date() : undefined,
-        updatedAt: new Date(),
-      },
-    }
-  )
+  const $set: Record<string, unknown> = {
+    published: publish,
+    updatedAt: new Date(),
+  }
+  const update: { $set: Record<string, unknown>; $unset?: Record<string, ""> } = { $set }
+
+  if (publish) {
+    $set.publishedAt = new Date()
+  } else {
+    update.$unset = { publishedAt: "" }
+  }
+
+  await col.updateOne({ _id: objectId }, update)
 }
 
-export async function deletePost(id: string): Promise<void> {
+export async function deletePost(id: string): Promise<boolean> {
   const objectId = toObjectId(id)
   if (!objectId) throw new Error("Invalid post id")
 
   const col = await collection()
-  await col.deleteOne({ _id: objectId })
+  const result = await col.deleteOne({ _id: objectId })
+  return result.deletedCount === 1
 }
 
 export async function ensureIndexes(): Promise<void> {

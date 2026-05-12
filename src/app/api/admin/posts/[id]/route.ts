@@ -97,6 +97,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   const { id } = await params
   if (!toObjectId(id)) return NextResponse.json({ error: "ID inválido" }, { status: 400 })
 
-  await deletePost(id)
+  const deleted = await deletePost(id)
+  if (!deleted) return NextResponse.json({ error: "Post não encontrado" }, { status: 404 })
   return NextResponse.json({ ok: true })
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { deleteNote, normalizeNoteContent, serializeNote, updateNote } from "@/lib/db/notes"
 import { requireAdmin } from "@/lib/auth"
-import { asString, asStringArray, toObjectId } from "@/lib/validation"
+import { asHttpUrlArray, asString, toObjectId } from "@/lib/validation"
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   await requireAdmin()
@@ -16,7 +16,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "content é obrigatório" }, { status: 400 })
   }
 
-  const images = body && "images" in body ? asStringArray(body.images, 6, 2048) : undefined
+  const images = body && "images" in body ? asHttpUrlArray(body.images, 6) : undefined
   const note = await updateNote(id, { content: normalizedContent, images })
 
   if (!note) return NextResponse.json({ error: "Nota não encontrada" }, { status: 404 })

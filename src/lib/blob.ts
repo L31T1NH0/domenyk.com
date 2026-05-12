@@ -1,5 +1,13 @@
 import { put, del, list } from "@vercel/blob"
 
+const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"])
+
+export const ACCEPTED_IMAGE_MIME_TYPES = Array.from(ALLOWED_IMAGE_TYPES).join(",")
+
+export function isAllowedImageType(type: string): boolean {
+  return ALLOWED_IMAGE_TYPES.has(type.toLowerCase())
+}
+
 function safeFilename(filename: string): string {
   const normalized = filename
     .normalize("NFKD")

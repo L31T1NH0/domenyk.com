@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createNote, getNotes, normalizeNoteContent, serializeNote } from "@/lib/db/notes"
 import { isAdmin } from "@/lib/auth"
-import { asString, toObjectId } from "@/lib/validation"
+import { asHttpUrlArray, asString, toObjectId } from "@/lib/validation"
 
 export async function GET(req: NextRequest) {
   const cursor = req.nextUrl.searchParams.get("cursor") ?? undefined
@@ -26,9 +26,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "content é obrigatório" }, { status: 400 })
   }
 
-  const images = Array.isArray(body?.images)
-    ? body.images.filter((image): image is string => typeof image === "string").slice(0, 6)
-    : []
+  const images = asHttpUrlArray(body?.images, 6)
 
   const note = await createNote({ content: normalizedContent, images })
   return NextResponse.json(serializeNote(note), { status: 201 })

@@ -55,6 +55,7 @@ export function PostsTable({ posts: initial }: Props) {
   const [visibility, setVisibility] = useState<VisibilityFilter>("all")
   const [showConfig, setShowConfig] = useState(false)
   const [busyAction, setBusyAction] = useState<string | null>(null)
+  const [actionError, setActionError] = useState("")
   const [visibleColumns, setVisibleColumns] = useState<Record<ColumnKey, boolean>>({
     status: true,
     date: true,
@@ -99,21 +100,34 @@ export function PostsTable({ posts: initial }: Props) {
   }
 
   async function togglePublish(id: string, published: boolean) {
-    await patchPost(id, { published: !published })
-    setPosts((prev) => prev.map((p) => (p._id === id ? { ...p, published: !published } : p)))
+    setActionError("")
+    try {
+      await patchPost(id, { published: !published })
+      setPosts((prev) => prev.map((p) => (p._id === id ? { ...p, published: !published } : p)))
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Não foi possível atualizar o post.")
+    }
   }
 
   async function togglePin(id: string, pinned: boolean) {
-    await patchPost(id, { pinned: !pinned })
-    setPosts((prev) => prev.map((p) => (p._id === id ? { ...p, pinned: !pinned } : p)))
+    setActionError("")
+    try {
+      await patchPost(id, { pinned: !pinned })
+      setPosts((prev) => prev.map((p) => (p._id === id ? { ...p, pinned: !pinned } : p)))
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Não foi possível atualizar o post.")
+    }
   }
 
   async function hideFromTimeline(ids: string[]) {
     setBusyAction("hide")
+    setActionError("")
     try {
       await Promise.all(ids.map((id) => patchPost(id, { hiddenFromTimeline: true })))
       setPosts((prev) => prev.map((post) => (ids.includes(post._id) ? { ...post, hiddenFromTimeline: true } : post)))
       setSelected({})
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Não foi possível ocultar os posts.")
     } finally {
       setBusyAction(null)
     }
@@ -122,10 +136,14 @@ export function PostsTable({ posts: initial }: Props) {
   async function remove(ids: string[]) {
     if (!confirm(ids.length === 1 ? "Deletar este post?" : `Deletar ${ids.length} posts?`)) return
     setBusyAction("delete")
+    setActionError("")
     try {
-      await Promise.all(ids.map((id) => fetch(`/api/admin/posts/${id}`, { method: "DELETE" })))
+      const responses = await Promise.all(ids.map((id) => fetch(`/api/admin/posts/${id}`, { method: "DELETE" })))
+      if (responses.some((res) => !res.ok)) throw new Error("Não foi possível deletar todos os posts.")
       setPosts((prev) => prev.filter((post) => !ids.includes(post._id)))
       setSelected({})
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Não foi possível deletar os posts.")
     } finally {
       setBusyAction(null)
     }
@@ -133,6 +151,7 @@ export function PostsTable({ posts: initial }: Props) {
 
   async function download(ids: string[]) {
     setBusyAction("download")
+    setActionError("")
     try {
       const res = await fetch("/api/admin/posts/download", {
         method: "POST",
@@ -148,6 +167,8 @@ export function PostsTable({ posts: initial }: Props) {
       anchor.download = `posts-${new Date().toISOString().slice(0, 10)}.md`
       anchor.click()
       URL.revokeObjectURL(url)
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Não foi possível exportar os posts.")
     } finally {
       setBusyAction(null)
     }
@@ -237,6 +258,12 @@ export function PostsTable({ posts: initial }: Props) {
             </div>
           </div>
         </div>
+
+        {actionError && (
+          <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
+            {actionError}
+          </p>
+        )}
 
         {selectedIds.length > 0 && (
           <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 dark:border-white/10 dark:bg-white/5">

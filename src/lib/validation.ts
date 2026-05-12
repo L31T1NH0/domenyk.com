@@ -46,3 +46,11 @@ export function asHttpUrl(value: unknown, maxLength = 2048): string | undefined 
     return undefined
   }
 }
+
+export function asHttpUrlArray(value: unknown, maxItems: number, maxLength = 2048): string[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((item) => asHttpUrl(item, maxLength))
+    .filter((item): item is string => Boolean(item))
+    .slice(0, maxItems)
+}

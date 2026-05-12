@@ -139,6 +139,14 @@ function rehypeParagraphIds() {
   }
 }
 
+function rehypeDemoteBodyH1() {
+  return (tree: Root) => {
+    visit(tree, "element", (node: Element) => {
+      if (node.tagName === "h1") node.tagName = "h2"
+    })
+  }
+}
+
 function createProcessor(options: MarkdownRenderOptions = {}) {
   return unified()
     .use(remarkParse)
@@ -169,6 +177,7 @@ function createProcessor(options: MarkdownRenderOptions = {}) {
       },
     })
     .use(rehypeParagraphIds)
+    .use(rehypeDemoteBodyH1)
     .use(rehypeSlug)
     .use(rehypeAutolinkHeadings, { behavior: "wrap" })
     .use(rehypeStringify)

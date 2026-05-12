@@ -76,7 +76,7 @@ export function MediaLibrary({ initialMedia }: Props) {
         <input
           ref={fileRef}
           type="file"
-          accept="image/*"
+          accept="image/png,image/jpeg,image/webp,image/gif"
           className="hidden"
           onChange={(e) => { if (e.target.files?.[0]) upload(e.target.files[0]) }}
         />

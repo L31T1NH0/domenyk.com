@@ -7,7 +7,7 @@ export const siteConfig = {
   description: "Blog pessoal de Domenyk com textos, notas e opiniões sobre tecnologia, cultura e internet.",
   url: getSiteUrl(),
   locale: "pt_BR",
-  image: "/images/profile.jpg",
+  image: "/opengraph-image",
 }
 
 function getSiteUrl() {
@@ -24,6 +24,22 @@ function getSiteUrl() {
 export function absoluteUrl(path = "/") {
   if (/^https?:\/\//.test(path)) return path
   return `${siteConfig.url}${path.startsWith("/") ? path : `/${path}`}`
+}
+
+export function descriptionFromMarkdown(markdown: string, maxLength = 155): string {
+  const text = markdown
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`[^`]*`/g, " ")
+    .replace(/!\[[^\]]*]\([^)]*\)/g, " ")
+    .replace(/\[([^\]]+)]\([^)]*\)/g, "$1")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/[#>*_~\-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+
+  if (text.length <= maxLength) return text
+  const truncated = text.slice(0, maxLength + 1)
+  return `${truncated.slice(0, truncated.lastIndexOf(" ") || maxLength).trim()}...`
 }
 
 export function buildPageMetadata({
@@ -48,7 +64,8 @@ export function buildPageMetadata({
   noIndex?: boolean
 } = {}): Metadata {
   const url = absoluteUrl(path)
-  const images = [{ url: image, width: 1200, height: 630, alt: title ?? siteConfig.title }]
+  const imageUrl = absoluteUrl(image)
+  const images = [{ url: imageUrl, width: 1200, height: 630, alt: title ?? siteConfig.title }]
 
   return {
     title,
@@ -71,7 +88,7 @@ export function buildPageMetadata({
       card: "summary_large_image",
       title: title ?? siteConfig.title,
       description,
-      images: [image],
+      images: [imageUrl],
     },
   }
 }

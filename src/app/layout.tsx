@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { ClerkProvider } from "@clerk/nextjs"
 import { Analytics } from "@vercel/analytics/next"
 import Script from "next/script"
-import { jsonLd, siteConfig } from "@/lib/seo"
+import { absoluteUrl, jsonLd, siteConfig } from "@/lib/seo"
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -23,13 +23,13 @@ export const metadata: Metadata = {
     siteName: siteConfig.name,
     locale: siteConfig.locale,
     type: "website",
-    images: [{ url: siteConfig.image, width: 1200, height: 630, alt: siteConfig.author }],
+    images: [{ url: absoluteUrl(siteConfig.image), width: 1200, height: 630, alt: siteConfig.author }],
   },
   twitter: {
     card: "summary_large_image",
     title: siteConfig.title,
     description: siteConfig.description,
-    images: [siteConfig.image],
+    images: [absoluteUrl(siteConfig.image)],
   },
   robots: {
     index: true,
@@ -77,7 +77,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 		                  "@id": `${siteConfig.url}/#person`,
 		                  name: siteConfig.author,
 		                  url: siteConfig.url,
-		                  image: `${siteConfig.url}${siteConfig.image}`,
+		                  image: absoluteUrl("/images/profile.jpg"),
 		                },
 		              ],
 		            }),

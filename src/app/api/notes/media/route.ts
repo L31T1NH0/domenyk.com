@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { uploadImage } from "@/lib/blob"
+import { uploadImage, isAllowedImageType } from "@/lib/blob"
 import { isAdmin } from "@/lib/auth"
 
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024
@@ -16,8 +16,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Nenhum arquivo enviado" }, { status: 400 })
   }
 
-  if (!file.type.startsWith("image/")) {
-    return NextResponse.json({ error: "Arquivo inválido. Envie uma imagem." }, { status: 400 })
+  if (!isAllowedImageType(file.type)) {
+    return NextResponse.json({ error: "Arquivo inválido. Envie PNG, JPG, WebP ou GIF." }, { status: 400 })
   }
 
   if (file.size > MAX_IMAGE_SIZE_BYTES) {
