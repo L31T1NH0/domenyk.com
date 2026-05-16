@@ -77,7 +77,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
               #{tag}
             </div>
           )) : (
-            <div style={{ fontSize: 24, color: "#E00070" }}>Blog pessoal</div>
+            <div style={{ fontSize: 24, color: "#E00070" }}>Política e liberalismo</div>
           )}
         </div>
       </div>

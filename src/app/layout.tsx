@@ -13,8 +13,8 @@ export const metadata: Metadata = {
   authors: [{ name: siteConfig.author, url: siteConfig.url }],
   creator: siteConfig.author,
   publisher: siteConfig.author,
-  category: "personal blog",
-  keywords: ["Domenyk", "blog pessoal", "opinião", "tecnologia", "cultura", "internet"],
+  category: "politics",
+  keywords: ["Domenyk", "política", "liberalismo", "ideias", "opinião", "debate público"],
   alternates: { canonical: "/" },
   openGraph: {
     title: siteConfig.title,

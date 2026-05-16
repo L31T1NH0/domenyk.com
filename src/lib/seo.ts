@@ -4,7 +4,7 @@ export const siteConfig = {
   name: "domenyk",
   author: "Domenyk",
   title: "domenyk",
-  description: "Blog pessoal de Domenyk com textos, notas e opiniões sobre tecnologia, cultura e internet.",
+  description: "Blog de Domenyk sobre política, liberalismo, ideias e debate público.",
   url: getSiteUrl(),
   locale: "pt_BR",
   image: "/opengraph-image",
