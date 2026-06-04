@@ -33,6 +33,9 @@ type ActiveImage = {
   alt: string
 }
 
+const TIMELINE_IMAGE_CROP_HEIGHT = 525
+const TIMELINE_IMAGE_CROP_MIN_RATIO = 1.12
+
 type NoteCommentsPanelProps = {
   noteId: string
   comments: Comment[]
@@ -307,12 +310,13 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
     const images = Array.from(content.querySelectorAll("img"))
 
     function updateImageCrop(image: HTMLImageElement) {
-      const isTall = cropTallImages && image.naturalHeight > image.naturalWidth
+      const aspectRatio = image.naturalWidth > 0 ? image.naturalHeight / image.naturalWidth : 0
+      const isTall = cropTallImages && aspectRatio >= TIMELINE_IMAGE_CROP_MIN_RATIO
       const renderedWidth = image.parentElement?.clientWidth || image.clientWidth
       const renderedHeight = renderedWidth > 0 && image.naturalWidth > 0
-        ? renderedWidth * (image.naturalHeight / image.naturalWidth)
+        ? renderedWidth * aspectRatio
         : 0
-      const shouldCrop = isTall && renderedHeight > 525
+      const shouldCrop = isTall && renderedHeight > TIMELINE_IMAGE_CROP_HEIGHT
       image.dataset.timelineCropped = shouldCrop ? "true" : "false"
       image.parentElement?.toggleAttribute("data-timeline-crop-frame", shouldCrop)
     }

@@ -10,15 +10,18 @@ import { ptBR } from "date-fns/locale"
 import { NoteCard } from "@/components/notes/NoteCard"
 import { NoteComposer } from "@/components/notes/NoteComposer"
 import { AutoFitText } from "@/components/text/AutoFitText"
-import { usePretextContentFontSize } from "@/components/text/usePretextTextMetrics"
 import type { SerializedNote } from "@/lib/db/notes"
 import type { SerializedPostSummary } from "@/lib/db/posts"
 
 type Props = {
   posts: SerializedPostSummary[]
   totalPosts: number
+  totalNotes: number
   initialNotes: SerializedNote[]
-  initialCursor: string | null
+  feedMode: FeedMode
+  currentPage: number
+  pageSize: number
+  totalPages: number
   isAdmin: boolean
 }
 
@@ -27,14 +30,9 @@ type TimelineItem =
   | { type: "post"; id: string; date: string; post: SerializedPostSummary }
 
 type TimelineDisplayItem =
-  | TimelineItem
-  | { type: "collapsed-notes"; id: string; groupId: string; date: string; notes: SerializedNote[]; expandedCount: number }
-  | { type: "notes-collapse-control"; id: string; groupId: string; date: string }
+  TimelineItem
 
 type FeedMode = "all" | "posts" | "notes"
-type NoteTimelineItem = Extract<TimelineItem, { type: "note" }>
-
-const MAX_NOTES_BETWEEN_POSTS = 3
 
 function postDate(post: SerializedPostSummary) {
   return post.publishedAt ?? post.createdAt
@@ -53,140 +51,11 @@ function itemHasCoverPost(item: TimelineDisplayItem | undefined) {
 }
 
 function itemNeedsTextSeparator(item: TimelineDisplayItem | undefined) {
-  return item?.type === "note" || item?.type === "collapsed-notes" || (item?.type === "post" && !postShowsTimelineCover(item.post))
+  return item?.type === "note" || (item?.type === "post" && !postShowsTimelineCover(item.post))
 }
 
 function itemShouldHaveTopSeparator(item: TimelineDisplayItem | undefined, previousItem: TimelineDisplayItem | undefined) {
-  return itemNeedsTextSeparator(item) && Boolean(previousItem) && (previousItem?.type === "note" || previousItem?.type === "collapsed-notes" || itemHasCoverPost(previousItem))
-}
-
-function limitNotesBetweenPosts(items: TimelineItem[], expandedGroups: Record<string, number>) {
-  const hasPosts = items.some((item) => item.type === "post")
-  if (!hasPosts) return { items, hiddenNoteCount: 0 }
-
-  const visible: TimelineDisplayItem[] = []
-  let pendingNotes: NoteTimelineItem[] = []
-  let hiddenNoteCount = 0
-
-  function flushPendingNotes() {
-    if (pendingNotes.length === 0) return
-
-    const groupId = `notes:${pendingNotes[0].note._id}`
-    const expandedCount = expandedGroups[groupId] ?? 0
-    const visibleCount = MAX_NOTES_BETWEEN_POSTS + expandedCount
-    const visibleNotes = pendingNotes.slice(0, visibleCount)
-    const hiddenNotes = pendingNotes.slice(visibleCount)
-
-    visible.push(...visibleNotes)
-
-    if (hiddenNotes.length > 0) {
-      hiddenNoteCount += hiddenNotes.length
-      visible.push({
-        type: "collapsed-notes",
-        id: `collapsed:${hiddenNotes[0].note._id}`,
-        groupId,
-        date: hiddenNotes[0].date,
-        notes: hiddenNotes.map((item) => item.note),
-        expandedCount,
-      })
-    } else if (expandedCount > 0) {
-      visible.push({
-        type: "notes-collapse-control",
-        id: `collapse:${groupId}`,
-        groupId,
-        date: visibleNotes[visibleNotes.length - 1].date,
-      })
-    }
-
-    pendingNotes = []
-  }
-
-  for (const item of items) {
-    if (item.type === "note") {
-      pendingNotes.push(item)
-      continue
-    }
-
-    flushPendingNotes()
-    visible.push(item)
-  }
-
-  flushPendingNotes()
-
-  return { items: visible, hiddenNoteCount }
-}
-
-function CollapsedNotesPreview({
-  notes,
-  expandedCount,
-  onShowMore,
-  onCollapse,
-}: {
-  notes: SerializedNote[]
-  expandedCount: number
-  onShowMore: () => void
-  onCollapse: () => void
-}) {
-  const previewNote = notes[0]
-  const revealCount = Math.min(MAX_NOTES_BETWEEN_POSTS, notes.length)
-  const previewRef = useRef<HTMLDivElement>(null)
-  const previewFontSize = usePretextContentFontSize(previewRef, {
-    minSize: 13,
-    maxSize: 15,
-    maxLinesPerBlock: 4,
-    blockSelector: "p, li, blockquote",
-  })
-
-  return (
-    <li className="border-b border-neutral-200 pb-5 dark:border-white/10">
-      <div className="relative max-h-36 overflow-hidden">
-        <div className="border-y border-neutral-200 pb-6 pt-5 opacity-65 dark:border-white/10">
-          <time className="text-xs text-[#A8A095]/75">
-            {format(new Date(previewNote.publishedAt), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}
-          </time>
-          <div
-            ref={previewRef}
-            className="note-content mt-3 text-[15px] leading-relaxed text-neutral-900 dark:text-[#f1f1f1]"
-            style={{ fontSize: previewFontSize }}
-            dangerouslySetInnerHTML={{ __html: previewNote.contentHtml }}
-          />
-        </div>
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent via-[#f4f4f4]/85 to-[#f4f4f4] dark:via-[#040404]/85 dark:to-[#040404]" />
-      </div>
-      <div className="relative -mt-7 flex justify-center gap-2">
-        <button
-          type="button"
-          onClick={onShowMore}
-          className="inline-flex h-8 items-center rounded-full border border-neutral-300 bg-white/90 px-3 text-xs font-medium text-neutral-700 shadow-sm shadow-black/10 backdrop-blur transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A8A095]/35 dark:border-white/10 dark:bg-[#040404]/90 dark:text-[#A8A095] dark:shadow-black/20 dark:hover:bg-white/10 dark:hover:text-[#f1f1f1]"
-        >
-          Mostrar mais {revealCount === 1 ? "1 nota" : `${revealCount} notas`}
-        </button>
-        {expandedCount > 0 && (
-          <button
-            type="button"
-            onClick={onCollapse}
-            className="inline-flex h-8 items-center rounded-full bg-white/80 px-3 text-xs font-medium text-neutral-600 backdrop-blur transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A8A095]/35 dark:bg-[#040404]/80 dark:text-[#A8A095]/80 dark:hover:bg-white/10 dark:hover:text-[#f1f1f1]"
-          >
-            Compactar
-          </button>
-        )}
-      </div>
-    </li>
-  )
-}
-
-function NotesCollapseControl({ onCollapse }: { onCollapse: () => void }) {
-  return (
-    <li className="flex justify-center border-b border-neutral-200 py-3 dark:border-white/10">
-      <button
-        type="button"
-        onClick={onCollapse}
-        className="inline-flex h-8 items-center rounded-full px-3 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-950/5 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A8A095]/35 dark:text-[#A8A095]/80 dark:hover:bg-white/10 dark:hover:text-[#f1f1f1]"
-      >
-        Compactar notas
-      </button>
-    </li>
-  )
+  return itemNeedsTextSeparator(item) && Boolean(previousItem) && (previousItem?.type === "note" || itemHasCoverPost(previousItem))
 }
 
 function PostTimelineItem({
@@ -306,20 +175,77 @@ function PostTimelineItem({
   )
 }
 
-export function HomeTimeline({ posts, totalPosts, initialNotes, initialCursor, isAdmin }: Props) {
+function pageHref(page: number, mode: FeedMode) {
+  const params = new URLSearchParams()
+  if (mode !== "all") params.set("mode", mode)
+  if (page > 1) params.set("page", String(page))
+  const query = params.toString()
+  return query ? `/?${query}` : "/"
+}
+
+function modeHref(mode: FeedMode) {
+  return mode === "all" ? "/" : `/?mode=${mode}`
+}
+
+function Pagination({ currentPage, totalPages, mode }: { currentPage: number; totalPages: number; mode: FeedMode }) {
+  if (totalPages <= 1) return null
+
+  const visiblePageCount = Math.min(3, totalPages)
+  const startPage = Math.min(currentPage, totalPages - visiblePageCount + 1)
+  const pages = Array.from({ length: visiblePageCount }, (_, index) => startPage + index)
+
+  return (
+    <nav className="flex flex-wrap items-center justify-center gap-1.5" aria-label="Paginação">
+      {currentPage > 1 && (
+        <Link
+          href={pageHref(currentPage - 1, mode)}
+          className="inline-flex h-8 min-w-8 items-center justify-center rounded-md px-2 text-sm text-neutral-500 transition-colors hover:bg-neutral-950/5 hover:text-neutral-950 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-neutral-200"
+        >
+          Anterior
+        </Link>
+      )}
+      {pages.map((page) => {
+        const active = page === currentPage
+        return (
+          <Link
+            key={page}
+            href={pageHref(page, mode)}
+            aria-current={active ? "page" : undefined}
+            className={[
+              "inline-flex h-8 min-w-8 items-center justify-center rounded-md px-2 text-sm transition-colors",
+              active
+                ? "bg-neutral-950 text-white dark:bg-[#A8A095] dark:text-black"
+                : "text-neutral-500 hover:bg-neutral-950/5 hover:text-neutral-950 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-neutral-200",
+            ].join(" ")}
+          >
+            {page}
+          </Link>
+        )
+      })}
+      {currentPage < totalPages && (
+        <Link
+          href={pageHref(currentPage + 1, mode)}
+          className="inline-flex h-8 min-w-8 items-center justify-center rounded-md px-2 text-sm text-neutral-500 transition-colors hover:bg-neutral-950/5 hover:text-neutral-950 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-neutral-200"
+        >
+          Próxima
+        </Link>
+      )}
+    </nav>
+  )
+}
+
+export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feedMode, currentPage, pageSize, totalPages, isAdmin }: Props) {
   const router = useRouter()
   const [timelinePosts, setTimelinePosts] = useState(posts)
   const [postCount, setPostCount] = useState(totalPosts)
+  const [noteCount, setNoteCount] = useState(totalNotes)
   const [notes, setNotes] = useState(initialNotes)
-  const timelineCount = postCount + notes.length
-  const [feedMode, setFeedMode] = useState<FeedMode>("all")
-  const [expandedNoteGroups, setExpandedNoteGroups] = useState<Record<string, number>>({})
-  const [cursor, setCursor] = useState(initialCursor)
-  const [loading, setLoading] = useState(false)
+  const timelineCount = postCount + noteCount
   const [hidingPostId, setHidingPostId] = useState<string | null>(null)
   const [pendingHidePostId, setPendingHidePostId] = useState<string | null>(null)
   const [hideError, setHideError] = useState("")
   const pendingHideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pageStartIndex = (currentPage - 1) * pageSize
 
   const resetPendingHide = useCallback(() => {
     if (pendingHideTimeoutRef.current) {
@@ -356,41 +282,27 @@ export function HomeTimeline({ posts, totalPosts, initialNotes, initialCursor, i
     })
   }, [notes, timelinePosts])
 
-  const { visibleItems } = useMemo(() => {
+  const visibleItems = useMemo<TimelineDisplayItem[]>(() => {
     if (feedMode === "posts") {
-      return { visibleItems: allItems.filter((item) => item.type === "post"), hiddenNoteCount: 0 }
+      return allItems.filter((item) => item.type === "post").slice(pageStartIndex, pageStartIndex + pageSize)
     }
 
     if (feedMode === "notes") {
-      return { visibleItems: allItems.filter((item) => item.type === "note"), hiddenNoteCount: 0 }
+      return allItems.filter((item) => item.type === "note").slice(pageStartIndex, pageStartIndex + pageSize)
     }
 
-    const limited = limitNotesBetweenPosts(allItems, expandedNoteGroups)
-    return { visibleItems: limited.items, hiddenNoteCount: limited.hiddenNoteCount }
-  }, [allItems, expandedNoteGroups, feedMode])
-
-  function showMoreNotesInGroup(groupId: string) {
-    setExpandedNoteGroups((current) => ({
-      ...current,
-      [groupId]: (current[groupId] ?? 0) + MAX_NOTES_BETWEEN_POSTS,
-    }))
-  }
-
-  function collapseNoteGroup(groupId: string) {
-    setExpandedNoteGroups((current) => {
-      const next = { ...current }
-      delete next[groupId]
-      return next
-    })
-  }
+    return allItems.slice(pageStartIndex, pageStartIndex + pageSize)
+  }, [allItems, feedMode, pageSize, pageStartIndex])
 
   function handlePosted(note: SerializedNote) {
     setNotes((prev) => [note, ...prev])
+    setNoteCount((prev) => prev + 1)
   }
 
   async function handleDelete(id: string) {
     await fetch(`/api/admin/notes/${id}`, { method: "DELETE" })
     setNotes((prev) => prev.filter((note) => note._id !== id))
+    setNoteCount((prev) => Math.max(0, prev - 1))
   }
 
   function handleUpdate(updatedNote: SerializedNote) {
@@ -430,20 +342,10 @@ export function HomeTimeline({ posts, totalPosts, initialNotes, initialCursor, i
     }
   }
 
-  async function loadMoreNotes() {
-    if (!cursor || loading) return
-    setLoading(true)
-    const res = await fetch(`/api/notes?cursor=${cursor}`)
-    const data = await res.json()
-    setNotes((prev) => [...prev, ...data.notes])
-    setCursor(data.nextCursor)
-    setLoading(false)
-  }
-
   const modeOptions = [
     { mode: "all" as const, label: "Tudo", count: timelineCount },
     { mode: "posts" as const, label: "Posts", count: postCount },
-    { mode: "notes" as const, label: "Notas", count: notes.length },
+    { mode: "notes" as const, label: "Notas", count: noteCount },
   ]
 
   return (
@@ -459,10 +361,9 @@ export function HomeTimeline({ posts, totalPosts, initialNotes, initialCursor, i
             {modeOptions.map((option) => {
               const active = feedMode === option.mode
               return (
-                <button
+                <Link
                   key={option.mode}
-                  type="button"
-                  onClick={() => setFeedMode(option.mode)}
+                  href={modeHref(option.mode)}
                   className={[
                     "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors",
                     active
@@ -472,10 +373,11 @@ export function HomeTimeline({ posts, totalPosts, initialNotes, initialCursor, i
                 >
                   {option.label}
                   <span className="tabular-nums opacity-70">{option.count}</span>
-                </button>
+                </Link>
               )
             })}
           </div>
+
         </div>
 
         {isAdmin && <NoteComposer onPosted={handlePosted} />}
@@ -498,19 +400,6 @@ export function HomeTimeline({ posts, totalPosts, initialNotes, initialCursor, i
                     cropTallImages
                   />
                 </li>
-              ) : item.type === "collapsed-notes" ? (
-                <CollapsedNotesPreview
-                  key={item.id}
-                  notes={item.notes}
-                  expandedCount={item.expandedCount}
-                  onShowMore={() => showMoreNotesInGroup(item.groupId)}
-                  onCollapse={() => collapseNoteGroup(item.groupId)}
-                />
-              ) : item.type === "notes-collapse-control" ? (
-                <NotesCollapseControl
-                  key={item.id}
-                  onCollapse={() => collapseNoteGroup(item.groupId)}
-                />
               ) : (
                 <PostTimelineItem
                   key={item.id}
@@ -527,16 +416,7 @@ export function HomeTimeline({ posts, totalPosts, initialNotes, initialCursor, i
           </ul>
         )}
 
-        {cursor && (
-          <button
-            type="button"
-            onClick={loadMoreNotes}
-            disabled={loading}
-            className="self-center text-sm text-neutral-500 transition-colors hover:text-neutral-900 disabled:opacity-40 dark:text-neutral-400 dark:hover:text-neutral-200"
-          >
-            {loading ? "carregando..." : "carregar mais notas"}
-          </button>
-        )}
+        <Pagination currentPage={currentPage} totalPages={totalPages} mode={feedMode} />
       </div>
     </section>
   )

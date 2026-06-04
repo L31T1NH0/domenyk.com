@@ -73,18 +73,22 @@ async function collection() {
   await indexesPromise
   return col
 }
-export async function getNotes(opts: { cursor?: string; limit?: number } = {}): Promise<{ notes: Note[]; nextCursor: string | null }> {
+export async function getNotes(opts: { cursor?: string; limit?: number } = {}): Promise<{ notes: Note[]; nextCursor: string | null; total: number }> {
   const { cursor, limit = 20 } = opts
   const filter: Record<string, unknown> = {}
   if (cursor) {
     const cursorId = toObjectId(cursor)
-    if (!cursorId) return { notes: [], nextCursor: null }
+    if (!cursorId) return { notes: [], nextCursor: null, total: 0 }
     filter._id = { $lt: cursorId }
   }
-  const notes = await (await collection()).find(filter).sort({ _id: -1 }).limit(limit + 1).toArray()
+  const col = await collection()
+  const [notes, total] = await Promise.all([
+    col.find(filter).sort({ _id: -1 }).limit(limit + 1).toArray(),
+    col.countDocuments(),
+  ])
   const hasMore = notes.length > limit
   if (hasMore) notes.pop()
-  return { notes, nextCursor: hasMore ? notes[notes.length - 1]._id.toString() : null }
+  return { notes, nextCursor: hasMore ? notes[notes.length - 1]._id.toString() : null, total }
 }
 
 export async function getNote(id: string): Promise<Note | null> {

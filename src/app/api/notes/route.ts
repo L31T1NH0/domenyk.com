@@ -9,8 +9,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Cursor inválido" }, { status: 400 })
   }
 
-  const { notes, nextCursor } = await getNotes({ cursor })
-  return NextResponse.json({ notes: notes.map(serializeNote), nextCursor })
+  const { notes, nextCursor, total } = await getNotes({ cursor })
+  return NextResponse.json({ notes: notes.map(serializeNote), nextCursor, total })
 }
 
 export async function POST(req: NextRequest) {
