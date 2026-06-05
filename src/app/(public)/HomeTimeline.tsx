@@ -95,7 +95,7 @@ function PostTimelineItem({
           Fixado
         </span>
       )}
-      <Link href={`/posts/${post.publicId}`} prefetch={false} className="block text-left focus-visible:outline-none">
+      <Link href={`/posts/${post.slug}`} prefetch={false} className="block text-left focus-visible:outline-none">
         {showCover ? (
           <span className="relative block aspect-video w-full overflow-hidden rounded-2xl bg-neutral-200 dark:bg-white/5">
             <Image

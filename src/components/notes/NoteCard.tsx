@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from "react"
 import { useUser } from "@clerk/nextjs"
 import { ChatBubbleLeftEllipsisIcon, PencilIcon, XMarkIcon } from "@heroicons/react/24/outline"
@@ -348,11 +349,18 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
   }
 
   const commentActionLabel = commentsLoaded && comments.length > 0 ? "ver comentários" : "comentar"
+  const notePath = `/notes/${note._id}`
 
   return (
     <article className="group relative flex flex-col gap-3 border-y border-neutral-200 pb-6 pt-5 dark:border-white/10">
       <div className="flex items-center">
-        <time className="text-xs text-neutral-500 dark:text-[#A8A095]/75">{ago}</time>
+        <Link
+          href={notePath}
+          className="text-xs text-neutral-500 transition-colors hover:text-neutral-950 dark:text-[#A8A095]/75 dark:hover:text-[#f1f1f1]"
+          aria-label="Abrir nota"
+        >
+          <time dateTime={note.publishedAt}>{ago}</time>
+        </Link>
         {isAdmin && (
           <div className="absolute right-0 top-5 flex items-center gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
             {onUpdate && !editing && (

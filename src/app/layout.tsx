@@ -55,10 +55,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 		            __html: `(function(){try{var d=localStorage.getItem('theme')!=='light';var e=document.documentElement;e.classList.toggle('dark-mode',d);e.classList.toggle('light-mode',!d);if(document.body){document.body.classList.toggle('dark-mode',d);document.body.classList.toggle('light-mode',!d)}}catch(e){document.documentElement.classList.add('dark-mode')}})()`,
 	          }}
 	        />
-	        <Script
+	        <script
 	          id="website-person-json-ld"
 	          type="application/ld+json"
-	          strategy="beforeInteractive"
 	          dangerouslySetInnerHTML={{
 		            __html: jsonLd({
 		              "@context": "https://schema.org",

@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { clerkClient } from "@clerk/nextjs/server"
 import Link from "next/link"
-import { notFound, redirect } from "next/navigation"
+import { notFound, permanentRedirect } from "next/navigation"
 import { getPostByPublicId, getPostBySlug } from "@/lib/db/posts"
 import { isAdmin } from "@/lib/auth"
 import { renderMarkdown } from "@/lib/mdx"
@@ -16,7 +16,7 @@ import { AudioPlayer } from "@/components/AudioPlayer"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import type { PostStyle } from "@/lib/db/posts"
-import { absoluteUrl, buildPageMetadata, descriptionFromMarkdown, jsonLd, siteConfig } from "@/lib/seo"
+import { absoluteUrl, buildPageMetadata, descriptionFromMarkdown, jsonLd, preferredContentImages, siteConfig } from "@/lib/seo"
 
 type Props = { params: Promise<{ slug: string }> }
 
@@ -54,22 +54,26 @@ function getPostStyleClasses(style: PostStyle) {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug: publicId } = await params
-  const post = (await getPostByPublicId(publicId)) ?? (await getPostBySlug(publicId))
+  const { slug } = await params
+  const post = (await getPostBySlug(slug)) ?? (await getPostByPublicId(slug))
   if (!post) return {}
   const admin = await isAdmin()
   if (!post.published && !admin) {
     return { robots: { index: false, follow: false } }
   }
 
-  const canonicalPath = `/posts/${post.publicId}`
+  const canonicalPath = `/posts/${post.slug}`
   const description = (post.excerpt ?? post.subtitle ?? descriptionFromMarkdown(post.content)) || siteConfig.description
+  const [preferredImage] = preferredContentImages({
+    cover: post.cover?.url,
+    markdown: post.content,
+  })
 
   return buildPageMetadata({
     title: post.title,
     description,
     path: canonicalPath,
-    image: post.cover?.url ?? `/og/posts/${post.publicId}`,
+    image: preferredImage ?? `/og/posts/${post.slug}`,
     type: "article",
     publishedTime: post.publishedAt?.toISOString(),
     modifiedTime: post.updatedAt.toISOString(),
@@ -79,11 +83,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function PostPage({ params }: Props) {
-  const { slug: publicId } = await params
-  const post = (await getPostByPublicId(publicId)) ?? (await getPostBySlug(publicId))
+  const { slug } = await params
+  const post = (await getPostBySlug(slug)) ?? (await getPostByPublicId(slug))
 
   if (!post) notFound()
-  if (post.publicId !== publicId) redirect(`/posts/${post.publicId}`)
+  if (post.slug !== slug) permanentRedirect(`/posts/${post.slug}`)
   const admin = await isAdmin()
   if (!post.published && !admin) notFound()
 
@@ -107,8 +111,12 @@ export default async function PostPage({ params }: Props) {
   const description = (post.excerpt ?? post.subtitle ?? descriptionFromMarkdown(post.content)) || siteConfig.description
   const styleClasses = getPostStyleClasses(post.style ?? "standard")
   const styleLabel = styleLabels[post.style ?? "standard"]
-  const postUrl = absoluteUrl(`/posts/${post.publicId}`)
-  const postImage = post.cover?.url ? absoluteUrl(post.cover.url) : absoluteUrl(siteConfig.image)
+  const postUrl = absoluteUrl(`/posts/${post.slug}`)
+  const postImages = preferredContentImages({
+    cover: post.cover?.url,
+    markdown: post.content,
+  })
+  const postStructuredImages = (postImages.length > 0 ? postImages : [siteConfig.image]).map(absoluteUrl)
 
   return (
     <div className={styleClasses.page}>
@@ -122,7 +130,7 @@ export default async function PostPage({ params }: Props) {
             mainEntityOfPage: postUrl,
             headline: post.title,
             description,
-            image: [postImage],
+            image: postStructuredImages,
             datePublished: post.publishedAt?.toISOString(),
             dateModified: post.updatedAt.toISOString(),
             author: { "@id": `${siteConfig.url}/#person` },

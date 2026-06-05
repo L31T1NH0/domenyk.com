@@ -42,6 +42,34 @@ export function descriptionFromMarkdown(markdown: string, maxLength = 155): stri
   return `${truncated.slice(0, truncated.lastIndexOf(" ") || maxLength).trim()}...`
 }
 
+export function imageUrlsFromMarkdown(markdown: string): string[] {
+  const urls = new Set<string>()
+  const imagePattern = /!\[[^\]]*]\(([^)\s]+)(?:\s+"[^"]*")?\)/g
+  let match: RegExpExecArray | null
+
+  while ((match = imagePattern.exec(markdown)) !== null) {
+    urls.add(match[1])
+  }
+
+  return [...urls]
+}
+
+export function preferredContentImages({
+  cover,
+  images,
+  markdown,
+}: {
+  cover?: string
+  images?: string[]
+  markdown?: string
+}): string[] {
+  const urls = new Set<string>()
+  if (cover) urls.add(cover)
+  images?.forEach((image) => urls.add(image))
+  if (markdown) imageUrlsFromMarkdown(markdown).forEach((image) => urls.add(image))
+  return [...urls]
+}
+
 export function buildPageMetadata({
   title,
   description = siteConfig.description,
@@ -71,7 +99,19 @@ export function buildPageMetadata({
     title,
     description,
     alternates: { canonical: url },
-    robots: noIndex ? { index: false, follow: false } : { index: true, follow: true },
+    robots: noIndex
+      ? { index: false, follow: false }
+      : {
+          index: true,
+          follow: true,
+          googleBot: {
+            index: true,
+            follow: true,
+            "max-image-preview": "large",
+            "max-snippet": -1,
+            "max-video-preview": -1,
+          },
+        },
     openGraph: {
       title: title ?? siteConfig.title,
       description,

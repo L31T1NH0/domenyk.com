@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next"
 import { getPosts } from "@/lib/db/posts"
 import { getNotes } from "@/lib/db/notes"
-import { absoluteUrl } from "@/lib/seo"
+import { absoluteUrl, preferredContentImages } from "@/lib/seo"
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [{ posts }, { notes }] = await Promise.all([
@@ -36,11 +36,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     },
     ...posts.map((post) => ({
-      url: absoluteUrl(`/posts/${post.publicId}`),
+      url: absoluteUrl(`/posts/${post.slug}`),
       lastModified: post.updatedAt,
       changeFrequency: "monthly" as const,
       priority: post.pinned ? 0.9 : 0.8,
-      images: post.cover?.url ? [absoluteUrl(post.cover.url)] : undefined,
+      images: preferredContentImages({
+        cover: post.cover?.url,
+      }).map(absoluteUrl),
+    })),
+    ...notes.map((note) => ({
+      url: absoluteUrl(`/notes/${note._id.toString()}`),
+      lastModified: note.createdAt,
+      changeFrequency: "monthly" as const,
+      priority: 0.5,
+      images: preferredContentImages({
+        images: note.images,
+        markdown: note.content,
+      }).map(absoluteUrl),
     })),
   ]
 }
