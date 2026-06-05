@@ -21,16 +21,23 @@ export function PostContentShell({ html, className }: Props) {
   const [activeImage, setActiveImage] = useState<ActiveImage | null>(null)
   const [visible, setVisible] = useState(false)
   const touchStartRef = useRef(0)
+  const activeImageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const threshold = 80
 
   const close = useCallback(() => {
+    if (activeImageTimerRef.current) clearTimeout(activeImageTimerRef.current)
     setVisible(false)
-    window.setTimeout(() => setActiveImage(null), 250)
+    activeImageTimerRef.current = setTimeout(() => {
+      setActiveImage(null)
+      activeImageTimerRef.current = null
+    }, 250)
   }, [])
 
   useEffect(() => {
     if (!activeImage) return
-    requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true)))
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => setVisible(true))
+    })
 
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = "hidden"
@@ -55,11 +62,16 @@ export function PostContentShell({ html, className }: Props) {
     window.addEventListener("touchmove", onTouchMove, { passive: true })
 
     return () => {
+      cancelAnimationFrame(frame)
       document.body.style.overflow = previousOverflow
       document.removeEventListener("keydown", onKey)
       window.removeEventListener("wheel", onWheel)
       window.removeEventListener("touchstart", onTouchStart)
       window.removeEventListener("touchmove", onTouchMove)
+      if (activeImageTimerRef.current) {
+        clearTimeout(activeImageTimerRef.current)
+        activeImageTimerRef.current = null
+      }
     }
   }, [activeImage, close])
 

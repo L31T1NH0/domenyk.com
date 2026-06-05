@@ -28,23 +28,27 @@ export function ParagraphThread({ postId, paragraphId, isAdmin = false, autoFocu
   const [draft, setDraft] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const onCountChangeRef = useRef(onCountChange)
 
   useEffect(() => {
-    onCountChangeRef.current = onCountChange
-  }, [onCountChange])
+    const controller = new AbortController()
 
-	  useEffect(() => {
-	    fetch(`/api/comments/${postId}/paragraph/${paragraphId}`)
-	      .then((r) => r.json())
-	      .then((next: Comment[]) => {
-	        setComments(next)
-	      })
-	  }, [postId, paragraphId])
+    fetch(`/api/comments/${postId}/paragraph/${paragraphId}`, { signal: controller.signal })
+      .then((r) => r.json())
+      .then((next: Comment[]) => {
+        setComments(next)
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return
+      })
 
-	  useEffect(() => {
-	    onCountChangeRef.current?.(comments.length)
-	  }, [comments.length])
+    return () => {
+      controller.abort()
+    }
+  }, [postId, paragraphId])
+
+  useEffect(() => {
+    onCountChange?.(comments.length)
+  }, [comments.length, onCountChange])
 
   useEffect(() => {
     if (!autoFocus) return

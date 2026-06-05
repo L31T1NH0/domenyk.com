@@ -192,11 +192,16 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
   const [savingEdit, setSavingEdit] = useState(false)
   const [editError, setEditError] = useState("")
   const touchStartRef = useRef(0)
+  const activeImageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const closeThreshold = 80
 
   const closeLightbox = useCallback(() => {
+    if (activeImageTimerRef.current) clearTimeout(activeImageTimerRef.current)
     setLightboxVisible(false)
-    window.setTimeout(() => setActiveImage(null), 250)
+    activeImageTimerRef.current = setTimeout(() => {
+      setActiveImage(null)
+      activeImageTimerRef.current = null
+    }, 250)
   }, [])
 
   const ago = formatDistanceToNow(new Date(note.publishedAt), {
@@ -271,7 +276,9 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
 
   useEffect(() => {
     if (!activeImage) return
-    requestAnimationFrame(() => requestAnimationFrame(() => setLightboxVisible(true)))
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => setLightboxVisible(true))
+    })
 
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = "hidden"
@@ -296,11 +303,16 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
     window.addEventListener("touchmove", onTouchMove, { passive: true })
 
     return () => {
+      cancelAnimationFrame(frame)
       document.body.style.overflow = previousOverflow
       document.removeEventListener("keydown", onKey)
       window.removeEventListener("wheel", onWheel)
       window.removeEventListener("touchstart", onTouchStart)
       window.removeEventListener("touchmove", onTouchMove)
+      if (activeImageTimerRef.current) {
+        clearTimeout(activeImageTimerRef.current)
+        activeImageTimerRef.current = null
+      }
     }
   }, [activeImage, closeLightbox])
 
@@ -336,7 +348,7 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
     return () => {
       cleanups.forEach((cleanup) => cleanup())
     }
-  })
+  }, [contentFontSize, cropTallImages, note.contentHtml, note.images])
 
   function openLightbox(src: string, alt = "") {
     setActiveImage({ src, alt })

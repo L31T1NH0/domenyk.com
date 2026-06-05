@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/outline"
 import { ParagraphThread } from "./ParagraphThread"
 
@@ -18,6 +18,8 @@ export function ParagraphCommentsLayer({ postId, isAdmin = false, containerSelec
   const [isTouch, setIsTouch] = useState(false)
   const layerRef = useRef<HTMLDivElement>(null)
   const hideButtonTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const paragraphIds = useMemo(() => Object.keys(positions), [positions])
+  const paragraphIdsKey = paragraphIds.join("\n")
 
   const clearHideButtonTimer = useCallback(() => {
     if (hideButtonTimerRef.current) {
@@ -51,28 +53,31 @@ export function ParagraphCommentsLayer({ postId, isAdmin = false, containerSelec
     return () => ro.disconnect()
   }, [containerSelector])
 
-	  useEffect(() => {
-	    const pids = Object.keys(positions)
-	    if (pids.length === 0) return
-	
-	    let cancelled = false
-	    fetch(`/api/comments/${postId}/paragraph-counts`, {
-	      method: "POST",
-	      headers: { "Content-Type": "application/json" },
-	      body: JSON.stringify({ paragraphIds: pids }),
-	    })
-	      .then((r) => r.ok ? r.json() : {})
-	      .then((next: Record<string, number>) => {
-	        if (!cancelled) setCounts(next)
-	      })
-	      .catch(() => {
-	        if (!cancelled) setCounts({})
-	      })
-	
-	    return () => {
-	      cancelled = true
+  useEffect(() => {
+    const pids = paragraphIdsKey ? paragraphIdsKey.split("\n") : []
+    if (pids.length === 0) return
+
+    const controller = new AbortController()
+
+    fetch(`/api/comments/${postId}/paragraph-counts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paragraphIds: pids }),
+      signal: controller.signal,
+    })
+      .then((r) => r.ok ? r.json() : {})
+      .then((next: Record<string, number>) => {
+        setCounts(next)
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return
+        setCounts({})
+      })
+
+    return () => {
+      controller.abort()
     }
-  }, [postId, positions])
+  }, [paragraphIdsKey, postId])
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -140,6 +145,10 @@ export function ParagraphCommentsLayer({ postId, isAdmin = false, containerSelec
   }, [clearHideButtonTimer, containerSelector, isTouch, scheduleHideButton])
 
   const buttonPid = hoveredPid && positions[hoveredPid] ? hoveredPid : null
+  const handleThreadCountChange = useCallback((count: number) => {
+    if (!activePid) return
+    setCounts((prev) => ({ ...prev, [activePid]: count }))
+  }, [activePid])
 
   return (
     <div ref={layerRef} className="absolute inset-0 pointer-events-none">
@@ -178,7 +187,7 @@ export function ParagraphCommentsLayer({ postId, isAdmin = false, containerSelec
               paragraphId={activePid}
               isAdmin={isAdmin}
               autoFocus={isTouch}
-              onCountChange={(count) => setCounts((prev) => ({ ...prev, [activePid]: count }))}
+              onCountChange={handleThreadCountChange}
               onClose={() => setActivePid(null)}
             />
           </div>

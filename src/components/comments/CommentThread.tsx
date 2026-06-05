@@ -24,9 +24,19 @@ export function CommentThread({ postId, isAdmin = false }: Props) {
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    fetch(`/api/comments/${postId}`)
+    const controller = new AbortController()
+
+    fetch(`/api/comments/${postId}`, { signal: controller.signal })
       .then((r) => r.json())
       .then(setComments)
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return
+        setComments([])
+      })
+
+    return () => {
+      controller.abort()
+    }
   }, [postId])
 
   async function submit() {
