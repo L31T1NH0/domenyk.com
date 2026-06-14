@@ -15,6 +15,10 @@ export const metadata: Metadata = {
   publisher: siteConfig.author,
   category: "politics",
   keywords: ["Domenyk", "política", "liberalismo", "ideias", "opinião", "debate público"],
+  icons: {
+    icon: [{ url: "/favicon.ico", sizes: "256x256", type: "image/x-icon" }],
+    shortcut: "/favicon.ico",
+  },
   alternates: { canonical: "/" },
   openGraph: {
     title: siteConfig.title,
