@@ -18,7 +18,6 @@ import { CodeNode, CodeHighlightNode } from "@lexical/code"
 import { LinkNode } from "@lexical/link"
 import { $convertFromMarkdownString, $convertToMarkdownString } from "@lexical/markdown"
 import {
-  $getRoot,
   $getSelection,
   $isRangeSelection,
   COMMAND_PRIORITY_HIGH,
@@ -44,6 +43,12 @@ const MARKDOWN_PASTE_PATTERN =
 
 type SerializedClipboardNode = SerializedLexicalNode & {
   children?: SerializedClipboardNode[]
+}
+
+type SerializedMarkdownImportState = {
+  root: {
+    children: SerializedClipboardNode[]
+  }
 }
 
 type FloatingToolbarState = {
@@ -122,10 +127,10 @@ function markdownToSerializedNodes(markdown: string): SerializedClipboardNode[] 
   importEditor.update(
     () => {
       $convertFromMarkdownString(markdown, MARKDOWN_TRANSFORMERS)
-      serializedNodes = $getRoot().getChildren().map((node) => node.exportJSON() as SerializedClipboardNode)
     },
     { discrete: true }
   )
+  serializedNodes = (importEditor.getEditorState().toJSON() as SerializedMarkdownImportState).root.children
 
   return serializedNodes
 }
