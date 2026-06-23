@@ -6,19 +6,18 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
   const currentYear = new Date().getFullYear()
 
   return (
-    <div data-public-shell data-scroll-progress-root className="w-full max-w-[36rem] flex flex-col mx-auto px-4 mb-4">
+    <div data-public-shell data-scroll-progress-root className="mx-auto mb-4 flex w-[min(100%,34.5rem)] max-w-[100vw] flex-col overflow-x-visible px-5 sm:px-4">
       <div aria-hidden data-scroll-progress-bar />
       <ScrollProgressEffect />
-      <header className="flex justify-between items-center py-1">
+      <header className="flex items-center justify-between py-1">
         <ThemeSwitcher />
         <ClerkButton />
       </header>
-      <main className="flex flex-col flex-1">
+      <main className="flex min-w-0 flex-1 flex-col">
         {children}
       </main>
       <footer
-        className="mt-10 mb-4 text-center text-sm leading-relaxed text-zinc-400"
-        style={{ fontFamily: "Calibri, Candara, Segoe, 'Segoe UI', Optima, Arial, sans-serif" }}
+        className="mb-4 mt-12 text-center text-xs leading-relaxed text-zinc-500 dark:text-zinc-500"
       >
         <p>© {currentYear} domenyk.com</p>
         <p className="mt-1 break-all">bc1qfv788krszr8xz3uxvvzy33pp8jph0hw53557d4</p>

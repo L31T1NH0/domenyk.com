@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { Bars3Icon } from "@heroicons/react/24/outline"
 import { AutoFitText } from "@/components/text/AutoFitText"
 
 type HeadingEntry = {
@@ -63,6 +64,8 @@ export function PostTopics({ containerSelector = "[data-post-content]" }: Props)
   const [headings, setHeadings] = useState<HeadingEntry[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
+  const [paragraphCommentsOpen, setParagraphCommentsOpen] = useState(false)
+  const [compactExpanded, setCompactExpanded] = useState(false)
 
   useEffect(() => {
     const update = () => setHeadings(collectHeadings(containerSelector))
@@ -84,6 +87,18 @@ export function PostTopics({ containerSelector = "[data-post-content]" }: Props)
     update()
     media.addEventListener("change", update)
     return () => media.removeEventListener("change", update)
+  }, [])
+
+  useEffect(() => {
+    const onChange = (event: Event) => {
+      const detail = (event as CustomEvent<{ open?: boolean }>).detail
+      const open = Boolean(detail?.open)
+      setParagraphCommentsOpen(open)
+      if (!open) setCompactExpanded(false)
+    }
+
+    window.addEventListener("paragraph-comments-open-change", onChange)
+    return () => window.removeEventListener("paragraph-comments-open-change", onChange)
   }, [])
 
   useEffect(() => {
@@ -127,50 +142,148 @@ export function PostTopics({ containerSelector = "[data-post-content]" }: Props)
     () => headings.filter((heading) => heading.text.length > 0),
     [headings]
   )
+  const activeIndex = Math.max(
+    0,
+    visibleHeadings.findIndex((heading) => heading.id === activeId)
+  )
+  const compactStartIndex = Math.min(Math.max(activeIndex, 0), Math.max(0, visibleHeadings.length - 1))
+  const displayedHeadings = paragraphCommentsOpen
+    ? visibleHeadings.slice(compactStartIndex, compactStartIndex + (compactExpanded ? 3 : 1))
+    : visibleHeadings
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("paragraph-topics-compact-change", {
+      detail: { expanded: paragraphCommentsOpen && compactExpanded },
+    }))
+
+    return () => {
+      window.dispatchEvent(new CustomEvent("paragraph-topics-compact-change", {
+        detail: { expanded: false },
+      }))
+    }
+  }, [compactExpanded, paragraphCommentsOpen])
 
   if (visibleHeadings.length === 0) return null
 
   return (
-    <aside className="fixed top-24 left-[calc(50%+20rem)] z-20 hidden max-h-[calc(100vh-7rem)] w-56 flex-col overflow-y-auto rounded-lg border border-neutral-200 bg-white/85 p-3 text-sm text-neutral-600 shadow-xl shadow-black/10 backdrop-blur-xl dark:border-white/10 dark:bg-[#040404]/80 dark:text-[#A8A095] dark:shadow-black/20 xl:flex">
-      <span className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-950 dark:text-[#f1f1f1]">
-        Neste artigo
-      </span>
-      <nav className="flex flex-col gap-1" aria-label="Tópicos do artigo">
-        {visibleHeadings.map((heading) => {
+    <aside
+      className={[
+        "fixed top-24 left-[calc(50%+20rem)] z-20 hidden w-64 flex-col overflow-hidden border border-neutral-950/10 bg-[#f4f4f4]/95 text-sm text-neutral-600 transition-[max-height,border-radius] duration-200 ease-out dark:border-white/10 dark:bg-[#040404]/95 dark:text-[#A8A095] xl:flex",
+        paragraphCommentsOpen
+          ? compactExpanded
+            ? "h-44 rounded-t-lg border-b-0"
+            : "h-32 rounded-t-lg border-b-0"
+          : "max-h-[calc(100vh-7rem)] rounded-lg",
+      ].join(" ")}
+    >
+      <div className={["border-b border-neutral-950/10 px-4 dark:border-white/10", paragraphCommentsOpen ? "py-2.5" : "py-3"].join(" ")}>
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-neutral-950 dark:text-[#f1f1f1]">
+            {paragraphCommentsOpen ? "Lendo agora" : "Neste artigo"}
+          </span>
+          <span className="tabular-nums text-[0.68rem] text-neutral-500 dark:text-[#A8A095]/80">
+            {activeIndex + 1}/{visibleHeadings.length}
+          </span>
+        </div>
+        <div className="mt-2 h-px overflow-hidden rounded-full bg-neutral-950/10 dark:bg-white/10">
+          <div
+            className="h-full rounded-full bg-[#E00070] transition-[width] duration-200 ease-out"
+            style={{
+              width: `${((activeIndex + 1) / visibleHeadings.length) * 100}%`,
+            }}
+          />
+        </div>
+      </div>
+
+      <nav
+        className={[
+          "relative flex flex-col px-2 pr-4",
+          paragraphCommentsOpen ? "h-[4.35rem] overflow-hidden py-1.5" : "overflow-y-auto py-2",
+          paragraphCommentsOpen && compactExpanded ? "h-[7.25rem]" : "",
+        ].join(" ")}
+        aria-label="Tópicos do artigo"
+      >
+        {!paragraphCommentsOpen && (
+          <span
+            aria-hidden
+            className="absolute left-[1.18rem] top-4 bottom-4 w-px bg-neutral-950/10 dark:bg-white/10"
+          />
+        )}
+        {displayedHeadings.map((heading) => {
           const active = heading.id === activeId
+          const nested = heading.level > 2
 
           return (
             <button
               key={heading.id}
               type="button"
               title={heading.text}
-              aria-current={active ? "true" : undefined}
+              aria-current={active ? "location" : undefined}
               onClick={() => {
                 heading.element.scrollIntoView({
                   behavior: prefersReducedMotion ? "auto" : "smooth",
                   block: "start",
                 })
+                window.history.replaceState(null, "", `#${encodeURIComponent(heading.id)}`)
               }}
               className={[
-                "w-full rounded-md px-2 py-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E00070]/70",
-                heading.level > 2 ? "pl-4 text-xs" : "",
-                active
-                  ? "bg-neutral-950/10 text-neutral-950 dark:bg-white/10 dark:text-[#f1f1f1]"
-                  : "hover:bg-neutral-950/5 hover:text-neutral-950 dark:hover:bg-white/5 dark:hover:text-[#f1f1f1]",
+                "group relative grid w-full grid-cols-[1.15rem_minmax(0,1fr)] items-start gap-2 rounded-md px-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E00070]/70",
+                paragraphCommentsOpen ? "h-8 py-1.5" : "py-2",
+                paragraphCommentsOpen
+                  ? active
+                    ? "text-neutral-950 dark:text-[#f1f1f1]"
+                    : "text-neutral-500 dark:text-[#A8A095]/85"
+                  : active
+                    ? "bg-neutral-950/[0.06] text-neutral-950 dark:bg-white/[0.07] dark:text-[#f1f1f1]"
+                    : "hover:bg-neutral-950/[0.035] hover:text-neutral-950 dark:hover:bg-white/[0.04] dark:hover:text-[#f1f1f1]",
               ]
                 .filter(Boolean)
                 .join(" ")}
             >
+              <span
+                aria-hidden
+                className={[
+                  "relative z-10 h-2 w-2 rounded-full border transition-all",
+                  paragraphCommentsOpen ? "mt-[0.28rem]" : "mt-[0.38rem]",
+                  active
+                    ? "border-[#E00070] bg-[#E00070]"
+                    : paragraphCommentsOpen
+                      ? "border-neutral-400 bg-[#f4f4f4] dark:border-[#A8A095]/60 dark:bg-[#040404]"
+                      : "border-neutral-400 bg-[#f4f4f4] group-hover:border-neutral-700 dark:border-[#A8A095]/60 dark:bg-[#040404] dark:group-hover:border-[#f1f1f1]",
+                ].join(" ")}
+              />
               <AutoFitText
                 text={heading.text}
                 minSize={11}
-                maxSize={heading.level > 2 ? 12 : 14}
-                maxLines={2}
-                className="block leading-snug"
+                maxSize={nested ? 12 : 13}
+                maxLines={paragraphCommentsOpen ? 1 : 2}
+                className={[
+                  "block min-w-0 leading-snug",
+                  nested
+                    ? [
+                        "pl-3 text-neutral-500 dark:text-[#A8A095]/85",
+                        paragraphCommentsOpen ? "" : "group-hover:text-neutral-700 dark:group-hover:text-[#f1f1f1]",
+                      ].join(" ")
+                    : "",
+                  active && nested ? "text-neutral-950 dark:text-[#f1f1f1]" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
               />
             </button>
           )
         })}
+        {paragraphCommentsOpen && (
+          <button
+            type="button"
+            aria-expanded={compactExpanded}
+            aria-label={compactExpanded ? "Mostrar menos tópicos" : "Mostrar mais tópicos"}
+            onClick={() => setCompactExpanded((current) => !current)}
+            className="mx-auto mt-1 grid h-6 w-8 place-items-center rounded-full text-neutral-500 transition-colors hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E00070]/70 dark:text-[#A8A095] dark:hover:text-[#f1f1f1]"
+          >
+            <Bars3Icon className="h-4 w-4" aria-hidden="true" />
+          </button>
+        )}
       </nav>
     </aside>
   )

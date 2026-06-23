@@ -1,11 +1,12 @@
 import { clerkClient } from "@clerk/nextjs/server"
 import { NextResponse } from "next/server"
-import { requireAdmin } from "@/lib/auth"
+import { adminOnly } from "@/lib/auth"
 
 export const runtime = "nodejs"
 
 export async function GET() {
-  await requireAdmin()
+  const unauthorized = await adminOnly()
+  if (unauthorized) return unauthorized
 
   const client = await clerkClient()
   const usersResponse = await client.users.getUserList({ limit: 100, orderBy: "-created_at" })

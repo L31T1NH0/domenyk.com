@@ -302,7 +302,7 @@ export function PostEditor({ post }: Props) {
           <input
             ref={coverFileRef}
             type="file"
-            accept="image/png,image/jpeg,image/webp,image/gif"
+            accept="image/png,image/jpeg,image/webp"
             className="hidden"
             onChange={(e) => { if (e.target.files?.[0]) uploadCover(e.target.files[0]) }}
           />

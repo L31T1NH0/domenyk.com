@@ -34,7 +34,7 @@ type ActiveImage = {
   alt: string
 }
 
-const TIMELINE_IMAGE_CROP_HEIGHT = 525
+const TIMELINE_IMAGE_CROP_MAX_HEIGHT = 416
 const TIMELINE_IMAGE_CROP_MIN_RATIO = 1.12
 
 type NoteCommentsPanelProps = {
@@ -176,7 +176,7 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
   const editEditorRef = useRef<LexicalEditorInstance | null>(null)
   const contentFontSize = usePretextContentFontSize(contentRef, {
     minSize: 13,
-    maxSize: 15,
+    maxSize: 14,
     maxLinesPerBlock: 5,
     blockSelector: "p, li, blockquote",
   })
@@ -194,6 +194,29 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
   const touchStartRef = useRef(0)
   const activeImageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const closeThreshold = 80
+
+  const applyTimelineImageCrops = useCallback(() => {
+    const content = contentRef.current
+    if (!content) return
+
+    const images = Array.from(content.querySelectorAll("img"))
+    for (const image of images) {
+      if (image.naturalWidth <= 0 || image.naturalHeight <= 0) continue
+
+      const aspectRatio = image.naturalHeight / image.naturalWidth
+      const isTall = cropTallImages && aspectRatio >= TIMELINE_IMAGE_CROP_MIN_RATIO
+      const renderedWidth =
+        image.getBoundingClientRect().width ||
+        image.parentElement?.clientWidth ||
+        image.clientWidth ||
+        image.naturalWidth
+      const renderedHeight = renderedWidth * aspectRatio
+      const shouldCrop = isTall && renderedHeight > TIMELINE_IMAGE_CROP_MAX_HEIGHT
+
+      image.dataset.timelineCropped = shouldCrop ? "true" : "false"
+      image.parentElement?.toggleAttribute("data-timeline-crop-frame", shouldCrop)
+    }
+  }, [cropTallImages])
 
   const closeLightbox = useCallback(() => {
     if (activeImageTimerRef.current) clearTimeout(activeImageTimerRef.current)
@@ -321,34 +344,31 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
     if (!content) return
 
     const images = Array.from(content.querySelectorAll("img"))
-
-    function updateImageCrop(image: HTMLImageElement) {
-      const aspectRatio = image.naturalWidth > 0 ? image.naturalHeight / image.naturalWidth : 0
-      const isTall = cropTallImages && aspectRatio >= TIMELINE_IMAGE_CROP_MIN_RATIO
-      const renderedWidth = image.parentElement?.clientWidth || image.clientWidth
-      const renderedHeight = renderedWidth > 0 && image.naturalWidth > 0
-        ? renderedWidth * aspectRatio
-        : 0
-      const shouldCrop = isTall && renderedHeight > TIMELINE_IMAGE_CROP_HEIGHT
-      image.dataset.timelineCropped = shouldCrop ? "true" : "false"
-      image.parentElement?.toggleAttribute("data-timeline-crop-frame", shouldCrop)
-    }
-
     const cleanups = images.map((image) => {
       if (image.complete) {
-        updateImageCrop(image)
+        applyTimelineImageCrops()
         return () => {}
       }
 
-      const onLoad = () => updateImageCrop(image)
+      const onLoad = () => applyTimelineImageCrops()
       image.addEventListener("load", onLoad)
       return () => image.removeEventListener("load", onLoad)
     })
+    const resizeObserver = new ResizeObserver(() => applyTimelineImageCrops())
+    resizeObserver.observe(content)
+    applyTimelineImageCrops()
 
     return () => {
       cleanups.forEach((cleanup) => cleanup())
+      resizeObserver.disconnect()
     }
-  }, [contentFontSize, cropTallImages, note.contentHtml, note.images])
+  }, [applyTimelineImageCrops, contentFontSize, note.contentHtml, note.images])
+
+  useEffect(() => {
+    if (activeImage) return
+    const frame = requestAnimationFrame(() => applyTimelineImageCrops())
+    return () => cancelAnimationFrame(frame)
+  }, [activeImage, applyTimelineImageCrops])
 
   function openLightbox(src: string, alt = "") {
     setActiveImage({ src, alt })
@@ -364,7 +384,7 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
   const notePath = `/notes/${note._id}`
 
   return (
-    <article className="group relative flex flex-col gap-3 border-y border-neutral-200 pb-6 pt-5 dark:border-white/10">
+    <article className="group relative flex w-full min-w-0 flex-col gap-2.5 border-y border-neutral-200 pb-5 pt-4 dark:border-white/10">
       <div className="flex items-center">
         <Link
           href={notePath}
@@ -445,7 +465,7 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
         <div
           ref={contentRef}
           className={[
-            "note-content text-[15px] leading-relaxed text-neutral-900 dark:text-[#f1f1f1]",
+            "note-content text-sm leading-relaxed text-neutral-900 dark:text-[#f1f1f1]",
             cropTallImages ? "note-content-timeline" : "",
           ].filter(Boolean).join(" ")}
           style={{ fontSize: contentFontSize }}

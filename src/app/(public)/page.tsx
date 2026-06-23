@@ -45,7 +45,7 @@ export default async function HomePage({
     <>
       <Header />
       <section className="flex flex-col items-center gap-1 pb-4 text-center">
-        <p className="text-lg text-zinc-200">Ideias, e somente ideias, podem iluminar a escuridão.</p>
+        <p className="w-full max-w-[22rem] text-[15px] leading-relaxed text-neutral-600 dark:text-zinc-400">Ideias, e somente ideias, podem iluminar a escuridão.</p>
       </section>
 
       <HomeTimeline

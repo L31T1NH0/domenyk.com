@@ -80,7 +80,7 @@ function PostTimelineItem({
   return (
     <li
       className={[
-        "group relative py-5 first:pt-0",
+        "group relative py-4 first:pt-0",
         showTopSeparator ? "border-t border-neutral-200 dark:border-white/10" : "",
         showBottomSeparator ? "border-b border-neutral-200 dark:border-white/10" : "",
       ]
@@ -97,24 +97,24 @@ function PostTimelineItem({
       )}
       <Link href={`/posts/${post.slug}`} prefetch={false} className="block text-left focus-visible:outline-none">
         {showCover ? (
-          <span className="relative block aspect-video w-full overflow-hidden rounded-2xl bg-neutral-200 dark:bg-white/5">
+          <span className="relative block aspect-video w-full overflow-hidden rounded-xl bg-neutral-200 dark:bg-white/5">
             <Image
               src={post.cover!.url}
               alt={post.cover!.alt ?? post.title}
               width={1920}
               height={1080}
-              sizes="(max-width: 640px) calc(100vw - 2rem), 34rem"
-              className="h-full w-full rounded-2xl object-cover !grayscale-0"
+              sizes="(max-width: 640px) calc(100vw - 2.5rem), 32.5rem"
+              className="h-full w-full rounded-xl object-cover !grayscale-0"
             />
-            <span className="pointer-events-none absolute inset-0 rounded-2xl">
-              <span className="absolute left-0 top-0 h-1/2 w-full bg-gradient-to-b from-[#040404] via-[#040404]/80 to-transparent" />
-              <span className="absolute bottom-0 left-0 h-1/2 w-full bg-gradient-to-t from-[#040404] via-[#040404]/80 to-transparent" />
+            <span className="pointer-events-none absolute inset-0 rounded-xl">
+              <span className="absolute left-0 top-0 h-2/5 w-full bg-gradient-to-b from-[#040404]/85 via-[#040404]/55 to-transparent" />
+              <span className="absolute bottom-0 left-0 h-3/5 w-full bg-gradient-to-t from-[#040404]/90 via-[#040404]/58 to-transparent" />
             </span>
             <span className="absolute bottom-2 left-3 right-3 flex flex-col gap-2 sm:bottom-3">
               <AutoFitText
                 text={post.title}
                 minSize={15}
-                maxSize={20}
+                maxSize={19}
                 maxLines={2}
                 className="font-normal leading-snug text-white"
               />
@@ -131,7 +131,7 @@ function PostTimelineItem({
             <AutoFitText
               text={post.title}
               minSize={14}
-              maxSize={18}
+              maxSize={17}
               maxLines={2}
               className="font-normal leading-snug text-neutral-950 dark:text-[#f1f1f1]"
             />
@@ -349,10 +349,10 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
   ]
 
   return (
-    <section aria-label="Timeline" className="flex w-full flex-col gap-4 self-center">
-      <div className="flex min-w-0 flex-col gap-4">
-        <div className="flex flex-col gap-4">
-          <h1 className="flex items-center gap-1 text-sm font-semibold uppercase tracking-wide text-neutral-950 dark:text-[#f1f1f1]">
+    <section aria-label="Timeline" className="flex w-full min-w-0 flex-col gap-5 self-center">
+      <div className="flex min-w-0 flex-col gap-5">
+        <div className="flex flex-col gap-3">
+          <h1 className="flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-950 dark:text-[#f1f1f1]">
             Timeline
             <span className="tabular-nums font-normal">({timelineCount})</span>
           </h1>
@@ -365,7 +365,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
                   key={option.mode}
                   href={modeHref(option.mode)}
                   className={[
-                    "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors",
+                    "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition-colors",
                     active
                       ? "border-neutral-400 bg-neutral-950/10 text-neutral-950 dark:border-[#A8A095]/60 dark:bg-[#A8A095]/15 dark:text-[#f1f1f1]"
                       : "border-neutral-300 text-neutral-600 hover:bg-neutral-950/5 hover:text-neutral-950 dark:border-white/10 dark:text-[#A8A095] dark:hover:bg-white/10 dark:hover:text-[#f1f1f1]",
@@ -388,10 +388,10 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
             <p>Nenhum post ou nota publicado ainda.</p>
           </div>
         ) : (
-          <ul className="ml-0">
+          <ul className="ml-0 min-w-0">
             {visibleItems.map((item, index) => (
               item.type === "note" ? (
-                <li key={item.id}>
+                <li key={item.id} className="min-w-0">
                   <NoteCard
                     note={item.note}
                     isAdmin={isAdmin}

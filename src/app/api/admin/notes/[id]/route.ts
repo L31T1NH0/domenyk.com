@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { deleteNote, normalizeNoteContent, serializeNote, updateNote } from "@/lib/db/notes"
-import { requireAdmin } from "@/lib/auth"
+import { adminOnly } from "@/lib/auth"
 import { asHttpUrlArray, asString, toObjectId } from "@/lib/validation"
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  await requireAdmin()
+  const unauthorized = await adminOnly()
+  if (unauthorized) return unauthorized
+
   const { id } = await params
   if (!toObjectId(id)) return NextResponse.json({ error: "ID inválido" }, { status: 400 })
 
@@ -25,7 +27,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  await requireAdmin()
+  const unauthorized = await adminOnly()
+  if (unauthorized) return unauthorized
+
   const { id } = await params
   if (!toObjectId(id)) return NextResponse.json({ error: "ID inválido" }, { status: 400 })
 

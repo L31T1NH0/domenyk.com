@@ -2,15 +2,19 @@ export const dynamic = "force-dynamic"
 
 import type { Metadata } from "next"
 import Link from "next/link"
+import { notFound } from "next/navigation"
 import { AdminNav } from "./AdminNav"
 import { ClerkButton } from "@/components/ClerkButton"
+import { isAdmin } from "@/lib/auth"
 
 export const metadata: Metadata = {
   title: "Admin",
   robots: { index: false, follow: false },
 }
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  if (!(await isAdmin())) notFound()
+
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-950 dark:bg-[#050505] dark:text-neutral-100">
       <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col lg:flex-row">

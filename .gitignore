@@ -42,3 +42,11 @@ next-env.d.ts
 
 # clerk configuration (can include secrets)
 /.clerk/
+
+# work in progress: books/library feature
+/.drafts/livros/
+/public/livros/
+/src/app/(public)/livros/
+/src/app/(public)/economia/
+/src/components/books/
+/src/lib/books.ts

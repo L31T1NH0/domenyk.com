@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createNote, getNotes, normalizeNoteContent, serializeNote } from "@/lib/db/notes"
-import { isAdmin } from "@/lib/auth"
+import { adminOnly } from "@/lib/auth"
 import { asHttpUrlArray, asString, toObjectId } from "@/lib/validation"
 
 export async function GET(req: NextRequest) {
@@ -14,9 +14,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await isAdmin())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const unauthorized = await adminOnly()
+  if (unauthorized) return unauthorized
 
   const body = await req.json().catch(() => null) as { content?: unknown; images?: unknown } | null
   const content = asString(body?.content, 20_000) ?? ""

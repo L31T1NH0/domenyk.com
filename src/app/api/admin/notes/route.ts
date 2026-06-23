@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createNote, normalizeNoteContent, serializeNote } from "@/lib/db/notes"
-import { requireAdmin } from "@/lib/auth"
+import { adminOnly } from "@/lib/auth"
 import { asHttpUrlArray, asString } from "@/lib/validation"
 
 export async function POST(req: NextRequest) {
-  await requireAdmin()
+  const unauthorized = await adminOnly()
+  if (unauthorized) return unauthorized
 
   const body = await req.json().catch(() => null) as { content?: unknown; images?: unknown } | null
   const content = asString(body?.content, 20_000) ?? ""

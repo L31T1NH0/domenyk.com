@@ -1,9 +1,24 @@
 import type { Metadata } from "next"
 import { ClerkProvider } from "@clerk/nextjs"
 import { Analytics } from "@vercel/analytics/next"
+import localFont from "next/font/local"
 import Script from "next/script"
 import { absoluteUrl, jsonLd, siteConfig } from "@/lib/seo"
 import "./globals.css"
+
+const polySans = localFont({
+  src: "./PolySans-Slim.woff2",
+  variable: "--font-display",
+  display: "swap",
+  fallback: ["Arial", "system-ui", "sans-serif"],
+})
+
+const geist = localFont({
+  src: "../../node_modules/next/dist/next-devtools/server/font/geist-latin.woff2",
+  variable: "--font-text",
+  display: "swap",
+  fallback: ["system-ui", "Arial", "sans-serif"],
+})
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
@@ -50,7 +65,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-	    <html lang="pt-BR" className="h-full antialiased dark-mode" suppressHydrationWarning>
+	    <html lang="pt-BR" className={`${polySans.variable} ${geist.variable} h-full antialiased dark-mode`} suppressHydrationWarning>
 	      <body className="min-h-full flex flex-col dark-mode" suppressHydrationWarning>
 	        <Script
 	          id="theme-bootstrap"

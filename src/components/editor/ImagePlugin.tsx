@@ -142,7 +142,7 @@ export function ImagePlugin({ compact = false, menuPlacement = "above" }: Props)
               {loadingAssets ? "carregando..." : showAssets ? "Ocultar assets" : "Ver assets"}
             </button>
           </div>
-          <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden"
+          <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden"
             onChange={(e) => { if (e.target.files?.[0]) uploadAndInsert(e.target.files[0]) }} />
 
           {showAssets && (

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { ObjectId } from "mongodb"
-import { requireAdmin } from "@/lib/auth"
+import { adminOnly } from "@/lib/auth"
 import { getDb } from "@/lib/db/client"
 import type { Post } from "@/lib/db/posts"
 
@@ -30,7 +30,8 @@ function postToMarkdown(post: Post) {
 }
 
 export async function POST(req: NextRequest) {
-  await requireAdmin()
+  const unauthorized = await adminOnly()
+  if (unauthorized) return unauthorized
 
   const body = (await req.json().catch(() => null)) as { ids?: unknown } | null
   const ids = Array.isArray(body?.ids) ? body.ids.filter((id): id is string => typeof id === "string") : []

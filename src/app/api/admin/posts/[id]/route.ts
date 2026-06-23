@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { updatePost, deletePost, publishPost } from "@/lib/db/posts"
-import { requireAdmin } from "@/lib/auth"
+import { adminOnly } from "@/lib/auth"
 import type { Post, PostStyle } from "@/lib/db/posts"
 import { asHttpUrl, asOptionalString, asString, asStringArray, toObjectId } from "@/lib/validation"
 
@@ -61,7 +61,9 @@ function parsePostPatch(body: Record<string, unknown>) {
 }
 
 export async function PATCH(req: NextRequest, { params }: Params) {
-  await requireAdmin()
+  const unauthorized = await adminOnly()
+  if (unauthorized) return unauthorized
+
   const { id } = await params
   if (!toObjectId(id)) return NextResponse.json({ error: "ID inválido" }, { status: 400 })
 
@@ -93,7 +95,9 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 }
 
 export async function DELETE(_req: NextRequest, { params }: Params) {
-  await requireAdmin()
+  const unauthorized = await adminOnly()
+  if (unauthorized) return unauthorized
+
   const { id } = await params
   if (!toObjectId(id)) return NextResponse.json({ error: "ID inválido" }, { status: 400 })
 

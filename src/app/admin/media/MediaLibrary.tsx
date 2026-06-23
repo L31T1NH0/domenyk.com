@@ -76,7 +76,7 @@ export function MediaLibrary({ initialMedia }: Props) {
         <input
           ref={fileRef}
           type="file"
-          accept="image/png,image/jpeg,image/webp,image/gif"
+          accept="image/png,image/jpeg,image/webp"
           className="hidden"
           onChange={(e) => { if (e.target.files?.[0]) upload(e.target.files[0]) }}
         />
@@ -85,7 +85,7 @@ export function MediaLibrary({ initialMedia }: Props) {
         ) : (
           <>
             <p className="text-sm font-medium text-neutral-700 dark:text-neutral-200">Arraste ou clique para enviar</p>
-            <p className="text-xs text-neutral-400">PNG, JPG, WebP, GIF</p>
+            <p className="text-xs text-neutral-400">PNG, JPG, WebP</p>
           </>
         )}
       </div>

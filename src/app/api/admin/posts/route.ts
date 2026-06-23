@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createPost, publishPost } from "@/lib/db/posts"
-import { requireAdmin } from "@/lib/auth"
+import { adminOnly } from "@/lib/auth"
 import type { PostStyle } from "@/lib/db/posts"
 import { asHttpUrl, asOptionalString, asString, asStringArray } from "@/lib/validation"
 
@@ -27,7 +27,8 @@ function parseBackground(value: unknown) {
 }
 
 export async function POST(req: NextRequest) {
-  await requireAdmin()
+  const unauthorized = await adminOnly()
+  if (unauthorized) return unauthorized
 
   const body = await req.json().catch(() => null) as Record<string, unknown> | null
   if (!body) return NextResponse.json({ error: "JSON inválido" }, { status: 400 })

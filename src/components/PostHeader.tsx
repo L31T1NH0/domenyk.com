@@ -26,13 +26,13 @@ function Avatar({
       <Image
         priority={src === "/images/profile.jpg"}
         src={src}
-        height={size === "post" ? 56 : 148}
-        width={size === "post" ? 56 : 148}
+        height={size === "post" ? 48 : 112}
+        width={size === "post" ? 48 : 112}
         alt={alt}
         className={[
           "!rounded-full hover:z-30 hover:opacity-90 transition-all object-cover",
           isProfileImage ? "!grayscale !brightness-125" : "",
-          size === "post" ? "w-10 h-10" : "w-[148px] h-[148px]",
+          size === "post" ? "size-9" : "size-28",
         ].join(" ")}
       />
     </Link>
@@ -42,26 +42,26 @@ function Avatar({
 export function PostHeader({ title, subtitle, cover, secondaryImage, background }: Props) {
   if (cover?.url) {
     return (
-      <div className="w-full relative">
+      <div className="relative w-full">
         <Image
           src={cover.url}
           alt={cover.alt ?? title}
           width={1920}
           height={1080}
-          className="banner w-full h-auto rounded-2xl object-cover"
+          className="banner h-auto w-full rounded-xl object-cover"
           style={{ filter: "none" }}
           priority
         />
-        <div className="absolute inset-0 rounded-2xl pointer-events-none">
-          <div className="absolute top-0 left-0 w-full h-[50%] bg-gradient-to-b from-[#040404] via-[#040404]/80 to-transparent" />
-          <div className="absolute bottom-0 left-0 w-full h-[50%] bg-gradient-to-t from-[#040404] via-[#040404]/80 to-transparent" />
+        <div className="pointer-events-none absolute inset-0 rounded-xl">
+          <div className="absolute left-0 top-0 h-[42%] w-full bg-gradient-to-b from-[#040404]/85 via-[#040404]/55 to-transparent" />
+          <div className="absolute bottom-0 left-0 h-[58%] w-full bg-gradient-to-t from-[#040404]/90 via-[#040404]/58 to-transparent" />
         </div>
-        <div className="absolute bottom-1 left-2 lg:bottom-3 flex flex-col gap-2">
+        <div className="absolute bottom-2 left-3 right-3 flex flex-col gap-2 sm:bottom-3">
           <div className="flex -space-x-5">
             <Avatar src="/images/profile.jpg" alt="Domenyk" size="post" />
             {secondaryImage && <Avatar src={secondaryImage} alt="Coautor" size="post" />}
           </div>
-          <AutoFitText as="h1" text={title} minSize={14} maxSize={20} maxLines={2} className="text-white" />
+          <AutoFitText as="h1" text={title} minSize={14} maxSize={19} maxLines={2} className="text-white" />
           {subtitle && (
             <AutoFitText
               as="p"
@@ -79,7 +79,7 @@ export function PostHeader({ title, subtitle, cover, secondaryImage, background 
 
   return (
     <div
-      className="flex flex-col gap-2 items-center pb-2"
+      className="flex flex-col items-center gap-2 pb-3 pt-1"
       style={{ backgroundColor: background?.color }}
     >
       <div className="flex -space-x-4">
@@ -90,7 +90,7 @@ export function PostHeader({ title, subtitle, cover, secondaryImage, background 
         as="h1"
         text={title}
         minSize={16}
-        maxSize={20}
+        maxSize={18}
         maxLines={3}
         className="w-full text-center text-neutral-950 dark:text-[#f1f1f1]"
       />
