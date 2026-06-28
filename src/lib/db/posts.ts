@@ -126,6 +126,10 @@ async function ensurePostPublicId(post: Post): Promise<Post> {
   return post
 }
 
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
 export async function getPosts(opts: {
   page?: number
   limit?: number
@@ -145,7 +149,13 @@ export async function getPosts(opts: {
   const filter: Record<string, unknown> = {}
   if (!includeUnpublished) filter.published = true
   if (excludeHiddenFromTimeline) filter.hiddenFromTimeline = { $ne: true }
-  if (search) filter.$text = { $search: search }
+  if (search) {
+    const regex = new RegExp(escapeRegex(search.trim()), "i")
+    filter.$or = [
+      { title: regex },
+      { tags: regex },
+    ]
+  }
 
   const [posts, total] = await Promise.all([
     col

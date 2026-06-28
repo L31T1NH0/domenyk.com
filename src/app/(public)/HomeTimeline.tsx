@@ -4,7 +4,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { EyeIcon } from "@heroicons/react/24/outline"
+import { EyeIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { NoteCard } from "@/components/notes/NoteCard"
@@ -19,6 +19,7 @@ type Props = {
   totalNotes: number
   initialNotes: SerializedNote[]
   feedMode: FeedMode
+  searchQuery: string
   currentPage: number
   pageSize: number
   totalPages: number
@@ -175,19 +176,34 @@ function PostTimelineItem({
   )
 }
 
-function pageHref(page: number, mode: FeedMode) {
+function pageHref(page: number, mode: FeedMode, searchQuery: string) {
   const params = new URLSearchParams()
   if (mode !== "all") params.set("mode", mode)
+  if (searchQuery) params.set("q", searchQuery)
   if (page > 1) params.set("page", String(page))
   const query = params.toString()
   return query ? `/?${query}` : "/"
 }
 
-function modeHref(mode: FeedMode) {
-  return mode === "all" ? "/" : `/?mode=${mode}`
+function modeHref(mode: FeedMode, searchQuery: string) {
+  const params = new URLSearchParams()
+  if (mode !== "all") params.set("mode", mode)
+  if (searchQuery) params.set("q", searchQuery)
+  const query = params.toString()
+  return query ? `/?${query}` : "/"
 }
 
-function Pagination({ currentPage, totalPages, mode }: { currentPage: number; totalPages: number; mode: FeedMode }) {
+function Pagination({
+  currentPage,
+  totalPages,
+  mode,
+  searchQuery,
+}: {
+  currentPage: number
+  totalPages: number
+  mode: FeedMode
+  searchQuery: string
+}) {
   if (totalPages <= 1) return null
 
   const visiblePageCount = Math.min(3, totalPages)
@@ -198,7 +214,7 @@ function Pagination({ currentPage, totalPages, mode }: { currentPage: number; to
     <nav className="flex flex-wrap items-center justify-center gap-1.5" aria-label="Paginação">
       {currentPage > 1 && (
         <Link
-          href={pageHref(currentPage - 1, mode)}
+          href={pageHref(currentPage - 1, mode, searchQuery)}
           className="inline-flex h-8 min-w-8 items-center justify-center rounded-md px-2 text-sm text-neutral-500 transition-colors hover:bg-neutral-950/5 hover:text-neutral-950 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-neutral-200"
         >
           Anterior
@@ -209,7 +225,7 @@ function Pagination({ currentPage, totalPages, mode }: { currentPage: number; to
         return (
           <Link
             key={page}
-            href={pageHref(page, mode)}
+            href={pageHref(page, mode, searchQuery)}
             aria-current={active ? "page" : undefined}
             className={[
               "inline-flex h-8 min-w-8 items-center justify-center rounded-md px-2 text-sm transition-colors",
@@ -224,7 +240,7 @@ function Pagination({ currentPage, totalPages, mode }: { currentPage: number; to
       })}
       {currentPage < totalPages && (
         <Link
-          href={pageHref(currentPage + 1, mode)}
+          href={pageHref(currentPage + 1, mode, searchQuery)}
           className="inline-flex h-8 min-w-8 items-center justify-center rounded-md px-2 text-sm text-neutral-500 transition-colors hover:bg-neutral-950/5 hover:text-neutral-950 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-neutral-200"
         >
           Próxima
@@ -234,13 +250,15 @@ function Pagination({ currentPage, totalPages, mode }: { currentPage: number; to
   )
 }
 
-export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feedMode, currentPage, pageSize, totalPages, isAdmin }: Props) {
+export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feedMode, searchQuery, currentPage, pageSize, totalPages, isAdmin }: Props) {
   const router = useRouter()
+  const searchInputRef = useRef<HTMLInputElement>(null)
   const [timelinePosts, setTimelinePosts] = useState(posts)
   const [postCount, setPostCount] = useState(totalPosts)
   const [noteCount, setNoteCount] = useState(totalNotes)
   const [notes, setNotes] = useState(initialNotes)
   const timelineCount = postCount + noteCount
+  const hasSearch = searchQuery.length > 0
   const [hidingPostId, setHidingPostId] = useState<string | null>(null)
   const [pendingHidePostId, setPendingHidePostId] = useState<string | null>(null)
   const [hideError, setHideError] = useState("")
@@ -267,6 +285,18 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
     return () => {
       if (pendingHideTimeoutRef.current) clearTimeout(pendingHideTimeoutRef.current)
     }
+  }, [])
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault()
+        searchInputRef.current?.focus()
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
   }, [])
 
   const allItems = useMemo<TimelineItem[]>(() => {
@@ -352,10 +382,48 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
     <section aria-label="Timeline" className="flex w-full min-w-0 flex-col gap-5 self-center">
       <div className="flex min-w-0 flex-col gap-5">
         <div className="flex flex-col gap-3">
-          <h1 className="flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-950 dark:text-[#f1f1f1]">
-            Timeline
-            <span className="tabular-nums font-normal">({timelineCount})</span>
-          </h1>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <h1 className="flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-950 dark:text-[#f1f1f1]">
+              Timeline
+              <span className="tabular-nums font-normal">({timelineCount})</span>
+            </h1>
+
+            <form action="/" className="min-w-0 sm:ml-2 sm:w-60">
+              <div
+                className={[
+                  "flex h-8 min-w-0 items-center gap-2 rounded-full border px-2.5 text-neutral-950 transition-colors",
+                  "border-neutral-300 bg-transparent focus-within:border-neutral-500 focus-within:bg-white/70",
+                  "dark:border-white/10 dark:text-[#f1f1f1] dark:focus-within:border-[#A8A095]/50 dark:focus-within:bg-white/[0.04]",
+                  hasSearch ? "border-neutral-400 dark:border-[#A8A095]/45" : "",
+                ].join(" ")}
+              >
+                <MagnifyingGlassIcon className="size-3.5 shrink-0 text-neutral-500 dark:text-[#A8A095]" aria-hidden />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  name="q"
+                  defaultValue={searchQuery}
+                  placeholder="Pesquisar posts..."
+                  aria-label="Pesquisar posts e notas"
+                  className="min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-neutral-500 dark:placeholder:text-[#A8A095]/65"
+                />
+                {feedMode !== "all" && <input type="hidden" name="mode" value={feedMode} />}
+                {hasSearch && (
+                  <>
+                    <span className="h-4 w-px bg-neutral-300 dark:bg-white/10" aria-hidden />
+                    <Link
+                      href={modeHref(feedMode, "")}
+                      aria-label="Limpar busca"
+                      title="Limpar busca"
+                      className="grid size-4 shrink-0 place-items-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-950/5 hover:text-neutral-950 dark:text-[#A8A095] dark:hover:bg-white/10 dark:hover:text-[#f1f1f1]"
+                    >
+                      <XMarkIcon className="size-3" aria-hidden />
+                    </Link>
+                  </>
+                )}
+              </div>
+            </form>
+          </div>
 
           <div className="flex flex-wrap items-center gap-2">
             {modeOptions.map((option) => {
@@ -363,7 +431,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
               return (
                 <Link
                   key={option.mode}
-                  href={modeHref(option.mode)}
+                  href={modeHref(option.mode, searchQuery)}
                   className={[
                     "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition-colors",
                     active
@@ -385,7 +453,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
 
         {visibleItems.length === 0 ? (
           <div className="text-sm text-zinc-400">
-            <p>Nenhum post ou nota publicado ainda.</p>
+            <p>{hasSearch ? "Nenhum resultado encontrado." : "Nenhum post ou nota publicado ainda."}</p>
           </div>
         ) : (
           <ul className="ml-0 min-w-0">
@@ -416,7 +484,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
           </ul>
         )}
 
-        <Pagination currentPage={currentPage} totalPages={totalPages} mode={feedMode} />
+        <Pagination currentPage={currentPage} totalPages={totalPages} mode={feedMode} searchQuery={searchQuery} />
       </div>
     </section>
   )

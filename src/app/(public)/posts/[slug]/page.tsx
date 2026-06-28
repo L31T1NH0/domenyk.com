@@ -9,6 +9,7 @@ import { BackHome } from "@/components/BackHome"
 import { ParagraphCommentsLayer } from "@/components/post/ParagraphCommentsLayer"
 import { PostContentShell } from "@/components/post/PostContentShell"
 import { PostMetaBar } from "@/components/post/PostMetaBar"
+import { PostReadingPosition } from "@/components/post/PostReadingPosition"
 import { PostTopics } from "@/components/post/PostTopics"
 import { CommentThread } from "@/components/comments/CommentThread"
 import { PostHeader } from "@/components/PostHeader"
@@ -164,6 +165,7 @@ export default async function PostPage({ params }: Props) {
 
         <div className="relative">
           <PostContentShell html={html} className={styleClasses.content} />
+          <PostReadingPosition postId={postId} updatedAt={post.updatedAt.toISOString()} />
           <ParagraphCommentsLayer postId={postId} isAdmin={admin} />
           <PostTopics />
         </div>

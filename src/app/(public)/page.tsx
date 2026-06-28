@@ -23,21 +23,41 @@ function parseFeedMode(value: string | string[] | undefined): FeedMode {
   return FEED_MODES.includes(mode as FeedMode) ? mode as FeedMode : "all"
 }
 
+function parseSearchQuery(value: string | string[] | undefined) {
+  const query = (Array.isArray(value) ? value[0] : value)?.trim() ?? ""
+  return query.replace(/\s+/g, " ").slice(0, 120)
+}
+
+function noteMatchesQuery(note: ReturnType<typeof serializeNote>, query: string) {
+  const normalized = query.toLowerCase()
+  return note.content.toLowerCase().includes(normalized)
+}
+
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string | string[]; mode?: string | string[] }>
+  searchParams: Promise<{ page?: string | string[]; mode?: string | string[]; q?: string | string[] }>
 }) {
   const params = await searchParams
   const requestedPage = parsePage(params.page)
   const feedMode = parseFeedMode(params.mode)
+  const searchQuery = parseSearchQuery(params.q)
   const admin = await isAdmin()
   const [{ posts, total }, { notes, total: totalNotes }] = await Promise.all([
-    getPosts({ limit: HOME_TIMELINE_FETCH_LIMIT, excludeHiddenFromTimeline: true }),
+    getPosts({
+      limit: HOME_TIMELINE_FETCH_LIMIT,
+      excludeHiddenFromTimeline: true,
+      search: searchQuery || undefined,
+    }),
     getNotes({ limit: HOME_TIMELINE_FETCH_LIMIT }),
   ])
-  const totalItems = total + totalNotes
-  const activeTotal = feedMode === "posts" ? total : feedMode === "notes" ? totalNotes : totalItems
+  const serializedNotes = notes.map(serializeNote)
+  const filteredNotes = searchQuery
+    ? serializedNotes.filter((note) => noteMatchesQuery(note, searchQuery))
+    : serializedNotes
+  const activeNoteTotal = searchQuery ? filteredNotes.length : totalNotes
+  const totalItems = total + activeNoteTotal
+  const activeTotal = feedMode === "posts" ? total : feedMode === "notes" ? activeNoteTotal : totalItems
   const totalPages = Math.max(1, Math.ceil(activeTotal / HOME_TIMELINE_PAGE_SIZE))
   const currentPage = Math.min(requestedPage, totalPages)
 
@@ -49,12 +69,13 @@ export default async function HomePage({
       </section>
 
       <HomeTimeline
-        key={`${feedMode}:${currentPage}`}
+        key={`${feedMode}:${currentPage}:${searchQuery}`}
         posts={posts.map(serializePostSummary)}
         totalPosts={total}
-        totalNotes={totalNotes}
-        initialNotes={notes.map(serializeNote)}
+        totalNotes={activeNoteTotal}
+        initialNotes={filteredNotes}
         feedMode={feedMode}
+        searchQuery={searchQuery}
         currentPage={currentPage}
         pageSize={HOME_TIMELINE_PAGE_SIZE}
         totalPages={totalPages}
