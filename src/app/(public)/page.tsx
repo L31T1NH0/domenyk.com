@@ -78,7 +78,6 @@ export default async function HomePage({
         searchQuery={searchQuery}
         currentPage={currentPage}
         pageSize={HOME_TIMELINE_PAGE_SIZE}
-        totalPages={totalPages}
         isAdmin={admin}
       />
     </>

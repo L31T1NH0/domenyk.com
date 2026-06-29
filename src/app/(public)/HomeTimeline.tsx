@@ -22,7 +22,6 @@ type Props = {
   searchQuery: string
   currentPage: number
   pageSize: number
-  totalPages: number
   isAdmin: boolean
 }
 
@@ -194,8 +193,8 @@ function modeHref(mode: FeedMode, searchQuery: string) {
 }
 
 const feedModeOrder: FeedMode[] = ["all", "posts", "notes"]
-const SWIPE_THRESHOLD = 72
-const SWIPE_MAX_OFFSET = 112
+const SWIPE_THRESHOLD = 46
+const SWIPE_MAX_OFFSET = 72
 
 function Pagination({
   currentPage,
@@ -254,7 +253,7 @@ function Pagination({
   )
 }
 
-export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feedMode, searchQuery, currentPage, pageSize, totalPages, isAdmin }: Props) {
+export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feedMode, searchQuery, currentPage, pageSize, isAdmin }: Props) {
   const router = useRouter()
   const searchInputRef = useRef<HTMLInputElement>(null)
   const touchStartRef = useRef<{ x: number; y: number; active: boolean } | null>(null)
@@ -262,6 +261,8 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
   const [postCount, setPostCount] = useState(totalPosts)
   const [noteCount, setNoteCount] = useState(totalNotes)
   const [notes, setNotes] = useState(initialNotes)
+  const [optimisticFeedMode, setOptimisticFeedMode] = useState(feedMode)
+  const [optimisticPage, setOptimisticPage] = useState(currentPage)
   const [swipeOffset, setSwipeOffset] = useState(0)
   const [isSwipeSettling, setIsSwipeSettling] = useState(false)
   const timelineCount = postCount + noteCount
@@ -270,7 +271,10 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
   const [pendingHidePostId, setPendingHidePostId] = useState<string | null>(null)
   const [hideError, setHideError] = useState("")
   const pendingHideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const pageStartIndex = (currentPage - 1) * pageSize
+  const optimisticTotal = optimisticFeedMode === "posts" ? postCount : optimisticFeedMode === "notes" ? noteCount : timelineCount
+  const optimisticTotalPages = Math.max(1, Math.ceil(optimisticTotal / pageSize))
+  const activePage = Math.min(optimisticPage, optimisticTotalPages)
+  const pageStartIndex = (activePage - 1) * pageSize
 
   const resetPendingHide = useCallback(() => {
     if (pendingHideTimeoutRef.current) {
@@ -306,6 +310,20 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [])
 
+  useEffect(() => {
+    function handlePopState() {
+      const params = new URLSearchParams(window.location.search)
+      const mode = params.get("mode")
+      const page = Number(params.get("page") ?? 1)
+
+      setOptimisticFeedMode(feedModeOrder.includes(mode as FeedMode) ? mode as FeedMode : "all")
+      setOptimisticPage(Number.isInteger(page) && page > 0 ? page : 1)
+    }
+
+    window.addEventListener("popstate", handlePopState)
+    return () => window.removeEventListener("popstate", handlePopState)
+  }, [])
+
   const allItems = useMemo<TimelineItem[]>(() => {
     return [
       ...notes.map((note) => ({ type: "note" as const, id: `note:${note._id}`, date: note.publishedAt, note })),
@@ -320,16 +338,16 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
   }, [notes, timelinePosts])
 
   const visibleItems = useMemo<TimelineDisplayItem[]>(() => {
-    if (feedMode === "posts") {
+    if (optimisticFeedMode === "posts") {
       return allItems.filter((item) => item.type === "post").slice(pageStartIndex, pageStartIndex + pageSize)
     }
 
-    if (feedMode === "notes") {
+    if (optimisticFeedMode === "notes") {
       return allItems.filter((item) => item.type === "note").slice(pageStartIndex, pageStartIndex + pageSize)
     }
 
     return allItems.slice(pageStartIndex, pageStartIndex + pageSize)
-  }, [allItems, feedMode, pageSize, pageStartIndex])
+  }, [allItems, optimisticFeedMode, pageSize, pageStartIndex])
 
   function handlePosted(note: SerializedNote) {
     setNotes((prev) => [note, ...prev])
@@ -380,13 +398,19 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
   }
 
   function isInteractiveTarget(target: EventTarget) {
-    return target instanceof Element && Boolean(target.closest("input, textarea, select, button, a"))
+    return target instanceof Element && Boolean(target.closest("input, textarea, select, button"))
   }
 
-  function getAdjacentMode(deltaX: number) {
-    const currentIndex = feedModeOrder.indexOf(feedMode)
+  function getAdjacentMode(deltaX: number, mode = optimisticFeedMode) {
+    const currentIndex = feedModeOrder.indexOf(mode)
     const nextIndex = deltaX < 0 ? currentIndex + 1 : currentIndex - 1
     return feedModeOrder[nextIndex]
+  }
+
+  function switchMode(nextMode: FeedMode) {
+    setOptimisticFeedMode(nextMode)
+    setOptimisticPage(1)
+    window.history.pushState(null, "", modeHref(nextMode, searchQuery))
   }
 
   function handleTouchStart(event: React.TouchEvent<HTMLElement>) {
@@ -417,7 +441,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
     }
 
     const hasAdjacentMode = Boolean(getAdjacentMode(deltaX))
-    const resistance = hasAdjacentMode ? 0.62 : 0.18
+    const resistance = hasAdjacentMode ? 0.82 : 0.2
     const offset = Math.max(-SWIPE_MAX_OFFSET, Math.min(SWIPE_MAX_OFFSET, deltaX * resistance))
     setSwipeOffset(offset)
   }
@@ -445,8 +469,8 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
       return
     }
 
-    setSwipeOffset(deltaX < 0 ? -SWIPE_MAX_OFFSET : SWIPE_MAX_OFFSET)
-    router.push(modeHref(nextMode, searchQuery), { scroll: false })
+    switchMode(nextMode)
+    setSwipeOffset(0)
   }
 
   const modeOptions = [
@@ -473,12 +497,15 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
           <div className="flex min-w-0 flex-col items-start gap-3">
             <nav className="flex min-w-0 flex-wrap items-center gap-2" aria-label="Filtros da timeline">
               {modeOptions.map((option) => {
-                const active = feedMode === option.mode
+                const active = optimisticFeedMode === option.mode
                 return (
-                  <Link
+                  <a
                     key={option.mode}
                     href={modeHref(option.mode, searchQuery)}
-                    scroll={false}
+                    onClick={(event) => {
+                      event.preventDefault()
+                      switchMode(option.mode)
+                    }}
                     aria-current={active ? "page" : undefined}
                     className={[
                       "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition-colors",
@@ -489,7 +516,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
                   >
                     {option.label}
                     <span className="tabular-nums opacity-70">{option.count}</span>
-                  </Link>
+                  </a>
                 )
               })}
             </nav>
@@ -513,12 +540,12 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
                   aria-label="Pesquisar posts e notas"
                   className="min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-neutral-500 dark:placeholder:text-[#A8A095]/65"
                 />
-                {feedMode !== "all" && <input type="hidden" name="mode" value={feedMode} />}
+                {optimisticFeedMode !== "all" && <input type="hidden" name="mode" value={optimisticFeedMode} />}
                 {hasSearch && (
                   <>
                     <span className="h-4 w-px bg-neutral-300 dark:bg-white/10" aria-hidden />
                     <Link
-                      href={modeHref(feedMode, "")}
+                      href={modeHref(optimisticFeedMode, "")}
                       aria-label="Limpar busca"
                       title="Limpar busca"
                       className="grid size-4 shrink-0 place-items-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-950/5 hover:text-neutral-950 dark:text-[#A8A095] dark:hover:bg-white/10 dark:hover:text-[#f1f1f1]"
@@ -541,7 +568,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
           style={{
             opacity: 1 - Math.min(Math.abs(swipeOffset) / 420, 0.18),
             transform: `translate3d(${swipeOffset}px, 0, 0)`,
-            transition: isSwipeSettling ? "transform 220ms cubic-bezier(0.16, 1, 0.3, 1), opacity 180ms ease-out" : "none",
+            transition: isSwipeSettling ? "transform 120ms cubic-bezier(0.16, 1, 0.3, 1), opacity 100ms ease-out" : "none",
           }}
         >
           {visibleItems.length === 0 ? (
@@ -577,7 +604,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
             </ul>
           )}
 
-          <Pagination currentPage={currentPage} totalPages={totalPages} mode={feedMode} searchQuery={searchQuery} />
+          <Pagination currentPage={activePage} totalPages={optimisticTotalPages} mode={optimisticFeedMode} searchQuery={searchQuery} />
         </div>
       </div>
     </section>
