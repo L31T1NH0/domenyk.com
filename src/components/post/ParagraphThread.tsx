@@ -1,17 +1,10 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect } from "react"
 import { useUser } from "@clerk/nextjs"
-import { ExpandableText } from "@/components/text/ExpandableText"
-
-type Comment = {
-  _id: string
-  authorName: string
-  authorImageUrl: string
-  content: string
-  authorId: string
-  createdAt: string
-}
+import { useComments } from "@/components/comments/useComments"
+import { CommentContent } from "@/components/comments/CommentContent"
+import { RichCommentComposer } from "@/components/comments/RichCommentComposer"
 
 type Props = {
   postId: string
@@ -24,57 +17,11 @@ type Props = {
 
 export function ParagraphThread({ postId, paragraphId, isAdmin = false, autoFocus = true, onCountChange, onClose }: Props) {
   const { user } = useUser()
-  const [comments, setComments] = useState<Comment[]>([])
-  const [draft, setDraft] = useState("")
-  const [submitting, setSubmitting] = useState(false)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-
-  useEffect(() => {
-    const controller = new AbortController()
-
-    fetch(`/api/comments/${postId}/paragraph/${paragraphId}`, { signal: controller.signal })
-      .then((r) => r.json())
-      .then((next: Comment[]) => {
-        setComments(next)
-      })
-      .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === "AbortError") return
-      })
-
-    return () => {
-      controller.abort()
-    }
-  }, [postId, paragraphId])
+  const { comments, draft, submitting, setDraft, submit, remove } = useComments(`/api/comments/${postId}/paragraph/${paragraphId}`)
 
   useEffect(() => {
     onCountChange?.(comments.length)
   }, [comments.length, onCountChange])
-
-  useEffect(() => {
-    if (!autoFocus) return
-    textareaRef.current?.focus()
-  }, [autoFocus])
-
-  async function submit() {
-    if (!draft.trim() || submitting) return
-    setSubmitting(true)
-    const res = await fetch(`/api/comments/${postId}/paragraph/${paragraphId}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: draft.trim() }),
-    })
-	    if (res.ok) {
-	      const comment = await res.json()
-	      setComments((prev) => [...prev, comment])
-	      setDraft("")
-	    }
-    setSubmitting(false)
-  }
-
-	  async function remove(id: string) {
-	    const res = await fetch(`/api/comments/by-id/${id}`, { method: "DELETE" })
-	    if (res.ok) setComments((prev) => prev.filter((c) => c._id !== id))
-	  }
 
   return (
     <div className="relative z-50 flex w-full max-w-[calc(100vw-2rem)] flex-col gap-3 rounded-lg border border-neutral-950/10 bg-[#f4f4f4] p-3 text-neutral-800 shadow-[0_2px_8px_rgb(0_0_0_/_0.14)] dark:border-white/10 dark:bg-[#040404] dark:text-[#f1f1f1] dark:shadow-none xl:h-full xl:rounded-t-none xl:border-t-0">
@@ -112,8 +59,8 @@ export function ParagraphThread({ postId, paragraphId, isAdmin = false, autoFocu
             )}
             <div className="min-w-0 flex-1">
               <span className="font-medium text-neutral-950 dark:text-[#f1f1f1]">{c.authorName}</span>
-              <ExpandableText
-                text={c.content}
+              <CommentContent
+                comment={c}
                 maxLines={4}
                 className="text-neutral-600 dark:text-[#A8A095]"
               />
@@ -134,23 +81,14 @@ export function ParagraphThread({ postId, paragraphId, isAdmin = false, autoFocu
 
       {user ? (
         <div className="flex flex-col gap-2 border-t border-neutral-950/10 pt-3 dark:border-white/10">
-          <textarea
-            ref={textareaRef}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit() }}
-            rows={2}
-            placeholder="Escreva um comentário..."
-            className="min-h-16 resize-none rounded-md border border-neutral-950/15 bg-white/70 p-2 text-xs leading-relaxed text-neutral-900 outline-none transition focus:border-[#E00070]/60 focus:ring-2 focus:ring-[#E00070]/20 dark:border-white/15 dark:bg-white/[0.04] dark:text-[#f1f1f1]"
+          <RichCommentComposer
+            draft={draft}
+            submitting={submitting}
+            size="compact"
+            autoFocus={autoFocus}
+            onDraftChange={setDraft}
+            onSubmit={submit}
           />
-          <button
-            type="button"
-            onClick={submit}
-            disabled={submitting || !draft.trim()}
-            className="self-end rounded-full bg-neutral-950 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[#E00070] disabled:cursor-not-allowed disabled:opacity-40 dark:bg-[#f1f1f1] dark:text-[#040404] dark:hover:bg-[#E00070] dark:hover:text-white"
-          >
-            {submitting ? "Enviando..." : "Enviar"}
-          </button>
         </div>
       ) : (
         <p className="border-t border-neutral-950/10 pt-3 text-xs text-neutral-500 dark:border-white/10 dark:text-[#A8A095]">

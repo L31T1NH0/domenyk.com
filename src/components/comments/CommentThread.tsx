@@ -1,64 +1,17 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { useUser } from "@clerk/nextjs"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { ExpandableText } from "@/components/text/ExpandableText"
-
-type Comment = {
-  _id: string
-  authorName: string
-  authorImageUrl: string
-  authorId: string
-  content: string
-  createdAt: string
-}
+import { useComments } from "@/components/comments/useComments"
+import { CommentContent } from "@/components/comments/CommentContent"
+import { RichCommentComposer } from "@/components/comments/RichCommentComposer"
 
 type Props = { postId: string; isAdmin?: boolean }
 
 export function CommentThread({ postId, isAdmin = false }: Props) {
   const { user } = useUser()
-  const [comments, setComments] = useState<Comment[]>([])
-  const [draft, setDraft] = useState("")
-  const [submitting, setSubmitting] = useState(false)
-
-  useEffect(() => {
-    const controller = new AbortController()
-
-    fetch(`/api/comments/${postId}`, { signal: controller.signal })
-      .then((r) => r.json())
-      .then(setComments)
-      .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === "AbortError") return
-        setComments([])
-      })
-
-    return () => {
-      controller.abort()
-    }
-  }, [postId])
-
-  async function submit() {
-    if (!draft.trim() || submitting) return
-    setSubmitting(true)
-    const res = await fetch(`/api/comments/${postId}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: draft.trim() }),
-    })
-    if (res.ok) {
-      const comment = await res.json()
-      setComments((prev) => [...prev, comment])
-      setDraft("")
-    }
-    setSubmitting(false)
-  }
-
-  async function remove(id: string) {
-    const res = await fetch(`/api/comments/by-id/${id}`, { method: "DELETE" })
-    if (res.ok) setComments((prev) => prev.filter((c) => c._id !== id))
-  }
+  const { comments, draft, submitting, setDraft, submit, remove } = useComments(`/api/comments/${postId}`)
 
   return (
     <section className="mt-12 flex flex-col gap-6">
@@ -86,8 +39,8 @@ export function CommentThread({ postId, isAdmin = false }: Props) {
                   </button>
                 )}
               </div>
-              <ExpandableText
-                text={c.content}
+              <CommentContent
+                comment={c}
                 maxLines={5}
                 className="mt-0.5 text-sm text-neutral-700 dark:text-neutral-300"
               />
@@ -99,22 +52,15 @@ export function CommentThread({ postId, isAdmin = false }: Props) {
       {user ? (
         <div className="flex gap-3">
             <img src={user.imageUrl} alt="" className="w-7 h-7 rounded-full object-cover shrink-0 mt-1" style={{ filter: "none" }} />
-          <div className="flex-1 flex flex-col gap-2">
-            <textarea
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit() }}
-              rows={3}
-              placeholder="Escreva um comentário..."
-              className="w-full resize-none rounded-lg border border-neutral-200 dark:border-neutral-800 bg-transparent p-3 text-sm outline-none focus:ring-1 focus:ring-neutral-300"
+          <div className="flex-1">
+            <RichCommentComposer
+              draft={draft}
+              submitting={submitting}
+              submitLabel="Comentar"
+              submittingLabel="enviando..."
+              onDraftChange={setDraft}
+              onSubmit={submit}
             />
-            <button
-              onClick={submit}
-              disabled={submitting || !draft.trim()}
-              className="self-end px-4 py-1.5 text-sm rounded-full bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 disabled:opacity-40"
-            >
-              {submitting ? "enviando..." : "Comentar"}
-            </button>
           </div>
         </div>
       ) : (

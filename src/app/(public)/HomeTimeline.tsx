@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type PointerEvent } from "react"
 import { useRouter } from "next/navigation"
 import { EyeIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline"
 import { format } from "date-fns"
@@ -196,6 +196,179 @@ const feedModeOrder: FeedMode[] = ["all", "posts", "notes"]
 const SWIPE_THRESHOLD = 46
 const SWIPE_MAX_OFFSET = 72
 
+function useTimelineFeed({
+  notes,
+  posts,
+  postCount,
+  noteCount,
+  mode,
+  page,
+  pageSize,
+}: {
+  notes: SerializedNote[]
+  posts: SerializedPostSummary[]
+  postCount: number
+  noteCount: number
+  mode: FeedMode
+  page: number
+  pageSize: number
+}) {
+  const timelineCount = postCount + noteCount
+  const total = mode === "posts" ? postCount : mode === "notes" ? noteCount : timelineCount
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  const activePage = Math.min(page, totalPages)
+  const pageStartIndex = (activePage - 1) * pageSize
+
+  const allItems = useMemo<TimelineItem[]>(() => {
+    return [
+      ...notes.map((note) => ({ type: "note" as const, id: `note:${note._id}`, date: note.publishedAt, note })),
+      ...posts.map((post) => ({ type: "post" as const, id: `post:${post.publicId}`, date: postDate(post), post })),
+    ].sort((a, b) => {
+      const aPinned = a.type === "post" && a.post.pinned
+      const bPinned = b.type === "post" && b.post.pinned
+
+      if (aPinned !== bPinned) return aPinned ? -1 : 1
+      return new Date(b.date).getTime() - new Date(a.date).getTime()
+    })
+  }, [notes, posts])
+
+  const visibleItems = useMemo<TimelineDisplayItem[]>(() => {
+    if (mode === "posts") {
+      return allItems.filter((item) => item.type === "post").slice(pageStartIndex, pageStartIndex + pageSize)
+    }
+
+    if (mode === "notes") {
+      return allItems.filter((item) => item.type === "note").slice(pageStartIndex, pageStartIndex + pageSize)
+    }
+
+    return allItems.slice(pageStartIndex, pageStartIndex + pageSize)
+  }, [allItems, mode, pageSize, pageStartIndex])
+
+  return { timelineCount, totalPages, activePage, visibleItems }
+}
+
+function isInteractiveTarget(target: EventTarget) {
+  return target instanceof Element && Boolean(target.closest("input, textarea, select, button, [data-swipe-ignore]"))
+}
+
+function getAdjacentMode(deltaX: number, mode: FeedMode) {
+  const currentIndex = feedModeOrder.indexOf(mode)
+  const nextIndex = deltaX < 0 ? currentIndex + 1 : currentIndex - 1
+  return feedModeOrder[nextIndex]
+}
+
+function useTimelineSwipeNavigation(mode: FeedMode, switchMode: (mode: FeedMode) => void) {
+  const pointerStartRef = useRef<{ id: number; x: number; y: number; active: boolean } | null>(null)
+  const suppressNextClickRef = useRef(false)
+  const [swipeOffset, setSwipeOffset] = useState(0)
+  const [isSwipeSettling, setIsSwipeSettling] = useState(false)
+
+  function handlePointerDown(event: PointerEvent<HTMLElement>) {
+    if (event.pointerType !== "touch") return
+    if (window.matchMedia("(min-width: 640px)").matches) return
+    if (isInteractiveTarget(event.target)) return
+
+    pointerStartRef.current = { id: event.pointerId, x: event.clientX, y: event.clientY, active: false }
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId)
+    } catch {
+      // Some synthetic/browser-dispatched pointer events are not capturable.
+    }
+    setIsSwipeSettling(false)
+  }
+
+  function handlePointerMove(event: PointerEvent<HTMLElement>) {
+    const start = pointerStartRef.current
+    if (!start || start.id !== event.pointerId) return
+    if (window.matchMedia("(min-width: 640px)").matches) return
+
+    const deltaX = event.clientX - start.x
+    const deltaY = event.clientY - start.y
+    const absX = Math.abs(deltaX)
+    const absY = Math.abs(deltaY)
+
+    if (!start.active) {
+      if (absY > 18 && absY > absX * 1.15) {
+        pointerStartRef.current = null
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId)
+        }
+        return
+      }
+      if (absX < 10 || absX < absY * 0.9) return
+      start.active = true
+    }
+
+    const hasAdjacentMode = Boolean(getAdjacentMode(deltaX, mode))
+    const resistance = hasAdjacentMode ? 0.82 : 0.2
+    const offset = Math.max(-SWIPE_MAX_OFFSET, Math.min(SWIPE_MAX_OFFSET, deltaX * resistance))
+    setSwipeOffset(offset)
+  }
+
+  function handlePointerUp(event: PointerEvent<HTMLElement>) {
+    const start = pointerStartRef.current
+    if (start && start.id !== event.pointerId) return
+    pointerStartRef.current = null
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+
+    if (!start || window.matchMedia("(min-width: 640px)").matches) {
+      setSwipeOffset(0)
+      return
+    }
+
+    const deltaX = event.clientX - start.x
+    const deltaY = event.clientY - start.y
+    setIsSwipeSettling(true)
+    if (!start.active || Math.abs(deltaX) < SWIPE_THRESHOLD || Math.abs(deltaX) < Math.abs(deltaY) * 0.9) {
+      setSwipeOffset(0)
+      return
+    }
+
+    const nextMode = getAdjacentMode(deltaX, mode)
+    if (!nextMode) {
+      setSwipeOffset(0)
+      return
+    }
+
+    switchMode(nextMode)
+    suppressNextClickRef.current = true
+    window.setTimeout(() => {
+      suppressNextClickRef.current = false
+    }, 350)
+    setSwipeOffset(0)
+  }
+
+  function handlePointerCancel(event: PointerEvent<HTMLElement>) {
+    const start = pointerStartRef.current
+    if (start && start.id !== event.pointerId) return
+    pointerStartRef.current = null
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+    setIsSwipeSettling(true)
+    setSwipeOffset(0)
+  }
+
+  function handleClickCapture(event: MouseEvent<HTMLElement>) {
+    if (!suppressNextClickRef.current) return
+    suppressNextClickRef.current = false
+    event.preventDefault()
+    event.stopPropagation()
+  }
+
+  return {
+    swipeOffset,
+    isSwipeSettling,
+    handlePointerDown,
+    handlePointerMove,
+    handlePointerUp,
+    handlePointerCancel,
+    handleClickCapture,
+  }
+}
+
 function Pagination({
   currentPage,
   totalPages,
@@ -274,26 +447,26 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
   const router = useRouter()
   const sectionRef = useRef<HTMLElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
-  const pointerStartRef = useRef<{ id: number; x: number; y: number; active: boolean } | null>(null)
-  const suppressNextClickRef = useRef(false)
   const [timelinePosts, setTimelinePosts] = useState(posts)
   const [postCount, setPostCount] = useState(totalPosts)
   const [noteCount, setNoteCount] = useState(totalNotes)
   const [notes, setNotes] = useState(initialNotes)
   const [optimisticFeedMode, setOptimisticFeedMode] = useState(feedMode)
   const [optimisticPage, setOptimisticPage] = useState(currentPage)
-  const [swipeOffset, setSwipeOffset] = useState(0)
-  const [isSwipeSettling, setIsSwipeSettling] = useState(false)
-  const timelineCount = postCount + noteCount
   const hasSearch = searchQuery.length > 0
   const [hidingPostId, setHidingPostId] = useState<string | null>(null)
   const [pendingHidePostId, setPendingHidePostId] = useState<string | null>(null)
   const [hideError, setHideError] = useState("")
   const pendingHideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const optimisticTotal = optimisticFeedMode === "posts" ? postCount : optimisticFeedMode === "notes" ? noteCount : timelineCount
-  const optimisticTotalPages = Math.max(1, Math.ceil(optimisticTotal / pageSize))
-  const activePage = Math.min(optimisticPage, optimisticTotalPages)
-  const pageStartIndex = (activePage - 1) * pageSize
+  const { timelineCount, totalPages: optimisticTotalPages, activePage, visibleItems } = useTimelineFeed({
+    notes,
+    posts: timelinePosts,
+    postCount,
+    noteCount,
+    mode: optimisticFeedMode,
+    page: optimisticPage,
+    pageSize,
+  })
 
   const resetPendingHide = useCallback(() => {
     if (pendingHideTimeoutRef.current) {
@@ -343,31 +516,6 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
     return () => window.removeEventListener("popstate", handlePopState)
   }, [])
 
-  const allItems = useMemo<TimelineItem[]>(() => {
-    return [
-      ...notes.map((note) => ({ type: "note" as const, id: `note:${note._id}`, date: note.publishedAt, note })),
-      ...timelinePosts.map((post) => ({ type: "post" as const, id: `post:${post.publicId}`, date: postDate(post), post })),
-    ].sort((a, b) => {
-      const aPinned = a.type === "post" && a.post.pinned
-      const bPinned = b.type === "post" && b.post.pinned
-
-      if (aPinned !== bPinned) return aPinned ? -1 : 1
-      return new Date(b.date).getTime() - new Date(a.date).getTime()
-    })
-  }, [notes, timelinePosts])
-
-  const visibleItems = useMemo<TimelineDisplayItem[]>(() => {
-    if (optimisticFeedMode === "posts") {
-      return allItems.filter((item) => item.type === "post").slice(pageStartIndex, pageStartIndex + pageSize)
-    }
-
-    if (optimisticFeedMode === "notes") {
-      return allItems.filter((item) => item.type === "note").slice(pageStartIndex, pageStartIndex + pageSize)
-    }
-
-    return allItems.slice(pageStartIndex, pageStartIndex + pageSize)
-  }, [allItems, optimisticFeedMode, pageSize, pageStartIndex])
-
   function handlePosted(note: SerializedNote) {
     setNotes((prev) => [note, ...prev])
     setNoteCount((prev) => prev + 1)
@@ -416,16 +564,6 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
     }
   }
 
-  function isInteractiveTarget(target: EventTarget) {
-    return target instanceof Element && Boolean(target.closest("input, textarea, select, button, [data-swipe-ignore]"))
-  }
-
-  function getAdjacentMode(deltaX: number, mode = optimisticFeedMode) {
-    const currentIndex = feedModeOrder.indexOf(mode)
-    const nextIndex = deltaX < 0 ? currentIndex + 1 : currentIndex - 1
-    return feedModeOrder[nextIndex]
-  }
-
   function scrollToTimelineStart() {
     sectionRef.current?.scrollIntoView({ block: "start" })
   }
@@ -452,93 +590,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
     updateTimelineUrl(optimisticFeedMode, clampedPage)
   }
 
-  function handlePointerDown(event: React.PointerEvent<HTMLElement>) {
-    if (event.pointerType !== "touch") return
-    if (window.matchMedia("(min-width: 640px)").matches) return
-    if (isInteractiveTarget(event.target)) return
-
-    pointerStartRef.current = { id: event.pointerId, x: event.clientX, y: event.clientY, active: false }
-    try {
-      event.currentTarget.setPointerCapture(event.pointerId)
-    } catch {
-      // Some synthetic/browser-dispatched pointer events are not capturable.
-    }
-    setIsSwipeSettling(false)
-  }
-
-  function handlePointerMove(event: React.PointerEvent<HTMLElement>) {
-    const start = pointerStartRef.current
-    if (!start || start.id !== event.pointerId) return
-    if (!start || window.matchMedia("(min-width: 640px)").matches) return
-
-    const deltaX = event.clientX - start.x
-    const deltaY = event.clientY - start.y
-    const absX = Math.abs(deltaX)
-    const absY = Math.abs(deltaY)
-
-    if (!start.active) {
-      if (absY > 18 && absY > absX * 1.15) {
-        pointerStartRef.current = null
-        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-          event.currentTarget.releasePointerCapture(event.pointerId)
-        }
-        return
-      }
-      if (absX < 10 || absX < absY * 0.9) return
-      start.active = true
-    }
-
-    const hasAdjacentMode = Boolean(getAdjacentMode(deltaX))
-    const resistance = hasAdjacentMode ? 0.82 : 0.2
-    const offset = Math.max(-SWIPE_MAX_OFFSET, Math.min(SWIPE_MAX_OFFSET, deltaX * resistance))
-    setSwipeOffset(offset)
-  }
-
-  function handlePointerUp(event: React.PointerEvent<HTMLElement>) {
-    const start = pointerStartRef.current
-    if (start && start.id !== event.pointerId) return
-    pointerStartRef.current = null
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId)
-    }
-
-    if (!start || window.matchMedia("(min-width: 640px)").matches) {
-      setSwipeOffset(0)
-      return
-    }
-
-    const deltaX = event.clientX - start.x
-    const deltaY = event.clientY - start.y
-    setIsSwipeSettling(true)
-    if (!start.active || Math.abs(deltaX) < SWIPE_THRESHOLD || Math.abs(deltaX) < Math.abs(deltaY) * 0.9) {
-      setSwipeOffset(0)
-      return
-    }
-
-    const nextMode = getAdjacentMode(deltaX)
-    if (!nextMode) {
-      setSwipeOffset(0)
-      return
-    }
-
-    switchMode(nextMode)
-    suppressNextClickRef.current = true
-    window.setTimeout(() => {
-      suppressNextClickRef.current = false
-    }, 350)
-    setSwipeOffset(0)
-  }
-
-  function handlePointerCancel(event: React.PointerEvent<HTMLElement>) {
-    const start = pointerStartRef.current
-    if (start && start.id !== event.pointerId) return
-    pointerStartRef.current = null
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId)
-    }
-    setIsSwipeSettling(true)
-    setSwipeOffset(0)
-  }
+  const swipeNavigation = useTimelineSwipeNavigation(optimisticFeedMode, switchMode)
 
   const modeOptions = [
     { mode: "all" as const, label: "Tudo", count: timelineCount },
@@ -551,16 +603,11 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
       ref={sectionRef}
       aria-label="Timeline"
       className="flex w-full min-w-0 touch-pan-y flex-col gap-5 self-center"
-      onPointerDownCapture={handlePointerDown}
-      onPointerMoveCapture={handlePointerMove}
-      onPointerUpCapture={handlePointerUp}
-      onPointerCancelCapture={handlePointerCancel}
-      onClickCapture={(event) => {
-        if (!suppressNextClickRef.current) return
-        suppressNextClickRef.current = false
-        event.preventDefault()
-        event.stopPropagation()
-      }}
+      onPointerDownCapture={swipeNavigation.handlePointerDown}
+      onPointerMoveCapture={swipeNavigation.handlePointerMove}
+      onPointerUpCapture={swipeNavigation.handlePointerUp}
+      onPointerCancelCapture={swipeNavigation.handlePointerCancel}
+      onClickCapture={swipeNavigation.handleClickCapture}
     >
       <div className="flex min-w-0 flex-col gap-5">
         <div className="flex flex-col gap-3">
@@ -638,9 +685,9 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
         <div
           className="min-w-0 will-change-transform"
           style={{
-            opacity: 1 - Math.min(Math.abs(swipeOffset) / 420, 0.18),
-            transform: `translate3d(${swipeOffset}px, 0, 0)`,
-            transition: isSwipeSettling ? "transform 120ms cubic-bezier(0.16, 1, 0.3, 1), opacity 100ms ease-out" : "none",
+            opacity: 1 - Math.min(Math.abs(swipeNavigation.swipeOffset) / 420, 0.18),
+            transform: `translate3d(${swipeNavigation.swipeOffset}px, 0, 0)`,
+            transition: swipeNavigation.isSwipeSettling ? "transform 120ms cubic-bezier(0.16, 1, 0.3, 1), opacity 100ms ease-out" : "none",
           }}
         >
           {visibleItems.length === 0 ? (

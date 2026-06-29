@@ -8,18 +8,11 @@ import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import type { LexicalEditor as LexicalEditorInstance } from "lexical"
 import { LexicalEditor, readMarkdownFromEditor } from "@/components/editor/LexicalEditor"
-import { ExpandableText } from "@/components/text/ExpandableText"
 import { usePretextContentFontSize } from "@/components/text/usePretextTextMetrics"
+import { CommentContent } from "@/components/comments/CommentContent"
+import { RichCommentComposer } from "@/components/comments/RichCommentComposer"
+import { useComments, type Comment } from "@/components/comments/useComments"
 import type { SerializedNote } from "@/lib/db/notes"
-
-type Comment = {
-  _id: string
-  authorName: string
-  authorImageUrl: string
-  authorId: string
-  content: string
-  createdAt: string
-}
 
 type Props = {
   note: SerializedNote
@@ -38,44 +31,19 @@ const TIMELINE_IMAGE_CROP_MAX_HEIGHT = 416
 const TIMELINE_IMAGE_CROP_MIN_RATIO = 1.12
 
 type NoteCommentsPanelProps = {
-  noteId: string
   comments: Comment[]
   loading?: boolean
+  draft: string
+  submitting: boolean
   isAdmin?: boolean
-  onCommentsChange: (comments: Comment[]) => void
+  onDraftChange: (draft: string) => void
+  onSubmit: (content?: string) => Promise<boolean | void> | boolean | void
+  onRemove: (id: string) => void
   onClose: () => void
 }
 
-function NoteCommentsPanel({ noteId, comments, loading = false, isAdmin, onCommentsChange, onClose }: NoteCommentsPanelProps) {
+function NoteCommentsPanel({ comments, loading = false, draft, submitting, isAdmin, onDraftChange, onSubmit, onRemove, onClose }: NoteCommentsPanelProps) {
   const { user } = useUser()
-  const [draft, setDraft] = useState("")
-  const [submitting, setSubmitting] = useState(false)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-
-  useEffect(() => {
-    textareaRef.current?.focus()
-  }, [])
-
-  async function submit() {
-    if (!draft.trim() || submitting) return
-    setSubmitting(true)
-    const res = await fetch(`/api/notes/${noteId}/comments`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: draft.trim() }),
-    })
-    if (res.ok) {
-      const comment = await res.json()
-      onCommentsChange([...comments, comment])
-      setDraft("")
-    }
-    setSubmitting(false)
-  }
-
-  async function remove(id: string) {
-    const res = await fetch(`/api/comments/by-id/${id}`, { method: "DELETE" })
-    if (res.ok) onCommentsChange(comments.filter((comment) => comment._id !== id))
-  }
 
   return (
     <aside className="fixed inset-x-4 bottom-4 z-50 flex max-h-[70vh] flex-col rounded-lg border border-neutral-200 bg-white p-3 shadow-xl shadow-black/10 dark:border-white/10 dark:bg-[#080808] sm:absolute sm:inset-x-auto sm:inset-y-0 sm:left-[calc(100%+1rem)] sm:bottom-auto sm:w-80 sm:max-h-full">
@@ -119,8 +87,8 @@ function NoteCommentsPanel({ noteId, comments, loading = false, isAdmin, onComme
                       {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true, locale: ptBR })}
                     </time>
                   </div>
-                  <ExpandableText
-                    text={comment.content}
+                  <CommentContent
+                    comment={comment}
                     maxLines={5}
                     whiteSpace="pre-wrap"
                     className="mt-0.5 break-words leading-relaxed text-neutral-700 dark:text-[#d8d4ce]"
@@ -129,7 +97,7 @@ function NoteCommentsPanel({ noteId, comments, loading = false, isAdmin, onComme
                 {(isAdmin || user?.id === comment.authorId) && (
                   <button
                     type="button"
-                    onClick={() => remove(comment._id)}
+                    onClick={() => onRemove(comment._id)}
                     aria-label="Deletar comentário"
                     className="grid size-5 shrink-0 place-items-center text-neutral-400 transition-colors hover:text-red-500 dark:text-[#A8A095]/50 dark:hover:text-red-400"
                   >
@@ -143,26 +111,16 @@ function NoteCommentsPanel({ noteId, comments, loading = false, isAdmin, onComme
       </div>
 
       {user ? (
-        <div className="flex gap-2 border-t border-neutral-200 pt-2 dark:border-white/10">
-          <textarea
-            ref={textareaRef}
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) submit()
-            }}
-            rows={2}
-            placeholder="Escreva um comentário..."
-            className="min-w-0 flex-1 resize-none rounded-md border border-neutral-200 bg-transparent p-2 text-xs text-neutral-900 outline-none placeholder:text-neutral-400 focus:ring-1 focus:ring-neutral-300 dark:border-white/10 dark:text-[#f1f1f1] dark:placeholder:text-[#A8A095]/60 dark:focus:ring-[#A8A095]/40"
+        <div className="border-t border-neutral-200 pt-2 dark:border-white/10">
+          <RichCommentComposer
+            draft={draft}
+            submitting={submitting}
+            size="compact"
+            autoFocus
+            submittingLabel="..."
+            onDraftChange={onDraftChange}
+            onSubmit={onSubmit}
           />
-          <button
-            type="button"
-            onClick={submit}
-            disabled={submitting || !draft.trim()}
-            className="self-end rounded-md bg-neutral-950 px-3 py-1.5 text-xs font-medium text-white transition-opacity disabled:opacity-40 dark:bg-[#f1f1f1] dark:text-[#080808]"
-          >
-            {submitting ? "..." : "Enviar"}
-          </button>
         </div>
       ) : (
         <p className="border-t border-neutral-200 pt-2 text-xs text-neutral-500 dark:border-white/10 dark:text-[#A8A095]/75">Faça login para comentar.</p>
@@ -174,15 +132,24 @@ function NoteCommentsPanel({ noteId, comments, loading = false, isAdmin, onComme
 export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = false }: Props) {
   const contentRef = useRef<HTMLDivElement>(null)
   const editEditorRef = useRef<LexicalEditorInstance | null>(null)
+  const commentsEndpoint = `/api/notes/${note._id}/comments`
   const contentFontSize = usePretextContentFontSize(contentRef, {
     minSize: 13,
     maxSize: 14,
     maxLinesPerBlock: 5,
     blockSelector: "p, li, blockquote",
   })
-  const [comments, setComments] = useState<Comment[]>([])
-  const [commentsLoaded, setCommentsLoaded] = useState(false)
-  const [loadingComments, setLoadingComments] = useState(false)
+  const {
+    comments,
+    draft,
+    loading: loadingComments,
+    loaded: commentsLoaded,
+    submitting,
+    setDraft,
+    load: loadComments,
+    submit: submitComment,
+    remove: removeComment,
+  } = useComments(commentsEndpoint, { enabled: false })
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [activeImage, setActiveImage] = useState<ActiveImage | null>(null)
   const [lightboxVisible, setLightboxVisible] = useState(false)
@@ -231,22 +198,6 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
     addSuffix: true,
     locale: ptBR,
   })
-
-  async function loadComments() {
-    if (commentsLoaded || loadingComments) return
-
-    setLoadingComments(true)
-    try {
-      const response = await fetch(`/api/notes/${note._id}/comments`)
-      const next = response.ok ? await response.json() as Comment[] : []
-      setComments(next)
-      setCommentsLoaded(true)
-    } catch {
-      setComments([])
-    } finally {
-      setLoadingComments(false)
-    }
-  }
 
   function openComments() {
     setCommentsOpen(true)
@@ -503,14 +454,14 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
 
       {commentsOpen && (
           <NoteCommentsPanel
-            noteId={note._id}
             comments={comments}
             loading={loadingComments}
+            draft={draft}
+            submitting={submitting}
             isAdmin={isAdmin}
-            onCommentsChange={(next) => {
-              setComments(next)
-              setCommentsLoaded(true)
-            }}
+            onDraftChange={setDraft}
+            onSubmit={submitComment}
+            onRemove={removeComment}
             onClose={() => setCommentsOpen(false)}
           />
       )}

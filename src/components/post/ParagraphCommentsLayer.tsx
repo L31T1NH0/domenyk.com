@@ -191,7 +191,7 @@ export function ParagraphCommentsLayer({ postId, isAdmin = false, containerSelec
       const onClick = (event: MouseEvent) => {
         if (!isTouch) return
         const target = event.target as HTMLElement
-        if (target.closest("a, button, img, textarea, input, select")) return
+        if (target.closest("a, button, img, textarea, input, select, [contenteditable='true']")) return
         setActivePid((current) => (current === pid ? null : pid))
       }
 

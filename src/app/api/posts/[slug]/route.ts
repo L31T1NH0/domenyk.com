@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createHash } from "crypto"
-import { getPostByPublicId, incrementPostViews } from "@/lib/db/posts"
+import { getPostByPublicId, incrementPostViewsOnce } from "@/lib/db/posts"
 import { isAdmin } from "@/lib/auth"
 
 const VIEW_COOKIE_MAX_AGE = 60 * 60 * 24
@@ -8,6 +8,25 @@ const VIEW_COOKIE_MAX_AGE = 60 * 60 * 24
 function viewCookieName(publicId: string) {
   const hash = createHash("sha256").update(publicId).digest("hex").slice(0, 16)
   return `post_viewed_${hash}`
+}
+
+function clientIp(req: NextRequest): string {
+  const forwardedFor = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+  return (
+    forwardedFor ||
+    req.headers.get("x-real-ip") ||
+    req.headers.get("cf-connecting-ip") ||
+    req.headers.get("true-client-ip") ||
+    "unknown"
+  )
+}
+
+function viewVisitorKey(req: NextRequest, publicId: string): string {
+  const day = new Date().toISOString().slice(0, 10)
+  const userAgent = req.headers.get("user-agent")?.slice(0, 300) ?? ""
+  return createHash("sha256")
+    .update(`${day}\n${publicId}\n${clientIp(req)}\n${userAgent}`)
+    .digest("hex")
 }
 
 export async function GET(
@@ -31,8 +50,9 @@ export async function GET(
   let counted = false
 
   if (shouldTrackView && post.published && !admin && !hasViewCookie) {
-    post.views = await incrementPostViews(publicId)
-    counted = true
+    const result = await incrementPostViewsOnce(publicId, viewVisitorKey(req, publicId))
+    post.views = result.views
+    counted = result.counted
   }
 
   const response = NextResponse.json({ ...post, viewCounted: counted })

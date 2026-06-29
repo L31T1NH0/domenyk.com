@@ -1,5 +1,6 @@
 import { ObjectId } from "mongodb"
 import { getDb } from "./client"
+import { renderMarkdownSync } from "../mdx"
 import { toObjectId } from "../validation"
 
 export type Comment = {
@@ -19,6 +20,7 @@ export type SerializedComment = Omit<Comment, "_id" | "postId" | "createdAt" | "
   postId: string
   createdAt: string
   updatedAt: string
+  contentHtml: string
 }
 
 type StoredComment = Partial<Comment> & {
@@ -74,10 +76,12 @@ export function serializeComment(comment: Comment): SerializedComment {
     postId: comment.postId.toString(),
     createdAt: comment.createdAt.toISOString(),
     updatedAt: comment.updatedAt.toISOString(),
+    contentHtml: renderMarkdownSync(comment.content),
   }
 }
 
 let indexesPromise: Promise<void> | undefined
+export const MAX_COMMENTS_PER_RESPONSE = 100
 
 async function collectionRaw() {
   const db = await getDb()
@@ -95,15 +99,26 @@ export async function getComments(
   postId: string,
   paragraphId?: string
 ): Promise<Comment[]> {
+  return (await getCommentsPage(postId, { paragraphId })).comments
+}
+
+export async function getCommentsPage(
+  postId: string,
+  opts: { paragraphId?: string; limit?: number } = {}
+): Promise<{ comments: Comment[]; hasMore: boolean }> {
+  const { paragraphId, limit = MAX_COMMENTS_PER_RESPONSE } = opts
   const objectId = toObjectId(postId)
-  if (!objectId) return []
+  if (!objectId) return { comments: [], hasMore: false }
 
   const col = await collection()
   const filter: Record<string, unknown> = { postId: objectId }
   if (paragraphId !== undefined) filter.paragraphId = paragraphId
   else filter.$or = [{ paragraphId: { $exists: false } }, { paragraphId: null }]
-  const comments = await col.find(filter).sort({ createdAt: 1 }).toArray()
-  return comments.map(normalizeComment)
+  const boundedLimit = Math.max(1, Math.min(limit, MAX_COMMENTS_PER_RESPONSE))
+  const comments = await col.find(filter).sort({ createdAt: 1 }).limit(boundedLimit + 1).toArray()
+  const hasMore = comments.length > boundedLimit
+  if (hasMore) comments.pop()
+  return { comments: comments.map(normalizeComment), hasMore }
 }
 
 export async function getComment(id: string): Promise<Comment | null> {

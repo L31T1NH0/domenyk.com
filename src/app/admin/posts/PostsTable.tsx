@@ -47,6 +47,53 @@ function postMatchesQuery(post: SerializedPostSummary, query: string) {
     .some((value) => value!.toLowerCase().includes(normalized))
 }
 
+function StatusBadge({ published }: { published: boolean }) {
+  return (
+    <span className={`inline-flex w-fit rounded-full px-2 py-0.5 text-xs font-medium ${published ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300" : "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"}`}>
+      {published ? "Publicado" : "Rascunho"}
+    </span>
+  )
+}
+
+function PostFlags({ post }: { post: SerializedPostSummary }) {
+  return (
+    <>
+      {post.pinned && <span className="shrink-0 rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-medium text-sky-700 dark:bg-sky-500/10 dark:text-sky-300">fixado</span>}
+      {post.hiddenFromTimeline && <span className="shrink-0 rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-medium text-neutral-600 dark:bg-white/10 dark:text-neutral-300">oculto</span>}
+    </>
+  )
+}
+
+type PostRowActionsProps = {
+  post: SerializedPostSummary
+  compact?: boolean
+  onTogglePublish: (post: SerializedPostSummary) => void
+  onTogglePin: (post: SerializedPostSummary) => void
+  onRemove: (id: string) => void
+}
+
+function PostRowActions({ post, compact = false, onTogglePublish, onTogglePin, onRemove }: PostRowActionsProps) {
+  const iconSize = compact ? "size-7" : "size-8"
+  const textPadding = compact ? "px-2 py-1" : "px-2 py-1.5"
+
+  return (
+    <div className="flex justify-end gap-1">
+      <button type="button" onClick={() => onTogglePublish(post)} className={`rounded-md ${textPadding} text-xs text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-950 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-neutral-100`}>
+        {post.published ? "Despublicar" : "Publicar"}
+      </button>
+      <button type="button" onClick={() => onTogglePin(post)} className={`rounded-md ${textPadding} text-xs text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-950 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-neutral-100`}>
+        {post.pinned ? "Desafixar" : "Fixar"}
+      </button>
+      <Link href={`/admin/posts/${post._id}/edit`} className={`grid ${iconSize} place-items-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-950 dark:hover:bg-white/10 dark:hover:text-neutral-100`} aria-label={`Editar ${post.title}`}>
+        <PencilSquareIcon className="size-4" aria-hidden />
+      </Link>
+      <button type="button" onClick={() => onRemove(post._id)} className={`grid ${iconSize} place-items-center rounded-md text-neutral-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-300`} aria-label={`Deletar ${post.title}`}>
+        <TrashIcon className="size-4" aria-hidden />
+      </button>
+    </div>
+  )
+}
+
 export function PostsTable({ posts: initial }: Props) {
   const [posts, setPosts] = useState(initial)
   const [selected, setSelected] = useState<Record<string, boolean>>({})
@@ -99,24 +146,22 @@ export function PostsTable({ posts: initial }: Props) {
     if (!res.ok) throw new Error("Não foi possível atualizar o post.")
   }
 
-  async function togglePublish(id: string, published: boolean) {
+  async function togglePostBoolean(id: string, key: "published" | "pinned", current: boolean) {
     setActionError("")
     try {
-      await patchPost(id, { published: !published })
-      setPosts((prev) => prev.map((p) => (p._id === id ? { ...p, published: !published } : p)))
+      await patchPost(id, { [key]: !current })
+      setPosts((prev) => prev.map((post) => (post._id === id ? { ...post, [key]: !current } : post)))
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Não foi possível atualizar o post.")
     }
   }
 
-  async function togglePin(id: string, pinned: boolean) {
-    setActionError("")
-    try {
-      await patchPost(id, { pinned: !pinned })
-      setPosts((prev) => prev.map((p) => (p._id === id ? { ...p, pinned: !pinned } : p)))
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Não foi possível atualizar o post.")
-    }
+  function togglePublish(post: SerializedPostSummary) {
+    void togglePostBoolean(post._id, "published", post.published)
+  }
+
+  function togglePin(post: SerializedPostSummary) {
+    void togglePostBoolean(post._id, "pinned", post.pinned)
   }
 
   async function hideFromTimeline(ids: string[]) {
@@ -317,31 +362,22 @@ export function PostsTable({ posts: initial }: Props) {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <h2 className="min-w-0 break-words text-sm font-medium text-neutral-950 dark:text-neutral-100">{post.title}</h2>
-                    {post.pinned && <span className="shrink-0 rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-medium text-sky-700 dark:bg-sky-500/10 dark:text-sky-300">fixado</span>}
-                    {post.hiddenFromTimeline && <span className="shrink-0 rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-medium text-neutral-600 dark:bg-white/10 dark:text-neutral-300">oculto</span>}
+                    <PostFlags post={post} />
                   </div>
                   <p className="mt-1 break-all text-xs text-neutral-500">{post.slug}</p>
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-neutral-500">
-                    <span className={`inline-flex w-fit rounded-full px-2 py-0.5 font-medium ${post.published ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300" : "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"}`}>
-                      {post.published ? "Publicado" : "Rascunho"}
-                    </span>
+                    <StatusBadge published={post.published} />
                     <span className="text-right">{formatDate(post.publishedAt ?? post.createdAt)}</span>
                     <span>{post.views ?? 0} views</span>
                     <span className="text-right">{post.readingTimeMinutes} min</span>
                   </div>
-                  <div className="mt-3 flex flex-wrap justify-end gap-1">
-                    <button type="button" onClick={() => togglePublish(post._id, post.published)} className="rounded-md px-2 py-1.5 text-xs text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-950 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-neutral-100">
-                      {post.published ? "Despublicar" : "Publicar"}
-                    </button>
-                    <button type="button" onClick={() => togglePin(post._id, post.pinned)} className="rounded-md px-2 py-1.5 text-xs text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-950 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-neutral-100">
-                      {post.pinned ? "Desafixar" : "Fixar"}
-                    </button>
-                    <Link href={`/admin/posts/${post._id}/edit`} className="grid size-8 place-items-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-950 dark:hover:bg-white/10 dark:hover:text-neutral-100" aria-label={`Editar ${post.title}`}>
-                      <PencilSquareIcon className="size-4" aria-hidden />
-                    </Link>
-                    <button type="button" onClick={() => remove([post._id])} className="grid size-8 place-items-center rounded-md text-neutral-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-300" aria-label={`Deletar ${post.title}`}>
-                      <TrashIcon className="size-4" aria-hidden />
-                    </button>
+                  <div className="mt-3">
+                    <PostRowActions
+                      post={post}
+                      onTogglePublish={togglePublish}
+                      onTogglePin={togglePin}
+                      onRemove={(id) => remove([id])}
+                    />
                   </div>
                 </div>
               </div>
@@ -387,17 +423,14 @@ export function PostsTable({ posts: initial }: Props) {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="truncate font-medium text-neutral-950 dark:text-neutral-100">{post.title}</p>
-                        {post.pinned && <span className="shrink-0 rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-medium text-sky-700 dark:bg-sky-500/10 dark:text-sky-300">fixado</span>}
-                        {post.hiddenFromTimeline && <span className="shrink-0 rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-medium text-neutral-600 dark:bg-white/10 dark:text-neutral-300">oculto</span>}
+                        <PostFlags post={post} />
                       </div>
                       <p className="mt-0.5 truncate text-xs text-neutral-500">{post.slug}</p>
                     </div>
                   </td>
                   {visibleColumns.status && (
                     <td className="px-4 py-3">
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${post.published ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300" : "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"}`}>
-                        {post.published ? "Publicado" : "Rascunho"}
-                      </span>
+                      <StatusBadge published={post.published} />
                     </td>
                   )}
                   {visibleColumns.date && <td className="whitespace-nowrap px-4 py-3 text-neutral-500">{formatDate(post.publishedAt ?? post.createdAt)}</td>}
@@ -405,20 +438,13 @@ export function PostsTable({ posts: initial }: Props) {
                   {visibleColumns.reading && <td className="px-4 py-3 text-right tabular-nums text-neutral-500">{post.readingTimeMinutes} min</td>}
                   {visibleColumns.style && <td className="px-4 py-3 text-neutral-500">{post.style}</td>}
                   <td className="px-4 py-3">
-                    <div className="flex justify-end gap-1">
-                      <button type="button" onClick={() => togglePublish(post._id, post.published)} className="rounded-md px-2 py-1 text-xs text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-950 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-neutral-100">
-                        {post.published ? "Despublicar" : "Publicar"}
-                      </button>
-                      <button type="button" onClick={() => togglePin(post._id, post.pinned)} className="rounded-md px-2 py-1 text-xs text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-950 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-neutral-100">
-                        {post.pinned ? "Desafixar" : "Fixar"}
-                      </button>
-                      <Link href={`/admin/posts/${post._id}/edit`} className="grid size-7 place-items-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-950 dark:hover:bg-white/10 dark:hover:text-neutral-100" aria-label={`Editar ${post.title}`}>
-                        <PencilSquareIcon className="size-4" aria-hidden />
-                      </Link>
-                      <button type="button" onClick={() => remove([post._id])} className="grid size-7 place-items-center rounded-md text-neutral-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-300" aria-label={`Deletar ${post.title}`}>
-                        <TrashIcon className="size-4" aria-hidden />
-                      </button>
-                    </div>
+                    <PostRowActions
+                      post={post}
+                      compact
+                      onTogglePublish={togglePublish}
+                      onTogglePin={togglePin}
+                      onRemove={(id) => remove([id])}
+                    />
                   </td>
                 </tr>
               ))}

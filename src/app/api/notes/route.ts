@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createNote, getNotes, normalizeNoteContent, serializeNote } from "@/lib/db/notes"
+import { getNotes, serializeNote } from "@/lib/db/notes"
 import { adminOnly } from "@/lib/auth"
-import { asHttpUrlArray, asString, toObjectId } from "@/lib/validation"
+import { toObjectId } from "@/lib/validation"
+import { createSerializedNoteFromBody } from "@/lib/api/note-input"
 
 export async function GET(req: NextRequest) {
   const cursor = req.nextUrl.searchParams.get("cursor") ?? undefined
@@ -18,15 +19,11 @@ export async function POST(req: NextRequest) {
   if (unauthorized) return unauthorized
 
   const body = await req.json().catch(() => null) as { content?: unknown; images?: unknown } | null
-  const content = asString(body?.content, 20_000) ?? ""
-  const normalizedContent = normalizeNoteContent(content)
-
-  if (!normalizedContent) {
+  try {
+    const note = await createSerializedNoteFromBody(body)
+    return NextResponse.json(note, { status: 201 })
+  } catch (err) {
+    if (!(err instanceof Error) || err.message !== "content é obrigatório") throw err
     return NextResponse.json({ error: "content é obrigatório" }, { status: 400 })
   }
-
-  const images = asHttpUrlArray(body?.images, 6)
-
-  const note = await createNote({ content: normalizedContent, images })
-  return NextResponse.json(serializeNote(note), { status: 201 })
 }

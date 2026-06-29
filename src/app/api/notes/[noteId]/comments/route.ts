@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getAuthUser } from "@/lib/auth"
-import { createComment, getComments, serializeComment } from "@/lib/db/comments"
+import { createComment, getCommentsPage, serializeComment, MAX_COMMENTS_PER_RESPONSE } from "@/lib/db/comments"
 import { getNote } from "@/lib/db/notes"
 import { rateLimit } from "@/lib/rate-limit"
-import { asString, toObjectId } from "@/lib/validation"
+import { toObjectId } from "@/lib/validation"
+import { parseCommentContent } from "@/lib/api/comment-input"
 
 type Params = { params: Promise<{ noteId: string }> }
 
@@ -14,8 +15,13 @@ export async function GET(_req: NextRequest, { params }: Params) {
   const note = await getNote(noteId)
   if (!note) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const comments = await getComments(noteId)
-  return NextResponse.json(comments.map(serializeComment))
+  const { comments, hasMore } = await getCommentsPage(noteId)
+  return NextResponse.json(comments.map(serializeComment), {
+    headers: {
+      "X-Comments-Limit": String(MAX_COMMENTS_PER_RESPONSE),
+      "X-Comments-Truncated": String(hasMore),
+    },
+  })
 }
 
 export async function POST(req: NextRequest, { params }: Params) {
@@ -32,7 +38,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   if (!note) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
   const body = await req.json().catch(() => null) as { content?: unknown } | null
-  const content = asString(body?.content, 1000)
+  const content = parseCommentContent(body?.content)
 
   if (!content) {
     return NextResponse.json({ error: "Invalid content" }, { status: 400 })

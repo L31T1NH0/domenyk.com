@@ -90,6 +90,9 @@ type Props = {
   shellClassName?: string
   toolbarVariant?: "default" | "compact"
   toolbarPlacement?: "top" | "bottom"
+  imageUploadEndpoint?: string
+  imageAssetsEndpoint?: string
+  allowImageAssetLibrary?: boolean
   onChangeDelayMs?: number
   editorRef?: MutableRefObject<LexicalEditorInstance | null>
 }
@@ -334,6 +337,9 @@ export function LexicalEditor({
   shellClassName = "min-h-64 p-4",
   toolbarVariant = "default",
   toolbarPlacement = "top",
+  imageUploadEndpoint,
+  imageAssetsEndpoint,
+  allowImageAssetLibrary,
   onChangeDelayMs = 0,
   editorRef,
 }: Props) {
@@ -381,7 +387,15 @@ export function LexicalEditor({
   return (
     <LexicalComposer initialConfig={initialConfig}>
       <EditorRefPlugin editorRef={editorRef} />
-      {toolbarPlacement === "top" && <ToolbarPlugin variant={toolbarVariant} placement="top" />}
+      {toolbarPlacement === "top" && (
+        <ToolbarPlugin
+          variant={toolbarVariant}
+          placement="top"
+          imageUploadEndpoint={imageUploadEndpoint}
+          imageAssetsEndpoint={imageAssetsEndpoint}
+          allowImageAssetLibrary={allowImageAssetLibrary}
+        />
+      )}
       <div className={`relative ${shellClassName}`}>
         <RichTextPlugin
           contentEditable={
@@ -400,7 +414,15 @@ export function LexicalEditor({
         <FloatingSelectionToolbarPlugin />
         <OnChangePlugin onChange={handleChange} ignoreSelectionChange />
       </div>
-      {toolbarPlacement === "bottom" && <ToolbarPlugin variant={toolbarVariant} placement="bottom" />}
+      {toolbarPlacement === "bottom" && (
+        <ToolbarPlugin
+          variant={toolbarVariant}
+          placement="bottom"
+          imageUploadEndpoint={imageUploadEndpoint}
+          imageAssetsEndpoint={imageAssetsEndpoint}
+          allowImageAssetLibrary={allowImageAssetLibrary}
+        />
+      )}
     </LexicalComposer>
   )
 }

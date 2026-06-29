@@ -9,6 +9,7 @@ import rehypeAutolinkHeadings from "rehype-autolink-headings"
 import rehypeStringify from "rehype-stringify"
 import rehypeRaw from "rehype-raw"
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize"
+import type { Options as SanitizeSchema } from "rehype-sanitize"
 import { visit } from "unist-util-visit"
 import type { Element, Root } from "hast"
 import { createHash } from "crypto"
@@ -26,6 +27,34 @@ type MdastNode = {
 
 const AUTHOR_TOKEN_PATTERN = /@autor|@co-autor/g
 const DEFAULT_AUTHOR_IMAGE = "/images/profile.jpg"
+const markdownSanitizeSchema: SanitizeSchema = {
+  ...defaultSchema,
+  clobberPrefix: "user-content-",
+  protocols: {
+    ...defaultSchema.protocols,
+    href: ["http", "https", "mailto"],
+    cite: ["http", "https"],
+    src: ["http", "https"],
+  },
+  attributes: {
+    ...defaultSchema.attributes,
+    a: [
+      ...(defaultSchema.attributes?.a ?? []),
+      ["rel", "nofollow"],
+      ["target", "_blank"],
+    ],
+    img: [
+      ...(defaultSchema.attributes?.img ?? []),
+      "loading",
+      "decoding",
+    ],
+    span: [
+      ...(defaultSchema.attributes?.span ?? []),
+      ["data-role", "author-reference"],
+      ["data-kind", "author", "co-author"],
+    ],
+  },
+}
 
 function escapeHtmlAttribute(value: string): string {
   return value
@@ -156,28 +185,7 @@ function createProcessor(options: MarkdownRenderOptions = {}) {
     .use(remarkAuthorReferences, options)
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeRaw)
-    .use(rehypeSanitize, {
-      ...defaultSchema,
-      attributes: {
-        ...defaultSchema.attributes,
-        a: [
-          ...(defaultSchema.attributes?.a ?? []),
-          ["rel", "nofollow"],
-          ["target", "_blank"],
-        ],
-        img: [
-          ...(defaultSchema.attributes?.img ?? []),
-          "loading",
-          "decoding",
-        ],
-        span: [
-          ...(defaultSchema.attributes?.span ?? []),
-          ["data-role", "author-reference"],
-          ["data-kind", "author"],
-          ["data-kind", "co-author"],
-        ],
-      },
-    })
+    .use(rehypeSanitize, markdownSanitizeSchema)
     .use(rehypeParagraphIds)
     .use(rehypeDemoteBodyH1)
     .use(rehypeSlug)

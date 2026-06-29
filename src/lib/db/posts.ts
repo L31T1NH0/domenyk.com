@@ -43,6 +43,14 @@ export type SerializedPostSummary = Omit<PostSummary, "_id" | "publishedAt" | "c
 }
 
 let indexesPromise: Promise<void> | undefined
+let postViewsIndexesPromise: Promise<void> | undefined
+
+type PostView = {
+  _id: ObjectId
+  publicId: string
+  visitorKey: string
+  createdAt: Date
+}
 
 async function ensurePostIndexes(col: Awaited<ReturnType<typeof collectionRaw>>): Promise<void> {
   const existingIndexes = await col.listIndexes().toArray()
@@ -73,6 +81,17 @@ export function serializePostSummary(post: PostSummary): SerializedPostSummary {
 async function collectionRaw() {
   const db = await getDb()
   return db.collection<Post>("posts")
+}
+
+async function postViewsCollection() {
+  const db = await getDb()
+  const col = db.collection<PostView>("post_views")
+  postViewsIndexesPromise ??= Promise.all([
+    col.createIndex({ publicId: 1, visitorKey: 1 }, { unique: true }),
+    col.createIndex({ createdAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 8 }),
+  ]).then(() => undefined)
+  await postViewsIndexesPromise
+  return col
 }
 
 async function collection() {
@@ -197,6 +216,30 @@ export async function incrementPostViews(publicId: string): Promise<number> {
     { returnDocument: "after", projection: { views: 1 } }
   )
   return result?.views ?? 0
+}
+
+export async function incrementPostViewsOnce(
+  publicId: string,
+  visitorKey: string
+): Promise<{ views: number; counted: boolean }> {
+  const viewsCol = await postViewsCollection()
+
+  try {
+    await viewsCol.insertOne({
+      _id: new ObjectId(),
+      publicId,
+      visitorKey,
+      createdAt: new Date(),
+    })
+  } catch (error) {
+    if (typeof error === "object" && error && "code" in error && error.code === 11000) {
+      const post = await (await collection()).findOne({ publicId }, { projection: { views: 1 } })
+      return { views: post?.views ?? 0, counted: false }
+    }
+    throw error
+  }
+
+  return { views: await incrementPostViews(publicId), counted: true }
 }
 
 export async function createPost(data: {

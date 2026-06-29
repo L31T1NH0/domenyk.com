@@ -499,6 +499,30 @@ html.light-mode [data-public-shell] .note-content a:hover {
   @apply text-inherit no-underline hover:text-inherit;
 }
 
+.comment-content {
+  @apply gap-1;
+}
+
+.comment-content h1 {
+  @apply text-base;
+}
+
+.comment-content h2,
+.comment-content h3,
+.comment-content h4,
+.comment-content h5,
+.comment-content h6 {
+  @apply text-sm;
+}
+
+.comment-content img {
+  @apply max-h-72 max-w-full rounded-md object-contain;
+}
+
+.comment-content pre {
+  @apply max-w-full text-[11px];
+}
+
 [data-scroll-progress-bar] {
   position: fixed;
   top: calc(env(safe-area-inset-top, 0px));

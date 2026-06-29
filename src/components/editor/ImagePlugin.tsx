@@ -16,9 +16,18 @@ type MediaAsset = {
 type Props = {
   compact?: boolean
   menuPlacement?: "above" | "below"
+  uploadEndpoint?: string
+  assetsEndpoint?: string
+  allowAssetLibrary?: boolean
 }
 
-export function ImagePlugin({ compact = false, menuPlacement = "above" }: Props) {
+export function ImagePlugin({
+  compact = false,
+  menuPlacement = "above",
+  uploadEndpoint = "/api/admin/media",
+  assetsEndpoint = "/api/admin/media",
+  allowAssetLibrary = true,
+}: Props) {
   const [editor] = useLexicalComposerContext()
   const [open, setOpen] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -44,7 +53,7 @@ export function ImagePlugin({ compact = false, menuPlacement = "above" }: Props)
     try {
       const form = new FormData()
       form.append("file", file)
-      const res = await fetch("/api/admin/media", { method: "POST", body: form })
+      const res = await fetch(uploadEndpoint, { method: "POST", body: form })
       const data = await res.json()
       if (!res.ok || !data.url) throw new Error(data.error ?? "Falha no upload")
       insertImage(data.url)
@@ -67,7 +76,7 @@ export function ImagePlugin({ compact = false, menuPlacement = "above" }: Props)
     setLoadingAssets(true)
     setError("")
     try {
-      const res = await fetch("/api/admin/media", { cache: "no-store" })
+      const res = await fetch(assetsEndpoint, { cache: "no-store" })
       const data = await res.json()
       if (!res.ok || !Array.isArray(data)) throw new Error(data?.error ?? "Não foi possível carregar os assets.")
       setAssets(data)
@@ -117,7 +126,7 @@ export function ImagePlugin({ compact = false, menuPlacement = "above" }: Props)
             </button>
           </div>
 
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className={allowAssetLibrary ? "mt-3 grid grid-cols-2 gap-2" : "mt-3 grid gap-2"}>
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
@@ -127,25 +136,27 @@ export function ImagePlugin({ compact = false, menuPlacement = "above" }: Props)
               <PhotoIcon className="size-4" aria-hidden />
               {uploading ? "enviando..." : "Upload"}
             </button>
-            <button
-              type="button"
-              onClick={loadAssets}
-              disabled={loadingAssets}
-              className={[
-                "inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors disabled:opacity-40",
-                showAssets
-                  ? "border-neutral-300 bg-neutral-900 text-white dark:border-white/20 dark:bg-white dark:text-neutral-950"
-                  : "border-neutral-200 bg-neutral-50/70 text-neutral-700 hover:border-neutral-300 hover:bg-neutral-100 dark:border-white/10 dark:bg-white/[0.04] dark:text-neutral-200 dark:hover:bg-white/10",
-              ].join(" ")}
-            >
-              <Squares2X2Icon className="size-4" aria-hidden />
-              {loadingAssets ? "carregando..." : showAssets ? "Ocultar assets" : "Ver assets"}
-            </button>
+            {allowAssetLibrary && (
+              <button
+                type="button"
+                onClick={loadAssets}
+                disabled={loadingAssets}
+                className={[
+                  "inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors disabled:opacity-40",
+                  showAssets
+                    ? "border-neutral-300 bg-neutral-900 text-white dark:border-white/20 dark:bg-white dark:text-neutral-950"
+                    : "border-neutral-200 bg-neutral-50/70 text-neutral-700 hover:border-neutral-300 hover:bg-neutral-100 dark:border-white/10 dark:bg-white/[0.04] dark:text-neutral-200 dark:hover:bg-white/10",
+                ].join(" ")}
+              >
+                <Squares2X2Icon className="size-4" aria-hidden />
+                {loadingAssets ? "carregando..." : showAssets ? "Ocultar assets" : "Ver assets"}
+              </button>
+            )}
           </div>
           <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden"
             onChange={(e) => { if (e.target.files?.[0]) uploadAndInsert(e.target.files[0]) }} />
 
-          {showAssets && (
+          {allowAssetLibrary && showAssets && (
             <div className="mt-3 max-h-56 overflow-y-auto rounded-lg border border-neutral-200 bg-neutral-50/60 p-2 dark:border-white/10 dark:bg-white/[0.03]">
               {loadingAssets ? (
                 <p className="py-6 text-center text-xs text-neutral-500">Carregando assets...</p>
