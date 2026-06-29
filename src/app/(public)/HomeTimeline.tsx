@@ -272,6 +272,7 @@ function Pagination({
 
 export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feedMode, searchQuery, currentPage, pageSize, isAdmin }: Props) {
   const router = useRouter()
+  const sectionRef = useRef<HTMLElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const touchStartRef = useRef<{ x: number; y: number; active: boolean } | null>(null)
   const suppressNextClickRef = useRef(false)
@@ -425,14 +426,24 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
     return feedModeOrder[nextIndex]
   }
 
+  function scrollToTimelineStart() {
+    sectionRef.current?.scrollIntoView({ block: "start" })
+  }
+
   function updateTimelineUrl(nextMode: FeedMode, nextPage: number) {
-    window.history.replaceState(null, "", pageHref(nextPage, nextMode, searchQuery))
+    window.history.pushState(null, "", pageHref(nextPage, nextMode, searchQuery))
   }
 
   function switchMode(nextMode: FeedMode) {
+    if (nextMode === optimisticFeedMode && optimisticPage === 1) {
+      scrollToTimelineStart()
+      return
+    }
+
     setOptimisticFeedMode(nextMode)
     setOptimisticPage(1)
     updateTimelineUrl(nextMode, 1)
+    scrollToTimelineStart()
   }
 
   function switchPage(nextPage: number) {
@@ -460,11 +471,11 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
     const absY = Math.abs(deltaY)
 
     if (!start.active) {
-      if (absY > 10 && absY > absX) {
+      if (absY > 18 && absY > absX * 1.15) {
         touchStartRef.current = null
         return
       }
-      if (absX < 12 || absX < absY * 1.2) return
+      if (absX < 10 || absX < absY * 0.9) return
       start.active = true
     }
 
@@ -486,7 +497,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
     const deltaX = touch.clientX - start.x
     const deltaY = touch.clientY - start.y
     setIsSwipeSettling(true)
-    if (!start.active || Math.abs(deltaX) < SWIPE_THRESHOLD || Math.abs(deltaX) < Math.abs(deltaY) * 1.4) {
+    if (!start.active || Math.abs(deltaX) < SWIPE_THRESHOLD || Math.abs(deltaX) < Math.abs(deltaY) * 0.9) {
       setSwipeOffset(0)
       return
     }
@@ -513,6 +524,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
 
   return (
     <section
+      ref={sectionRef}
       aria-label="Timeline"
       className="flex w-full min-w-0 touch-pan-y flex-col gap-5 self-center"
       onTouchStart={handleTouchStart}
