@@ -193,6 +193,8 @@ function modeHref(mode: FeedMode, searchQuery: string) {
   return query ? `/?${query}` : "/"
 }
 
+const feedModeOrder: FeedMode[] = ["all", "posts", "notes"]
+
 function Pagination({
   currentPage,
   totalPages,
@@ -253,6 +255,7 @@ function Pagination({
 export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feedMode, searchQuery, currentPage, pageSize, totalPages, isAdmin }: Props) {
   const router = useRouter()
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
   const [timelinePosts, setTimelinePosts] = useState(posts)
   const [postCount, setPostCount] = useState(totalPosts)
   const [noteCount, setNoteCount] = useState(totalNotes)
@@ -372,6 +375,30 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
     }
   }
 
+  function handleTouchStart(event: React.TouchEvent<HTMLElement>) {
+    if (window.matchMedia("(min-width: 640px)").matches) return
+    const touch = event.touches[0]
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY }
+  }
+
+  function handleTouchEnd(event: React.TouchEvent<HTMLElement>) {
+    const start = touchStartRef.current
+    touchStartRef.current = null
+    if (!start || window.matchMedia("(min-width: 640px)").matches) return
+
+    const touch = event.changedTouches[0]
+    const deltaX = touch.clientX - start.x
+    const deltaY = touch.clientY - start.y
+    if (Math.abs(deltaX) < 64 || Math.abs(deltaX) < Math.abs(deltaY) * 1.4) return
+
+    const currentIndex = feedModeOrder.indexOf(feedMode)
+    const nextIndex = deltaX < 0 ? currentIndex + 1 : currentIndex - 1
+    const nextMode = feedModeOrder[nextIndex]
+    if (!nextMode) return
+
+    router.push(modeHref(nextMode, searchQuery))
+  }
+
   const modeOptions = [
     { mode: "all" as const, label: "Tudo", count: timelineCount },
     { mode: "posts" as const, label: "Posts", count: postCount },
@@ -379,16 +406,38 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
   ]
 
   return (
-    <section aria-label="Timeline" className="flex w-full min-w-0 flex-col gap-5 self-center">
+    <section
+      aria-label="Timeline"
+      className="flex w-full min-w-0 touch-pan-y flex-col gap-5 self-center"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       <div className="flex min-w-0 flex-col gap-5">
         <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <h1 className="flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-950 dark:text-[#f1f1f1]">
-              Timeline
-              <span className="tabular-nums font-normal">({timelineCount})</span>
-            </h1>
+          <div className="flex min-w-0 flex-col items-start gap-3">
+            <nav className="flex min-w-0 flex-wrap items-center gap-2" aria-label="Filtros da timeline">
+              {modeOptions.map((option) => {
+                const active = feedMode === option.mode
+                return (
+                  <Link
+                    key={option.mode}
+                    href={modeHref(option.mode, searchQuery)}
+                    aria-current={active ? "page" : undefined}
+                    className={[
+                      "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition-colors",
+                      active
+                        ? "border-neutral-400 bg-neutral-950/10 text-neutral-950 dark:border-[#A8A095]/60 dark:bg-[#A8A095]/15 dark:text-[#f1f1f1]"
+                        : "border-neutral-300 text-neutral-600 hover:bg-neutral-950/5 hover:text-neutral-950 dark:border-white/10 dark:text-[#A8A095] dark:hover:bg-white/10 dark:hover:text-[#f1f1f1]",
+                    ].join(" ")}
+                  >
+                    {option.label}
+                    <span className="tabular-nums opacity-70">{option.count}</span>
+                  </Link>
+                )
+              })}
+            </nav>
 
-            <form action="/" className="min-w-0 sm:ml-2 sm:w-60">
+            <form action="/" className="w-[min(100%,14rem)] min-w-0 sm:w-60">
               <div
                 className={[
                   "flex h-8 min-w-0 items-center gap-2 rounded-full border px-2.5 text-neutral-950 transition-colors",
@@ -423,27 +472,6 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
                 )}
               </div>
             </form>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {modeOptions.map((option) => {
-              const active = feedMode === option.mode
-              return (
-                <Link
-                  key={option.mode}
-                  href={modeHref(option.mode, searchQuery)}
-                  className={[
-                    "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition-colors",
-                    active
-                      ? "border-neutral-400 bg-neutral-950/10 text-neutral-950 dark:border-[#A8A095]/60 dark:bg-[#A8A095]/15 dark:text-[#f1f1f1]"
-                      : "border-neutral-300 text-neutral-600 hover:bg-neutral-950/5 hover:text-neutral-950 dark:border-white/10 dark:text-[#A8A095] dark:hover:bg-white/10 dark:hover:text-[#f1f1f1]",
-                  ].join(" ")}
-                >
-                  {option.label}
-                  <span className="tabular-nums opacity-70">{option.count}</span>
-                </Link>
-              )
-            })}
           </div>
 
         </div>
