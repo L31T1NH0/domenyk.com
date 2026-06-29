@@ -201,11 +201,13 @@ function Pagination({
   totalPages,
   mode,
   searchQuery,
+  onPageChange,
 }: {
   currentPage: number
   totalPages: number
   mode: FeedMode
   searchQuery: string
+  onPageChange: (page: number) => void
 }) {
   if (totalPages <= 1) return null
 
@@ -216,19 +218,29 @@ function Pagination({
   return (
     <nav className="flex flex-wrap items-center justify-center gap-1.5" aria-label="Paginação">
       {currentPage > 1 && (
-        <Link
+        <a
           href={pageHref(currentPage - 1, mode, searchQuery)}
+          data-swipe-ignore
+          onClick={(event) => {
+            event.preventDefault()
+            onPageChange(currentPage - 1)
+          }}
           className="inline-flex h-8 min-w-8 items-center justify-center rounded-md px-2 text-sm text-neutral-500 transition-colors hover:bg-neutral-950/5 hover:text-neutral-950 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-neutral-200"
         >
           Anterior
-        </Link>
+        </a>
       )}
       {pages.map((page) => {
         const active = page === currentPage
         return (
-          <Link
+          <a
             key={page}
             href={pageHref(page, mode, searchQuery)}
+            data-swipe-ignore
+            onClick={(event) => {
+              event.preventDefault()
+              onPageChange(page)
+            }}
             aria-current={active ? "page" : undefined}
             className={[
               "inline-flex h-8 min-w-8 items-center justify-center rounded-md px-2 text-sm transition-colors",
@@ -238,16 +250,21 @@ function Pagination({
             ].join(" ")}
           >
             {page}
-          </Link>
+          </a>
         )
       })}
       {currentPage < totalPages && (
-        <Link
+        <a
           href={pageHref(currentPage + 1, mode, searchQuery)}
+          data-swipe-ignore
+          onClick={(event) => {
+            event.preventDefault()
+            onPageChange(currentPage + 1)
+          }}
           className="inline-flex h-8 min-w-8 items-center justify-center rounded-md px-2 text-sm text-neutral-500 transition-colors hover:bg-neutral-950/5 hover:text-neutral-950 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-neutral-200"
         >
           Próxima
-        </Link>
+        </a>
       )}
     </nav>
   )
@@ -257,6 +274,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
   const router = useRouter()
   const searchInputRef = useRef<HTMLInputElement>(null)
   const touchStartRef = useRef<{ x: number; y: number; active: boolean } | null>(null)
+  const suppressNextClickRef = useRef(false)
   const [timelinePosts, setTimelinePosts] = useState(posts)
   const [postCount, setPostCount] = useState(totalPosts)
   const [noteCount, setNoteCount] = useState(totalNotes)
@@ -398,7 +416,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
   }
 
   function isInteractiveTarget(target: EventTarget) {
-    return target instanceof Element && Boolean(target.closest("input, textarea, select, button"))
+    return target instanceof Element && Boolean(target.closest("input, textarea, select, button, [data-swipe-ignore]"))
   }
 
   function getAdjacentMode(deltaX: number, mode = optimisticFeedMode) {
@@ -407,10 +425,20 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
     return feedModeOrder[nextIndex]
   }
 
+  function updateTimelineUrl(nextMode: FeedMode, nextPage: number) {
+    window.history.replaceState(null, "", pageHref(nextPage, nextMode, searchQuery))
+  }
+
   function switchMode(nextMode: FeedMode) {
     setOptimisticFeedMode(nextMode)
     setOptimisticPage(1)
-    window.history.pushState(null, "", modeHref(nextMode, searchQuery))
+    updateTimelineUrl(nextMode, 1)
+  }
+
+  function switchPage(nextPage: number) {
+    const clampedPage = Math.min(Math.max(1, nextPage), optimisticTotalPages)
+    setOptimisticPage(clampedPage)
+    updateTimelineUrl(optimisticFeedMode, clampedPage)
   }
 
   function handleTouchStart(event: React.TouchEvent<HTMLElement>) {
@@ -470,6 +498,10 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
     }
 
     switchMode(nextMode)
+    suppressNextClickRef.current = true
+    window.setTimeout(() => {
+      suppressNextClickRef.current = false
+    }, 350)
     setSwipeOffset(0)
   }
 
@@ -491,6 +523,12 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
         setIsSwipeSettling(true)
         setSwipeOffset(0)
       }}
+      onClickCapture={(event) => {
+        if (!suppressNextClickRef.current) return
+        suppressNextClickRef.current = false
+        event.preventDefault()
+        event.stopPropagation()
+      }}
     >
       <div className="flex min-w-0 flex-col gap-5">
         <div className="flex flex-col gap-3">
@@ -502,6 +540,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
                   <a
                     key={option.mode}
                     href={modeHref(option.mode, searchQuery)}
+                    data-swipe-ignore
                     onClick={(event) => {
                       event.preventDefault()
                       switchMode(option.mode)
@@ -546,6 +585,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
                     <span className="h-4 w-px bg-neutral-300 dark:bg-white/10" aria-hidden />
                     <Link
                       href={modeHref(optimisticFeedMode, "")}
+                      data-swipe-ignore
                       aria-label="Limpar busca"
                       title="Limpar busca"
                       className="grid size-4 shrink-0 place-items-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-950/5 hover:text-neutral-950 dark:text-[#A8A095] dark:hover:bg-white/10 dark:hover:text-[#f1f1f1]"
@@ -604,7 +644,13 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
             </ul>
           )}
 
-          <Pagination currentPage={activePage} totalPages={optimisticTotalPages} mode={optimisticFeedMode} searchQuery={searchQuery} />
+          <Pagination
+            currentPage={activePage}
+            totalPages={optimisticTotalPages}
+            mode={optimisticFeedMode}
+            searchQuery={searchQuery}
+            onPageChange={switchPage}
+          />
         </div>
       </div>
     </section>
