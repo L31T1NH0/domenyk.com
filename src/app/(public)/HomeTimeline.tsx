@@ -274,7 +274,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
   const router = useRouter()
   const sectionRef = useRef<HTMLElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
-  const touchStartRef = useRef<{ x: number; y: number; active: boolean } | null>(null)
+  const pointerStartRef = useRef<{ id: number; x: number; y: number; active: boolean } | null>(null)
   const suppressNextClickRef = useRef(false)
   const [timelinePosts, setTimelinePosts] = useState(posts)
   const [postCount, setPostCount] = useState(totalPosts)
@@ -452,27 +452,36 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
     updateTimelineUrl(optimisticFeedMode, clampedPage)
   }
 
-  function handleTouchStart(event: React.TouchEvent<HTMLElement>) {
+  function handlePointerDown(event: React.PointerEvent<HTMLElement>) {
+    if (event.pointerType !== "touch") return
     if (window.matchMedia("(min-width: 640px)").matches) return
     if (isInteractiveTarget(event.target)) return
-    const touch = event.touches[0]
-    touchStartRef.current = { x: touch.clientX, y: touch.clientY, active: false }
+
+    pointerStartRef.current = { id: event.pointerId, x: event.clientX, y: event.clientY, active: false }
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId)
+    } catch {
+      // Some synthetic/browser-dispatched pointer events are not capturable.
+    }
     setIsSwipeSettling(false)
   }
 
-  function handleTouchMove(event: React.TouchEvent<HTMLElement>) {
-    const start = touchStartRef.current
+  function handlePointerMove(event: React.PointerEvent<HTMLElement>) {
+    const start = pointerStartRef.current
+    if (!start || start.id !== event.pointerId) return
     if (!start || window.matchMedia("(min-width: 640px)").matches) return
 
-    const touch = event.touches[0]
-    const deltaX = touch.clientX - start.x
-    const deltaY = touch.clientY - start.y
+    const deltaX = event.clientX - start.x
+    const deltaY = event.clientY - start.y
     const absX = Math.abs(deltaX)
     const absY = Math.abs(deltaY)
 
     if (!start.active) {
       if (absY > 18 && absY > absX * 1.15) {
-        touchStartRef.current = null
+        pointerStartRef.current = null
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId)
+        }
         return
       }
       if (absX < 10 || absX < absY * 0.9) return
@@ -485,17 +494,21 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
     setSwipeOffset(offset)
   }
 
-  function handleTouchEnd(event: React.TouchEvent<HTMLElement>) {
-    const start = touchStartRef.current
-    touchStartRef.current = null
+  function handlePointerUp(event: React.PointerEvent<HTMLElement>) {
+    const start = pointerStartRef.current
+    if (start && start.id !== event.pointerId) return
+    pointerStartRef.current = null
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+
     if (!start || window.matchMedia("(min-width: 640px)").matches) {
       setSwipeOffset(0)
       return
     }
 
-    const touch = event.changedTouches[0]
-    const deltaX = touch.clientX - start.x
-    const deltaY = touch.clientY - start.y
+    const deltaX = event.clientX - start.x
+    const deltaY = event.clientY - start.y
     setIsSwipeSettling(true)
     if (!start.active || Math.abs(deltaX) < SWIPE_THRESHOLD || Math.abs(deltaX) < Math.abs(deltaY) * 0.9) {
       setSwipeOffset(0)
@@ -516,6 +529,17 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
     setSwipeOffset(0)
   }
 
+  function handlePointerCancel(event: React.PointerEvent<HTMLElement>) {
+    const start = pointerStartRef.current
+    if (start && start.id !== event.pointerId) return
+    pointerStartRef.current = null
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+    setIsSwipeSettling(true)
+    setSwipeOffset(0)
+  }
+
   const modeOptions = [
     { mode: "all" as const, label: "Tudo", count: timelineCount },
     { mode: "posts" as const, label: "Posts", count: postCount },
@@ -527,14 +551,10 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
       ref={sectionRef}
       aria-label="Timeline"
       className="flex w-full min-w-0 touch-pan-y flex-col gap-5 self-center"
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      onTouchCancel={() => {
-        touchStartRef.current = null
-        setIsSwipeSettling(true)
-        setSwipeOffset(0)
-      }}
+      onPointerDownCapture={handlePointerDown}
+      onPointerMoveCapture={handlePointerMove}
+      onPointerUpCapture={handlePointerUp}
+      onPointerCancelCapture={handlePointerCancel}
       onClickCapture={(event) => {
         if (!suppressNextClickRef.current) return
         suppressNextClickRef.current = false
