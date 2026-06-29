@@ -194,6 +194,8 @@ function modeHref(mode: FeedMode, searchQuery: string) {
 }
 
 const feedModeOrder: FeedMode[] = ["all", "posts", "notes"]
+const SWIPE_THRESHOLD = 72
+const SWIPE_MAX_OFFSET = 112
 
 function Pagination({
   currentPage,
@@ -255,11 +257,13 @@ function Pagination({
 export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feedMode, searchQuery, currentPage, pageSize, totalPages, isAdmin }: Props) {
   const router = useRouter()
   const searchInputRef = useRef<HTMLInputElement>(null)
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
+  const touchStartRef = useRef<{ x: number; y: number; active: boolean } | null>(null)
   const [timelinePosts, setTimelinePosts] = useState(posts)
   const [postCount, setPostCount] = useState(totalPosts)
   const [noteCount, setNoteCount] = useState(totalNotes)
   const [notes, setNotes] = useState(initialNotes)
+  const [swipeOffset, setSwipeOffset] = useState(0)
+  const [isSwipeSettling, setIsSwipeSettling] = useState(false)
   const timelineCount = postCount + noteCount
   const hasSearch = searchQuery.length > 0
   const [hidingPostId, setHidingPostId] = useState<string | null>(null)
@@ -375,28 +379,74 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
     }
   }
 
+  function isInteractiveTarget(target: EventTarget) {
+    return target instanceof Element && Boolean(target.closest("input, textarea, select, button, a"))
+  }
+
+  function getAdjacentMode(deltaX: number) {
+    const currentIndex = feedModeOrder.indexOf(feedMode)
+    const nextIndex = deltaX < 0 ? currentIndex + 1 : currentIndex - 1
+    return feedModeOrder[nextIndex]
+  }
+
   function handleTouchStart(event: React.TouchEvent<HTMLElement>) {
     if (window.matchMedia("(min-width: 640px)").matches) return
+    if (isInteractiveTarget(event.target)) return
     const touch = event.touches[0]
-    touchStartRef.current = { x: touch.clientX, y: touch.clientY }
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY, active: false }
+    setIsSwipeSettling(false)
+  }
+
+  function handleTouchMove(event: React.TouchEvent<HTMLElement>) {
+    const start = touchStartRef.current
+    if (!start || window.matchMedia("(min-width: 640px)").matches) return
+
+    const touch = event.touches[0]
+    const deltaX = touch.clientX - start.x
+    const deltaY = touch.clientY - start.y
+    const absX = Math.abs(deltaX)
+    const absY = Math.abs(deltaY)
+
+    if (!start.active) {
+      if (absY > 10 && absY > absX) {
+        touchStartRef.current = null
+        return
+      }
+      if (absX < 12 || absX < absY * 1.2) return
+      start.active = true
+    }
+
+    const hasAdjacentMode = Boolean(getAdjacentMode(deltaX))
+    const resistance = hasAdjacentMode ? 0.62 : 0.18
+    const offset = Math.max(-SWIPE_MAX_OFFSET, Math.min(SWIPE_MAX_OFFSET, deltaX * resistance))
+    setSwipeOffset(offset)
   }
 
   function handleTouchEnd(event: React.TouchEvent<HTMLElement>) {
     const start = touchStartRef.current
     touchStartRef.current = null
-    if (!start || window.matchMedia("(min-width: 640px)").matches) return
+    if (!start || window.matchMedia("(min-width: 640px)").matches) {
+      setSwipeOffset(0)
+      return
+    }
 
     const touch = event.changedTouches[0]
     const deltaX = touch.clientX - start.x
     const deltaY = touch.clientY - start.y
-    if (Math.abs(deltaX) < 64 || Math.abs(deltaX) < Math.abs(deltaY) * 1.4) return
+    setIsSwipeSettling(true)
+    if (!start.active || Math.abs(deltaX) < SWIPE_THRESHOLD || Math.abs(deltaX) < Math.abs(deltaY) * 1.4) {
+      setSwipeOffset(0)
+      return
+    }
 
-    const currentIndex = feedModeOrder.indexOf(feedMode)
-    const nextIndex = deltaX < 0 ? currentIndex + 1 : currentIndex - 1
-    const nextMode = feedModeOrder[nextIndex]
-    if (!nextMode) return
+    const nextMode = getAdjacentMode(deltaX)
+    if (!nextMode) {
+      setSwipeOffset(0)
+      return
+    }
 
-    router.push(modeHref(nextMode, searchQuery))
+    setSwipeOffset(deltaX < 0 ? -SWIPE_MAX_OFFSET : SWIPE_MAX_OFFSET)
+    router.push(modeHref(nextMode, searchQuery), { scroll: false })
   }
 
   const modeOptions = [
@@ -410,7 +460,13 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
       aria-label="Timeline"
       className="flex w-full min-w-0 touch-pan-y flex-col gap-5 self-center"
       onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      onTouchCancel={() => {
+        touchStartRef.current = null
+        setIsSwipeSettling(true)
+        setSwipeOffset(0)
+      }}
     >
       <div className="flex min-w-0 flex-col gap-5">
         <div className="flex flex-col gap-3">
@@ -422,6 +478,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
                   <Link
                     key={option.mode}
                     href={modeHref(option.mode, searchQuery)}
+                    scroll={false}
                     aria-current={active ? "page" : undefined}
                     className={[
                       "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition-colors",
@@ -479,40 +536,49 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
         {isAdmin && <NoteComposer onPosted={handlePosted} />}
         {hideError && <p className="text-sm text-red-400">{hideError}</p>}
 
-        {visibleItems.length === 0 ? (
-          <div className="text-sm text-zinc-400">
-            <p>{hasSearch ? "Nenhum resultado encontrado." : "Nenhum post ou nota publicado ainda."}</p>
-          </div>
-        ) : (
-          <ul className="ml-0 min-w-0">
-            {visibleItems.map((item, index) => (
-              item.type === "note" ? (
-                <li key={item.id} className="min-w-0">
-                  <NoteCard
-                    note={item.note}
+        <div
+          className="min-w-0 will-change-transform"
+          style={{
+            opacity: 1 - Math.min(Math.abs(swipeOffset) / 420, 0.18),
+            transform: `translate3d(${swipeOffset}px, 0, 0)`,
+            transition: isSwipeSettling ? "transform 220ms cubic-bezier(0.16, 1, 0.3, 1), opacity 180ms ease-out" : "none",
+          }}
+        >
+          {visibleItems.length === 0 ? (
+            <div className="text-sm text-zinc-400">
+              <p>{hasSearch ? "Nenhum resultado encontrado." : "Nenhum post ou nota publicado ainda."}</p>
+            </div>
+          ) : (
+            <ul className="ml-0 min-w-0">
+              {visibleItems.map((item, index) => (
+                item.type === "note" ? (
+                  <li key={item.id} className="min-w-0">
+                    <NoteCard
+                      note={item.note}
+                      isAdmin={isAdmin}
+                      onDelete={handleDelete}
+                      onUpdate={handleUpdate}
+                      cropTallImages
+                    />
+                  </li>
+                ) : (
+                  <PostTimelineItem
+                    key={item.id}
+                    post={item.post}
                     isAdmin={isAdmin}
-                    onDelete={handleDelete}
-                    onUpdate={handleUpdate}
-                    cropTallImages
+                    onHide={handleHidePost}
+                    hiding={hidingPostId === item.post._id}
+                    pendingHide={pendingHidePostId === item.post._id}
+                    showTopSeparator={itemShouldHaveTopSeparator(item, visibleItems[index - 1])}
+                    showBottomSeparator={itemNeedsTextSeparator(item)}
                   />
-                </li>
-              ) : (
-                <PostTimelineItem
-                  key={item.id}
-                  post={item.post}
-                  isAdmin={isAdmin}
-                  onHide={handleHidePost}
-                  hiding={hidingPostId === item.post._id}
-                  pendingHide={pendingHidePostId === item.post._id}
-                  showTopSeparator={itemShouldHaveTopSeparator(item, visibleItems[index - 1])}
-                  showBottomSeparator={itemNeedsTextSeparator(item)}
-                />
-              )
-            ))}
-          </ul>
-        )}
+                )
+              ))}
+            </ul>
+          )}
 
-        <Pagination currentPage={currentPage} totalPages={totalPages} mode={feedMode} searchQuery={searchQuery} />
+          <Pagination currentPage={currentPage} totalPages={totalPages} mode={feedMode} searchQuery={searchQuery} />
+        </div>
       </div>
     </section>
   )
