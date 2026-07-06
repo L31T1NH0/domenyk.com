@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from "react"
+import { createPortal } from "react-dom"
 import { useUser } from "@clerk/nextjs"
 import { ChatBubbleLeftEllipsisIcon, PencilIcon, XMarkIcon } from "@heroicons/react/24/outline"
 import { formatDistanceToNow } from "date-fns"
@@ -466,7 +467,7 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
           />
       )}
 
-      {activeImage && (
+      {activeImage && createPortal(
         <div
           onClick={closeLightbox}
           className="fixed inset-0 z-[9999] flex items-center justify-center"
@@ -503,7 +504,8 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
           >
             Scroll ou Esc para fechar
           </span>
-        </div>
+        </div>,
+        document.body,
       )}
     </article>
   )
