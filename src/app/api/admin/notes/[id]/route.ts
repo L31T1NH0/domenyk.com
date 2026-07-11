@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
-import { deleteNote, normalizeNoteContent, serializeNote, updateNote } from "@/lib/db/notes"
+import { deleteNote, markNoteDeleting, normalizeNoteContent, serializeNote, updateNote } from "@/lib/db/notes"
 import { adminOnly } from "@/lib/auth"
-import { asHttpUrlArray, asString, toObjectId } from "@/lib/validation"
+import { asString, asTrustedImageUrlArray, toObjectId } from "@/lib/validation"
+import { deleteCommentsForParent, getCommentsForParent } from "@/lib/db/comments"
+import { deleteCommentImagesFromContents, queueCommentImagesForCleanup } from "@/lib/db/comment-uploads"
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const unauthorized = await adminOnly()
@@ -18,7 +20,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "content é obrigatório" }, { status: 400 })
   }
 
-  const images = body && "images" in body ? asHttpUrlArray(body.images, 6) : undefined
+  const images = body && "images" in body ? asTrustedImageUrlArray(body.images, 6) : undefined
   const note = await updateNote(id, { content: normalizedContent, images })
 
   if (!note) return NextResponse.json({ error: "Nota não encontrada" }, { status: 404 })
@@ -33,6 +35,13 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const { id } = await params
   if (!toObjectId(id)) return NextResponse.json({ error: "ID inválido" }, { status: 400 })
 
+  const marked = await markNoteDeleting(id)
+  if (!marked) return NextResponse.json({ error: "Nota não encontrada" }, { status: 404 })
+  const comments = await getCommentsForParent(id)
+  const contents = comments.map((comment) => comment.content)
+  await queueCommentImagesForCleanup(contents)
+  await deleteCommentsForParent(id)
   await deleteNote(id)
+  await deleteCommentImagesFromContents(contents)
   return NextResponse.json({ ok: true })
 }

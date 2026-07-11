@@ -6,6 +6,7 @@ import { Header } from "@/components/Header"
 import { BackHome } from "@/components/BackHome"
 import { getNote, serializeNote } from "@/lib/db/notes"
 import { absoluteUrl, buildPageMetadata, descriptionFromMarkdown, jsonLd, preferredContentImages, siteConfig } from "@/lib/seo"
+import { headers } from "next/headers"
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -32,11 +33,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     image: image ?? siteConfig.image,
     type: "article",
     publishedTime: note.publishedAt.toISOString(),
-    modifiedTime: note.createdAt.toISOString(),
+    modifiedTime: (note.updatedAt ?? note.createdAt).toISOString(),
   })
 }
 
 export default async function NotePage({ params }: Props) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined
   const { id } = await params
   const note = await getNote(id)
   if (!note) notFound()
@@ -55,6 +57,7 @@ export default async function NotePage({ params }: Props) {
     <>
       <Header />
       <script
+        nonce={nonce}
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: jsonLd({
@@ -66,7 +69,7 @@ export default async function NotePage({ params }: Props) {
             description,
             image: structuredImages,
             datePublished: serializedNote.publishedAt,
-            dateModified: serializedNote.createdAt,
+            dateModified: serializedNote.updatedAt,
             author: { "@id": `${siteConfig.url}/#person` },
             publisher: { "@id": `${siteConfig.url}/#person` },
             inLanguage: "pt-BR",

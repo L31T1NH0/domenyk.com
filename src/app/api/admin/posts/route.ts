@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createPost, publishPost } from "@/lib/db/posts"
+import { createPost } from "@/lib/db/posts"
 import { adminOnly } from "@/lib/auth"
-import { asHttpUrl, asOptionalString, asString, asStringArray } from "@/lib/validation"
+import { asHttpsUrl, asOptionalString, asSlug, asString, asStringArray, asTrustedImageUrl } from "@/lib/validation"
 import { parsePostBackground, parsePostCover, parsePostStyle } from "@/lib/api/post-input"
 
 export async function POST(req: NextRequest) {
@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
 
   const title = asString(body.title, 180)
   const content = asString(body.content, 300_000)
-  const slug = asString(body.slug, 180)
+  const slug = asSlug(body.slug)
 
   if (!title || !content || !slug) {
     return NextResponse.json({ error: "title, content e slug são obrigatórios" }, { status: 400 })
@@ -28,20 +28,15 @@ export async function POST(req: NextRequest) {
       excerpt: asOptionalString(body.excerpt, 500),
       cover,
       showCoverInTimeline: Boolean(cover) && body.showCoverInTimeline !== false,
-      friendImage: asHttpUrl(body.friendImage),
+      friendImage: asTrustedImageUrl(body.friendImage),
       coAuthorUserId: asOptionalString(body.coAuthorUserId, 120) ?? null,
-      audioUrl: asHttpUrl(body.audioUrl),
+      audioUrl: asHttpsUrl(body.audioUrl),
       background: parsePostBackground(body.background),
       tags: asStringArray(body.tags, 20, 40),
       style: parsePostStyle(body.style, "standard"),
       hiddenFromTimeline: body.hiddenFromTimeline === true,
+      published: body.published === true,
     })
-
-    if (body.published === true) {
-      await publishPost(post._id.toString(), true)
-      post.published = true
-      post.publishedAt = new Date()
-    }
 
     return NextResponse.json(post, { status: 201 })
   } catch (err) {

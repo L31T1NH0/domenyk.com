@@ -13,9 +13,9 @@ export const siteConfig = {
 function getSiteUrl() {
   const rawUrl =
     process.env.NEXT_PUBLIC_SITE_URL ??
-    process.env.VERCEL_PROJECT_PRODUCTION_URL ??
-    process.env.VERCEL_URL ??
-    "https://domenyk.com"
+    (process.env.NODE_ENV === "development"
+      ? process.env.VERCEL_URL ?? "http://localhost:3000"
+      : "https://domenyk.com")
 
   const url = rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`
   return url.replace(/\/$/, "")

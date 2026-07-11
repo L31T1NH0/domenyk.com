@@ -3,7 +3,7 @@ import { CommentsTable } from "./CommentsTable"
 
 export default async function AdminCommentsPage() {
   const comments = await getRecentComments(50)
-  const serializedComments = comments.map(serializeComment)
+  const serializedComments = comments.map((comment) => serializeComment(comment, true))
 
   return (
     <>

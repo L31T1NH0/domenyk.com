@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect, useRef } from "react"
+import { useState, useCallback, useEffect, useId, useRef } from "react"
 import { useRouter } from "next/navigation"
 import type { LexicalEditor as LexicalEditorInstance } from "lexical"
 import { LexicalEditor, readMarkdownFromEditor } from "./LexicalEditor"
@@ -40,6 +40,10 @@ function slugify(text: string) {
     .replace(/^-|-$/g, "")
 }
 
+const FIELD_CLASS_NAME = "min-h-10 rounded border border-neutral-300 bg-transparent px-3 py-2 text-sm text-neutral-950 placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500/60 dark:border-neutral-700 dark:text-neutral-100 dark:placeholder:text-neutral-400 dark:focus-visible:ring-neutral-300/70"
+const LABEL_CLASS_NAME = "text-xs font-medium text-neutral-600 dark:text-neutral-400"
+const ACCEPTED_COVER_TYPES = new Set(["image/jpeg", "image/png", "image/webp"])
+
 export function PostEditor({ post }: Props) {
   const router = useRouter()
   const isEditing = !!post?.id
@@ -58,12 +62,16 @@ export function PostEditor({ post }: Props) {
   const [coAuthorUserId, setCoAuthorUserId] = useState(post?.coAuthorUserId ?? "")
   const [coAuthors, setCoAuthors] = useState<CoAuthorOption[]>([])
   const [loadingCoAuthors, setLoadingCoAuthors] = useState(true)
+  const [coAuthorsError, setCoAuthorsError] = useState("")
   const [audioUrl, setAudioUrl] = useState(post?.audioUrl ?? "")
   const [content, setContent] = useState(post?.content ?? "")
   const [saving, setSaving] = useState(false)
   const [uploadingCover, setUploadingCover] = useState(false)
   const [error, setError] = useState("")
+  const fieldId = useId()
   const coverFileRef = useRef<HTMLInputElement>(null)
+  const titleRef = useRef<HTMLInputElement>(null)
+  const errorRef = useRef<HTMLParagraphElement>(null)
   const editorRef = useRef<LexicalEditorInstance | null>(null)
 
   function handleTitleChange(value: string) {
@@ -76,24 +84,37 @@ export function PostEditor({ post }: Props) {
   }, [])
 
   useEffect(() => {
-    let cancelled = false
+    const controller = new AbortController()
 
-    fetch("/api/admin/users")
-      .then((res) => res.ok ? res.json() : { users: [] })
-      .then((data: { users?: CoAuthorOption[] }) => {
-        if (!cancelled) setCoAuthors(data.users ?? [])
-      })
-      .catch(() => {
-        if (!cancelled) setCoAuthors([])
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingCoAuthors(false)
-      })
+    async function loadCoAuthors() {
+      setLoadingCoAuthors(true)
+      setCoAuthorsError("")
+      try {
+        const response = await fetch("/api/admin/users", { signal: controller.signal })
+        if (!response.ok) throw new Error("Não foi possível carregar os coautores.")
+
+        const data = await response.json() as { users?: CoAuthorOption[] }
+        if (!controller.signal.aborted) setCoAuthors(Array.isArray(data.users) ? data.users : [])
+      } catch {
+        if (!controller.signal.aborted) {
+          setCoAuthors([])
+          setCoAuthorsError("Não foi possível carregar os coautores.")
+        }
+      } finally {
+        if (!controller.signal.aborted) setLoadingCoAuthors(false)
+      }
+    }
+
+    void loadCoAuthors()
 
     return () => {
-      cancelled = true
+      controller.abort()
     }
   }, [])
+
+  useEffect(() => {
+    if (error) errorRef.current?.focus()
+  }, [error])
 
   function handleCoAuthorChange(value: string) {
     setCoAuthorUserId(value)
@@ -102,28 +123,42 @@ export function PostEditor({ post }: Props) {
   }
 
   async function uploadCover(file: File) {
+    if (!ACCEPTED_COVER_TYPES.has(file.type)) {
+      setError("Selecione um arquivo de imagem válido.")
+      if (coverFileRef.current) coverFileRef.current.value = ""
+      return
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      setError("A imagem deve ter no máximo 4 MB.")
+      if (coverFileRef.current) coverFileRef.current.value = ""
+      return
+    }
+
     setUploadingCover(true)
     setError("")
     try {
       const form = new FormData()
       form.append("file", file)
       const res = await fetch("/api/admin/media", { method: "POST", body: form })
-      const data = await res.json()
-      if (!res.ok || !data.url) throw new Error(data.error ?? "Erro ao enviar imagem.")
+      const data = await res.json().catch(() => null)
+      if (!res.ok || !data?.url) throw new Error(data?.error ?? "Erro ao enviar imagem.")
       setCoverUrl(data.url)
       if (!coverAlt) setCoverAlt(title)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao enviar imagem.")
     } finally {
       setUploadingCover(false)
+      if (coverFileRef.current) coverFileRef.current.value = ""
     }
   }
 
   async function save(publish?: boolean) {
+    if (saving) return
     const latestContent = editorRef.current ? readMarkdownFromEditor(editorRef.current) : content
 
-    if (!title || !slug || !latestContent) {
+    if (!title.trim() || !slug.trim() || !latestContent.trim()) {
       setError("Título, slug e conteúdo são obrigatórios.")
+      if (!title.trim()) requestAnimationFrame(() => titleRef.current?.focus())
       return
     }
 
@@ -147,80 +182,95 @@ export function PostEditor({ post }: Props) {
 
     setContent(latestContent)
 
-    let res: Response
-    if (isEditing) {
-      res = await fetch(`/api/admin/posts/${post!.id}`, {
-        method: "PATCH",
+    try {
+      const res = await fetch(isEditing ? `/api/admin/posts/${post!.id}` : "/api/admin/posts", {
+        method: isEditing ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(publish !== undefined ? { ...body, published: publish } : body),
       })
-    } else {
-      res = await fetch("/api/admin/posts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(publish !== undefined ? { ...body, published: publish } : body),
-      })
-    }
 
-    if (res.ok) {
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.error ?? "Erro ao salvar.")
+      }
+
       router.push("/admin/posts")
-    } else {
-      const data = await res.json()
-      setError(data.error ?? "Erro ao salvar.")
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Erro ao salvar.")
+    } finally {
+      setSaving(false)
     }
-
-    setSaving(false)
   }
 
   return (
-    <div className="flex w-full max-w-3xl flex-col gap-6">
+    <div className="flex w-full max-w-3xl flex-col gap-6" aria-busy={saving || uploadingCover}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-lg font-semibold">{isEditing ? "Editar post" : "Novo post"}</h1>
         <div className="flex flex-col gap-2 sm:flex-row">
           {!isEditing && (
             <button
+              type="button"
               onClick={() => save()}
               disabled={saving}
-              className="rounded-lg border border-neutral-200 px-3 py-2 text-sm hover:bg-neutral-50 disabled:opacity-40 dark:border-neutral-700 dark:hover:bg-neutral-800 sm:py-1.5"
+              className="min-h-10 rounded-lg border border-neutral-300 px-3 py-2 text-sm hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:cursor-wait disabled:opacity-50 dark:border-neutral-700 dark:hover:bg-neutral-800 dark:focus-visible:ring-neutral-300"
             >
               Salvar rascunho
             </button>
           )}
           <button
+            type="button"
             onClick={() => save(isEditing ? undefined : true)}
             disabled={saving}
-            className="rounded-lg bg-neutral-900 px-3 py-2 text-sm text-white disabled:opacity-40 dark:bg-white dark:text-neutral-900 sm:py-1.5"
+            className="min-h-10 rounded-lg bg-neutral-900 px-3 py-2 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-50 dark:bg-white dark:text-neutral-900 dark:focus-visible:ring-neutral-300 dark:focus-visible:ring-offset-black"
           >
             {isEditing ? "Aplicar edições" : "Publicar"}
           </button>
         </div>
       </div>
 
-      {error && <p className="text-sm text-red-500">{error}</p>}
+      {error && (
+        <p
+          ref={errorRef}
+          role="alert"
+          tabIndex={-1}
+          className="rounded-md text-sm text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:text-red-300"
+        >
+          {error}
+        </p>
+      )}
 
       <div className="flex flex-col gap-4">
+        <label htmlFor={`${fieldId}-title`} className="sr-only">Título</label>
         <input
+          ref={titleRef}
+          id={`${fieldId}-title`}
           value={title}
           onChange={(e) => handleTitleChange(e.target.value)}
           placeholder="Título"
-          className="w-full border-b border-neutral-200 bg-transparent pb-2 text-2xl font-semibold outline-none placeholder:text-neutral-300 dark:border-neutral-800"
+          required
+          aria-invalid={Boolean(error && !title.trim())}
+          className="w-full border-b border-neutral-300 bg-transparent pb-2 text-2xl font-semibold text-neutral-950 placeholder:text-neutral-500 focus-visible:border-neutral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500/60 dark:border-neutral-700 dark:text-neutral-100 dark:placeholder:text-neutral-400 dark:focus-visible:border-neutral-400 dark:focus-visible:ring-neutral-300/70"
         />
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-neutral-400">Slug</label>
+            <label htmlFor={`${fieldId}-slug`} className={LABEL_CLASS_NAME}>Slug</label>
             <input
+              id={`${fieldId}-slug`}
               value={slug}
               onChange={(e) => { setSlug(e.target.value); setSlugEdited(true) }}
-              className="text-sm bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-neutral-300"
+              required
+              aria-invalid={Boolean(error && !slug.trim())}
+              className={FIELD_CLASS_NAME}
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-neutral-400">Estilo</label>
+            <label htmlFor={`${fieldId}-style`} className={LABEL_CLASS_NAME}>Estilo</label>
             <select
+              id={`${fieldId}-style`}
               value={style}
               onChange={(e) => setStyle(e.target.value as PostData["style"])}
-              className="text-sm bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1 outline-none"
+              className={FIELD_CLASS_NAME}
             >
               <option value="standard">Standard</option>
               <option value="editorial">Editorial</option>
@@ -228,11 +278,12 @@ export function PostEditor({ post }: Props) {
             </select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-neutral-400">Tags (separadas por vírgula)</label>
+            <label htmlFor={`${fieldId}-tags`} className={LABEL_CLASS_NAME}>Tags (separadas por vírgula)</label>
             <input
+              id={`${fieldId}-tags`}
               value={tags}
               onChange={(e) => setTags(e.target.value)}
-              className="text-sm bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-neutral-300"
+              className={FIELD_CLASS_NAME}
             />
           </div>
           <label className="flex items-center gap-2 rounded border border-neutral-200 px-2 py-1 text-sm text-neutral-700 dark:border-neutral-700 dark:text-neutral-300">
@@ -240,29 +291,33 @@ export function PostEditor({ post }: Props) {
               type="checkbox"
               checked={visibleInTimeline}
               onChange={(e) => setVisibleInTimeline(e.target.checked)}
-              className="size-4 rounded border-neutral-300"
+              className="size-5 rounded border-neutral-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:focus-visible:ring-neutral-300"
             />
             Aparecer na timeline
           </label>
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-neutral-400">Resumo (excerpt)</label>
+          <label htmlFor={`${fieldId}-excerpt`} className={LABEL_CLASS_NAME}>Resumo (excerpt)</label>
           <textarea
+            id={`${fieldId}-excerpt`}
             value={excerpt}
             onChange={(e) => setExcerpt(e.target.value)}
             rows={2}
-            className="text-sm bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-neutral-300 resize-none"
+            className={`${FIELD_CLASS_NAME} resize-y`}
           />
         </div>
 
         <div className="grid gap-3 rounded-xl border border-neutral-200 p-3 dark:border-neutral-800">
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-neutral-400">Coautor</label>
+            <label htmlFor={`${fieldId}-co-author`} className={LABEL_CLASS_NAME}>Coautor</label>
             <select
+              id={`${fieldId}-co-author`}
               value={coAuthorUserId}
               onChange={(e) => handleCoAuthorChange(e.target.value)}
-              className="text-sm bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1 outline-none"
+              disabled={loadingCoAuthors}
+              aria-describedby={`${fieldId}-co-author-hint`}
+              className={`${FIELD_CLASS_NAME} disabled:cursor-wait disabled:opacity-60`}
             >
               <option value="">Sem coautor</option>
               {coAuthors.map((user) => (
@@ -271,52 +326,61 @@ export function PostEditor({ post }: Props) {
                 </option>
               ))}
             </select>
-            <span className="text-xs text-neutral-500">
-              {loadingCoAuthors ? "Carregando usuários..." : "Usado pelo token @co-autor no texto."}
+            <span id={`${fieldId}-co-author-hint`} role="status" className="text-xs text-neutral-600 dark:text-neutral-400">
+              {loadingCoAuthors ? "Carregando usuários..." : coAuthorsError || "Usado pelo token @co-autor no texto."}
             </span>
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-neutral-400">Imagem do coautor</label>
+            <label htmlFor={`${fieldId}-friend-image`} className={LABEL_CLASS_NAME}>Imagem do coautor</label>
             <input
+              id={`${fieldId}-friend-image`}
+              type="url"
               value={friendImage}
               onChange={(e) => setFriendImage(e.target.value)}
               placeholder="https://..."
-              className="text-sm bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-neutral-300"
+              className={FIELD_CLASS_NAME}
             />
           </div>
         </div>
 
         <div className="grid gap-3 rounded-xl border border-neutral-200 p-3 dark:border-neutral-800">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <label className="text-xs text-neutral-400">Capa / asset de imagem</label>
+            <h2 className={LABEL_CLASS_NAME}>Capa / asset de imagem</h2>
             <button
               type="button"
               onClick={() => coverFileRef.current?.click()}
               disabled={uploadingCover}
-              className="rounded border border-neutral-200 px-2 py-1.5 text-xs hover:bg-neutral-50 disabled:opacity-40 dark:border-neutral-700 dark:hover:bg-neutral-800 sm:py-1"
+              aria-controls={`${fieldId}-cover-file`}
+              className="min-h-10 rounded border border-neutral-300 px-3 py-2 text-xs hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:cursor-wait disabled:opacity-50 dark:border-neutral-700 dark:hover:bg-neutral-800 dark:focus-visible:ring-neutral-300"
             >
-              {uploadingCover ? "enviando..." : "Upload para Blob"}
+              {uploadingCover ? "Enviando..." : "Enviar imagem"}
             </button>
           </div>
           <input
             ref={coverFileRef}
+            id={`${fieldId}-cover-file`}
             type="file"
             accept="image/png,image/jpeg,image/webp"
             className="hidden"
             onChange={(e) => { if (e.target.files?.[0]) uploadCover(e.target.files[0]) }}
           />
+          <label htmlFor={`${fieldId}-cover-url`} className="sr-only">URL da imagem de capa</label>
           <input
+            id={`${fieldId}-cover-url`}
+            type="url"
             value={coverUrl}
             onChange={(e) => setCoverUrl(e.target.value)}
             placeholder="URL da imagem de capa"
-            className="text-sm bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-neutral-300"
+            className={FIELD_CLASS_NAME}
           />
+          <label htmlFor={`${fieldId}-cover-alt`} className="sr-only">Texto alternativo da imagem de capa</label>
           <input
+            id={`${fieldId}-cover-alt`}
             value={coverAlt}
             onChange={(e) => setCoverAlt(e.target.value)}
-            placeholder="Texto alternativo"
-            className="text-sm bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-neutral-300"
+            placeholder="Texto alternativo da capa"
+            className={FIELD_CLASS_NAME}
           />
           <label className="flex items-start gap-2 rounded-lg border border-neutral-200 px-3 py-2 text-sm text-neutral-700 dark:border-neutral-800 dark:text-neutral-300">
             <input
@@ -324,11 +388,11 @@ export function PostEditor({ post }: Props) {
               checked={showCoverInTimeline}
               onChange={(e) => setShowCoverInTimeline(e.target.checked)}
               disabled={!coverUrl.trim()}
-              className="mt-0.5 size-4 rounded border-neutral-300 text-neutral-900 disabled:opacity-40"
+              className="mt-0.5 size-5 rounded border-neutral-300 text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:opacity-50 dark:focus-visible:ring-neutral-300"
             />
             <span className="flex flex-col gap-0.5">
               <span className="font-medium">Mostrar capa na timeline</span>
-              <span className="text-xs text-neutral-500">
+              <span className="text-xs text-neutral-600 dark:text-neutral-400">
                 A capa continua visível dentro do post mesmo quando esta opção está desligada.
               </span>
             </span>
@@ -336,17 +400,24 @@ export function PostEditor({ post }: Props) {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-neutral-400">URL do áudio</label>
+          <label htmlFor={`${fieldId}-audio-url`} className={LABEL_CLASS_NAME}>URL do áudio</label>
           <input
+            id={`${fieldId}-audio-url`}
+            type="url"
             value={audioUrl}
             onChange={(e) => setAudioUrl(e.target.value)}
             placeholder="https://..."
-            className="text-sm bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-neutral-300"
+            className={FIELD_CLASS_NAME}
           />
         </div>
       </div>
 
-      <div className="border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden">
+      <h2 id={`${fieldId}-content-label`} className="sr-only">Conteúdo do post</h2>
+      <div
+        role="group"
+        aria-labelledby={`${fieldId}-content-label`}
+        className="overflow-hidden rounded-xl border border-neutral-200 focus-within:ring-2 focus-within:ring-neutral-500/60 dark:border-neutral-800 dark:focus-within:ring-neutral-300/70"
+      >
         <LexicalEditor initialMarkdown={content} onChange={handleContentChange} editorRef={editorRef} />
       </div>
     </div>

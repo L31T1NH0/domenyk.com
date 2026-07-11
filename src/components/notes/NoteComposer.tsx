@@ -33,21 +33,25 @@ export function NoteComposer({
     if (!currentContent || submitting) return
     setSubmitting(true)
     setError("")
-    const res = await fetch(submitEndpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: currentContent }),
-    })
-    if (res.ok) {
+    try {
+      const res = await fetch(submitEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: currentContent }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.error ?? "Não foi possível postar a nota.")
+      }
       const note = await res.json()
       onPosted(note)
       setContent("")
       setEditorKey((key) => key + 1)
-    } else {
-      const data = await res.json().catch(() => null)
-      setError(data?.error ?? "Não foi possível postar a nota.")
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Não foi possível postar a nota.")
+    } finally {
+      setSubmitting(false)
     }
-    setSubmitting(false)
   }
 
   return (
@@ -85,7 +89,7 @@ export function NoteComposer({
             </button>
           </div>
 
-          {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
+          {error && <p role="alert" className="mt-2 text-xs text-red-700 dark:text-red-300">{error}</p>}
         </div>
       </div>
     </div>

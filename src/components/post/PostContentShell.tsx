@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import type { MouseEvent } from "react"
+import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent } from "react"
 import { XMarkIcon } from "@heroicons/react/24/solid"
 import { usePostContentFontSize } from "./usePostContentFontSize"
 
@@ -20,6 +20,9 @@ export function PostContentShell({ html, className }: Props) {
   const fontSize = usePostContentFontSize(ref, { minSize: 12, maxSize: 16 })
   const [activeImage, setActiveImage] = useState<ActiveImage | null>(null)
   const [visible, setVisible] = useState(false)
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const openerRef = useRef<HTMLElement | null>(null)
   const touchStartRef = useRef(0)
   const activeImageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const threshold = 80
@@ -27,24 +30,54 @@ export function PostContentShell({ html, className }: Props) {
   const close = useCallback(() => {
     if (activeImageTimerRef.current) clearTimeout(activeImageTimerRef.current)
     setVisible(false)
+    const closeDelay = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 250
     activeImageTimerRef.current = setTimeout(() => {
+      if (dialogRef.current?.open) dialogRef.current.close()
       setActiveImage(null)
+      openerRef.current?.focus()
+      openerRef.current = null
       activeImageTimerRef.current = null
-    }, 250)
+    }, closeDelay)
   }, [])
 
   useEffect(() => {
+    const content = ref.current
+    if (!content) return
+
+    const images = Array.from(content.querySelectorAll("img"))
+      .filter((image) => !image.closest('[data-role="author-reference"]'))
+
+    for (const image of images) {
+      image.tabIndex = 0
+      image.setAttribute("role", "button")
+      image.setAttribute("aria-label", image.alt ? `Ampliar imagem: ${image.alt}` : "Ampliar imagem")
+    }
+
+    return () => {
+      for (const image of images) {
+        image.removeAttribute("tabindex")
+        image.removeAttribute("role")
+        image.removeAttribute("aria-label")
+      }
+    }
+  }, [html])
+
+  useEffect(() => {
     if (!activeImage) return
+    const dialog = dialogRef.current
+    if (!dialog) return
+
+    if (!dialog.open) dialog.showModal()
     let frame = requestAnimationFrame(() => {
-      frame = requestAnimationFrame(() => setVisible(true))
+      frame = requestAnimationFrame(() => {
+        setVisible(true)
+        closeButtonRef.current?.focus()
+      })
     })
 
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = "hidden"
 
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") close()
-    }
     const onWheel = (event: WheelEvent) => {
       if (Math.abs(event.deltaY) > threshold) close()
     }
@@ -56,22 +89,21 @@ export function PostContentShell({ html, className }: Props) {
       if (delta > threshold) close()
     }
 
-    document.addEventListener("keydown", onKey)
-    window.addEventListener("wheel", onWheel, { passive: true })
-    window.addEventListener("touchstart", onTouchStart, { passive: true })
-    window.addEventListener("touchmove", onTouchMove, { passive: true })
+    dialog.addEventListener("wheel", onWheel, { passive: true })
+    dialog.addEventListener("touchstart", onTouchStart, { passive: true })
+    dialog.addEventListener("touchmove", onTouchMove, { passive: true })
 
     return () => {
       cancelAnimationFrame(frame)
       document.body.style.overflow = previousOverflow
-      document.removeEventListener("keydown", onKey)
-      window.removeEventListener("wheel", onWheel)
-      window.removeEventListener("touchstart", onTouchStart)
-      window.removeEventListener("touchmove", onTouchMove)
+      dialog.removeEventListener("wheel", onWheel)
+      dialog.removeEventListener("touchstart", onTouchStart)
+      dialog.removeEventListener("touchmove", onTouchMove)
       if (activeImageTimerRef.current) {
         clearTimeout(activeImageTimerRef.current)
         activeImageTimerRef.current = null
       }
+      if (dialog.open) dialog.close()
     }
   }, [activeImage, close])
 
@@ -79,6 +111,7 @@ export function PostContentShell({ html, className }: Props) {
     const image = (event.target as HTMLElement).closest("img")
     if (image && ref.current?.contains(image)) {
       if (image.closest('[data-role="author-reference"]')) return
+      openerRef.current = image
       setActiveImage({
         src: image.getAttribute("src") ?? "",
         alt: image.getAttribute("alt") ?? "",
@@ -92,12 +125,22 @@ export function PostContentShell({ html, className }: Props) {
     const href = anchor.getAttribute("href")
     if (!href?.includes("#")) return
 
-    const targetUrl = new URL(href, window.location.href)
+    let targetUrl: URL
+    try {
+      targetUrl = new URL(href, window.location.href)
+    } catch {
+      return
+    }
     const isSamePage =
       targetUrl.origin === window.location.origin &&
       targetUrl.pathname === window.location.pathname &&
       targetUrl.search === window.location.search
-    const targetId = decodeURIComponent(targetUrl.hash.slice(1))
+    let targetId = ""
+    try {
+      targetId = decodeURIComponent(targetUrl.hash.slice(1))
+    } catch {
+      return
+    }
     const target = isSamePage && targetId ? document.getElementById(targetId) : null
 
     if (!target) return
@@ -111,6 +154,20 @@ export function PostContentShell({ html, className }: Props) {
     window.history.pushState(null, "", targetUrl.hash)
   }
 
+  function handleKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
+    if (event.key !== "Enter" && event.key !== " ") return
+    const image = (event.target as HTMLElement).closest("img")
+    if (!image || !ref.current?.contains(image)) return
+    if (image.closest('[data-role="author-reference"]')) return
+
+    const src = image.getAttribute("src") ?? ""
+    if (!src) return
+
+    event.preventDefault()
+    openerRef.current = image
+    setActiveImage({ src, alt: image.getAttribute("alt") ?? "" })
+  }
+
   return (
     <>
       <div
@@ -119,12 +176,21 @@ export function PostContentShell({ html, className }: Props) {
         className={["post-content flex flex-col gap-3.5", className].filter(Boolean).join(" ")}
         style={{ fontSize }}
         onClick={handleClick}
+        onKeyDown={handleKeyDown}
         dangerouslySetInnerHTML={{ __html: html }}
       />
       {activeImage && (
-        <div
-          onClick={close}
-          className="fixed inset-0 z-[9999] flex items-center justify-center"
+        <dialog
+          ref={dialogRef}
+          aria-label={activeImage.alt ? `Imagem ampliada: ${activeImage.alt}` : "Imagem ampliada"}
+          onCancel={(event) => {
+            event.preventDefault()
+            close()
+          }}
+          onClick={(event) => {
+            if (event.target === event.currentTarget) close()
+          }}
+          className="fixed inset-0 m-0 flex h-dvh max-h-none w-screen max-w-none items-center justify-center border-0 bg-transparent p-4 backdrop:bg-transparent motion-reduce:!transition-none"
           style={{
             backgroundColor: `rgba(0,0,0,${visible ? 0.92 : 0})`,
             backdropFilter: `blur(${visible ? 8 : 0}px)`,
@@ -132,19 +198,19 @@ export function PostContentShell({ html, className }: Props) {
           }}
         >
           <button
+            ref={closeButtonRef}
             type="button"
             onClick={close}
-            aria-label="Fechar"
-            className="absolute top-4 right-4 z-10 flex items-center justify-center rounded-full bg-white/10 p-2 transition-colors hover:bg-white/20"
+            aria-label="Fechar imagem ampliada"
+            className="absolute right-4 top-4 z-10 grid size-10 place-items-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white motion-reduce:!transition-none"
             style={{ opacity: visible ? 1 : 0, transition: "opacity 250ms ease" }}
           >
-            <XMarkIcon className="h-5 w-5 text-white" />
+            <XMarkIcon className="h-5 w-5" aria-hidden />
           </button>
           <img
             src={activeImage.src}
             alt={activeImage.alt}
-            onClick={(event) => event.stopPropagation()}
-            className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain shadow-2xl"
+            className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain shadow-2xl motion-reduce:!transform-none motion-reduce:!transition-none"
             style={{
               filter: "grayscale(0)",
               opacity: visible ? 1 : 0,
@@ -153,12 +219,12 @@ export function PostContentShell({ html, className }: Props) {
             }}
           />
           <span
-            className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white mix-blend-difference backdrop-blur-sm"
+            className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-white motion-reduce:!transition-none"
             style={{ opacity: visible ? 1 : 0, transition: "opacity 400ms ease" }}
           >
-            Scroll ou Esc para fechar
+            Role, deslize ou pressione Esc para fechar
           </span>
-        </div>
+        </dialog>
       )}
     </>
   )

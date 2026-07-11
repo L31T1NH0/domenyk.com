@@ -1,5 +1,4 @@
 import type { Metadata } from "next"
-import { clerkClient } from "@clerk/nextjs/server"
 import Link from "next/link"
 import { notFound, permanentRedirect } from "next/navigation"
 import { getPostByPublicId, getPostBySlug } from "@/lib/db/posts"
@@ -18,6 +17,8 @@ import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import type { PostStyle } from "@/lib/db/posts"
 import { absoluteUrl, buildPageMetadata, descriptionFromMarkdown, jsonLd, preferredContentImages, siteConfig } from "@/lib/seo"
+import { headers } from "next/headers"
+import { getCachedClerkUserImage } from "@/lib/clerk-users"
 
 type Props = { params: Promise<{ slug: string }> }
 
@@ -84,6 +85,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function PostPage({ params }: Props) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined
   const { slug } = await params
   const post = (await getPostBySlug(slug)) ?? (await getPostByPublicId(slug))
 
@@ -94,13 +96,7 @@ export default async function PostPage({ params }: Props) {
 
   let coAuthorImageUrl = post.friendImage ?? null
   if (post.coAuthorUserId) {
-    try {
-      const client = await clerkClient()
-      const user = await client.users.getUser(post.coAuthorUserId)
-      coAuthorImageUrl = user.imageUrl ?? coAuthorImageUrl
-    } catch {
-      coAuthorImageUrl = post.friendImage ?? null
-    }
+    coAuthorImageUrl = await getCachedClerkUserImage(post.coAuthorUserId) ?? coAuthorImageUrl
   }
 
   const postId = post._id.toString()
@@ -122,6 +118,7 @@ export default async function PostPage({ params }: Props) {
   return (
     <div className={styleClasses.page}>
       <script
+        nonce={nonce}
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: jsonLd({

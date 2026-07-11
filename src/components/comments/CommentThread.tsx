@@ -11,13 +11,25 @@ type Props = { postId: string; isAdmin?: boolean }
 
 export function CommentThread({ postId, isAdmin = false }: Props) {
   const { user } = useUser()
-  const { comments, draft, submitting, setDraft, submit, remove } = useComments(`/api/comments/${postId}`)
+  const { comments, draft, totalCount, submitting, hasMore, loadingOlder, error, setDraft, submit, remove, loadOlder } = useComments(`/api/comments/${postId}`)
 
   return (
     <section className="mt-12 flex flex-col gap-6">
-      <h2 className="text-sm font-semibold">Comentários</h2>
+      <h2 className="text-sm font-semibold">Comentários{totalCount > 0 ? ` (${totalCount})` : ""}</h2>
+
+      {error && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{error}</p>}
 
       <div className="flex flex-col gap-4">
+        {hasMore && (
+          <button
+            type="button"
+            onClick={() => void loadOlder()}
+            disabled={loadingOlder}
+            className="self-start rounded-md px-2 py-1 text-xs text-neutral-500 hover:text-neutral-900 disabled:opacity-50 dark:text-neutral-400 dark:hover:text-neutral-100"
+          >
+            {loadingOlder ? "Carregando..." : "Carregar comentários anteriores"}
+          </button>
+        )}
         {comments.map((c) => (
           <div key={c._id} className="flex gap-3">
             {c.authorImageUrl ? (
@@ -33,7 +45,7 @@ export function CommentThread({ postId, isAdmin = false }: Props) {
                 <time className="text-xs text-neutral-400">
                   {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true, locale: ptBR })}
                 </time>
-                {(isAdmin || user?.id === c.authorId) && (
+                {(isAdmin || c.canDelete) && (
                   <button onClick={() => remove(c._id)} className="text-xs text-neutral-300 hover:text-red-400 ml-auto">
                     deletar
                   </button>

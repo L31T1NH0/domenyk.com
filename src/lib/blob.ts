@@ -4,7 +4,15 @@ import { put, del, list } from "@vercel/blob"
 import sharp from "sharp"
 
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"])
-const MAX_IMAGE_PIXELS = 25_000_000
+const MAX_IMAGE_INPUT_PIXELS = 16_000_000
+const MAX_IMAGE_INPUT_DIMENSION = 12_000
+const MAX_IMAGE_OUTPUT_DIMENSION = 2_400
+const IMAGE_PROCESSING_TIMEOUT_SECONDS = 8
+const IMAGE_WEBP_QUALITY = 80
+const IMAGE_WEBP_FALLBACK_QUALITY = 64
+
+export const MAX_IMAGE_UPLOAD_BYTES = 4 * 1024 * 1024
+export const MAX_SANITIZED_IMAGE_BYTES = 4 * 1024 * 1024
 
 export const ACCEPTED_IMAGE_MIME_TYPES = Array.from(ALLOWED_IMAGE_TYPES).join(",")
 
@@ -47,6 +55,10 @@ export async function sanitizeImageUpload(
   declaredType: string
 ): Promise<{ filename: string; data: Buffer; contentType: string }> {
   const buffer = Buffer.from(data)
+  if (buffer.length === 0 || buffer.length > MAX_IMAGE_UPLOAD_BYTES) {
+    throw new Error("Invalid image")
+  }
+
   const detectedType = detectImageType(buffer)
   const normalizedDeclaredType = declaredType.toLowerCase()
 
@@ -57,18 +69,47 @@ export async function sanitizeImageUpload(
   const image = sharp(buffer, {
     animated: false,
     failOn: "error",
-    limitInputPixels: MAX_IMAGE_PIXELS,
+    limitInputPixels: MAX_IMAGE_INPUT_PIXELS,
+    sequentialRead: true,
   })
-  const metadata = await image.metadata()
+  const metadata = await image.timeout({ seconds: IMAGE_PROCESSING_TIMEOUT_SECONDS }).metadata()
 
-  if (!metadata.width || !metadata.height || (metadata.pages && metadata.pages > 1)) {
+  if (
+    !metadata.width ||
+    !metadata.height ||
+    metadata.width > MAX_IMAGE_INPUT_DIMENSION ||
+    metadata.height > MAX_IMAGE_INPUT_DIMENSION ||
+    metadata.width * metadata.height > MAX_IMAGE_INPUT_PIXELS ||
+    (metadata.pages && metadata.pages > 1)
+  ) {
     throw new Error("Invalid image")
   }
 
-  const sanitized = await image
+  const encode = (quality: number) => sharp(buffer, {
+    animated: false,
+    failOn: "error",
+    limitInputPixels: MAX_IMAGE_INPUT_PIXELS,
+    sequentialRead: true,
+  })
     .rotate()
-    .webp({ quality: 82, effort: 4 })
+    .resize({
+      width: MAX_IMAGE_OUTPUT_DIMENSION,
+      height: MAX_IMAGE_OUTPUT_DIMENSION,
+      fit: "inside",
+      withoutEnlargement: true,
+      fastShrinkOnLoad: true,
+    })
+    .webp({ quality, alphaQuality: quality, effort: 2, smartSubsample: true })
+    .timeout({ seconds: IMAGE_PROCESSING_TIMEOUT_SECONDS })
     .toBuffer()
+
+  let sanitized = await encode(IMAGE_WEBP_QUALITY)
+  if (sanitized.length > MAX_SANITIZED_IMAGE_BYTES) {
+    sanitized = await encode(IMAGE_WEBP_FALLBACK_QUALITY)
+  }
+  if (sanitized.length > MAX_SANITIZED_IMAGE_BYTES) {
+    throw new Error("Image output is too large")
+  }
 
   return {
     filename: webpFilename(filename),
@@ -80,7 +121,7 @@ export async function sanitizeImageUpload(
 export async function uploadImage(
   filename: string,
   data: ArrayBuffer | Blob | Buffer,
-  folder: "posts" | "notes" | "media",
+  folder: "posts" | "notes" | "comments" | "media",
   contentType?: string
 ): Promise<string> {
   const { url } = await put(`${folder}/${safeFilename(filename)}`, data, {
@@ -103,11 +144,24 @@ export function serializeMediaItem(item: MediaItem): SerializedMediaItem {
 }
 
 export async function listMedia(): Promise<MediaItem[]> {
-  const { blobs } = await list({ prefix: "media/" })
-  return blobs.map((b) => ({
-    url: b.url,
-    pathname: b.pathname,
-    size: b.size,
-    uploadedAt: b.uploadedAt,
-  }))
+  const media: MediaItem[] = []
+  let cursor: string | undefined
+
+  do {
+    const page = await list({ prefix: "media/", cursor, limit: 1_000 })
+    media.push(...page.blobs.map((blob) => ({
+      url: blob.url,
+      pathname: blob.pathname,
+      size: blob.size,
+      uploadedAt: blob.uploadedAt,
+    })))
+
+    if (!page.hasMore) break
+    if (!page.cursor || page.cursor === cursor) {
+      throw new Error("Invalid cursor returned while listing media")
+    }
+    cursor = page.cursor
+  } while (true)
+
+  return media
 }

@@ -2,6 +2,18 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+Use Node.js 22 (see `.nvmrc`) and configure these environment variables in `.env.local`:
+
+- `MONGODB_URI`
+- `BLOB_READ_WRITE_TOKEN`
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+- `CLERK_SECRET_KEY`
+- `ADMIN_USER_ID`
+- `NEXT_PUBLIC_SITE_URL`
+- `CLERK_AUTHORIZED_PARTIES` (comma-separated trusted origins, when using previews or extra domains)
+- `CRON_SECRET` (required by the scheduled orphan-upload cleanup)
+- `REQUEST_IDENTITY_SECRET` (recommended separate HMAC secret for rate limits and view deduplication; falls back to `CLERK_SECRET_KEY`)
+
 First, run the development server:
 
 ```bash
@@ -16,7 +28,7 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+You can start editing the page by modifying `src/app/(public)/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 

@@ -3,8 +3,13 @@ import { getNotes, serializeNote } from "@/lib/db/notes"
 import { adminOnly } from "@/lib/auth"
 import { toObjectId } from "@/lib/validation"
 import { createSerializedNoteFromBody } from "@/lib/api/note-input"
+import { rateLimit } from "@/lib/rate-limit"
+import { requestIdentity } from "@/lib/request-identity"
 
 export async function GET(req: NextRequest) {
+  if (!(await rateLimit(`notes-read:${requestIdentity(req)}`, { limit: 120, windowMs: 60_000 }))) {
+    return NextResponse.json({ error: "Muitas requisições." }, { status: 429 })
+  }
   const cursor = req.nextUrl.searchParams.get("cursor") ?? undefined
   if (cursor && !toObjectId(cursor)) {
     return NextResponse.json({ error: "Cursor inválido" }, { status: 400 })

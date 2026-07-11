@@ -1,7 +1,17 @@
 "use client"
 
 import Link from "next/link"
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from "react"
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent,
+  type RefObject,
+} from "react"
 import { createPortal } from "react-dom"
 import { useUser } from "@clerk/nextjs"
 import { ChatBubbleLeftEllipsisIcon, PencilIcon, XMarkIcon } from "@heroicons/react/24/outline"
@@ -18,9 +28,10 @@ import type { SerializedNote } from "@/lib/db/notes"
 type Props = {
   note: SerializedNote
   isAdmin?: boolean
-  onDelete?: (id: string) => void
+  onDelete?: (id: string) => Promise<void> | void
   onUpdate?: (note: SerializedNote) => void
   cropTallImages?: boolean
+  deleting?: boolean
 }
 
 type ActiveImage = {
@@ -34,39 +45,78 @@ const TIMELINE_IMAGE_CROP_MIN_RATIO = 1.12
 type NoteCommentsPanelProps = {
   comments: Comment[]
   loading?: boolean
+  hasMore?: boolean
+  loadingOlder?: boolean
+  error?: string
   draft: string
   submitting: boolean
   isAdmin?: boolean
   onDraftChange: (draft: string) => void
   onSubmit: (content?: string) => Promise<boolean | void> | boolean | void
   onRemove: (id: string) => void
+  onLoadOlder: () => Promise<void> | void
   onClose: () => void
+  returnFocusRef: RefObject<HTMLButtonElement | null>
 }
 
-function NoteCommentsPanel({ comments, loading = false, draft, submitting, isAdmin, onDraftChange, onSubmit, onRemove, onClose }: NoteCommentsPanelProps) {
+function NoteCommentsPanel({ comments, loading = false, hasMore = false, loadingOlder = false, error = "", draft, submitting, isAdmin, onDraftChange, onSubmit, onRemove, onLoadOlder, onClose, returnFocusRef }: NoteCommentsPanelProps) {
   const { user } = useUser()
+  const panelRef = useRef<HTMLElement>(null)
+  const titleId = useId()
+
+  useEffect(() => {
+    const returnFocusTarget = returnFocusRef.current
+    const frame = requestAnimationFrame(() => {
+      if (!panelRef.current?.contains(document.activeElement)) panelRef.current?.focus()
+    })
+
+    return () => {
+      cancelAnimationFrame(frame)
+      returnFocusTarget?.focus()
+    }
+  }, [returnFocusRef])
 
   return (
-    <aside className="fixed inset-x-4 bottom-4 z-50 flex max-h-[70vh] flex-col rounded-lg border border-neutral-200 bg-white p-3 shadow-xl shadow-black/10 dark:border-white/10 dark:bg-[#080808] sm:absolute sm:inset-x-auto sm:inset-y-0 sm:left-[calc(100%+1rem)] sm:bottom-auto sm:w-80 sm:max-h-full">
+    <aside
+      ref={panelRef}
+      role="dialog"
+      aria-labelledby={titleId}
+      tabIndex={-1}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") onClose()
+      }}
+      className="fixed inset-x-4 bottom-4 z-50 flex max-h-[70vh] flex-col rounded-lg border border-neutral-200 bg-white p-3 shadow-md shadow-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:border-white/10 dark:bg-[#080808] dark:focus-visible:ring-neutral-300 sm:absolute sm:inset-x-auto sm:inset-y-0 sm:left-[calc(100%+1rem)] sm:bottom-auto sm:w-80 sm:max-h-full"
+    >
       <div className="flex items-center justify-between gap-3 border-b border-neutral-200 pb-2 dark:border-white/10">
-        <span className="text-xs font-medium text-neutral-700 dark:text-[#A8A095]">Comentários</span>
+        <h2 id={titleId} className="text-xs font-medium text-neutral-700 dark:text-[#c2bbb1]">Comentários</h2>
         <button
           type="button"
           onClick={onClose}
           aria-label="Fechar comentários"
-          className="grid size-7 place-items-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-950 dark:text-[#A8A095] dark:hover:bg-white/10 dark:hover:text-[#f1f1f1]"
+          className="grid size-8 place-items-center rounded-full text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#c2bbb1] dark:hover:bg-white/10 dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
         >
           <XMarkIcon className="size-4" aria-hidden />
         </button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto py-3">
+        {error && <p role="alert" className="mb-3 text-xs text-red-700 dark:text-red-300">{error}</p>}
         {loading ? (
-          <p className="text-xs text-neutral-500 dark:text-[#A8A095]/75">Carregando comentários...</p>
+          <p role="status" className="text-xs text-neutral-600 dark:text-[#c2bbb1]">Carregando comentários...</p>
         ) : comments.length === 0 ? (
-          <p className="text-xs text-neutral-500 dark:text-[#A8A095]/75">Nenhum comentário ainda.</p>
+          <p className="text-xs text-neutral-600 dark:text-[#c2bbb1]">Nenhum comentário ainda.</p>
         ) : (
           <div className="flex flex-col gap-3">
+            {hasMore && (
+              <button
+                type="button"
+                onClick={() => void onLoadOlder()}
+                disabled={loadingOlder}
+                className="min-h-8 self-start rounded px-2 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:opacity-50 dark:text-[#c2bbb1] dark:hover:bg-white/10 dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
+              >
+                {loadingOlder ? "Carregando..." : "Comentários anteriores"}
+              </button>
+            )}
             {comments.map((comment) => (
               <div key={comment._id} className="flex gap-2 text-xs">
                 {comment.authorImageUrl ? (
@@ -84,7 +134,7 @@ function NoteCommentsPanel({ comments, loading = false, draft, submitting, isAdm
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline gap-2">
                     <span className="font-medium text-neutral-950 dark:text-[#f1f1f1]">{comment.authorName}</span>
-                    <time className="shrink-0 text-[11px] text-neutral-500 dark:text-[#A8A095]/70">
+                    <time dateTime={comment.createdAt} className="shrink-0 text-[11px] text-neutral-600 dark:text-[#c2bbb1]">
                       {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true, locale: ptBR })}
                     </time>
                   </div>
@@ -95,12 +145,12 @@ function NoteCommentsPanel({ comments, loading = false, draft, submitting, isAdm
                     className="mt-0.5 break-words leading-relaxed text-neutral-700 dark:text-[#d8d4ce]"
                   />
                 </div>
-                {(isAdmin || user?.id === comment.authorId) && (
+                {(isAdmin || comment.canDelete) && (
                   <button
                     type="button"
                     onClick={() => onRemove(comment._id)}
                     aria-label="Deletar comentário"
-                    className="grid size-5 shrink-0 place-items-center text-neutral-400 transition-colors hover:text-red-500 dark:text-[#A8A095]/50 dark:hover:text-red-400"
+                    className="grid size-8 shrink-0 place-items-center rounded-full text-neutral-500 transition-colors hover:bg-red-50 hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:text-[#A8A095] dark:hover:bg-red-950/40 dark:hover:text-red-300"
                   >
                     <XMarkIcon className="size-3" aria-hidden />
                   </button>
@@ -124,15 +174,19 @@ function NoteCommentsPanel({ comments, loading = false, draft, submitting, isAdm
           />
         </div>
       ) : (
-        <p className="border-t border-neutral-200 pt-2 text-xs text-neutral-500 dark:border-white/10 dark:text-[#A8A095]/75">Faça login para comentar.</p>
+        <p className="border-t border-neutral-200 pt-2 text-xs text-neutral-600 dark:border-white/10 dark:text-[#c2bbb1]">Faça login para comentar.</p>
       )}
     </aside>
   )
 }
 
-export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = false }: Props) {
+export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = false, deleting = false }: Props) {
   const contentRef = useRef<HTMLDivElement>(null)
   const editEditorRef = useRef<LexicalEditorInstance | null>(null)
+  const commentsButtonRef = useRef<HTMLButtonElement>(null)
+  const lightboxDialogRef = useRef<HTMLDialogElement>(null)
+  const lightboxCloseButtonRef = useRef<HTMLButtonElement>(null)
+  const lightboxOpenerRef = useRef<HTMLElement | null>(null)
   const commentsEndpoint = `/api/notes/${note._id}/comments`
   const contentFontSize = usePretextContentFontSize(contentRef, {
     minSize: 13,
@@ -145,9 +199,14 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
     draft,
     loading: loadingComments,
     loaded: commentsLoaded,
+    totalCount: commentCount,
     submitting,
+    hasMore,
+    loadingOlder,
+    error: commentsError,
     setDraft,
     load: loadComments,
+    loadOlder: loadOlderComments,
     submit: submitComment,
     remove: removeComment,
   } = useComments(commentsEndpoint, { enabled: false })
@@ -189,10 +248,14 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
   const closeLightbox = useCallback(() => {
     if (activeImageTimerRef.current) clearTimeout(activeImageTimerRef.current)
     setLightboxVisible(false)
+    const closeDelay = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 250
     activeImageTimerRef.current = setTimeout(() => {
+      if (lightboxDialogRef.current?.open) lightboxDialogRef.current.close()
       setActiveImage(null)
+      lightboxOpenerRef.current?.focus()
+      lightboxOpenerRef.current = null
       activeImageTimerRef.current = null
-    }, 250)
+    }, closeDelay)
   }, [])
 
   const ago = formatDistanceToNow(new Date(note.publishedAt), {
@@ -226,41 +289,49 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
     setSavingEdit(true)
     setEditError("")
 
-    const response = await fetch(`/api/admin/notes/${note._id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: currentContent }),
-    })
+    try {
+      const response = await fetch(`/api/admin/notes/${note._id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: currentContent }),
+      })
 
-    if (response.ok) {
+      if (!response.ok) {
+        const data = await response.json().catch(() => null)
+        throw new Error(data?.error ?? "Não foi possível salvar a nota.")
+      }
+
       const updatedNote = await response.json() as SerializedNote
       onUpdate?.(updatedNote)
       setEditing(false)
-    } else {
-      const data = await response.json().catch(() => null)
-      setEditError(data?.error ?? "Não foi possível salvar a nota.")
+    } catch (caughtError) {
+      setEditError(caughtError instanceof Error ? caughtError.message : "Não foi possível salvar a nota.")
+    } finally {
+      setSavingEdit(false)
     }
-
-    setSavingEdit(false)
   }
 
   function confirmDelete() {
-    if (!window.confirm("Deletar esta nota? Esta ação não pode ser desfeita.")) return
-    onDelete?.(note._id)
+    if (deleting || !window.confirm("Deletar esta nota? Esta ação não pode ser desfeita.")) return
+    void onDelete?.(note._id)
   }
 
   useEffect(() => {
     if (!activeImage) return
+    const dialog = lightboxDialogRef.current
+    if (!dialog) return
+
+    if (!dialog.open) dialog.showModal()
     let frame = requestAnimationFrame(() => {
-      frame = requestAnimationFrame(() => setLightboxVisible(true))
+      frame = requestAnimationFrame(() => {
+        setLightboxVisible(true)
+        lightboxCloseButtonRef.current?.focus()
+      })
     })
 
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = "hidden"
 
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closeLightbox()
-    }
     const onWheel = (event: WheelEvent) => {
       if (Math.abs(event.deltaY) > closeThreshold) closeLightbox()
     }
@@ -272,22 +343,21 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
       if (delta > closeThreshold) closeLightbox()
     }
 
-    document.addEventListener("keydown", onKey)
-    window.addEventListener("wheel", onWheel, { passive: true })
-    window.addEventListener("touchstart", onTouchStart, { passive: true })
-    window.addEventListener("touchmove", onTouchMove, { passive: true })
+    dialog.addEventListener("wheel", onWheel, { passive: true })
+    dialog.addEventListener("touchstart", onTouchStart, { passive: true })
+    dialog.addEventListener("touchmove", onTouchMove, { passive: true })
 
     return () => {
       cancelAnimationFrame(frame)
       document.body.style.overflow = previousOverflow
-      document.removeEventListener("keydown", onKey)
-      window.removeEventListener("wheel", onWheel)
-      window.removeEventListener("touchstart", onTouchStart)
-      window.removeEventListener("touchmove", onTouchMove)
+      dialog.removeEventListener("wheel", onWheel)
+      dialog.removeEventListener("touchstart", onTouchStart)
+      dialog.removeEventListener("touchmove", onTouchMove)
       if (activeImageTimerRef.current) {
         clearTimeout(activeImageTimerRef.current)
         activeImageTimerRef.current = null
       }
+      if (dialog.open) dialog.close()
     }
   }, [activeImage, closeLightbox])
 
@@ -296,6 +366,13 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
     if (!content) return
 
     const images = Array.from(content.querySelectorAll("img"))
+    const zoomableImages = images.filter((image) => !image.closest('[data-role="author-reference"]'))
+    for (const image of zoomableImages) {
+      image.tabIndex = 0
+      image.setAttribute("role", "button")
+      image.setAttribute("aria-label", image.alt ? `Ampliar imagem: ${image.alt}` : "Ampliar imagem")
+    }
+
     const cleanups = images.map((image) => {
       if (image.complete) {
         applyTimelineImageCrops()
@@ -312,6 +389,11 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
 
     return () => {
       cleanups.forEach((cleanup) => cleanup())
+      for (const image of zoomableImages) {
+        image.removeAttribute("tabindex")
+        image.removeAttribute("role")
+        image.removeAttribute("aria-label")
+      }
       resizeObserver.disconnect()
     }
   }, [applyTimelineImageCrops, contentFontSize, note.contentHtml, note.images])
@@ -322,14 +404,27 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
     return () => cancelAnimationFrame(frame)
   }, [activeImage, applyTimelineImageCrops])
 
-  function openLightbox(src: string, alt = "") {
+  function openLightbox(src: string, alt = "", opener?: HTMLElement) {
+    if (!src) return
+    lightboxOpenerRef.current = opener ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null)
     setActiveImage({ src, alt })
   }
 
   function handleContentClick(event: MouseEvent<HTMLDivElement>) {
     const image = (event.target as HTMLElement).closest("img")
     if (!image || !contentRef.current?.contains(image)) return
-    openLightbox(image.getAttribute("src") ?? "", image.getAttribute("alt") ?? "")
+    if (image.closest('[data-role="author-reference"]')) return
+    openLightbox(image.getAttribute("src") ?? "", image.getAttribute("alt") ?? "", image)
+  }
+
+  function handleContentKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
+    if (event.key !== "Enter" && event.key !== " ") return
+    const image = (event.target as HTMLElement).closest("img")
+    if (!image || !contentRef.current?.contains(image)) return
+    if (image.closest('[data-role="author-reference"]')) return
+
+    event.preventDefault()
+    openLightbox(image.getAttribute("src") ?? "", image.getAttribute("alt") ?? "", image)
   }
 
   const commentActionLabel = commentsLoaded && comments.length > 0 ? "ver comentários" : "comentar"
@@ -340,7 +435,7 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
       <div className="flex items-center">
         <Link
           href={notePath}
-          className="text-xs text-neutral-500 transition-colors hover:text-neutral-950 dark:text-[#A8A095]/75 dark:hover:text-[#f1f1f1]"
+          className="inline-flex min-h-8 items-center rounded text-xs text-neutral-600 transition-colors hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#c2bbb1] dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
           aria-label="Abrir nota"
         >
           <time dateTime={note.publishedAt}>{ago}</time>
@@ -353,7 +448,7 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
                 onClick={startEditing}
                 aria-label="Editar nota"
                 title="Editar nota"
-                className="grid size-4 place-items-center text-neutral-400 transition-colors hover:text-neutral-950 dark:text-[#A8A095]/60 dark:hover:text-[#f1f1f1]"
+                className="grid size-8 place-items-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#A8A095] dark:hover:bg-white/10 dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
               >
                 <PencilIcon className="size-3.5" aria-hidden />
               </button>
@@ -362,9 +457,11 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
               <button
                 type="button"
                 onClick={confirmDelete}
-                className="text-xs leading-none text-neutral-400 transition-colors hover:text-red-500 dark:text-[#A8A095]/50 dark:hover:text-red-400"
+                disabled={deleting}
+                aria-label={deleting ? "Deletando nota" : "Deletar nota"}
+                className="min-h-8 rounded px-2 text-xs leading-none text-neutral-500 transition-colors hover:bg-red-50 hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 disabled:cursor-wait disabled:opacity-50 dark:text-[#A8A095] dark:hover:bg-red-950/40 dark:hover:text-red-300"
               >
-                deletar
+                {deleting ? "deletando..." : "deletar"}
               </button>
             )}
           </div>
@@ -394,12 +491,12 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
             />
           </div>
           <div className="flex items-center justify-end gap-2 border-t border-neutral-200 px-3 py-2 dark:border-white/10">
-            {editError && <p className="mr-auto text-xs text-red-400">{editError}</p>}
+            {editError && <p role="alert" className="mr-auto text-xs text-red-700 dark:text-red-300">{editError}</p>}
             <button
               type="button"
               onClick={cancelEditing}
               disabled={savingEdit}
-              className="rounded-full px-3 py-1.5 text-xs font-medium text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-950 disabled:opacity-50 dark:text-[#A8A095] dark:hover:bg-white/10 dark:hover:text-[#f1f1f1]"
+              className="min-h-8 rounded-full px-3 py-1.5 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:opacity-50 dark:text-[#c2bbb1] dark:hover:bg-white/10 dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
             >
               Cancelar
             </button>
@@ -407,7 +504,7 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
               type="button"
               onClick={saveEdit}
               disabled={savingEdit || !editContent.trim()}
-              className="rounded-full bg-neutral-950 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-neutral-700 disabled:cursor-not-allowed disabled:bg-neutral-200 disabled:text-neutral-400 dark:bg-[#f1f1f1] dark:text-[#040404] dark:hover:bg-[#A8A095] dark:disabled:bg-white/25 dark:disabled:text-white/50"
+              className="min-h-8 rounded-full bg-neutral-950 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-neutral-200 disabled:text-neutral-500 dark:bg-[#f1f1f1] dark:text-[#040404] dark:hover:bg-[#A8A095] dark:focus-visible:ring-neutral-300 dark:focus-visible:ring-offset-[#080808] dark:disabled:bg-white/25 dark:disabled:text-white/60"
             >
               {savingEdit ? "Salvando" : "Salvar"}
             </button>
@@ -422,34 +519,42 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
           ].filter(Boolean).join(" ")}
           style={{ fontSize: contentFontSize }}
           onClick={handleContentClick}
+          onKeyDown={handleContentKeyDown}
           dangerouslySetInnerHTML={{ __html: note.contentHtml }}
         />
       )}
 
       {note.images && note.images.length > 0 && (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {note.images.map((url) => (
-            <img
+          {note.images.map((url, index) => (
+            <button
               key={url}
-              src={url}
-              alt=""
-              onClick={() => openLightbox(url)}
-              className="aspect-square w-full cursor-zoom-in rounded-xl border border-neutral-200 object-cover dark:border-white/10"
-            />
+              type="button"
+              onClick={(event) => openLightbox(url, `Imagem ${index + 1} da nota`, event.currentTarget)}
+              aria-label={`Ampliar imagem ${index + 1} da nota`}
+              className="aspect-square w-full cursor-zoom-in overflow-hidden rounded-xl border border-neutral-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 focus-visible:ring-offset-2 dark:border-white/10 dark:focus-visible:ring-neutral-300 dark:focus-visible:ring-offset-[#040404]"
+            >
+              <img
+                src={url}
+                alt=""
+                className="h-full w-full rounded-none object-cover"
+              />
+            </button>
           ))}
         </div>
       )}
 
       <div className="pointer-events-none absolute bottom-0 left-0">
         <button
+          ref={commentsButtonRef}
           type="button"
           onClick={openComments}
           aria-expanded={commentsOpen}
-          className="pointer-events-auto inline-flex items-center gap-1.5 text-xs text-neutral-500 opacity-100 transition-colors hover:text-neutral-950 dark:text-[#A8A095]/70 dark:hover:text-[#f1f1f1] sm:opacity-0 sm:group-hover:opacity-100"
+          className="pointer-events-auto inline-flex min-h-8 items-center gap-1.5 rounded text-xs text-neutral-600 opacity-100 transition-colors hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#c2bbb1] dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
         >
           <ChatBubbleLeftEllipsisIcon className="size-4" aria-hidden />
           <span>{commentActionLabel}</span>
-          {commentsLoaded && comments.length > 0 && <span className="tabular-nums">({comments.length})</span>}
+          {commentsLoaded && commentCount > 0 && <span className="tabular-nums">({commentCount})</span>}
         </button>
       </div>
 
@@ -457,20 +562,33 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
           <NoteCommentsPanel
             comments={comments}
             loading={loadingComments}
+            hasMore={hasMore}
+            loadingOlder={loadingOlder}
+            error={commentsError}
             draft={draft}
             submitting={submitting}
             isAdmin={isAdmin}
             onDraftChange={setDraft}
             onSubmit={submitComment}
             onRemove={removeComment}
+            onLoadOlder={loadOlderComments}
             onClose={() => setCommentsOpen(false)}
+            returnFocusRef={commentsButtonRef}
           />
       )}
 
       {activeImage && createPortal(
-        <div
-          onClick={closeLightbox}
-          className="fixed inset-0 z-[9999] flex items-center justify-center"
+        <dialog
+          ref={lightboxDialogRef}
+          aria-label={activeImage.alt ? `Imagem ampliada: ${activeImage.alt}` : "Imagem ampliada"}
+          onCancel={(event) => {
+            event.preventDefault()
+            closeLightbox()
+          }}
+          onClick={(event) => {
+            if (event.target === event.currentTarget) closeLightbox()
+          }}
+          className="fixed inset-0 m-0 flex h-dvh max-h-none w-screen max-w-none items-center justify-center border-0 bg-transparent p-4 backdrop:bg-transparent motion-reduce:!transition-none"
           style={{
             backgroundColor: `rgba(0,0,0,${lightboxVisible ? 0.92 : 0})`,
             backdropFilter: `blur(${lightboxVisible ? 8 : 0}px)`,
@@ -478,19 +596,19 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
           }}
         >
           <button
+            ref={lightboxCloseButtonRef}
             type="button"
             onClick={closeLightbox}
-            aria-label="Fechar"
-            className="absolute right-4 top-4 z-10 flex items-center justify-center rounded-full bg-white/10 p-2 transition-colors hover:bg-white/20"
+            aria-label="Fechar imagem ampliada"
+            className="absolute right-4 top-4 z-10 grid size-10 place-items-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white motion-reduce:!transition-none"
             style={{ opacity: lightboxVisible ? 1 : 0, transition: "opacity 250ms ease" }}
           >
-            <XMarkIcon className="h-5 w-5 text-white" />
+            <XMarkIcon className="h-5 w-5" aria-hidden />
           </button>
           <img
             src={activeImage.src}
             alt={activeImage.alt}
-            onClick={(event) => event.stopPropagation()}
-            className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain shadow-2xl"
+            className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain shadow-2xl motion-reduce:!transform-none motion-reduce:!transition-none"
             style={{
               filter: "grayscale(0)",
               opacity: lightboxVisible ? 1 : 0,
@@ -499,12 +617,12 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
             }}
           />
           <span
-            className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white mix-blend-difference backdrop-blur-sm"
+            className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-white motion-reduce:!transition-none"
             style={{ opacity: lightboxVisible ? 1 : 0, transition: "opacity 400ms ease" }}
           >
-            Scroll ou Esc para fechar
+            Role, deslize ou pressione Esc para fechar
           </span>
-        </div>,
+        </dialog>,
         document.body,
       )}
     </article>

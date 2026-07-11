@@ -3,9 +3,9 @@ import { getDb } from "./client"
 import { renderMarkdownSync } from "../mdx"
 import { toObjectId } from "../validation"
 
-export type Note = { _id: ObjectId; content: string; images?: string[]; publishedAt: Date; createdAt: Date }
-export type SerializedNote = Omit<Note, "_id" | "publishedAt" | "createdAt"> & {
-  _id: string; publishedAt: string; createdAt: string; contentHtml: string
+export type Note = { _id: ObjectId; content: string; images?: string[]; publishedAt: Date; createdAt: Date; updatedAt?: Date; deleting?: boolean }
+export type SerializedNote = Omit<Note, "_id" | "deleting" | "publishedAt" | "createdAt" | "updatedAt"> & {
+  _id: string; publishedAt: string; createdAt: string; updatedAt: string; contentHtml: string
 }
 
 function protectImages(content: string): { protected: string; images: string[] } {
@@ -59,8 +59,12 @@ export function normalizeNoteContent(content: string): string {
 export function serializeNote(note: Note): SerializedNote {
   const content = normalizeNoteContent(note.content)
   return {
-    ...note, content, _id: note._id.toString(),
-    publishedAt: note.publishedAt.toISOString(), createdAt: note.createdAt.toISOString(),
+    _id: note._id.toString(),
+    content,
+    images: note.images,
+    publishedAt: note.publishedAt.toISOString(),
+    createdAt: note.createdAt.toISOString(),
+    updatedAt: (note.updatedAt ?? note.createdAt).toISOString(),
     contentHtml: renderMarkdownSync(content),
   }
 }
@@ -69,13 +73,15 @@ let indexesPromise: Promise<void> | undefined
 
 async function collection() {
   const col = (await getDb()).collection<Note>("notes")
-  indexesPromise ??= col.createIndex({ _id: 1 }).then(() => undefined)
+  indexesPromise ??= col.createIndex({ content: "text" }).then(() => undefined)
   await indexesPromise
   return col
 }
-export async function getNotes(opts: { cursor?: string; limit?: number } = {}): Promise<{ notes: Note[]; nextCursor: string | null; total: number }> {
-  const { cursor, limit = 20 } = opts
-  const filter: Record<string, unknown> = {}
+export async function getNotes(opts: { cursor?: string; page?: number; limit?: number; search?: string } = {}): Promise<{ notes: Note[]; nextCursor: string | null; total: number }> {
+  const { cursor, page = 1, limit = 20, search } = opts
+  const baseFilter: Record<string, unknown> = { deleting: { $ne: true } }
+  if (search?.trim()) baseFilter.$text = { $search: search.trim() }
+  const filter: Record<string, unknown> = { ...baseFilter }
   if (cursor) {
     const cursorId = toObjectId(cursor)
     if (!cursorId) return { notes: [], nextCursor: null, total: 0 }
@@ -83,25 +89,35 @@ export async function getNotes(opts: { cursor?: string; limit?: number } = {}): 
   }
   const col = await collection()
   const [notes, total] = await Promise.all([
-    col.find(filter).sort({ _id: -1 }).limit(limit + 1).toArray(),
-    col.countDocuments(),
+    col.find(filter)
+      .sort({ _id: -1 })
+      .skip(cursor ? 0 : Math.max(0, page - 1) * limit)
+      .limit(limit + 1)
+      .toArray(),
+    col.countDocuments(baseFilter),
   ])
   const hasMore = notes.length > limit
   if (hasMore) notes.pop()
   return { notes, nextCursor: hasMore ? notes[notes.length - 1]._id.toString() : null, total }
 }
 
+export async function countNotes(search?: string): Promise<number> {
+  const filter: Record<string, unknown> = { deleting: { $ne: true } }
+  if (search?.trim()) filter.$text = { $search: search.trim() }
+  return (await collection()).countDocuments(filter)
+}
+
 export async function getNote(id: string): Promise<Note | null> {
   const objectId = toObjectId(id)
   if (!objectId) return null
-  return (await collection()).findOne({ _id: objectId })
+  return (await collection()).findOne({ _id: objectId, deleting: { $ne: true } })
 }
 
 export async function createNote(data: { content: string; images?: string[] }): Promise<Note> {
   const col = await collection()
   const now = new Date()
   const note: Omit<Note, "_id"> = {
-    content: normalizeNoteContent(data.content), images: data.images, publishedAt: now, createdAt: now,
+    content: normalizeNoteContent(data.content), images: data.images, publishedAt: now, createdAt: now, updatedAt: now,
   }
   const result = await col.insertOne(note as Note)
   return { ...note, _id: result.insertedId }
@@ -111,7 +127,7 @@ export async function updateNote(id: string, data: { content: string; images?: s
   const objectId = toObjectId(id)
   if (!objectId) return null
 
-  const update: Partial<Note> = { content: normalizeNoteContent(data.content) }
+  const update: Partial<Note> = { content: normalizeNoteContent(data.content), updatedAt: new Date() }
   if (data.images !== undefined) update.images = data.images
 
   return (await collection()).findOneAndUpdate(
@@ -121,8 +137,19 @@ export async function updateNote(id: string, data: { content: string; images?: s
   )
 }
 
-export async function deleteNote(id: string): Promise<void> {
+export async function deleteNote(id: string): Promise<boolean> {
   const objectId = toObjectId(id)
-  if (!objectId) return
-  await (await collection()).deleteOne({ _id: objectId })
+  if (!objectId) return false
+  const result = await (await collection()).deleteOne({ _id: objectId })
+  return result.deletedCount === 1
+}
+
+export async function markNoteDeleting(id: string): Promise<boolean> {
+  const objectId = toObjectId(id)
+  if (!objectId) return false
+  const result = await (await collection()).updateOne(
+    { _id: objectId },
+    { $set: { deleting: true, updatedAt: new Date() } }
+  )
+  return result.matchedCount === 1
 }

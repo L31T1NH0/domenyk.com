@@ -4,9 +4,15 @@ import { useSyncExternalStore } from "react"
 import { SunIcon, MoonIcon } from "@heroicons/react/20/solid"
 
 const THEME_CHANGE_EVENT = "themechange"
+let volatileDarkMode: boolean | null = null
 
 function getDarkModeSnapshot() {
-  return localStorage.getItem("theme") !== "light"
+  if (volatileDarkMode !== null) return volatileDarkMode
+  try {
+    return localStorage.getItem("theme") !== "light"
+  } catch {
+    return !document.documentElement.classList.contains("light-mode")
+  }
 }
 
 function getServerDarkModeSnapshot() {
@@ -14,10 +20,16 @@ function getServerDarkModeSnapshot() {
 }
 
 function subscribeToThemeChange(callback: () => void) {
-  window.addEventListener("storage", callback)
+  const onStorage = (event: StorageEvent) => {
+    if (event.key !== "theme" && event.key !== null) return
+    volatileDarkMode = null
+    callback()
+  }
+
+  window.addEventListener("storage", onStorage)
   window.addEventListener(THEME_CHANGE_EVENT, callback)
   return () => {
-    window.removeEventListener("storage", callback)
+    window.removeEventListener("storage", onStorage)
     window.removeEventListener(THEME_CHANGE_EVENT, callback)
   }
 }
@@ -38,14 +50,25 @@ export function ThemeSwitcher() {
 
   function toggle() {
     const next = !darkMode
+    volatileDarkMode = next
     applyTheme(next)
-    localStorage.setItem("theme", next ? "dark" : "light")
+    try {
+      localStorage.setItem("theme", next ? "dark" : "light")
+    } catch {
+      // The theme still applies for this page when storage is unavailable.
+    }
     window.dispatchEvent(new Event(THEME_CHANGE_EVENT))
   }
 
   return (
-    <button onClick={toggle} className="w-8 h-8 rounded-full">
-      {darkMode ? <SunIcon width={24} height={24} /> : <MoonIcon width={24} height={24} />}
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label={darkMode ? "Ativar tema claro" : "Ativar tema escuro"}
+      title={darkMode ? "Ativar tema claro" : "Ativar tema escuro"}
+      className="grid size-10 place-items-center rounded-full text-zinc-700 transition-colors hover:bg-zinc-200/70 hover:text-zinc-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f4f4f4] dark:text-zinc-300 dark:hover:bg-white/10 dark:hover:text-white dark:focus-visible:ring-zinc-300 dark:focus-visible:ring-offset-[#040404]"
+    >
+      {darkMode ? <SunIcon width={22} height={22} aria-hidden /> : <MoonIcon width={22} height={22} aria-hidden />}
     </button>
   )
 }

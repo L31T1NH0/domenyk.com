@@ -3,10 +3,18 @@ import { isAdmin } from "@/lib/auth"
 import { getParagraphCommentCounts } from "@/lib/db/comments"
 import { getPostById } from "@/lib/db/posts"
 import { toObjectId } from "@/lib/validation"
+import { rateLimit } from "@/lib/rate-limit"
+import { requestIdentity } from "@/lib/request-identity"
 
 type Params = { params: Promise<{ postId: string }> }
 
 export async function POST(req: NextRequest, { params }: Params) {
+  if (!(await rateLimit(
+    `paragraph-counts:${requestIdentity(req)}`,
+    { limit: 60, windowMs: 60_000 }
+  ))) {
+    return NextResponse.json({ error: "Muitas requisições." }, { status: 429 })
+  }
   const { postId } = await params
   if (!toObjectId(postId)) return NextResponse.json({ error: "ID inválido" }, { status: 400 })
 

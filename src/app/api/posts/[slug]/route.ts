@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createHash } from "crypto"
-import { getPostByPublicId, incrementPostViewsOnce } from "@/lib/db/posts"
+import { getPostByPublicId, incrementPostViewsOnce, serializePost } from "@/lib/db/posts"
 import { isAdmin } from "@/lib/auth"
+import { rateLimit } from "@/lib/rate-limit"
+import { requestIdentity } from "@/lib/request-identity"
 
 const VIEW_COOKIE_MAX_AGE = 60 * 60 * 24
 
@@ -10,22 +12,10 @@ function viewCookieName(publicId: string) {
   return `post_viewed_${hash}`
 }
 
-function clientIp(req: NextRequest): string {
-  const forwardedFor = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-  return (
-    forwardedFor ||
-    req.headers.get("x-real-ip") ||
-    req.headers.get("cf-connecting-ip") ||
-    req.headers.get("true-client-ip") ||
-    "unknown"
-  )
-}
-
 function viewVisitorKey(req: NextRequest, publicId: string): string {
   const day = new Date().toISOString().slice(0, 10)
-  const userAgent = req.headers.get("user-agent")?.slice(0, 300) ?? ""
   return createHash("sha256")
-    .update(`${day}\n${publicId}\n${clientIp(req)}\n${userAgent}`)
+    .update(`${day}\n${publicId}\n${requestIdentity(req)}`)
     .digest("hex")
 }
 
@@ -34,6 +24,9 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug: publicId } = await params
+  if (!publicId || publicId.length > 180) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 })
+  }
   const post = await getPostByPublicId(publicId)
 
   if (!post) return NextResponse.json({ error: "Not found" }, { status: 404 })
@@ -41,7 +34,7 @@ export async function GET(
   const admin = await isAdmin()
 
   if (!post.published && !admin) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    return NextResponse.json({ error: "Not found" }, { status: 404 })
   }
 
   const shouldTrackView = req.nextUrl.searchParams.get("view") === "1"
@@ -49,15 +42,28 @@ export async function GET(
   const hasViewCookie = req.cookies.has(cookieName)
   let counted = false
 
+  let withinViewLimit = true
   if (shouldTrackView && post.published && !admin && !hasViewCookie) {
+    withinViewLimit = await rateLimit(
+      `post-view:${requestIdentity(req)}`,
+      { limit: 120, windowMs: 24 * 60 * 60_000 }
+    )
+  }
+
+  if (shouldTrackView && post.published && !admin && !hasViewCookie && withinViewLimit) {
     const result = await incrementPostViewsOnce(publicId, viewVisitorKey(req, publicId))
     post.views = result.views
     counted = result.counted
   }
 
-  const response = NextResponse.json({ ...post, viewCounted: counted })
+  const publicPost = serializePost(post)
+  const response = NextResponse.json(
+    shouldTrackView
+      ? { views: publicPost.views ?? 0, viewCounted: counted }
+      : { ...publicPost, viewCounted: counted }
+  )
 
-  if (shouldTrackView && post.published && !admin && !hasViewCookie) {
+  if (shouldTrackView && post.published && !admin && !hasViewCookie && withinViewLimit) {
     response.cookies.set(cookieName, "1", {
       httpOnly: true,
       maxAge: VIEW_COOKIE_MAX_AGE,

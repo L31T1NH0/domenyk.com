@@ -3,6 +3,7 @@ import { ClerkProvider } from "@clerk/nextjs"
 import { Analytics } from "@vercel/analytics/next"
 import localFont from "next/font/local"
 import Script from "next/script"
+import { headers } from "next/headers"
 import { absoluteUrl, jsonLd, siteConfig } from "@/lib/seo"
 import "./globals.css"
 
@@ -63,12 +64,14 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined
   return (
 	    <html lang="pt-BR" className={`${polySans.variable} ${geist.variable} h-full antialiased dark-mode`} suppressHydrationWarning>
 	      <body className="min-h-full flex flex-col dark-mode" suppressHydrationWarning>
 	        <Script
 	          id="theme-bootstrap"
+	          nonce={nonce}
 	          strategy="beforeInteractive"
 	          dangerouslySetInnerHTML={{
 		            __html: `(function(){try{var d=localStorage.getItem('theme')!=='light';var e=document.documentElement;e.classList.toggle('dark-mode',d);e.classList.toggle('light-mode',!d);if(document.body){document.body.classList.toggle('dark-mode',d);document.body.classList.toggle('light-mode',!d)}}catch(e){document.documentElement.classList.add('dark-mode')}})()`,
@@ -76,6 +79,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 	        />
 	        <script
 	          id="website-person-json-ld"
+	          nonce={nonce}
 	          type="application/ld+json"
 	          dangerouslySetInnerHTML={{
 		            __html: jsonLd({
@@ -103,11 +107,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 	        />
 	        <Script
 	          id="microsoft-clarity"
+	          nonce={nonce}
 	          dangerouslySetInnerHTML={{
 		            __html: `(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,"clarity","script","wnikfbzpwx");`,
 	          }}
 	        />
-        <ClerkProvider>
+        <ClerkProvider dynamic>
           {children}
           <Analytics />
         </ClerkProvider>

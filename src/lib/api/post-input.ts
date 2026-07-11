@@ -1,5 +1,5 @@
 import type { Post, PostStyle } from "@/lib/db/posts"
-import { asHttpUrl, asOptionalString, asString, asStringArray } from "@/lib/validation"
+import { asHttpsUrl, asOptionalString, asSlug, asString, asStringArray, asTrustedImageUrl } from "@/lib/validation"
 
 const POST_STYLES: PostStyle[] = ["standard", "editorial", "opinion"]
 
@@ -10,7 +10,7 @@ export function parsePostStyle(value: unknown, fallback: PostStyle): PostStyle {
 export function parsePostCover(value: unknown): Post["cover"] | undefined {
   if (!value || typeof value !== "object") return undefined
   const cover = value as { url?: unknown; alt?: unknown }
-  const url = asHttpUrl(cover.url)
+  const url = asTrustedImageUrl(cover.url)
   if (!url) return undefined
   return { url, alt: asOptionalString(cover.alt, 180) }
 }
@@ -19,7 +19,7 @@ export function parsePostBackground(value: unknown): Post["background"] | undefi
   if (!value || typeof value !== "object") return undefined
   const background = value as { color?: unknown; imageUrl?: unknown }
   const color = asOptionalString(background.color, 80)
-  const imageUrl = asHttpUrl(background.imageUrl)
+  const imageUrl = asTrustedImageUrl(background.imageUrl)
   return color || imageUrl ? { color, imageUrl } : undefined
 }
 
@@ -37,7 +37,7 @@ export function parsePostPatch(body: Record<string, unknown>) {
     data.content = content
   }
   if ("slug" in body) {
-    const slug = asString(body.slug, 180)
+    const slug = asSlug(body.slug)
     if (!slug) throw new Error("Slug inválido.")
     data.slug = slug
   }
@@ -48,9 +48,9 @@ export function parsePostPatch(body: Record<string, unknown>) {
   if ("pinned" in body) data.pinned = body.pinned === true
   if ("cover" in body) data.cover = body.cover === null ? undefined : parsePostCover(body.cover)
   if ("showCoverInTimeline" in body) data.showCoverInTimeline = body.showCoverInTimeline === true
-  if ("friendImage" in body) data.friendImage = asHttpUrl(body.friendImage)
+  if ("friendImage" in body) data.friendImage = asTrustedImageUrl(body.friendImage)
   if ("coAuthorUserId" in body) data.coAuthorUserId = asOptionalString(body.coAuthorUserId, 120) ?? null
-  if ("audioUrl" in body) data.audioUrl = asHttpUrl(body.audioUrl)
+  if ("audioUrl" in body) data.audioUrl = asHttpsUrl(body.audioUrl)
   if ("background" in body) data.background = parsePostBackground(body.background)
 
   return data

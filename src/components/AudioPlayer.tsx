@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import {
   BoltIcon as BoltSolidIcon,
   PauseIcon,
@@ -16,6 +16,7 @@ type Props = {
 const BOOST_MULTIPLIER = 2
 
 function formatTime(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return "00:00"
   const minutes = Math.floor(seconds / 60)
   const secs = Math.floor(seconds % 60)
   return `${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
@@ -35,19 +36,63 @@ function AudioPlayerInner({ audioUrl }: Props) {
   const [duration, setDuration] = useState(0)
   const [volume, setVolume] = useState(1)
   const [isBoosted, setIsBoosted] = useState(false)
+  const [boostAvailable, setBoostAvailable] = useState<boolean | null>(null)
+  const [error, setError] = useState("")
+  const controlId = useId()
 
-  function togglePlayPause() {
+  function ensureAudioGraph() {
+    if (audioContextRef.current) return true
+    const audio = audioRef.current
+    if (!audio || typeof window === "undefined") return false
+
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+
+    if (!AudioContextClass) {
+      setBoostAvailable(false)
+      return false
+    }
+
+    try {
+      const context = new AudioContextClass()
+      const source = context.createMediaElementSource(audio)
+      const gainNode = context.createGain()
+
+      source.connect(gainNode)
+      gainNode.connect(context.destination)
+      audio.volume = 1
+      gainNode.gain.value = volume * (isBoosted ? BOOST_MULTIPLIER : 1)
+
+      audioContextRef.current = context
+      gainNodeRef.current = gainNode
+      sourceRef.current = source
+      setBoostAvailable(true)
+      return true
+    } catch {
+      setBoostAvailable(false)
+      return false
+    }
+  }
+
+  async function togglePlayPause() {
     const audio = audioRef.current
     if (!audio) return
 
     if (isPlaying) {
       audio.pause()
-      setIsPlaying(false)
       return
     }
 
-    audioContextRef.current?.resume()
-    audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false))
+    setError("")
+    try {
+      ensureAudioGraph()
+      await audioContextRef.current?.resume()
+      await audio.play()
+    } catch {
+      setIsPlaying(false)
+      setError("Não foi possível reproduzir o áudio.")
+    }
   }
 
   function updateDurationFromMetadata() {
@@ -61,40 +106,18 @@ function AudioPlayerInner({ audioUrl }: Props) {
     const audio = audioRef.current
     if (!audio) return
 
-    const newTime = Number(event.target.value)
+    const requestedTime = Number(event.target.value)
+    const newTime = Number.isFinite(requestedTime) ? requestedTime : 0
     audio.currentTime = newTime
     setCurrentTime(newTime)
   }
 
   useEffect(() => {
-    const audio = audioRef.current
-    if (!audio || typeof window === "undefined" || audioContextRef.current) return
-
-    const AudioContextClass =
-      window.AudioContext ||
-      (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
-
-    if (!AudioContextClass) return
-
-    const context = new AudioContextClass()
-    const source = context.createMediaElementSource(audio)
-    const gainNode = context.createGain()
-
-    source.connect(gainNode)
-    gainNode.connect(context.destination)
-
-    audioContextRef.current = context
-    gainNodeRef.current = gainNode
-    sourceRef.current = source
-  }, [audioUrl])
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume
-    }
-
     if (gainNodeRef.current) {
+      if (audioRef.current) audioRef.current.volume = 1
       gainNodeRef.current.gain.value = volume * (isBoosted ? BOOST_MULTIPLIER : 1)
+    } else if (audioRef.current) {
+      audioRef.current.volume = volume
     }
   }, [volume, isBoosted])
 
@@ -102,30 +125,40 @@ function AudioPlayerInner({ audioUrl }: Props) {
     return () => {
       sourceRef.current?.disconnect()
       gainNodeRef.current?.disconnect()
-      audioContextRef.current?.close()
+      void audioContextRef.current?.close().catch(() => undefined)
     }
   }, [])
 
-  const progress = duration && Number.isFinite(duration) ? (currentTime / duration) * 100 : 0
-
   return (
-    <div className="w-full max-w-2xl mx-auto rounded-lg shadow-md flex items-center gap-3">
+    <div role="group" className="mx-auto flex w-full max-w-2xl flex-wrap items-center gap-3 rounded-lg" aria-label="Player de áudio">
       <audio
         ref={audioRef}
         src={audioUrl}
         crossOrigin="anonymous"
         preload="metadata"
-        onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime ?? 0)}
+        onTimeUpdate={() => {
+          const time = audioRef.current?.currentTime ?? 0
+          setCurrentTime(Number.isFinite(time) ? time : 0)
+        }}
         onLoadedMetadata={updateDurationFromMetadata}
         onDurationChange={updateDurationFromMetadata}
-        onEnded={() => setIsPlaying(false)}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        onEnded={() => {
+          setIsPlaying(false)
+          setCurrentTime(0)
+        }}
+        onError={() => {
+          setIsPlaying(false)
+          setError("Não foi possível carregar o áudio.")
+        }}
         className="hidden"
       />
 
       <button
         type="button"
-        onClick={togglePlayPause}
-        className="text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white rounded p-2"
+        onClick={() => void togglePlayPause()}
+        className="grid size-10 place-items-center rounded-full text-zinc-700 transition-colors hover:bg-zinc-200/70 hover:text-zinc-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 dark:text-zinc-300 dark:hover:bg-white/10 dark:hover:text-white dark:focus-visible:ring-zinc-300"
         aria-label={isPlaying ? "Pausar" : "Tocar"}
       >
         {isPlaying ? (
@@ -135,50 +168,53 @@ function AudioPlayerInner({ audioUrl }: Props) {
         )}
       </button>
 
-      <small className="text-zinc-700 dark:text-zinc-300">
+      <small className="min-w-[5.5rem] text-zinc-700 tabular-nums dark:text-zinc-300" aria-live="off">
         {formatTime(currentTime)} / {formatTime(Number.isFinite(duration) ? duration : 0)}
       </small>
 
       <div className="flex-1">
+        <label htmlFor={`${controlId}-progress`} className="sr-only">Posição do áudio</label>
         <input
+          id={`${controlId}-progress`}
           type="range"
           min="0"
           max={Number.isFinite(duration) ? duration : 0}
           value={currentTime}
           onChange={handleSeek}
-          className="h-2 w-full cursor-pointer appearance-none rounded-full bg-zinc-200 accent-zinc-800 dark:bg-zinc-700 dark:accent-zinc-100"
-          style={{
-            background: `linear-gradient(to right, #0F0F0F ${progress}%, #d4d4d8 ${progress}%)`,
-          }}
+          disabled={!duration}
+          aria-valuetext={`${formatTime(currentTime)} de ${formatTime(duration)}`}
+          className="h-8 w-full cursor-pointer accent-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 disabled:cursor-not-allowed disabled:opacity-50 dark:accent-zinc-100 dark:focus-visible:ring-zinc-300"
         />
       </div>
 
       <div className="hidden items-center gap-2 sm:flex">
-        <label className="flex items-center text-xs text-zinc-600 dark:text-zinc-400" htmlFor="volume-slider">
+        <label className="flex items-center text-xs text-zinc-600 dark:text-zinc-400" htmlFor={`${controlId}-volume`}>
           <SpeakerWaveIcon className="h-4 w-4" aria-hidden="true" />
           <span className="sr-only">Volume</span>
         </label>
         <input
-          id="volume-slider"
+          id={`${controlId}-volume`}
           type="range"
           min="0"
           max="1"
           step="0.01"
           value={volume}
           onChange={(event) => setVolume(Number(event.target.value))}
-          className="h-2 w-20 cursor-pointer appearance-none rounded-full bg-zinc-200 accent-zinc-800 dark:bg-zinc-700 dark:accent-zinc-100"
-          style={{
-            background: `linear-gradient(to right, #0F0F0F ${volume * 100}%, #d4d4d8 ${volume * 100}%)`,
-          }}
+          aria-valuetext={`${Math.round(volume * 100)}%`}
+          className="h-8 w-20 cursor-pointer accent-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 dark:accent-zinc-100 dark:focus-visible:ring-zinc-300"
         />
       </div>
 
       <button
         type="button"
-        className="rounded px-2 py-1 text-xs font-medium text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white"
-        aria-label={isBoosted ? "Desativar boost de volume 2x" : "Ativar boost de volume 2x"}
-        title={isBoosted ? "Desativar boost de volume 2x" : "Ativar boost de volume 2x"}
-        onClick={() => setIsBoosted((prev) => !prev)}
+        className="grid size-10 place-items-center rounded-full text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-200/70 hover:text-zinc-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 disabled:cursor-not-allowed disabled:opacity-50 dark:text-zinc-300 dark:hover:bg-white/10 dark:hover:text-white dark:focus-visible:ring-zinc-300"
+        aria-pressed={isBoosted}
+        aria-label={boostAvailable === false ? "Boost de volume indisponível" : (isBoosted ? "Desativar boost de volume 2x" : "Ativar boost de volume 2x")}
+        title={boostAvailable === false ? "Boost de volume indisponível" : (isBoosted ? "Desativar boost de volume 2x" : "Ativar boost de volume 2x")}
+        disabled={boostAvailable === false}
+        onClick={() => {
+          if (ensureAudioGraph()) setIsBoosted((prev) => !prev)
+        }}
       >
         {isBoosted ? (
           <BoltSolidIcon className="h-4 w-4" aria-hidden="true" />
@@ -186,6 +222,11 @@ function AudioPlayerInner({ audioUrl }: Props) {
           <BoltOutlineIcon className="h-4 w-4" aria-hidden="true" />
         )}
       </button>
+      {error && (
+        <p role="alert" className="basis-full text-xs text-red-700 dark:text-red-300">
+          {error}
+        </p>
+      )}
     </div>
   )
 }

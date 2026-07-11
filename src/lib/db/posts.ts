@@ -28,6 +28,7 @@ export type Post = {
   readingTimeMinutes: number
   views?: number
   paragraphCommentsEnabled?: boolean
+  deleting?: boolean
   style: PostStyle
   createdAt: Date
   updatedAt: Date
@@ -35,12 +36,13 @@ export type Post = {
 
 export type PostSummary = Omit<Post, "content">
 
-export type SerializedPostSummary = Omit<PostSummary, "_id" | "publishedAt" | "createdAt" | "updatedAt"> & {
+export type SerializedPostSummary = Omit<PostSummary, "_id" | "coAuthorUserId" | "deleting" | "publishedAt" | "createdAt" | "updatedAt"> & {
   _id: string
   publishedAt?: string
   createdAt: string
   updatedAt: string
 }
+export type SerializedPost = SerializedPostSummary & { content: string }
 
 let indexesPromise: Promise<void> | undefined
 let postViewsIndexesPromise: Promise<void> | undefined
@@ -56,26 +58,49 @@ async function ensurePostIndexes(col: Awaited<ReturnType<typeof collectionRaw>>)
   const existingIndexes = await col.listIndexes().toArray()
   const textIndex = existingIndexes.find(index => index.key._fts === "text")
   
-  if (textIndex && textIndex.name !== "title_text_content_text") {
-    await col.dropIndex(textIndex.name)
+  if (textIndex && textIndex.name !== "title_text_content_text_tags_text") {
+    await col.dropIndex(textIndex.name).catch((error: unknown) => {
+      if (!(typeof error === "object" && error && "code" in error && error.code === 27)) throw error
+    })
   }
 
   await Promise.all([
     col.createIndex({ publicId: 1 }, { unique: true, sparse: true }),
     col.createIndex({ slug: 1 }, { unique: true }),
     col.createIndex({ published: 1, publishedAt: -1 }),
-    col.createIndex({ title: "text", content: "text" }),
+    col.createIndex({ title: "text", content: "text", tags: "text" }),
   ])
 }
 
 export function serializePostSummary(post: PostSummary): SerializedPostSummary {
   return {
-    ...post,
     _id: post._id.toString(),
+    publicId: post.publicId,
+    slug: post.slug,
+    title: post.title,
+    excerpt: post.excerpt,
+    subtitle: post.subtitle,
+    cover: post.cover,
+    showCoverInTimeline: post.showCoverInTimeline,
+    friendImage: post.friendImage,
+    audioUrl: post.audioUrl,
+    background: post.background,
+    tags: post.tags,
+    pinned: post.pinned,
+    published: post.published,
+    hiddenFromTimeline: post.hiddenFromTimeline,
     publishedAt: post.publishedAt?.toISOString(),
+    readingTimeMinutes: post.readingTimeMinutes,
+    views: post.views,
+    paragraphCommentsEnabled: post.paragraphCommentsEnabled,
+    style: post.style,
     createdAt: post.createdAt.toISOString(),
     updatedAt: post.updatedAt.toISOString(),
   }
+}
+
+export function serializePost(post: Post): SerializedPost {
+  return { ...serializePostSummary(post), content: post.content }
 }
 
 async function collectionRaw() {
@@ -101,7 +126,7 @@ async function collection() {
   return col
 }
 
-async function ensurePublicIds(posts: PostSummary[]): Promise<PostSummary[]> {
+export async function ensurePostPublicIds(posts: PostSummary[]): Promise<PostSummary[]> {
   const missingPublicIds = posts.filter((post) => !post.publicId)
   if (missingPublicIds.length === 0) return posts
 
@@ -145,10 +170,6 @@ async function ensurePostPublicId(post: Post): Promise<Post> {
   return post
 }
 
-function escapeRegex(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-}
-
 export async function getPosts(opts: {
   page?: number
   limit?: number
@@ -166,32 +187,42 @@ export async function getPosts(opts: {
   const col = await collection()
 
   const filter: Record<string, unknown> = {}
+  filter.deleting = { $ne: true }
   if (!includeUnpublished) filter.published = true
   if (excludeHiddenFromTimeline) filter.hiddenFromTimeline = { $ne: true }
   if (search) {
-    const regex = new RegExp(escapeRegex(search.trim()), "i")
-    filter.$or = [
-      { title: regex },
-      { tags: regex },
-    ]
+    filter.$text = { $search: search.trim() }
   }
 
   const [posts, total] = await Promise.all([
     col
       .find(filter, { projection: { content: 0 } })
-      .sort({ pinned: -1, publishedAt: -1 })
+      .sort({ pinned: -1, publishedAt: -1, _id: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
       .toArray(),
     col.countDocuments(filter),
   ])
 
-  return { posts: await ensurePublicIds(posts as PostSummary[]), total }
+  return { posts: await ensurePostPublicIds(posts as PostSummary[]), total }
+}
+
+export async function countPosts(opts: {
+  includeUnpublished?: boolean
+  excludeHiddenFromTimeline?: boolean
+  search?: string
+} = {}): Promise<number> {
+  const filter: Record<string, unknown> = {}
+  filter.deleting = { $ne: true }
+  if (!opts.includeUnpublished) filter.published = true
+  if (opts.excludeHiddenFromTimeline) filter.hiddenFromTimeline = { $ne: true }
+  if (opts.search?.trim()) filter.$text = { $search: opts.search.trim() }
+  return (await collection()).countDocuments(filter)
 }
 
 export async function getPostByPublicId(publicId: string): Promise<Post | null> {
   const col = await collection()
-  return col.findOne({ publicId })
+  return col.findOne({ publicId, deleting: { $ne: true } })
 }
 
 export async function getPostById(id: string): Promise<Post | null> {
@@ -199,12 +230,12 @@ export async function getPostById(id: string): Promise<Post | null> {
   if (!objectId) return null
 
   const col = await collection()
-  return col.findOne({ _id: objectId })
+  return col.findOne({ _id: objectId, deleting: { $ne: true } })
 }
 
 export async function getPostBySlug(slug: string): Promise<Post | null> {
   const col = await collection()
-  const post = await col.findOne({ slug })
+  const post = await col.findOne({ slug, deleting: { $ne: true } })
   return post ? ensurePostPublicId(post) : null
 }
 
@@ -256,6 +287,7 @@ export async function createPost(data: {
   tags?: string[]
   style?: PostStyle
   hiddenFromTimeline?: boolean
+  published?: boolean
 }): Promise<Post> {
   const col = await collection()
   const now = new Date()
@@ -273,13 +305,14 @@ export async function createPost(data: {
     background: data.background,
     tags: data.tags ?? [],
     pinned: false,
-    published: false,
+    published: data.published ?? false,
     hiddenFromTimeline: data.hiddenFromTimeline ?? false,
     readingTimeMinutes: calcReadingTime(data.content),
     style: data.style ?? "standard",
     createdAt: now,
     updatedAt: now,
   }
+  if (post.published) post.publishedAt = now
   const result = await col.insertOne(post as Post)
   return { ...post, _id: result.insertedId }
 }
@@ -338,6 +371,16 @@ export async function deletePost(id: string): Promise<boolean> {
   const col = await collection()
   const result = await col.deleteOne({ _id: objectId })
   return result.deletedCount === 1
+}
+
+export async function markPostDeleting(id: string): Promise<boolean> {
+  const objectId = toObjectId(id)
+  if (!objectId) return false
+  const result = await (await collection()).updateOne(
+    { _id: objectId },
+    { $set: { deleting: true, updatedAt: new Date() } }
+  )
+  return result.matchedCount === 1
 }
 
 export async function ensureIndexes(): Promise<void> {

@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type PointerEvent } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition, type MouseEvent, type PointerEvent } from "react"
 import { useRouter } from "next/navigation"
 import { EyeIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline"
 import { format } from "date-fns"
@@ -20,6 +20,7 @@ type Props = {
   initialNotes: SerializedNote[]
   feedMode: FeedMode
   searchQuery: string
+  searchError?: string
   currentPage: number
   pageSize: number
   isAdmin: boolean
@@ -88,14 +89,14 @@ function PostTimelineItem({
         .join(" ")}
     >
       {post.pinned && (
-        <span className="mb-2 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-[#A8A095]">
+        <span className="mb-2 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-600 dark:text-[#A8A095]">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="size-3" aria-hidden>
             <path d="M9.828.722a.5.5 0 0 1 .354.146l4.95 4.95a.5.5 0 0 1 0 .707c-.48.48-1.072.588-1.503.588-.177 0-.335-.018-.46-.039l-3.134 3.134a5.927 5.927 0 0 1 .16 1.013c.046.702-.032 1.687-.72 2.375a.5.5 0 0 1-.707 0l-2.829-2.828-3.182 3.182c-.195.195-1.219.902-1.414.707-.195-.195.512-1.22.707-1.414l3.182-3.182-2.828-2.829a.5.5 0 0 1 0-.707c.688-.688 1.673-.767 2.375-.72a5.922 5.922 0 0 1 1.013.16l3.134-3.133a2.772 2.772 0 0 1-.04-.461c0-.43.108-1.022.589-1.503a.5.5 0 0 1 .353-.146z" />
           </svg>
           Fixado
         </span>
       )}
-      <Link href={`/posts/${post.slug}`} prefetch={false} className="block text-left focus-visible:outline-none">
+      <Link href={`/posts/${post.slug}`} prefetch={false} className="block rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 focus-visible:ring-offset-2 dark:focus-visible:ring-neutral-300 dark:focus-visible:ring-offset-[#040404]">
         {showCover ? (
           <span className="relative block aspect-video w-full overflow-hidden rounded-xl bg-neutral-200 dark:bg-white/5">
             <Image
@@ -136,9 +137,9 @@ function PostTimelineItem({
               className="font-normal leading-snug text-neutral-950 dark:text-[#f1f1f1]"
             />
             <span className="flex flex-wrap items-center gap-3">
-              <span className="text-xs text-[#A8A095]">{postDateLabel(post)}</span>
-              <span aria-hidden className="text-[#A8A095]/40">·</span>
-              <span className="text-xs text-[#A8A095] tabular-nums">{post.views ?? 0} views</span>
+              <span className="text-xs text-neutral-600 dark:text-[#A8A095]">{postDateLabel(post)}</span>
+              <span aria-hidden className="text-neutral-400 dark:text-[#A8A095]/60">·</span>
+              <span className="text-xs text-neutral-600 tabular-nums dark:text-[#A8A095]">{post.views ?? 0} views</span>
               {!post.published && <span className="text-xs text-amber-400">rascunho</span>}
             </span>
           </span>
@@ -217,7 +218,6 @@ function useTimelineFeed({
   const total = mode === "posts" ? postCount : mode === "notes" ? noteCount : timelineCount
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
   const activePage = Math.min(page, totalPages)
-  const pageStartIndex = (activePage - 1) * pageSize
 
   const allItems = useMemo<TimelineItem[]>(() => {
     return [
@@ -234,15 +234,15 @@ function useTimelineFeed({
 
   const visibleItems = useMemo<TimelineDisplayItem[]>(() => {
     if (mode === "posts") {
-      return allItems.filter((item) => item.type === "post").slice(pageStartIndex, pageStartIndex + pageSize)
+      return allItems.filter((item) => item.type === "post")
     }
 
     if (mode === "notes") {
-      return allItems.filter((item) => item.type === "note").slice(pageStartIndex, pageStartIndex + pageSize)
+      return allItems.filter((item) => item.type === "note")
     }
 
-    return allItems.slice(pageStartIndex, pageStartIndex + pageSize)
-  }, [allItems, mode, pageSize, pageStartIndex])
+    return allItems
+  }, [allItems, mode])
 
   return { timelineCount, totalPages, activePage, visibleItems }
 }
@@ -398,7 +398,7 @@ function Pagination({
             event.preventDefault()
             onPageChange(currentPage - 1)
           }}
-          className="inline-flex h-8 min-w-8 items-center justify-center rounded-md px-2 text-sm text-neutral-500 transition-colors hover:bg-neutral-950/5 hover:text-neutral-950 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-neutral-200"
+          className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-md px-2 text-sm text-neutral-600 transition-colors hover:bg-neutral-950/5 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-neutral-100 dark:focus-visible:ring-neutral-300"
         >
           Anterior
         </a>
@@ -416,10 +416,10 @@ function Pagination({
             }}
             aria-current={active ? "page" : undefined}
             className={[
-              "inline-flex h-8 min-w-8 items-center justify-center rounded-md px-2 text-sm transition-colors",
+              "inline-flex min-h-10 min-w-10 items-center justify-center rounded-md px-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:focus-visible:ring-neutral-300",
               active
                 ? "bg-neutral-950 text-white dark:bg-[#A8A095] dark:text-black"
-                : "text-neutral-500 hover:bg-neutral-950/5 hover:text-neutral-950 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-neutral-200",
+                : "text-neutral-600 hover:bg-neutral-950/5 hover:text-neutral-950 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-neutral-100",
             ].join(" ")}
           >
             {page}
@@ -434,7 +434,7 @@ function Pagination({
             event.preventDefault()
             onPageChange(currentPage + 1)
           }}
-          className="inline-flex h-8 min-w-8 items-center justify-center rounded-md px-2 text-sm text-neutral-500 transition-colors hover:bg-neutral-950/5 hover:text-neutral-950 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-neutral-200"
+          className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-md px-2 text-sm text-neutral-600 transition-colors hover:bg-neutral-950/5 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-neutral-100 dark:focus-visible:ring-neutral-300"
         >
           Próxima
         </a>
@@ -443,7 +443,7 @@ function Pagination({
   )
 }
 
-export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feedMode, searchQuery, currentPage, pageSize, isAdmin }: Props) {
+export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feedMode, searchQuery, searchError = "", currentPage, pageSize, isAdmin }: Props) {
   const router = useRouter()
   const sectionRef = useRef<HTMLElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -451,12 +451,15 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
   const [postCount, setPostCount] = useState(totalPosts)
   const [noteCount, setNoteCount] = useState(totalNotes)
   const [notes, setNotes] = useState(initialNotes)
-  const [optimisticFeedMode, setOptimisticFeedMode] = useState(feedMode)
-  const [optimisticPage, setOptimisticPage] = useState(currentPage)
+  const optimisticFeedMode = feedMode
+  const optimisticPage = currentPage
   const hasSearch = searchQuery.length > 0
   const [hidingPostId, setHidingPostId] = useState<string | null>(null)
+  const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null)
   const [pendingHidePostId, setPendingHidePostId] = useState<string | null>(null)
   const [hideError, setHideError] = useState("")
+  const [noteError, setNoteError] = useState("")
+  const [isPagePending, startPageTransition] = useTransition()
   const pendingHideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const { timelineCount, totalPages: optimisticTotalPages, activePage, visibleItems } = useTimelineFeed({
     notes,
@@ -502,29 +505,31 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [])
 
-  useEffect(() => {
-    function handlePopState() {
-      const params = new URLSearchParams(window.location.search)
-      const mode = params.get("mode")
-      const page = Number(params.get("page") ?? 1)
-
-      setOptimisticFeedMode(feedModeOrder.includes(mode as FeedMode) ? mode as FeedMode : "all")
-      setOptimisticPage(Number.isInteger(page) && page > 0 ? page : 1)
-    }
-
-    window.addEventListener("popstate", handlePopState)
-    return () => window.removeEventListener("popstate", handlePopState)
-  }, [])
-
   function handlePosted(note: SerializedNote) {
     setNotes((prev) => [note, ...prev])
     setNoteCount((prev) => prev + 1)
   }
 
   async function handleDelete(id: string) {
-    await fetch(`/api/admin/notes/${id}`, { method: "DELETE" })
-    setNotes((prev) => prev.filter((note) => note._id !== id))
-    setNoteCount((prev) => Math.max(0, prev - 1))
+    if (deletingNoteId) return
+    setDeletingNoteId(id)
+    setNoteError("")
+
+    try {
+      const response = await fetch(`/api/admin/notes/${id}`, { method: "DELETE" })
+      if (!response.ok) {
+        const data = await response.json().catch(() => null)
+        throw new Error(data?.error ?? "Não foi possível deletar a nota.")
+      }
+
+      setNotes((prev) => prev.filter((note) => note._id !== id))
+      setNoteCount((prev) => Math.max(0, prev - 1))
+      router.refresh()
+    } catch (caughtError) {
+      setNoteError(caughtError instanceof Error ? caughtError.message : "Não foi possível deletar a nota.")
+    } finally {
+      setDeletingNoteId(null)
+    }
   }
 
   function handleUpdate(updatedNote: SerializedNote) {
@@ -568,26 +573,24 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
     sectionRef.current?.scrollIntoView({ block: "start" })
   }
 
-  function updateTimelineUrl(nextMode: FeedMode, nextPage: number) {
-    window.history.pushState(null, "", pageHref(nextPage, nextMode, searchQuery))
-  }
-
   function switchMode(nextMode: FeedMode) {
     if (nextMode === optimisticFeedMode && optimisticPage === 1) {
       scrollToTimelineStart()
       return
     }
 
-    setOptimisticFeedMode(nextMode)
-    setOptimisticPage(1)
-    updateTimelineUrl(nextMode, 1)
+    startPageTransition(() => {
+      router.push(modeHref(nextMode, searchQuery), { scroll: false })
+    })
     scrollToTimelineStart()
   }
 
   function switchPage(nextPage: number) {
     const clampedPage = Math.min(Math.max(1, nextPage), optimisticTotalPages)
-    setOptimisticPage(clampedPage)
-    updateTimelineUrl(optimisticFeedMode, clampedPage)
+    startPageTransition(() => {
+      router.push(pageHref(clampedPage, optimisticFeedMode, searchQuery), { scroll: false })
+    })
+    scrollToTimelineStart()
   }
 
   const swipeNavigation = useTimelineSwipeNavigation(optimisticFeedMode, switchMode)
@@ -602,6 +605,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
     <section
       ref={sectionRef}
       aria-label="Timeline"
+      aria-busy={isPagePending}
       className="flex w-full min-w-0 touch-pan-y flex-col gap-5 self-center"
       onPointerDownCapture={swipeNavigation.handlePointerDown}
       onPointerMoveCapture={swipeNavigation.handlePointerMove}
@@ -626,14 +630,14 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
                     }}
                     aria-current={active ? "page" : undefined}
                     className={[
-                      "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition-colors",
+                      "inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:focus-visible:ring-neutral-300",
                       active
                         ? "border-neutral-400 bg-neutral-950/10 text-neutral-950 dark:border-[#A8A095]/60 dark:bg-[#A8A095]/15 dark:text-[#f1f1f1]"
                         : "border-neutral-300 text-neutral-600 hover:bg-neutral-950/5 hover:text-neutral-950 dark:border-white/10 dark:text-[#A8A095] dark:hover:bg-white/10 dark:hover:text-[#f1f1f1]",
                     ].join(" ")}
                   >
                     {option.label}
-                    <span className="tabular-nums opacity-70">{option.count}</span>
+                    <span className="tabular-nums">{option.count}</span>
                   </a>
                 )
               })}
@@ -642,9 +646,9 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
             <form action="/" className="w-[min(100%,14rem)] min-w-0 sm:w-60">
               <div
                 className={[
-                  "flex h-8 min-w-0 items-center gap-2 rounded-full border px-2.5 text-neutral-950 transition-colors",
-                  "border-neutral-300 bg-transparent focus-within:border-neutral-500 focus-within:bg-white/70",
-                  "dark:border-white/10 dark:text-[#f1f1f1] dark:focus-within:border-[#A8A095]/50 dark:focus-within:bg-white/[0.04]",
+                  "flex h-10 min-w-0 items-center gap-2 rounded-full border px-3 text-neutral-950 transition-colors",
+                  "border-neutral-300 bg-transparent focus-within:border-neutral-500 focus-within:bg-white/70 focus-within:ring-2 focus-within:ring-neutral-500/50",
+                  "dark:border-white/10 dark:text-[#f1f1f1] dark:focus-within:border-[#A8A095]/50 dark:focus-within:bg-white/[0.04] dark:focus-within:ring-neutral-300/60",
                   hasSearch ? "border-neutral-400 dark:border-[#A8A095]/45" : "",
                 ].join(" ")}
               >
@@ -656,7 +660,8 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
                   defaultValue={searchQuery}
                   placeholder="Pesquisar posts..."
                   aria-label="Pesquisar posts e notas"
-                  className="min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-neutral-500 dark:placeholder:text-[#A8A095]/65"
+                  maxLength={120}
+                  className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-neutral-600 dark:placeholder:text-[#c2bbb1]"
                 />
                 {optimisticFeedMode !== "all" && <input type="hidden" name="mode" value={optimisticFeedMode} />}
                 {hasSearch && (
@@ -667,7 +672,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
                       data-swipe-ignore
                       aria-label="Limpar busca"
                       title="Limpar busca"
-                      className="grid size-4 shrink-0 place-items-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-950/5 hover:text-neutral-950 dark:text-[#A8A095] dark:hover:bg-white/10 dark:hover:text-[#f1f1f1]"
+                      className="grid size-8 shrink-0 place-items-center rounded-full text-neutral-600 transition-colors hover:bg-neutral-950/5 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#c2bbb1] dark:hover:bg-white/10 dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
                     >
                       <XMarkIcon className="size-3" aria-hidden />
                     </Link>
@@ -680,10 +685,13 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
         </div>
 
         {isAdmin && <NoteComposer onPosted={handlePosted} />}
-        {hideError && <p className="text-sm text-red-400">{hideError}</p>}
+        {hideError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{hideError}</p>}
+        {noteError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{noteError}</p>}
+        {searchError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{searchError}</p>}
+        {isPagePending && <p role="status" className="sr-only">Carregando página da timeline...</p>}
 
         <div
-          className="min-w-0 will-change-transform"
+          className="min-w-0 will-change-transform motion-reduce:!translate-x-0 motion-reduce:!opacity-100 motion-reduce:!transition-none"
           style={{
             opacity: 1 - Math.min(Math.abs(swipeNavigation.swipeOffset) / 420, 0.18),
             transform: `translate3d(${swipeNavigation.swipeOffset}px, 0, 0)`,
@@ -691,7 +699,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
           }}
         >
           {visibleItems.length === 0 ? (
-            <div className="text-sm text-zinc-400">
+            <div className="text-sm text-zinc-600 dark:text-zinc-400">
               <p>{hasSearch ? "Nenhum resultado encontrado." : "Nenhum post ou nota publicado ainda."}</p>
             </div>
           ) : (
@@ -704,6 +712,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
                       isAdmin={isAdmin}
                       onDelete={handleDelete}
                       onUpdate={handleUpdate}
+                      deleting={deletingNoteId === item.note._id}
                       cropTallImages
                     />
                   </li>

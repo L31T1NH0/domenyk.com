@@ -1,7 +1,8 @@
 import { ObjectId } from "mongodb"
 import { getDb } from "./client"
-import { renderMarkdownSync } from "../mdx"
+import { renderMarkdownSync, type MarkdownRenderOptions } from "../mdx"
 import { toObjectId } from "../validation"
+import { MAX_COMMENT_IMAGES } from "@/lib/api/comment-input"
 
 export type Comment = {
   _id: ObjectId
@@ -15,12 +16,13 @@ export type Comment = {
   updatedAt: Date
 }
 
-export type SerializedComment = Omit<Comment, "_id" | "postId" | "createdAt" | "updatedAt"> & {
+export type SerializedComment = Omit<Comment, "_id" | "postId" | "authorId" | "createdAt" | "updatedAt"> & {
   _id: string
   postId: string
   createdAt: string
   updatedAt: string
   contentHtml: string
+  canDelete: boolean
 }
 
 type StoredComment = Partial<Comment> & {
@@ -57,8 +59,8 @@ function normalizeComment(comment: StoredComment): Comment {
   const createdAt = toDate(comment.createdAt)
   const updatedAt = toDate(comment.updatedAt, createdAt)
 
-  return {
-    ...comment,
+  const normalized: Comment = {
+    _id: comment._id,
     postId: comment.postId ?? new ObjectId(),
     authorId: comment.authorId ?? "",
     authorName,
@@ -67,21 +69,55 @@ function normalizeComment(comment: StoredComment): Comment {
     createdAt,
     updatedAt,
   }
+  if (typeof comment.paragraphId === "string") normalized.paragraphId = comment.paragraphId
+  return normalized
 }
 
-export function serializeComment(comment: Comment): SerializedComment {
+export function serializeComment(comment: Comment, canDelete = false): SerializedComment {
   return {
-    ...comment,
     _id: comment._id.toString(),
     postId: comment.postId.toString(),
+    paragraphId: comment.paragraphId,
+    authorName: comment.authorName,
+    authorImageUrl: comment.authorImageUrl,
+    content: comment.content,
     createdAt: comment.createdAt.toISOString(),
     updatedAt: comment.updatedAt.toISOString(),
-    contentHtml: renderMarkdownSync(comment.content),
+    contentHtml: renderMarkdownSync(comment.content, commentMarkdownOptions(comment.content)),
+    canDelete,
   }
 }
 
 let indexesPromise: Promise<void> | undefined
-export const MAX_COMMENTS_PER_RESPONSE = 100
+export const MAX_COMMENTS_PER_RESPONSE = 50
+
+function commentMarkdownOptions(content: string): MarkdownRenderOptions {
+  const allowedUrlPrefixes = new Set<string>()
+  const urlPattern = /https:\/\/[^\s)"'<>]+/g
+
+  for (const candidate of content.match(urlPattern) ?? []) {
+    try {
+      const url = new URL(candidate)
+      if (
+        url.protocol === "https:" &&
+        url.hostname.endsWith(".public.blob.vercel-storage.com") &&
+        url.pathname.startsWith("/comments/")
+      ) {
+        allowedUrlPrefixes.add(`${url.origin}/comments/`)
+      }
+    } catch {
+      // Invalid URLs are removed by the restricted Markdown renderer.
+    }
+  }
+
+  return {
+    imagePolicy: {
+      mode: "allowlist",
+      allowedUrlPrefixes: [...allowedUrlPrefixes],
+      maxImages: MAX_COMMENT_IMAGES,
+    },
+  }
+}
 
 async function collectionRaw() {
   const db = await getDb()
@@ -90,7 +126,7 @@ async function collectionRaw() {
 
 async function collection() {
   const col = await collectionRaw()
-  indexesPromise ??= col.createIndex({ postId: 1, paragraphId: 1 }).then(() => undefined)
+  indexesPromise ??= col.createIndex({ postId: 1, paragraphId: 1, _id: -1 }).then(() => undefined)
   await indexesPromise
   return col
 }
@@ -104,21 +140,32 @@ export async function getComments(
 
 export async function getCommentsPage(
   postId: string,
-  opts: { paragraphId?: string; limit?: number } = {}
-): Promise<{ comments: Comment[]; hasMore: boolean }> {
-  const { paragraphId, limit = MAX_COMMENTS_PER_RESPONSE } = opts
+  opts: { paragraphId?: string; limit?: number; cursor?: string } = {}
+): Promise<{ comments: Comment[]; hasMore: boolean; nextCursor: string | null; total: number }> {
+  const { paragraphId, limit = MAX_COMMENTS_PER_RESPONSE, cursor } = opts
   const objectId = toObjectId(postId)
-  if (!objectId) return { comments: [], hasMore: false }
+  if (!objectId) return { comments: [], hasMore: false, nextCursor: null, total: 0 }
 
   const col = await collection()
-  const filter: Record<string, unknown> = { postId: objectId }
-  if (paragraphId !== undefined) filter.paragraphId = paragraphId
-  else filter.$or = [{ paragraphId: { $exists: false } }, { paragraphId: null }]
+  const baseFilter: Record<string, unknown> = { postId: objectId }
+  if (paragraphId !== undefined) baseFilter.paragraphId = paragraphId
+  else baseFilter.$or = [{ paragraphId: { $exists: false } }, { paragraphId: null }]
+  const filter: Record<string, unknown> = { ...baseFilter }
+  if (cursor) {
+    const cursorId = toObjectId(cursor)
+    if (!cursorId) return { comments: [], hasMore: false, nextCursor: null, total: 0 }
+    filter._id = { $lt: cursorId }
+  }
   const boundedLimit = Math.max(1, Math.min(limit, MAX_COMMENTS_PER_RESPONSE))
-  const comments = await col.find(filter).sort({ createdAt: 1 }).limit(boundedLimit + 1).toArray()
+  const [comments, total] = await Promise.all([
+    col.find(filter).sort({ _id: -1 }).limit(boundedLimit + 1).toArray(),
+    col.countDocuments(baseFilter),
+  ])
   const hasMore = comments.length > boundedLimit
   if (hasMore) comments.pop()
-  return { comments: comments.map(normalizeComment), hasMore }
+  const nextCursor = hasMore && comments.length > 0 ? comments[comments.length - 1]._id.toString() : null
+  comments.reverse()
+  return { comments: comments.map(normalizeComment), hasMore, nextCursor, total }
 }
 
 export async function getComment(id: string): Promise<Comment | null> {
@@ -165,6 +212,23 @@ export async function deleteComment(id: string): Promise<void> {
   await col.deleteOne({ _id: objectId })
 }
 
+export async function deleteCommentsForParent(parentId: string): Promise<Comment[]> {
+  const objectId = toObjectId(parentId)
+  if (!objectId) return []
+
+  const col = await collection()
+  const comments = await col.find({ postId: objectId }).toArray()
+  if (comments.length > 0) await col.deleteMany({ postId: objectId })
+  return comments.map(normalizeComment)
+}
+
+export async function getCommentsForParent(parentId: string): Promise<Comment[]> {
+  const objectId = toObjectId(parentId)
+  if (!objectId) return []
+  const comments = await (await collection()).find({ postId: objectId }).toArray()
+  return comments.map(normalizeComment)
+}
+
 export async function getRecentComments(limit = 20): Promise<Comment[]> {
   const col = await collection()
   const comments = await col.find({}).sort({ createdAt: -1 }).limit(limit).toArray()
@@ -205,5 +269,5 @@ export async function getParagraphCommentCounts(
 
 export async function ensureIndexes(): Promise<void> {
   const col = await collectionRaw()
-  await col.createIndex({ postId: 1, paragraphId: 1 })
+  await col.createIndex({ postId: 1, paragraphId: 1, _id: -1 })
 }

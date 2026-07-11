@@ -16,6 +16,11 @@ export async function isAdmin(): Promise<boolean> {
   return userId === ADMIN_USER_ID
 }
 
+export async function getAuthUserId(): Promise<string | null> {
+  const { userId } = await auth()
+  return userId
+}
+
 export async function requireAdmin(): Promise<void> {
   const admin = await isAdmin()
   if (!admin) throw new Error("Unauthorized")

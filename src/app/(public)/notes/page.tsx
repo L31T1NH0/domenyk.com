@@ -4,6 +4,7 @@ import { isAdmin } from "@/lib/auth"
 import { Header } from "@/components/Header"
 import { NotesTimeline } from "./NotesTimeline"
 import { absoluteUrl, buildPageMetadata, jsonLd, siteConfig } from "@/lib/seo"
+import { headers } from "next/headers"
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Notes",
@@ -12,6 +13,7 @@ export const metadata: Metadata = buildPageMetadata({
 })
 
 export default async function NotesPage() {
+  const nonce = (await headers()).get("x-nonce") ?? undefined
   const admin = await isAdmin()
   const { notes, nextCursor } = await getNotes({ limit: 20 })
   const serializedNotes = notes.map(serializeNote)
@@ -20,6 +22,7 @@ export default async function NotesPage() {
     <>
       <Header />
       <script
+        nonce={nonce}
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: jsonLd({

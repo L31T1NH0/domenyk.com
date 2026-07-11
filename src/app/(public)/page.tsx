@@ -1,7 +1,11 @@
 import type { Metadata } from "next"
-import { getPosts, serializePostSummary } from "@/lib/db/posts"
-import { getNotes, serializeNote } from "@/lib/db/notes"
+import { headers } from "next/headers"
+import { countPosts, getPosts, serializePostSummary } from "@/lib/db/posts"
+import { countNotes, getNotes, serializeNote } from "@/lib/db/notes"
+import { getTimelinePage } from "@/lib/db/timeline"
 import { isAdmin } from "@/lib/auth"
+import { rateLimit } from "@/lib/rate-limit"
+import { requestIdentityFromHeaders } from "@/lib/request-identity"
 import { Header } from "@/components/Header"
 import { HomeTimeline } from "./HomeTimeline"
 import { buildPageMetadata } from "@/lib/seo"
@@ -9,13 +13,13 @@ import { buildPageMetadata } from "@/lib/seo"
 export const metadata: Metadata = buildPageMetadata()
 
 const HOME_TIMELINE_PAGE_SIZE = 10
-const HOME_TIMELINE_FETCH_LIMIT = 1000
+const MAX_TIMELINE_PAGE = 10_000
 const FEED_MODES = ["all", "posts", "notes"] as const
 type FeedMode = (typeof FEED_MODES)[number]
 
 function parsePage(value: string | string[] | undefined) {
   const page = Number(Array.isArray(value) ? value[0] : value)
-  return Number.isInteger(page) && page > 0 ? Math.min(page, 500) : 1
+  return Number.isInteger(page) && page > 0 ? Math.min(page, MAX_TIMELINE_PAGE) : 1
 }
 
 function parseFeedMode(value: string | string[] | undefined): FeedMode {
@@ -28,11 +32,6 @@ function parseSearchQuery(value: string | string[] | undefined) {
   return query.replace(/\s+/g, " ").slice(0, 120)
 }
 
-function noteMatchesQuery(note: ReturnType<typeof serializeNote>, query: string) {
-  const normalized = query.toLowerCase()
-  return note.content.toLowerCase().includes(normalized)
-}
-
 export default async function HomePage({
   searchParams,
 }: {
@@ -42,25 +41,54 @@ export default async function HomePage({
   const requestedPage = parsePage(params.page)
   const feedMode = parseFeedMode(params.mode)
   const searchQuery = parseSearchQuery(params.q)
-  const admin = await isAdmin()
-  const [{ posts, total }, { notes, total: totalNotes }] = await Promise.all([
-    getPosts({
-      limit: HOME_TIMELINE_FETCH_LIMIT,
-      excludeHiddenFromTimeline: true,
-      search: searchQuery || undefined,
-    }),
-    getNotes({ limit: HOME_TIMELINE_FETCH_LIMIT }),
+  const requestHeaders = await headers()
+  const searchAllowed = !searchQuery || await rateLimit(
+    `home-search:${requestIdentityFromHeaders(requestHeaders)}`,
+    { limit: 30, windowMs: 60_000 }
+  )
+  const effectiveSearch = searchAllowed ? searchQuery : ""
+  const searchError = searchAllowed ? "" : "Muitas buscas. Aguarde um instante e tente novamente."
+
+  const adminPromise = isAdmin()
+  const [totalPosts, totalNotes] = await Promise.all([
+    countPosts({ excludeHiddenFromTimeline: true, search: effectiveSearch || undefined }),
+    countNotes(effectiveSearch || undefined),
   ])
-  const serializedNotes = notes.map(serializeNote)
-  const filteredNotes = searchQuery
-    ? serializedNotes.filter((note) => noteMatchesQuery(note, searchQuery))
-    : serializedNotes
-  const activeNoteTotal = searchQuery ? filteredNotes.length : totalNotes
-  const totalItems = total + activeNoteTotal
-  const activeTotal = feedMode === "posts" ? total : feedMode === "notes" ? activeNoteTotal : totalItems
+  const activeTotal = feedMode === "posts"
+    ? totalPosts
+    : feedMode === "notes"
+      ? totalNotes
+      : totalPosts + totalNotes
   const totalPages = Math.max(1, Math.ceil(activeTotal / HOME_TIMELINE_PAGE_SIZE))
   const currentPage = Math.min(requestedPage, totalPages)
 
+  let posts = [] as Awaited<ReturnType<typeof getPosts>>["posts"]
+  let notes = [] as Awaited<ReturnType<typeof getNotes>>["notes"]
+
+  if (feedMode === "all") {
+    const entries = await getTimelinePage({
+      page: currentPage,
+      limit: HOME_TIMELINE_PAGE_SIZE,
+      search: effectiveSearch || undefined,
+    })
+    posts = entries.filter((entry) => entry.type === "post").map((entry) => entry.post)
+    notes = entries.filter((entry) => entry.type === "note").map((entry) => entry.note)
+  } else if (feedMode === "posts") {
+    posts = (await getPosts({
+      page: currentPage,
+      limit: HOME_TIMELINE_PAGE_SIZE,
+      excludeHiddenFromTimeline: true,
+      search: effectiveSearch || undefined,
+    })).posts
+  } else {
+    notes = (await getNotes({
+      page: currentPage,
+      limit: HOME_TIMELINE_PAGE_SIZE,
+      search: effectiveSearch || undefined,
+    })).notes
+  }
+
+  const admin = await adminPromise
   return (
     <>
       <Header />
@@ -71,11 +99,12 @@ export default async function HomePage({
       <HomeTimeline
         key={`${feedMode}:${currentPage}:${searchQuery}`}
         posts={posts.map(serializePostSummary)}
-        totalPosts={total}
-        totalNotes={activeNoteTotal}
-        initialNotes={filteredNotes}
+        totalPosts={totalPosts}
+        totalNotes={totalNotes}
+        initialNotes={notes.map(serializeNote)}
         feedMode={feedMode}
         searchQuery={searchQuery}
+        searchError={searchError}
         currentPage={currentPage}
         pageSize={HOME_TIMELINE_PAGE_SIZE}
         isAdmin={admin}

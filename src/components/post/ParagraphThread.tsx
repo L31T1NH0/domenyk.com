@@ -17,11 +17,11 @@ type Props = {
 
 export function ParagraphThread({ postId, paragraphId, isAdmin = false, autoFocus = true, onCountChange, onClose }: Props) {
   const { user } = useUser()
-  const { comments, draft, submitting, setDraft, submit, remove } = useComments(`/api/comments/${postId}/paragraph/${paragraphId}`)
+  const { comments, draft, loaded, totalCount, submitting, hasMore, loadingOlder, error, setDraft, submit, remove, loadOlder } = useComments(`/api/comments/${postId}/paragraph/${paragraphId}`)
 
   useEffect(() => {
-    onCountChange?.(comments.length)
-  }, [comments.length, onCountChange])
+    if (loaded) onCountChange?.(totalCount)
+  }, [loaded, onCountChange, totalCount])
 
   return (
     <div className="relative z-50 flex w-full max-w-[calc(100vw-2rem)] flex-col gap-3 rounded-lg border border-neutral-950/10 bg-[#f4f4f4] p-3 text-neutral-800 shadow-[0_2px_8px_rgb(0_0_0_/_0.14)] dark:border-white/10 dark:bg-[#040404] dark:text-[#f1f1f1] dark:shadow-none xl:h-full xl:rounded-t-none xl:border-t-0">
@@ -29,7 +29,7 @@ export function ParagraphThread({ postId, paragraphId, isAdmin = false, autoFocu
         <div>
           <span className="block text-xs font-semibold text-neutral-950 dark:text-[#f1f1f1]">Comentários do parágrafo</span>
           <span className="mt-0.5 block text-[11px] text-neutral-500 dark:text-[#A8A095]">
-            {comments.length === 1 ? "1 comentário" : `${comments.length} comentários`}
+            {totalCount === 1 ? "1 comentário" : `${totalCount} comentários`}
           </span>
         </div>
         <button
@@ -43,6 +43,17 @@ export function ParagraphThread({ postId, paragraphId, isAdmin = false, autoFocu
       </div>
 
       <div className="flex max-h-56 min-h-0 flex-col gap-3 overflow-y-auto pr-1 xl:max-h-none xl:flex-1">
+        {error && <p role="alert" className="text-xs text-red-700 dark:text-red-300">{error}</p>}
+        {hasMore && (
+          <button
+            type="button"
+            onClick={() => void loadOlder()}
+            disabled={loadingOlder}
+            className="min-h-6 self-start rounded px-1.5 text-[11px] text-neutral-500 hover:text-neutral-950 disabled:opacity-50 dark:text-[#A8A095] dark:hover:text-[#f1f1f1]"
+          >
+            {loadingOlder ? "Carregando..." : "Comentários anteriores"}
+          </button>
+        )}
         {comments.length === 0 && (
           <p className="rounded-md border border-dashed border-neutral-950/15 px-3 py-2 text-xs leading-relaxed text-neutral-500 dark:border-white/15 dark:text-[#A8A095]">
             Nenhum comentário ainda. Use este espaço para responder diretamente a este trecho.
@@ -65,7 +76,7 @@ export function ParagraphThread({ postId, paragraphId, isAdmin = false, autoFocu
                 className="text-neutral-600 dark:text-[#A8A095]"
               />
             </div>
-            {(isAdmin || user?.id === c.authorId) && (
+            {(isAdmin || c.canDelete) && (
               <button
                 type="button"
                 onClick={() => remove(c._id)}

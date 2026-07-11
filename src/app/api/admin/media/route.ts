@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { listMedia, serializeMediaItem, deleteImage } from "@/lib/blob"
 import { adminOnly } from "@/lib/auth"
-import { uploadImageFromFormData } from "@/lib/api/image-upload"
+import { uploadImageFromRequest } from "@/lib/api/image-upload"
 
 export async function GET() {
   const unauthorized = await adminOnly()
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   const unauthorized = await adminOnly()
   if (unauthorized) return unauthorized
 
-  return uploadImageFromFormData(await req.formData(), "media")
+  return uploadImageFromRequest(req, "media")
 }
 
 export async function DELETE(req: NextRequest) {

@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getAuthUser } from "@/lib/auth"
-import { uploadImageFromFormData } from "@/lib/api/image-upload"
+import { getAuthUserId } from "@/lib/auth"
+import { uploadImageFromRequest } from "@/lib/api/image-upload"
 import { rateLimit } from "@/lib/rate-limit"
+import { recordCommentUpload } from "@/lib/db/comment-uploads"
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  if (!rateLimit(`comment-media:${user.id}`, { limit: 8, windowMs: 60_000 })) {
+  const userId = await getAuthUserId()
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (!(await rateLimit(`comment-media:${userId}`, { limit: 8, windowMs: 60_000 }))) {
     return NextResponse.json({ error: "Muitas tentativas. Tente novamente em instantes." }, { status: 429 })
   }
+  if (!(await rateLimit(`comment-media-daily:${userId}`, { limit: 50, windowMs: 24 * 60 * 60_000 }))) {
+    return NextResponse.json({ error: "Limite diário de imagens atingido." }, { status: 429 })
+  }
 
-  return uploadImageFromFormData(await req.formData(), "notes")
+  return uploadImageFromRequest(req, "comments", (url) => recordCommentUpload(url, userId))
 }

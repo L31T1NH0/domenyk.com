@@ -10,13 +10,22 @@ import rehypeStringify from "rehype-stringify"
 import rehypeRaw from "rehype-raw"
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize"
 import type { Options as SanitizeSchema } from "rehype-sanitize"
-import { visit } from "unist-util-visit"
+import { SKIP, visit } from "unist-util-visit"
 import type { Element, Root } from "hast"
 import { createHash } from "crypto"
 
-type MarkdownRenderOptions = {
+export type MarkdownImagePolicy =
+  | { mode: "none" }
+  | {
+      mode: "allowlist"
+      allowedUrlPrefixes: readonly string[]
+      maxImages: number
+    }
+
+export type MarkdownRenderOptions = {
   authorImageUrl?: string
   coAuthorImageUrl?: string | null
+  imagePolicy?: MarkdownImagePolicy
 }
 
 type MdastNode = {
@@ -27,6 +36,8 @@ type MdastNode = {
 
 const AUTHOR_TOKEN_PATTERN = /@autor|@co-autor/g
 const DEFAULT_AUTHOR_IMAGE = "/images/profile.jpg"
+const MAX_PARAGRAPH_ID_CACHE_ENTRIES = 128
+const paragraphIdCache = new Map<string, ReadonlySet<string>>()
 const markdownSanitizeSchema: SanitizeSchema = {
   ...defaultSchema,
   clobberPrefix: "user-content-",
@@ -48,10 +59,14 @@ const markdownSanitizeSchema: SanitizeSchema = {
       "loading",
       "decoding",
     ],
+    p: [
+      ...(defaultSchema.attributes?.p ?? []),
+      "dataPid",
+    ],
     span: [
       ...(defaultSchema.attributes?.span ?? []),
-      ["data-role", "author-reference"],
-      ["data-kind", "author", "co-author"],
+      ["dataRole", "author-reference"],
+      ["dataKind", "author", "co-author"],
     ],
   },
 }
@@ -134,11 +149,18 @@ function remarkAuthorReferences(options: MarkdownRenderOptions = {}) {
   }
 }
 
-function paragraphId(text: string): string {
+function legacyParagraphId(text: string): string {
   return createHash("sha1")
     .update(text.trim().slice(0, 80))
     .digest("hex")
     .slice(0, 8)
+}
+
+function paragraphFingerprint(text: string): string {
+  return createHash("sha256")
+    .update(text.trim())
+    .digest("hex")
+    .slice(0, 16)
 }
 
 function elementText(node: Element): string {
@@ -146,6 +168,9 @@ function elementText(node: Element): string {
     .map((child) => {
       if (child.type === "text") return child.value
       if (child.type === "element") {
+        if (child.tagName === "span" && child.properties?.dataRole === "author-reference") {
+          return child.properties.dataKind === "co-author" ? "@co-autor" : "@autor"
+        }
         if (child.tagName === "img") {
           const src = child.properties?.src
           return typeof src === "string" ? src : ""
@@ -157,15 +182,133 @@ function elementText(node: Element): string {
     .join("")
 }
 
-function rehypeParagraphIds() {
+function nextParagraphId(text: string, usedIds: Set<string>, collisionCounts: Map<string, number>): string {
+  const legacyId = legacyParagraphId(text)
+  if (!usedIds.has(legacyId)) {
+    usedIds.add(legacyId)
+    return legacyId
+  }
+
+  const collisionBase = `${legacyId}-${paragraphFingerprint(text)}`
+  let occurrence = collisionCounts.get(collisionBase) ?? 0
+  let candidate = collisionBase
+
+  while (usedIds.has(candidate)) {
+    occurrence += 1
+    candidate = `${collisionBase}-${occurrence + 1}`
+  }
+
+  collisionCounts.set(collisionBase, occurrence)
+  usedIds.add(candidate)
+  return candidate
+}
+
+function rehypeParagraphIds(onParagraphId?: (paragraphId: string) => void) {
   return (tree: Root) => {
+    const usedIds = new Set<string>()
+    const collisionCounts = new Map<string, number>()
+
     visit(tree, "element", (node: Element) => {
       if (node.tagName !== "p") return
       const text = elementText(node)
       if (text.trim()) {
+        const id = nextParagraphId(text, usedIds, collisionCounts)
         node.properties = node.properties ?? {}
-        node.properties["data-pid"] = paragraphId(text)
+        node.properties.dataPid = id
+        onParagraphId?.(id)
       }
+    })
+  }
+}
+
+type AllowedImagePrefix = {
+  origin: string
+  pathname: string
+}
+
+function parseAllowedImagePrefix(value: string): AllowedImagePrefix | null {
+  try {
+    const url = new URL(value)
+    if (
+      (url.protocol !== "https:" && url.protocol !== "http:") ||
+      url.username ||
+      url.password ||
+      url.search ||
+      url.hash
+    ) {
+      return null
+    }
+
+    return { origin: url.origin, pathname: url.pathname }
+  } catch {
+    return null
+  }
+}
+
+function pathMatchesPrefix(pathname: string, prefix: string): boolean {
+  if (prefix === "/") return true
+  if (prefix.endsWith("/")) return pathname.startsWith(prefix)
+  return pathname === prefix || pathname.startsWith(`${prefix}/`)
+}
+
+function isAllowedImageSource(source: string, prefixes: readonly AllowedImagePrefix[]): boolean {
+  try {
+    const url = new URL(source)
+    if (
+      (url.protocol !== "https:" && url.protocol !== "http:") ||
+      url.username ||
+      url.password
+    ) {
+      return false
+    }
+
+    return prefixes.some(
+      (prefix) => url.origin === prefix.origin && pathMatchesPrefix(url.pathname, prefix.pathname)
+    )
+  } catch {
+    // Relative URLs are intentionally rejected in restricted content. Besides
+    // tracking pixels, an image request can otherwise trigger same-origin GETs.
+    return false
+  }
+}
+
+function rehypeRestrictImages(policy?: MarkdownImagePolicy) {
+  if (!policy) return () => undefined
+
+  const prefixes = policy.mode === "allowlist"
+    ? policy.allowedUrlPrefixes
+        .map(parseAllowedImagePrefix)
+        .filter((prefix): prefix is AllowedImagePrefix => prefix !== null)
+    : []
+  const maxImages = policy.mode === "allowlist" && Number.isFinite(policy.maxImages)
+    ? Math.max(0, Math.floor(policy.maxImages))
+    : 0
+
+  return (tree: Root) => {
+    let imageCount = 0
+
+    visit(tree, "element", (node, index, parent) => {
+      const isSource = node.tagName === "source"
+      const source = node.tagName === "img" && typeof node.properties?.src === "string"
+        ? node.properties.src
+        : null
+      const imageAllowed = source !== null &&
+        imageCount < maxImages &&
+        isAllowedImageSource(source, prefixes)
+
+      if (node.tagName === "img" && imageAllowed) {
+        imageCount += 1
+        return
+      }
+
+      if ((node.tagName !== "img" && !isSource) || index === undefined || !parent) return
+
+      const alt = node.tagName === "img" && typeof node.properties?.alt === "string"
+        ? node.properties.alt
+        : ""
+      const replacement = alt ? [{ type: "text" as const, value: alt }] : []
+      parent.children.splice(index, 1, ...replacement)
+      return [SKIP, index]
     })
   }
 }
@@ -178,18 +321,34 @@ function rehypeDemoteBodyH1() {
   }
 }
 
-function createProcessor(options: MarkdownRenderOptions = {}) {
+function rehypePrefixFragmentLinks() {
+  return (tree: Root) => {
+    visit(tree, "element", (node: Element) => {
+      if (node.tagName !== "a") return
+      const href = node.properties?.href
+      if (typeof href !== "string" || !href.startsWith("#")) return
+      node.properties.href = `#${markdownSanitizeSchema.clobberPrefix ?? "user-content-"}${href.slice(1)}`
+    })
+  }
+}
+
+function createProcessor(
+  options: MarkdownRenderOptions = {},
+  onParagraphId?: (paragraphId: string) => void
+) {
   return unified()
     .use(remarkParse)
     .use(remarkGfm)
     .use(remarkAuthorReferences, options)
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeRaw)
-    .use(rehypeSanitize, markdownSanitizeSchema)
-    .use(rehypeParagraphIds)
+    .use(rehypeRestrictImages, options.imagePolicy)
+    .use(rehypeParagraphIds, onParagraphId)
     .use(rehypeDemoteBodyH1)
     .use(rehypeSlug)
     .use(rehypeAutolinkHeadings, { behavior: "wrap" })
+    .use(rehypePrefixFragmentLinks)
+    .use(rehypeSanitize, markdownSanitizeSchema)
     .use(rehypeStringify)
 }
 
@@ -201,4 +360,40 @@ export async function renderMarkdown(content: string, options: MarkdownRenderOpt
 export function renderMarkdownSync(content: string, options: MarkdownRenderOptions = {}): string {
   const result = createProcessor(options).processSync(content)
   return String(result)
+}
+
+export function extractParagraphIds(content: string, options: MarkdownRenderOptions = {}): string[] {
+  const paragraphIds: string[] = []
+  createProcessor(options, (paragraphId) => paragraphIds.push(paragraphId)).processSync(content)
+  return paragraphIds
+}
+
+export function hasParagraphId(
+  content: string,
+  paragraphId: string,
+  options: MarkdownRenderOptions = {}
+): boolean {
+  if (!paragraphId || paragraphId.length > 120) return false
+  const optionsKey = JSON.stringify({
+    authorImageUrl: options.authorImageUrl ?? null,
+    coAuthorImageUrl: options.coAuthorImageUrl ?? null,
+    imagePolicy: options.imagePolicy ?? null,
+  })
+  const cacheKey = createHash("sha256")
+    .update(optionsKey)
+    .update("\0")
+    .update(content)
+    .digest("hex")
+  let ids = paragraphIdCache.get(cacheKey)
+
+  if (!ids) {
+    ids = new Set(extractParagraphIds(content, options))
+    paragraphIdCache.set(cacheKey, ids)
+    if (paragraphIdCache.size > MAX_PARAGRAPH_ID_CACHE_ENTRIES) {
+      const oldestKey = paragraphIdCache.keys().next().value
+      if (oldestKey) paragraphIdCache.delete(oldestKey)
+    }
+  }
+
+  return ids.has(paragraphId)
 }
