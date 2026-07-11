@@ -11,7 +11,6 @@ Use Node.js 22 (see `.nvmrc`) and configure these environment variables in `.env
 - `ADMIN_USER_ID`
 - `NEXT_PUBLIC_SITE_URL`
 - `CLERK_AUTHORIZED_PARTIES` (comma-separated trusted origins, when using previews or extra domains)
-- `CRON_SECRET` (required by the scheduled orphan-upload cleanup)
 - `REQUEST_IDENTITY_SECRET` (recommended separate HMAC secret for rate limits and view deduplication; falls back to `CLERK_SECRET_KEY`)
 
 First, run the development server:
