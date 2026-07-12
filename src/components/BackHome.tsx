@@ -8,9 +8,10 @@ type Props = {
   boundaryId?: string
   label?: string
   href?: string
+  variant?: "default" | "editorial"
 }
 
-export function BackHome({ boundaryId = "post-content-boundary", label = "Voltar", href = "/" }: Props) {
+export function BackHome({ boundaryId = "post-content-boundary", label = "Voltar", href = "/", variant = "default" }: Props) {
   const linkRef = useRef<HTMLAnchorElement>(null)
   const [top, setTop] = useState("50%")
 
@@ -74,7 +75,10 @@ export function BackHome({ boundaryId = "post-content-boundary", label = "Voltar
       <Link
         ref={linkRef}
         href={href}
-        className="hidden md:flex fixed left-[calc(50%-18rem)] -translate-x-full -translate-y-1/2 -ml-4 z-40 items-center justify-center p-1.5 rounded-full text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-[top,transform] duration-150 hover:scale-110"
+        className={[
+          "hidden md:flex fixed left-[calc(50%-18rem)] -translate-x-full -translate-y-1/2 -ml-4 z-40 items-center justify-center p-1.5 rounded-full text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-[top,transform] duration-150 hover:scale-110",
+          variant === "editorial" ? "editorial-back-home" : "",
+        ].join(" ")}
         style={{ top }}
         aria-label={label}
         title={label}

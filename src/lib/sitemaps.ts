@@ -13,6 +13,7 @@ export async function getSitemapDescriptors(): Promise<Array<{ id: string }>> {
   const [postCount, noteCount] = await Promise.all([countPostsWithPublishedVersions(), countNotes()])
   return [
     { id: "index" },
+    { id: "topics" },
     ...Array.from({ length: chunkCount(postCount) }, (_, index) => ({ id: `posts-${index}` })),
     ...Array.from({ length: chunkCount(noteCount) }, (_, index) => ({ id: `notes-${index}` })),
   ]

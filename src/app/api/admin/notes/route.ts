@@ -6,7 +6,7 @@ export async function POST(req: NextRequest) {
   const unauthorized = await adminOnly()
   if (unauthorized) return unauthorized
 
-  const body = await req.json().catch(() => null) as { content?: unknown; images?: unknown } | null
+  const body = await req.json().catch(() => null) as { title?: unknown; content?: unknown; images?: unknown } | null
   try {
     const note = await createSerializedNoteFromBody(body)
     return NextResponse.json(note, { status: 201 })

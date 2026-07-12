@@ -5,9 +5,12 @@ import { AutoFitText } from "@/components/text/AutoFitText"
 type Props = {
   title: string
   subtitle?: string
+  summary?: string
   cover?: { url: string; alt?: string }
   secondaryImage?: string | null
   background?: { color?: string; imageUrl?: string }
+  variant?: "default" | "editorial"
+  editorialLabel?: string
 }
 
 function Avatar({
@@ -39,7 +42,57 @@ function Avatar({
   )
 }
 
-export function PostHeader({ title, subtitle, cover, secondaryImage, background }: Props) {
+export function PostHeader({
+  title,
+  subtitle,
+  summary,
+  cover,
+  secondaryImage,
+  background,
+  variant = "default",
+  editorialLabel = "Editorial",
+}: Props) {
+  if (variant === "editorial") {
+    return (
+      <header className="editorial-hero">
+        <div className="editorial-case-label">
+          <strong>{editorialLabel}</strong>
+          <span>Domenyk</span>
+        </div>
+
+        {cover?.url && (
+          <div className="editorial-cover-image relative">
+            <Image
+              src={cover.url}
+              alt={cover.alt ?? title}
+              fill
+              sizes="(max-width: 767px) calc(100vw - 2rem), 75rem"
+              className="object-cover"
+              style={{ filter: "none" }}
+              priority
+            />
+          </div>
+        )}
+
+        <div className="editorial-cover-copy">
+          <h1 className="editorial-cover-title">{title}</h1>
+          <div className="editorial-cover-details">
+            {(summary || subtitle) && (
+              <p className="editorial-cover-thesis">{summary || subtitle}</p>
+            )}
+            <div className="editorial-byline" aria-label="Autoria">
+              <div className="flex -space-x-3">
+                <Avatar src="/images/profile.jpg" alt="Domenyk" size="post" />
+                {secondaryImage && <Avatar src={secondaryImage} alt="Coautor" size="post" />}
+              </div>
+              <span>Domenyk{secondaryImage ? " + coautoria" : ""}</span>
+            </div>
+          </div>
+        </div>
+      </header>
+    )
+  }
+
   if (cover?.url) {
     return (
       <div className="relative w-full">

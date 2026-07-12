@@ -8,6 +8,7 @@ import { usePostContentFontSize } from "./usePostContentFontSize"
 type Props = {
   html: string
   className?: string
+  variant?: "default" | "editorial"
 }
 
 type ActiveImage = {
@@ -15,9 +16,14 @@ type ActiveImage = {
   alt: string
 }
 
-export function PostContentShell({ html, className }: Props) {
+export function PostContentShell({ html, className, variant = "default" }: Props) {
   const ref = useRef<HTMLDivElement>(null)
-  const fontSize = usePostContentFontSize(ref, { minSize: 12, maxSize: 16 })
+  const fontSize = usePostContentFontSize(
+    ref,
+    variant === "editorial"
+      ? { minSize: 16, maxSize: 18, maxLinesPerParagraph: 9 }
+      : { minSize: 12, maxSize: 16 }
+  )
   const [activeImage, setActiveImage] = useState<ActiveImage | null>(null)
   const [visible, setVisible] = useState(false)
   const dialogRef = useRef<HTMLDialogElement>(null)

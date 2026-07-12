@@ -16,6 +16,7 @@ export function NoteComposer({
   submitEndpoint = "/api/admin/notes",
 }: Props) {
   const [content, setContent] = useState("")
+  const [title, setTitle] = useState("")
   const [editorKey, setEditorKey] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
@@ -37,7 +38,7 @@ export function NoteComposer({
       const res = await fetch(submitEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: currentContent }),
+        body: JSON.stringify({ title: title.trim() || undefined, content: currentContent }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => null)
@@ -46,6 +47,7 @@ export function NoteComposer({
       const note = await res.json()
       onPosted(note)
       setContent("")
+      setTitle("")
       setEditorKey((key) => key + 1)
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Não foi possível postar a nota.")
@@ -62,6 +64,15 @@ export function NoteComposer({
             className="rounded-2xl border border-neutral-200 bg-white shadow-[0_1px_0_rgba(0,0,0,0.04)_inset] transition-colors focus-within:border-neutral-400 focus-within:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:shadow-[0_1px_0_rgba(255,255,255,0.05)_inset] dark:focus-within:border-[#A8A095]/45 dark:focus-within:bg-white/[0.045]"
             onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit() }}
           >
+            <label className="sr-only" htmlFor="note-title">Título da nota</label>
+            <input
+              id="note-title"
+              value={title}
+              maxLength={120}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="Título (opcional)"
+              className="w-full border-b border-neutral-200 bg-transparent px-4 py-3 text-sm font-medium text-neutral-950 outline-none placeholder:text-neutral-500 dark:border-white/10 dark:text-[#f1f1f1] dark:placeholder:text-zinc-400"
+            />
             <LexicalEditor
               key={editorKey}
               namespace="NoteEditor"

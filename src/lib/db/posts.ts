@@ -387,6 +387,58 @@ export async function countPostsWithPublishedVersions(): Promise<number> {
   return (await collection()).countDocuments(publishedVersionFilter)
 }
 
+export async function getLatestPublishedPostUpdate(): Promise<Date | undefined> {
+  const post = await (await collection()).findOne(
+    publishedVersionFilter,
+    { sort: { updatedAt: -1 }, projection: { updatedAt: 1 } }
+  )
+  return post?.updatedAt
+}
+
+export async function getPublishedPostTags(): Promise<string[]> {
+  const tags = await (await collection()).distinct("tags", {
+    published: true,
+    deleting: { $ne: true },
+  })
+  return tags.filter((tag): tag is string => typeof tag === "string" && tag.trim().length > 0).sort((a, b) => a.localeCompare(b, "pt-BR"))
+}
+
+export async function getPublishedTagUpdates(): Promise<Array<{ tag: string; updatedAt: Date }>> {
+  const rows = await (await collection()).aggregate<{ _id: string; updatedAt: Date }>([
+    { $match: { published: true, deleting: { $ne: true }, tags: { $type: "array", $ne: [] } } },
+    { $unwind: "$tags" },
+    { $match: { tags: { $type: "string", $ne: "" } } },
+    { $group: { _id: "$tags", updatedAt: { $max: "$updatedAt" } } },
+    { $sort: { _id: 1 } },
+  ]).toArray()
+  return rows.map((row) => ({ tag: row._id, updatedAt: row.updatedAt }))
+}
+
+export async function getPostsByTag(tag: string, limit = 50): Promise<PostSummary[]> {
+  const posts = await (await collection())
+    .find(
+      { published: true, deleting: { $ne: true }, tags: tag },
+      { projection: { content: 0, "translations.en.content": 0, "translations.de.content": 0, "translations.id.content": 0 } }
+    )
+    .sort({ publishedAt: -1, _id: -1 })
+    .limit(Math.max(1, Math.min(limit, 100)))
+    .toArray()
+  return ensurePostPublicIds(posts as PostSummary[])
+}
+
+export async function getRelatedPosts(post: Pick<Post, "_id" | "tags">, limit = 3): Promise<PostSummary[]> {
+  if (post.tags.length === 0) return []
+  const posts = await (await collection())
+    .find(
+      { _id: { $ne: post._id }, published: true, deleting: { $ne: true }, tags: { $in: post.tags } },
+      { projection: { content: 0, "translations.en.content": 0, "translations.de.content": 0, "translations.id.content": 0 } }
+    )
+    .sort({ publishedAt: -1, _id: -1 })
+    .limit(Math.max(1, Math.min(limit, 6)))
+    .toArray()
+  return ensurePostPublicIds(posts as PostSummary[])
+}
+
 export async function getPostByPublicId(publicId: string): Promise<Post | null> {
   const col = await collection()
   return col.findOne({ publicId, deleting: { $ne: true } })

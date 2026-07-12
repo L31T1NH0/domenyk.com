@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Editorial — dossiê de argumentos</title>
+  <style>
+    /*
+      Protótipo isolado. Hipóteses:
+      - O diferencial do site é a arquitetura dos argumentos, não uma simulação de papel.
+      - Índice, tese e critérios acompanham a leitura sem competir com o texto.
+      - A composição usa três zonas funcionais no desktop e se recompõe no mobile.
+    */
+    @font-face {
+      font-family: "PolySans";
+      src: url("../src/app/PolySans-Slim.woff2") format("woff2");
+      font-display: swap;
+    }
+
+    :root {
+      color-scheme: dark;
+      --bg: #040404;
+      --surface: #0b0b0b;
+      --ink: #f1f1f1;
+      --body: #d8d4ce;
+      --muted: #a8a095;
+      --rule: rgba(241, 241, 241, 0.18);
+      --rule-strong: rgba(241, 241, 241, 0.38);
+      --accent: #e00070;
+      --display: "PolySans", Arial, sans-serif;
+      --serif: Georgia, "Times New Roman", serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { scrollbar-gutter: stable; scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--serif);
+      text-rendering: optimizeLegibility;
+    }
+
+    a { color: inherit; }
+    img { display: block; max-width: 100%; }
+
+    .progress {
+      position: fixed;
+      z-index: 20;
+      inset: 0 auto auto 0;
+      width: var(--progress, 0%);
+      height: 3px;
+      background: var(--accent);
+      pointer-events: none;
+    }
+
+    .site-bar {
+      width: min(100% - 32px, 1200px);
+      min-height: 64px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--rule);
+      font-family: var(--display);
+    }
+
+    .brand {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      text-decoration: none;
+    }
+
+    .switches { display: flex; align-items: center; gap: 18px; }
+    .switch {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      color: var(--muted);
+      font-size: 0.78rem;
+      text-decoration: none;
+    }
+    .switch:hover { color: var(--ink); }
+
+    main {
+      width: min(100% - 32px, 1200px);
+      margin: 0 auto;
+      padding: clamp(34px, 6vw, 76px) 0 90px;
+    }
+
+    .case-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--rule-strong);
+      color: var(--muted);
+      font-family: var(--display);
+      font-size: 0.72rem;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+    }
+
+    .case-label strong { color: var(--ink); font-weight: 700; }
+
+    .cover {
+      border-bottom: 1px solid var(--rule-strong);
+    }
+
+    .cover-image {
+      position: relative;
+      aspect-ratio: 16 / 7;
+      min-height: 360px;
+      overflow: hidden;
+      border-bottom: 1px solid var(--rule-strong);
+    }
+
+    .cover-image img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: grayscale(1) contrast(1.1);
+    }
+
+    .cover-copy {
+      padding: clamp(34px, 5vw, 62px) 0 clamp(38px, 6vw, 72px);
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+      gap: clamp(34px, 6vw, 84px);
+      align-items: end;
+    }
+
+    .cover-copy h1 {
+      max-width: 720px;
+      margin: 0;
+      font-family: var(--display);
+      font-size: clamp(4.2rem, 8vw, 7.4rem);
+      line-height: 0.87;
+      letter-spacing: -0.04em;
+      text-wrap: balance;
+    }
+
+    .cover-details {
+      padding-bottom: 0.55rem;
+    }
+
+    .cover-thesis {
+      max-width: 580px;
+      margin: 0;
+      color: var(--body);
+      font-size: clamp(1.08rem, 2vw, 1.35rem);
+      line-height: 1.45;
+      text-wrap: pretty;
+    }
+
+    .meta {
+      margin-top: 32px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px 20px;
+      color: var(--muted);
+      font-family: var(--display);
+      font-size: 0.76rem;
+    }
+
+    .reading-grid {
+      display: grid;
+      grid-template-columns: 170px minmax(0, 650px) minmax(220px, 1fr);
+      gap: clamp(28px, 4vw, 54px);
+      align-items: start;
+      margin-top: clamp(52px, 8vw, 96px);
+    }
+
+    .section-nav {
+      position: sticky;
+      top: 28px;
+      font-family: var(--display);
+    }
+
+    .section-nav p,
+    .margin-label {
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .section-nav a {
+      display: grid;
+      grid-template-columns: 24px 1fr;
+      gap: 8px;
+      padding: 10px 0;
+      border-top: 1px solid var(--rule);
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.25;
+      text-decoration: none;
+      transition: color 140ms ease;
+    }
+
+    .section-nav a:last-child { border-bottom: 1px solid var(--rule); }
+    .section-nav a:hover,
+    .section-nav a[aria-current="location"] { color: var(--ink); }
+    .section-nav a[aria-current="location"] span:first-child { color: var(--accent); }
+
+    .article-body section {
+      scroll-margin-top: 28px;
+      padding-top: 42px;
+      border-top: 1px solid var(--rule-strong);
+    }
+
+    .article-body section:first-child { padding-top: 0; border-top: 0; }
+    .article-body section + section { margin-top: 58px; }
+
+    .section-kicker {
+      margin: 0 0 14px;
+      color: var(--accent);
+      font-family: var(--display);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .article-body h2 {
+      margin: 0 0 24px;
+      font-family: var(--display);
+      font-size: clamp(2rem, 4vw, 3.35rem);
+      line-height: 0.98;
+      letter-spacing: -0.035em;
+      text-wrap: balance;
+    }
+
+    .article-body p {
+      margin: 0 0 1.18em;
+      color: var(--body);
+      font-size: 1.06rem;
+      line-height: 1.74;
+      letter-spacing: 0.005em;
+      text-wrap: pretty;
+    }
+
+    .article-body .lead::first-letter {
+      float: left;
+      margin: 0.03em 0.1em -0.03em 0;
+      color: var(--accent);
+      font-family: var(--display);
+      font-size: 5.8em;
+      font-weight: 800;
+      line-height: 0.74;
+    }
+
+    .article-body blockquote {
+      margin: 38px 0;
+      padding: 24px 0;
+      border-top: 1px solid var(--accent);
+      border-bottom: 1px solid var(--accent);
+      color: var(--ink);
+      font-family: var(--display);
+      font-size: clamp(1.55rem, 3vw, 2.3rem);
+      line-height: 1.08;
+      letter-spacing: -0.025em;
+      text-wrap: balance;
+    }
+
+    .margin-notes {
+      position: sticky;
+      top: 28px;
+      padding-left: clamp(22px, 3vw, 38px);
+      border-left: 1px solid var(--rule-strong);
+    }
+
+    .central-claim {
+      margin: 0;
+      font-family: var(--display);
+      font-size: clamp(1.65rem, 3vw, 2.45rem);
+      line-height: 1.02;
+      letter-spacing: -0.03em;
+      text-wrap: balance;
+    }
+
+    .criterion {
+      margin-top: 32px;
+      padding-top: 18px;
+      border-top: 1px solid var(--rule-strong);
+    }
+
+    .criterion dt {
+      color: var(--muted);
+      font-family: var(--display);
+      font-size: 0.66rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .criterion dd {
+      margin: 6px 0 18px;
+      color: var(--body);
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+
+    .closing {
+      margin-top: 72px;
+      padding: 28px 0;
+      border-top: 1px solid var(--rule-strong);
+      border-bottom: 1px solid var(--rule-strong);
+      font-family: var(--display);
+      font-size: clamp(1.8rem, 4vw, 3.4rem);
+      line-height: 1.04;
+      letter-spacing: -0.035em;
+      text-wrap: balance;
+    }
+
+    .closing::after {
+      content: "";
+      display: block;
+      width: 10px;
+      height: 10px;
+      margin-top: 24px;
+      background: var(--accent);
+    }
+
+    footer {
+      padding: 30px 16px 48px;
+      border-top: 1px solid var(--rule);
+      color: var(--muted);
+      font-family: var(--display);
+      font-size: 0.72rem;
+      text-align: center;
+    }
+
+    @media (max-width: 1020px) {
+      .reading-grid { grid-template-columns: minmax(0, 1fr) minmax(220px, 0.42fr); }
+      .section-nav {
+        position: sticky;
+        z-index: 5;
+        top: 0;
+        grid-column: 1 / -1;
+        display: flex;
+        overflow-x: auto;
+        background: rgba(4, 4, 4, 0.96);
+        border-bottom: 1px solid var(--rule-strong);
+      }
+      .section-nav p { display: none; }
+      .section-nav a {
+        min-width: max-content;
+        grid-template-columns: auto auto;
+        padding: 12px 18px 12px 0;
+        border-top: 0;
+      }
+      .section-nav a:last-child { border-bottom: 0; }
+    }
+
+    @media (max-width: 720px) {
+      .site-bar { min-height: 54px; }
+      .switches { gap: 12px; }
+      .case-label span:last-child { display: none; }
+      .cover-image { aspect-ratio: 16 / 10; min-height: 0; }
+      .cover-copy { grid-template-columns: 1fr; gap: 24px; padding: 30px 0 36px; }
+      .cover-copy h1 { font-size: clamp(3.6rem, 18vw, 5.4rem); }
+      .cover-details { padding-bottom: 0; }
+      .meta { margin-top: 24px; }
+      .reading-grid { grid-template-columns: minmax(0, 1fr); margin-top: 44px; }
+      .section-nav { margin-inline: -16px; padding-inline: 16px; }
+      .margin-notes {
+        position: static;
+        padding: 30px 0 0;
+        border-left: 0;
+        border-top: 1px solid var(--rule-strong);
+      }
+      .article-body p { font-size: 1rem; line-height: 1.7; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .section-nav a { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress" aria-hidden="true"></div>
+  <header class="site-bar">
+    <a class="brand" href="#">domenyk</a>
+    <nav class="switches" aria-label="Versões do protótipo">
+      <a class="switch" href="editorial-jornal-contemporaneo.html">Jornal</a>
+      <a class="switch" href="editorial-revista-analise.html">Revista</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <div class="case-label"><strong>Dossiê editorial</strong><span>Liberdade, associação e coerção</span></div>
+      <section class="cover">
+        <div class="cover-image">
+          <img src="https://x4ceaxoe9soax6vc.public.blob.vercel-storage.com/media/ig_0f0b5bff76ca0f03016a3fa93e87a0819197bbcb3d0c97a42c-MzYbLeZWoF1pcv2xl2wz2mKJaTtURQ.webp" alt="Casal em frente a uma pizzaria">
+        </div>
+        <div class="cover-copy">
+          <h1>Preconceito é crime?</h1>
+          <div class="cover-details">
+            <p class="cover-thesis">Uma investigação sobre a fronteira entre reprovação moral, dissociação privada e punição estatal.</p>
+            <div class="meta"><span>Domenyk</span><span>27 de junho de 2026</span><span>7 min</span></div>
+          </div>
+        </div>
+      </section>
+
+      <div class="reading-grid">
+        <nav class="section-nav" aria-label="Estrutura do argumento">
+          <p>Estrutura</p>
+          <a href="#fato" aria-current="location"><span>01</span><span>O fato</span></a>
+          <a href="#agressao"><span>02</span><span>A agressão</span></a>
+          <a href="#publico"><span>03</span><span>O público</span></a>
+          <a href="#estado"><span>04</span><span>A punição</span></a>
+          <a href="#custo"><span>05</span><span>O custo</span></a>
+          <a href="#simetria"><span>06</span><span>A simetria</span></a>
+          <a href="#conclusao"><span>07</span><span>Conclusão</span></a>
+        </nav>
+
+        <div class="article-body">
+          <section id="fato" data-section>
+            <p class="section-kicker">01 · O fato</p>
+            <h2>O caso recente</h2>
+            <p class="lead">Há algumas semanas, a TwoBrothersPizza, uma pizzaria de Fortaleza, criou uma promoção de Dia dos Namorados e excluiu casais LGBT pelo critério interno da empresa.</p>
+            <p>A reação veio rápido: indignação, boicote, exposição pública e pedido de punição. Uma parte dessa reação é legítima. Se alguém considera a conduta repugnante, pode deixar de comprar, criticar a empresa, convencer outras pessoas a fazer o mesmo e transformar aquela marca em exemplo público de mau julgamento moral.</p>
+            <p>Isso também é liberdade.</p>
+            <p>O problema começa quando a crítica deixa de ser dissociação e vira pedido para que o Estado obrigue uma associação privada. A pergunta central não é se a pizzaria foi simpática. Não foi. A pergunta é outra: quem foi agredido? Quem teve propriedade invadida? Quem foi fraudado? Que contrato foi quebrado?</p>
+            <p>Sem essa resposta, não há crime. Há desaprovação moral.</p>
+          </section>
+
+          <section id="agressao" data-section>
+            <p class="section-kicker">02 · O critério</p>
+            <h2>Onde está a agressão?</h2>
+            <p>Uma sociedade livre parte de um critério simples: cada pessoa é proprietária de si mesma e pode dispor da própria propriedade enquanto não agride a propriedade alheia. Isso inclui falar, comprar, vender, contratar, não contratar, associar-se e não se associar.</p>
+            <p>Contrato voluntário sem direito de recusa é uma contradição. Se o comerciante tem dever jurídico de contratar com qualquer pessoa, sob qualquer critério aprovado pela moral pública do dia, ele não está contratando. Ele está obedecendo.</p>
+            <blockquote>Contrato voluntário sem direito de recusa é uma contradição.</blockquote>
+            <p>E isso vale quando a recusa é feia.</p>
+            <p>A liberdade contratual não existe para proteger escolhas simpáticas. Escolhas simpáticas quase nunca precisam de proteção. O teste real aparece quando alguém usa a própria liberdade de um modo burro, cruel, preconceituoso ou economicamente suicida.</p>
+            <p>Se a resposta imediata a uma escolha privada ruim é chamar o Estado, a liberdade defendida não era liberdade. Era permissão condicional.</p>
+          </section>
+
+          <section id="publico" data-section>
+            <p class="section-kicker">03 · A propriedade</p>
+            <h2>Aberta ao público não é pública</h2>
+            <p>O argumento contrário diz que a pizzaria, por estar aberta ao público, não poderia excluir determinado grupo de uma promoção. Mas "aberta ao público" não significa "propriedade pública". Uma loja aberta ao público continua tendo dono, custo, risco, estoque, reputação, critério comercial e responsabilidade privada.</p>
+            <p>Existe uma expectativa geral de atendimento. Essa expectativa importa quando há fraude, propaganda enganosa, descumprimento de oferta ou quebra de condição anunciada. Se a promoção foi divulgada como "casais" e depois aplicada de forma diferente do que foi prometido, esse é o ponto jurídico relevante: houve fraude? Houve violação da oferta? Houve quebra contratual?</p>
+            <p>Essa análise é diferente de dizer que todo critério interno moralmente antipático vira crime.</p>
+            <p>Não existe direito natural ao desconto alheio. Não existe direito natural à promoção alheia. Não existe direito natural de obrigar outra pessoa a transformar a propriedade dela em extensão dos seus valores.</p>
+            <p>Existe o direito de reagir sem coerção: criticar, expor, boicotar, competir, abandonar, ridicularizar, convencer consumidores e fazer a empresa pagar o preço reputacional da escolha que fez.</p>
+            <p>O resto é coerção.</p>
+          </section>
+
+          <section id="estado" data-section>
+            <p class="section-kicker">04 · A sanção</p>
+            <h2>Quem pede punição está pedindo Estado</h2>
+            <p>Quando alguém diz que a pizzaria "não pode sair impune", a frase esconde uma confusão. Impune diante de quem?</p>
+            <p>Diante dos consumidores, ela já não saiu. A reputação foi atingida, a marca virou alvo, a promoção virou caso público e qualquer concorrente poderia atender a demanda recusada. A empresa passou a carregar o custo da própria preferência.</p>
+            <p>Então não se pede consequência. Consequência já existe.</p>
+            <p>Pede-se outro tipo de consequência: a consequência monopolizada pelo Estado. Multa, processo, proibição, ordem, sanção. A sociedade deixa de responder por associação voluntária e passa a responder por comando.</p>
+            <p>E aqui está o perigo. O Estado nunca pune apenas aquele caso. Ele cria uma regra geral. Ao punir a pizzaria por uma recusa privada sem agressão, fraude ou contrato quebrado, o Estado declara que critérios privados de associação dependem da aprovação moral de uma autoridade externa.</p>
+            <p>Hoje essa autoridade pode proteger um grupo que você considera vulnerável. Amanhã ela pode proteger um grupo que você considera repugnante. O poder será o mesmo.</p>
+            <p>Quem entrega ao Estado o direito de decidir quais associações privadas são moralmente permitidas não está criando tolerância. Está criando uma polícia de associação.</p>
+          </section>
+
+          <section id="custo" data-section>
+            <p class="section-kicker">05 · O custo</p>
+            <h2>O preço do preconceito</h2>
+            <p>Nada disso torna preconceito privado gratuito. Em mercado, preferência tem preço.</p>
+            <p>Se uma pizzaria rejeita consumidores por preconceito, ela abandona demanda, perde reputação, reduz o mercado potencial e entrega clientes a concorrentes. Pode descobrir que parte da clientela aprova a exclusão. Nesse caso, ela não eliminou o custo; escolheu outro público e aceitou outro tipo de reputação.</p>
+            <p>O mercado não promete santificar ninguém. Ele não transforma pessoas preconceituosas em anjos cosmopolitas. Ele faz algo mais frio: precifica escolhas.</p>
+            <p>Uma preferência discriminatória pode custar caro, custar pouco ou até virar vantagem dentro de uma bolha moral específica. Mas esse cálculo pertence a quem arca com o resultado. O proprietário decide se quer perder clientes por causa da própria preferência. O consumidor decide se quer sustentar aquele proprietário. O concorrente decide se quer capturar a demanda rejeitada.</p>
+            <p>Esse processo é imperfeito, mas tem uma virtude que a coerção estatal não tem: permite resposta sem subordinar a sociedade inteira a uma regra moral central.</p>
+            <p>O boicote também tem limite. Criticar e deixar de comprar é dissociação. Ameaçar, invadir, fraudar, perseguir ou impedir terceiros de contratar pela força já não é boicote. É a mesma lógica coercitiva com sinal trocado.</p>
+          </section>
+
+          <section id="simetria" data-section>
+            <p class="section-kicker">06 · O teste de simetria</p>
+            <h2>A mesma regra contra outro alvo</h2>
+            <p>O teste mais honesto é inverter o alvo.</p>
+            <p>Imagine uma boate gay que cria uma noite para casais LGBT. Um casal hétero chega, exige o mesmo desconto e ouve que aquela promoção não foi feita para ele. Houve agressão? Houve fraude? Alguém teve propriedade invadida? O dono da boate deve redesenhar a própria promoção porque um terceiro quer participar dela?</p>
+            <p>A resposta deveria ser óbvia.</p>
+            <p>Ou imagine uma empresa progressista que se recusa a atender um racista explícito. Ela deve ser obrigada a servi-lo? Se a resposta for não, então o princípio já foi aceito: proprietários privados podem se dissociar com base em critério moral.</p>
+            <p>O que resta é a disputa sobre quais critérios recebem aprovação política.</p>
+            <p>E esse é exatamente o problema. Quando a esquerda gosta da finalidade, chama de recorte, pertencimento, comunidade, proteção simbólica ou resistência. Quando não gosta, chama de discriminação punível. Mas a estrutura formal pode ser a mesma: alguém usando propriedade privada para escolher com quem deseja se associar.</p>
+            <p>Isso não torna todos os casos moralmente idênticos. Uma boate voltada a um público minoritário pode ter razões muito diferentes de uma pizzaria que exclui casais LGBT. Um bar que rejeita americanos ou israelenses por posição política tem outro contexto. Uma empresa que rejeita um racista explícito também carrega outro peso moral.</p>
+            <p>Mas diferença moral não resolve sozinha a pergunta jurídica.</p>
+            <p>A pergunta jurídica continua sendo: houve agressão, fraude, coerção ou quebra contratual? Se não houve, a resposta pertence ao campo da dissociação privada, não ao campo da punição estatal.</p>
+          </section>
+
+          <section id="conclusao" data-section>
+            <p class="section-kicker">07 · Conclusão</p>
+            <h2>Quando propriedade vira concessão</h2>
+            <p>No fundo, a discussão não é sobre pizza. É sobre propriedade.</p>
+            <p>Se o dono de um estabelecimento só pode usar a própria propriedade conforme a moral aprovada pela maioria indignada, ele não é proprietário. Ele é administrador temporário de uma concessão social. A porta tem dono, o forno tem dono, o risco tem dono, o aluguel tem dono, mas o critério de associação pertence a terceiros.</p>
+            <p>Isso destrói a própria ideia de contrato.</p>
+            <p>Contrato exige consentimento. Consentimento exige possibilidade de recusa. E a possibilidade de recusa inclui recusas erradas, burras, feias e moralmente condenáveis. Tirar isso do contrato e manter apenas as recusas aprovadas pela autoridade não é defender direitos. É transformar o direito em filtro moral.</p>
+            <p>A pizzaria pode ter sido preconceituosa. Pode merecer boicote. Pode perder clientes. Pode virar exemplo do que não fazer. Pode ser esmagada pela própria reputação.</p>
+            <p>Mas, se não houve agressão, fraude ou contrato quebrado, ela não cometeu crime contra ninguém.</p>
+            <p>E se toda associação privada moralmente errada virar crime, a pergunta que sobra não é se o preconceito será eliminado. A pergunta é quem vai controlar, por meio do Estado, o direito de cada um dizer não.</p>
+            <div class="closing">A pergunta que sobra não é se o preconceito será eliminado. É quem vai controlar o direito de cada um dizer não.</div>
+          </section>
+        </div>
+
+        <aside class="margin-notes">
+          <p class="margin-label">Tese central</p>
+          <p class="central-claim">A diferença moral entre escolhas não resolve, sozinha, a pergunta jurídica.</p>
+          <dl class="criterion">
+            <dt>Problema</dt><dd>Preconceito e exclusão privada.</dd>
+            <dt>Teste jurídico</dt><dd>Houve agressão, fraude, coerção ou quebra contratual?</dd>
+            <dt>Resposta social</dt><dd>Crítica, boicote, concorrência e dissociação.</dd>
+            <dt>Risco institucional</dt><dd>Converter propriedade em concessão moral.</dd>
+          </dl>
+        </aside>
+      </div>
+    </article>
+  </main>
+
+  <footer>Protótipo visual · editorial dossiê de argumentos</footer>
+
+  <script>
+    const root = document.documentElement;
+    const links = [...document.querySelectorAll('.section-nav a')];
+    const sections = [...document.querySelectorAll('[data-section]')];
+
+    function updateProgress() {
+      const max = root.scrollHeight - innerHeight;
+      root.style.setProperty('--progress', `${max > 0 ? (scrollY / max) * 100 : 0}%`);
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      const visible = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+      if (!visible) return;
+      links.forEach((link) => {
+        if (link.hash === `#${visible.target.id}`) link.setAttribute('aria-current', 'location');
+        else link.removeAttribute('aria-current');
+      });
+    }, { rootMargin: '-18% 0px -62% 0px', threshold: 0 });
+
+    sections.forEach((section) => observer.observe(section));
+    addEventListener('scroll', updateProgress, { passive: true });
+    addEventListener('resize', updateProgress);
+    updateProgress();
+  </script>
+</body>
+</html>

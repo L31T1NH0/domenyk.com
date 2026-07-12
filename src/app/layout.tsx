@@ -20,12 +20,20 @@ const geist = localFont({
   fallback: ["system-ui", "Arial", "sans-serif"],
 })
 
+const geistMono = localFont({
+  src: "../../node_modules/next/dist/next-devtools/server/font/geist-mono-latin.woff2",
+  variable: "--font-mono",
+  display: "swap",
+  preload: false,
+  fallback: ["ui-monospace", "SFMono-Regular", "Consolas", "monospace"],
+})
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   applicationName: siteConfig.name,
   title: { default: siteConfig.title, template: `%s — ${siteConfig.name}` },
   description: siteConfig.description,
-  authors: [{ name: siteConfig.author, url: siteConfig.url }],
+  authors: [{ name: siteConfig.author, url: absoluteUrl("/sobre") }],
   creator: siteConfig.author,
   publisher: siteConfig.author,
   category: "politics",
@@ -71,7 +79,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     ? requestedLanguage
     : "pt-BR"
   return (
-	    <html lang={documentLanguage} className={`${polySans.variable} ${geist.variable} h-full antialiased dark-mode`} suppressHydrationWarning>
+	    <html lang={documentLanguage} className={`${polySans.variable} ${geist.variable} ${geistMono.variable} h-full antialiased dark-mode`} suppressHydrationWarning>
 	      <body className="min-h-full flex flex-col dark-mode" suppressHydrationWarning>
 	        <script
 	          id="theme-bootstrap"
@@ -104,8 +112,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 		                  "@type": "Person",
 		                  "@id": `${siteConfig.url}/#person`,
 		                  name: siteConfig.author,
-		                  url: siteConfig.url,
+		                  url: absoluteUrl("/sobre"),
 		                  image: absoluteUrl("/images/profile.jpg"),
+		                  description: siteConfig.description,
+		                  knowsAbout: ["política", "liberalismo", "instituições", "debate público"],
 		                },
 		              ],
 		            }),

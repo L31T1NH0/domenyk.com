@@ -24,6 +24,7 @@ import { CommentContent } from "@/components/comments/CommentContent"
 import { RichCommentComposer } from "@/components/comments/RichCommentComposer"
 import { useComments, type Comment } from "@/components/comments/useComments"
 import type { SerializedNote } from "@/lib/db/notes"
+import { noteDisplayTitle } from "@/lib/seo"
 
 type Props = {
   note: SerializedNote
@@ -214,6 +215,7 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
   const [activeImage, setActiveImage] = useState<ActiveImage | null>(null)
   const [lightboxVisible, setLightboxVisible] = useState(false)
   const [editing, setEditing] = useState(false)
+  const [editTitle, setEditTitle] = useState(note.title ?? "")
   const [editContent, setEditContent] = useState(note.content)
   const [editSession, setEditSession] = useState(0)
   const [savingEdit, setSavingEdit] = useState(false)
@@ -269,6 +271,7 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
   }
 
   function startEditing() {
+    setEditTitle(note.title ?? "")
     setEditContent(note.content)
     setEditError("")
     setEditSession((current) => current + 1)
@@ -293,7 +296,7 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
       const response = await fetch(`/api/admin/notes/${note._id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: currentContent }),
+        body: JSON.stringify({ title: editTitle.trim() || undefined, content: currentContent }),
       })
 
       if (!response.ok) {
@@ -429,19 +432,20 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
 
   const commentActionLabel = commentsLoaded && comments.length > 0 ? "ver comentários" : "comentar"
   const notePath = `/notes/${note._id}`
+  const displayTitle = noteDisplayTitle(note)
 
   return (
-    <article className="group relative flex w-full min-w-0 flex-col gap-2.5 border-y border-neutral-200 pb-5 pt-4 dark:border-white/10">
+    <article className="group relative flex w-full min-w-0 flex-col gap-2.5 border-y border-neutral-200 pb-5 pt-1 dark:border-white/10">
       <div className="flex items-center">
         <Link
           href={notePath}
-          className="inline-flex min-h-8 items-center rounded text-xs text-neutral-600 transition-colors hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#c2bbb1] dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
+          className="inline-flex min-h-6 items-center rounded text-xs text-neutral-600 transition-colors hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#c2bbb1] dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
           aria-label="Abrir nota"
         >
           <time dateTime={note.publishedAt}>{ago}</time>
         </Link>
         {isAdmin && (
-          <div className="absolute right-0 top-5 flex items-center gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+          <div className="absolute right-0 top-1 flex items-center gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
             {onUpdate && !editing && (
               <button
                 type="button"
@@ -468,8 +472,27 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
         )}
       </div>
 
+      {note.title ? (
+        <h2 className="text-[15px] font-semibold leading-snug text-neutral-950 dark:text-[#f1f1f1]">
+          <Link href={notePath} className="rounded-sm hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:focus-visible:ring-neutral-300">
+            {note.title}
+          </Link>
+        </h2>
+      ) : (
+        <h2 className="sr-only"><Link href={notePath}>{displayTitle}</Link></h2>
+      )}
+
       {editing ? (
         <div className="rounded-lg border border-neutral-200 bg-white dark:border-white/10 dark:bg-white/[0.03]">
+          <label className="sr-only" htmlFor={`note-edit-title-${note._id}`}>Título da nota</label>
+          <input
+            id={`note-edit-title-${note._id}`}
+            value={editTitle}
+            maxLength={120}
+            onChange={(event) => setEditTitle(event.target.value)}
+            placeholder="Título (opcional)"
+            className="w-full border-b border-neutral-200 bg-transparent px-4 py-3 text-sm font-medium text-neutral-950 outline-none placeholder:text-neutral-500 dark:border-white/10 dark:text-[#f1f1f1] dark:placeholder:text-zinc-400"
+          />
           <div
             onKeyDown={(event) => {
               if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) saveEdit()
@@ -536,7 +559,7 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
             >
               <img
                 src={url}
-                alt=""
+                alt={`Imagem ${index + 1}: ${displayTitle}`}
                 className="h-full w-full rounded-none object-cover"
               />
             </button>

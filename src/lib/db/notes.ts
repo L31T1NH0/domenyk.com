@@ -3,7 +3,7 @@ import { getDb } from "./client"
 import { renderMarkdownSync } from "../mdx"
 import { toObjectId } from "../validation"
 
-export type Note = { _id: ObjectId; content: string; images?: string[]; publishedAt: Date; createdAt: Date; updatedAt?: Date; deleting?: boolean }
+export type Note = { _id: ObjectId; title?: string; content: string; images?: string[]; publishedAt: Date; createdAt: Date; updatedAt?: Date; deleting?: boolean }
 export type SerializedNote = Omit<Note, "_id" | "deleting" | "publishedAt" | "createdAt" | "updatedAt"> & {
   _id: string; publishedAt: string; createdAt: string; updatedAt: string; contentHtml: string
 }
@@ -113,26 +113,28 @@ export async function getNote(id: string): Promise<Note | null> {
   return (await collection()).findOne({ _id: objectId, deleting: { $ne: true } })
 }
 
-export async function createNote(data: { content: string; images?: string[] }): Promise<Note> {
+export async function createNote(data: { title?: string; content: string; images?: string[] }): Promise<Note> {
   const col = await collection()
   const now = new Date()
   const note: Omit<Note, "_id"> = {
+    ...(data.title ? { title: data.title } : {}),
     content: normalizeNoteContent(data.content), images: data.images, publishedAt: now, createdAt: now, updatedAt: now,
   }
   const result = await col.insertOne(note as Note)
   return { ...note, _id: result.insertedId }
 }
 
-export async function updateNote(id: string, data: { content: string; images?: string[] }): Promise<Note | null> {
+export async function updateNote(id: string, data: { title?: string; content: string; images?: string[] }): Promise<Note | null> {
   const objectId = toObjectId(id)
   if (!objectId) return null
 
   const update: Partial<Note> = { content: normalizeNoteContent(data.content), updatedAt: new Date() }
+  if (data.title) update.title = data.title
   if (data.images !== undefined) update.images = data.images
 
   return (await collection()).findOneAndUpdate(
     { _id: objectId },
-    { $set: update },
+    data.title ? { $set: update } : { $set: update, $unset: { title: "" } },
     { returnDocument: "after" }
   )
 }

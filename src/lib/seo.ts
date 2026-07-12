@@ -42,6 +42,16 @@ export function descriptionFromMarkdown(markdown: string, maxLength = 155): stri
   return `${truncated.slice(0, truncated.lastIndexOf(" ") || maxLength).trim()}...`
 }
 
+export function titleFromMarkdown(markdown: string, maxLength = 68): string {
+  const description = descriptionFromMarkdown(markdown, maxLength)
+  if (!description) return ""
+  return description.replace(/\.\.\.$/, "").trim()
+}
+
+export function noteDisplayTitle(note: { title?: string; content: string }): string {
+  return note.title?.trim() || titleFromMarkdown(note.content) || "Nota de Domenyk"
+}
+
 export function imageUrlsFromMarkdown(markdown: string): string[] {
   const urls = new Set<string>()
   const imagePattern = /!\[[^\]]*]\(([^)\s]+)(?:\s+"[^"]*")?\)/g
@@ -102,7 +112,7 @@ export function buildPageMetadata({
   const images = [{ url: imageUrl, width: 1200, height: 630, alt: title ?? siteConfig.title }]
 
   return {
-    title,
+    ...(title ? { title } : {}),
     description,
     alternates: {
       canonical: url,

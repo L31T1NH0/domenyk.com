@@ -10,8 +10,6 @@ import { Header } from "@/components/Header"
 import { HomeTimeline } from "./HomeTimeline"
 import { buildPageMetadata } from "@/lib/seo"
 
-export const metadata: Metadata = buildPageMetadata()
-
 const HOME_TIMELINE_PAGE_SIZE = 10
 const MAX_TIMELINE_PAGE = 10_000
 const FEED_MODES = ["all", "posts", "notes"] as const
@@ -30,6 +28,33 @@ function parseFeedMode(value: string | string[] | undefined): FeedMode {
 function parseSearchQuery(value: string | string[] | undefined) {
   const query = (Array.isArray(value) ? value[0] : value)?.trim() ?? ""
   return query.replace(/\s+/g, " ").slice(0, 120)
+}
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string | string[]; mode?: string | string[]; q?: string | string[] }>
+}): Promise<Metadata> {
+  const params = await searchParams
+  const page = parsePage(params.page)
+  const mode = parseFeedMode(params.mode)
+  const query = parseSearchQuery(params.q)
+  const isFiltered = Boolean(query) || mode !== "all"
+  const path = !isFiltered && page > 1 ? `/?page=${page}` : "/"
+  const pageMetadata = buildPageMetadata({
+    title: page > 1 && !isFiltered ? `Página ${page}` : undefined,
+    path,
+  })
+
+  if (!isFiltered) return pageMetadata
+  return {
+    ...pageMetadata,
+    robots: {
+      index: false,
+      follow: true,
+      googleBot: { index: false, follow: true },
+    },
+  }
 }
 
 export default async function HomePage({

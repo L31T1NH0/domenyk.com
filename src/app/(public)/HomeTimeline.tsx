@@ -4,7 +4,16 @@ import Image from "next/image"
 import Link from "next/link"
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition, type MouseEvent, type PointerEvent } from "react"
 import { useRouter } from "next/navigation"
-import { EyeIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline"
+import {
+  ChatBubbleBottomCenterTextIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  DocumentTextIcon,
+  EyeIcon,
+  MagnifyingGlassIcon,
+  Squares2X2Icon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { NoteCard } from "@/components/notes/NoteCard"
@@ -77,6 +86,7 @@ function PostTimelineItem({
   pendingHide: boolean
 }) {
   const showCover = postShowsTimelineCover(post)
+  const isEditorial = post.style === "editorial"
 
   return (
     <li
@@ -97,7 +107,37 @@ function PostTimelineItem({
         </span>
       )}
       <Link href={`/posts/${post.slug}`} prefetch={false} className="block rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 focus-visible:ring-offset-2 dark:focus-visible:ring-neutral-300 dark:focus-visible:ring-offset-[#040404]">
-        {showCover ? (
+        {showCover && isEditorial ? (
+          <span className="flex min-w-0 flex-col gap-3">
+            <span className="relative block aspect-video w-full overflow-hidden rounded-xl bg-neutral-200 dark:bg-white/5">
+              <Image
+                src={post.cover!.url}
+                alt={post.cover!.alt ?? post.title}
+                width={1920}
+                height={1080}
+                sizes="(max-width: 640px) calc(100vw - 2.5rem), 32.5rem"
+                className="h-full w-full rounded-xl object-cover !grayscale-0"
+              />
+            </span>
+            <span className="flex min-w-0 flex-col gap-2">
+              <span className="font-editorial-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[#E00070]">
+                Editorial
+              </span>
+              <AutoFitText
+                as="h2"
+                text={post.title.toLocaleUpperCase("pt-BR")}
+                minSize={14}
+                maxSize={17}
+                maxLines={3}
+                className="font-editorial-mono font-semibold uppercase leading-[1.2] tracking-[-0.025em] text-neutral-950 dark:text-[#f1f1f1]"
+              />
+              <span className="flex flex-wrap items-center gap-3 font-editorial-mono text-[11px] text-neutral-600 dark:text-[#A8A095]">
+                <span>{post.views ?? 0} views</span>
+                {!post.published && <span className="text-amber-400">rascunho</span>}
+              </span>
+            </span>
+          </span>
+        ) : showCover ? (
           <span className="relative block aspect-video w-full overflow-hidden rounded-xl bg-neutral-200 dark:bg-white/5">
             <Image
               src={post.cover!.url}
@@ -113,6 +153,7 @@ function PostTimelineItem({
             </span>
             <span className="absolute bottom-2 left-3 right-3 flex flex-col gap-2 sm:bottom-3">
               <AutoFitText
+                as="h2"
                 text={post.title}
                 minSize={15}
                 maxSize={19}
@@ -130,16 +171,29 @@ function PostTimelineItem({
         ) : (
           <span className="flex min-w-0 flex-col gap-2">
             <AutoFitText
-              text={post.title}
+              as="h2"
+              text={isEditorial ? post.title.toLocaleUpperCase("pt-BR") : post.title}
               minSize={14}
               maxSize={17}
               maxLines={2}
-              className="font-normal leading-snug text-neutral-950 dark:text-[#f1f1f1]"
+              className={isEditorial
+                ? "font-editorial-mono font-semibold uppercase leading-[1.2] tracking-[-0.025em] text-neutral-950 dark:text-[#f1f1f1]"
+                : "font-normal leading-snug text-neutral-950 dark:text-[#f1f1f1]"}
             />
             <span className="flex flex-wrap items-center gap-3">
-              <span className="text-xs text-neutral-600 dark:text-[#A8A095]">{postDateLabel(post)}</span>
-              <span aria-hidden className="text-neutral-400 dark:text-[#A8A095]/60">·</span>
-              <span className="text-xs text-neutral-600 tabular-nums dark:text-[#A8A095]">{post.views ?? 0} views</span>
+              {isEditorial ? (
+                <>
+                  <span className="font-editorial-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[#E00070]">Editorial</span>
+                  <span aria-hidden className="text-neutral-400 dark:text-[#A8A095]/60">·</span>
+                  <span className="font-editorial-mono text-[11px] text-neutral-600 tabular-nums dark:text-[#A8A095]">{post.views ?? 0} views</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-xs text-neutral-600 dark:text-[#A8A095]">{postDateLabel(post)}</span>
+                  <span aria-hidden className="text-neutral-400 dark:text-[#A8A095]/60">·</span>
+                  <span className="text-xs text-neutral-600 tabular-nums dark:text-[#A8A095]">{post.views ?? 0} views</span>
+                </>
+              )}
               {!post.published && <span className="text-xs text-amber-400">rascunho</span>}
             </span>
           </span>
@@ -191,6 +245,10 @@ function modeHref(mode: FeedMode, searchQuery: string) {
   if (searchQuery) params.set("q", searchQuery)
   const query = params.toString()
   return query ? `/?${query}` : "/"
+}
+
+function normalizeSearchQuery(value: string) {
+  return value.trim().replace(/\s+/g, " ").slice(0, 120)
 }
 
 const feedModeOrder: FeedMode[] = ["all", "posts", "notes"]
@@ -385,11 +443,17 @@ function Pagination({
   if (totalPages <= 1) return null
 
   const visiblePageCount = Math.min(3, totalPages)
-  const startPage = Math.min(currentPage, totalPages - visiblePageCount + 1)
+  const startPage = Math.max(
+    1,
+    Math.min(currentPage - 1, totalPages - visiblePageCount + 1)
+  )
   const pages = Array.from({ length: visiblePageCount }, (_, index) => startPage + index)
 
   return (
-    <nav className="flex flex-wrap items-center justify-center gap-1.5" aria-label="Paginação">
+    <nav
+      className="mt-8 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-t border-neutral-200 pt-4 dark:border-white/10"
+      aria-label="Paginação"
+    >
       {currentPage > 1 && (
         <a
           href={pageHref(currentPage - 1, mode, searchQuery)}
@@ -398,34 +462,42 @@ function Pagination({
             event.preventDefault()
             onPageChange(currentPage - 1)
           }}
-          className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-md px-2 text-sm text-neutral-600 transition-colors hover:bg-neutral-950/5 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-neutral-100 dark:focus-visible:ring-neutral-300"
+          rel="prev"
+          className="group col-start-1 inline-flex min-h-11 w-fit items-center gap-1.5 rounded-md pr-2 text-sm text-neutral-600 transition-colors hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-neutral-400 dark:hover:text-neutral-100 dark:focus-visible:ring-neutral-300"
         >
-          Anterior
+          <ChevronLeftIcon className="size-4 transition-transform duration-150 group-hover:-translate-x-0.5 motion-reduce:transition-none" aria-hidden />
+          <span>Anterior</span>
         </a>
       )}
-      {pages.map((page) => {
-        const active = page === currentPage
-        return (
-          <a
-            key={page}
-            href={pageHref(page, mode, searchQuery)}
-            data-swipe-ignore
-            onClick={(event) => {
-              event.preventDefault()
-              onPageChange(page)
-            }}
-            aria-current={active ? "page" : undefined}
-            className={[
-              "inline-flex min-h-10 min-w-10 items-center justify-center rounded-md px-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:focus-visible:ring-neutral-300",
-              active
-                ? "bg-neutral-950 text-white dark:bg-[#A8A095] dark:text-black"
-                : "text-neutral-600 hover:bg-neutral-950/5 hover:text-neutral-950 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-neutral-100",
-            ].join(" ")}
-          >
-            {page}
-          </a>
-        )
-      })}
+
+      <ol className="col-start-2 row-start-1 flex items-center justify-center gap-0.5" aria-label="Páginas">
+        {pages.map((page) => {
+          const active = page === currentPage
+          return (
+            <li key={page}>
+              <a
+                href={pageHref(page, mode, searchQuery)}
+                data-swipe-ignore
+                onClick={(event) => {
+                  event.preventDefault()
+                  onPageChange(page)
+                }}
+                aria-current={active ? "page" : undefined}
+                aria-label={active ? `Página ${page}, atual` : `Ir para a página ${page}`}
+                className={[
+                  "relative inline-flex size-10 items-center justify-center rounded-md text-sm tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:focus-visible:ring-neutral-300",
+                  active
+                    ? "font-semibold text-neutral-950 after:absolute after:inset-x-2.5 after:bottom-1 after:h-0.5 after:rounded-full after:bg-[#E00070] dark:text-neutral-100"
+                    : "text-neutral-500 hover:bg-neutral-950/5 hover:text-neutral-950 dark:text-neutral-500 dark:hover:bg-white/[0.06] dark:hover:text-neutral-100",
+                ].join(" ")}
+              >
+                {page}
+              </a>
+            </li>
+          )
+        })}
+      </ol>
+
       {currentPage < totalPages && (
         <a
           href={pageHref(currentPage + 1, mode, searchQuery)}
@@ -434,11 +506,85 @@ function Pagination({
             event.preventDefault()
             onPageChange(currentPage + 1)
           }}
-          className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-md px-2 text-sm text-neutral-600 transition-colors hover:bg-neutral-950/5 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-neutral-100 dark:focus-visible:ring-neutral-300"
+          rel="next"
+          className="group col-start-3 inline-flex min-h-11 w-fit items-center gap-1.5 justify-self-end rounded-md pl-2 text-sm text-neutral-600 transition-colors hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-neutral-400 dark:hover:text-neutral-100 dark:focus-visible:ring-neutral-300"
         >
-          Próxima
+          <span>Próxima</span>
+          <ChevronRightIcon className="size-4 transition-transform duration-150 group-hover:translate-x-0.5 motion-reduce:transition-none" aria-hidden />
         </a>
       )}
+    </nav>
+  )
+}
+
+type ModeOption = {
+  mode: FeedMode
+  label: string
+  count: number
+}
+
+const modeIcons = {
+  all: Squares2X2Icon,
+  posts: DocumentTextIcon,
+  notes: ChatBubbleBottomCenterTextIcon,
+} satisfies Record<FeedMode, typeof Squares2X2Icon>
+
+function TimelineModeDock({
+  options,
+  activeMode,
+  searchQuery,
+  onModeChange,
+}: {
+  options: ModeOption[]
+  activeMode: FeedMode
+  searchQuery: string
+  onModeChange: (mode: FeedMode) => void
+}) {
+  return (
+    <nav
+      data-timeline-mode-dock
+      className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-1/2 z-50 flex -translate-x-1/2 flex-row items-center gap-0.5 rounded-full border border-neutral-200 bg-white p-0.5 shadow-[0_3px_8px_rgb(0_0_0_/_0.12)] dark:border-white/10 dark:bg-[#0b0b0b] dark:shadow-[0_3px_8px_rgb(0_0_0_/_0.35)] md:bottom-auto md:left-[calc(50%-18rem)] md:top-1/2 md:-ml-4 md:-translate-x-full md:-translate-y-1/2 md:flex-col"
+      aria-label="Filtros da timeline"
+    >
+      {options.map((option) => {
+        const active = activeMode === option.mode
+        const Icon = modeIcons[option.mode]
+
+        return (
+          <a
+            key={option.mode}
+            href={modeHref(option.mode, searchQuery)}
+            data-swipe-ignore
+            onClick={(event) => {
+              event.preventDefault()
+              onModeChange(option.mode)
+            }}
+            aria-current={active ? "page" : undefined}
+            aria-label={`${option.label}, ${option.count}`}
+            className={[
+              "group relative grid size-10 place-items-center rounded-full transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 motion-reduce:transition-none dark:focus-visible:ring-neutral-300 md:size-8",
+              active
+                ? "bg-neutral-950/[0.07] text-neutral-950 dark:bg-white/[0.10] dark:text-white"
+                : "text-neutral-500 hover:bg-neutral-950/[0.05] hover:text-neutral-950 dark:text-neutral-500 dark:hover:bg-white/[0.07] dark:hover:text-neutral-100",
+            ].join(" ")}
+          >
+            <Icon className="size-[17px] md:size-4" strokeWidth={active ? 1.9 : 1.6} aria-hidden />
+            {active && (
+              <span
+                aria-hidden
+                className="absolute right-0.5 top-0.5 size-1.5 rounded-full bg-[#E00070] ring-2 ring-white dark:ring-[#0b0b0b] md:right-0 md:top-0"
+              />
+            )}
+            <span
+              role="tooltip"
+              className="pointer-events-none absolute left-full top-1/2 ml-2 hidden -translate-y-1/2 translate-x-1 whitespace-nowrap rounded-md border border-white/10 bg-neutral-950 px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-[0_3px_8px_rgb(0_0_0_/_0.22)] transition-[opacity,transform] duration-150 group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100 motion-reduce:transition-none md:block"
+            >
+              {option.label}
+              <span className="ml-1.5 tabular-nums text-neutral-400">{option.count}</span>
+            </span>
+          </a>
+        )
+      })}
     </nav>
   )
 }
@@ -447,6 +593,8 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
   const router = useRouter()
   const sectionRef = useRef<HTMLElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastRequestedSearchRef = useRef(searchQuery)
   const [timelinePosts, setTimelinePosts] = useState(posts)
   const [postCount, setPostCount] = useState(totalPosts)
   const [noteCount, setNoteCount] = useState(totalNotes)
@@ -454,6 +602,8 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
   const optimisticFeedMode = feedMode
   const optimisticPage = currentPage
   const hasSearch = searchQuery.length > 0
+  const [searchInput, setSearchInput] = useState(searchQuery)
+  const hasSearchInput = searchInput.length > 0
   const [hidingPostId, setHidingPostId] = useState<string | null>(null)
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null)
   const [pendingHidePostId, setPendingHidePostId] = useState<string | null>(null)
@@ -490,8 +640,37 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
   useEffect(() => {
     return () => {
       if (pendingHideTimeoutRef.current) clearTimeout(pendingHideTimeoutRef.current)
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current)
     }
   }, [])
+
+  const applySearch = useCallback((value: string) => {
+    const normalizedQuery = normalizeSearchQuery(value)
+    if (normalizedQuery === searchQuery) return
+    lastRequestedSearchRef.current = normalizedQuery
+
+    startPageTransition(() => {
+      router.replace(modeHref(optimisticFeedMode, normalizedQuery), { scroll: false })
+    })
+  }, [optimisticFeedMode, router, searchQuery])
+
+  useEffect(() => {
+    const normalizedQuery = normalizeSearchQuery(searchInput)
+    if (normalizedQuery === searchQuery || normalizedQuery === lastRequestedSearchRef.current) return
+
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current)
+    searchDebounceRef.current = setTimeout(() => {
+      searchDebounceRef.current = null
+      applySearch(searchInput)
+    }, 550)
+
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current)
+        searchDebounceRef.current = null
+      }
+    }
+  }, [applySearch, searchInput, searchQuery])
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -574,13 +753,14 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
   }
 
   function switchMode(nextMode: FeedMode) {
-    if (nextMode === optimisticFeedMode && optimisticPage === 1) {
+    const currentInputQuery = normalizeSearchQuery(searchInput)
+    if (nextMode === optimisticFeedMode && optimisticPage === 1 && currentInputQuery === searchQuery) {
       scrollToTimelineStart()
       return
     }
 
     startPageTransition(() => {
-      router.push(modeHref(nextMode, searchQuery), { scroll: false })
+      router.push(modeHref(nextMode, currentInputQuery), { scroll: false })
     })
     scrollToTimelineStart()
   }
@@ -613,43 +793,34 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
       onPointerCancelCapture={swipeNavigation.handlePointerCancel}
       onClickCapture={swipeNavigation.handleClickCapture}
     >
+      <TimelineModeDock
+        options={modeOptions}
+        activeMode={optimisticFeedMode}
+        searchQuery={normalizeSearchQuery(searchInput)}
+        onModeChange={switchMode}
+      />
+
       <div className="flex min-w-0 flex-col gap-5">
         <div className="flex flex-col gap-3">
           <div className="flex min-w-0 flex-col items-start gap-3">
-            <nav className="flex min-w-0 flex-wrap items-center gap-2" aria-label="Filtros da timeline">
-              {modeOptions.map((option) => {
-                const active = optimisticFeedMode === option.mode
-                return (
-                  <a
-                    key={option.mode}
-                    href={modeHref(option.mode, searchQuery)}
-                    data-swipe-ignore
-                    onClick={(event) => {
-                      event.preventDefault()
-                      switchMode(option.mode)
-                    }}
-                    aria-current={active ? "page" : undefined}
-                    className={[
-                      "inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:focus-visible:ring-neutral-300",
-                      active
-                        ? "border-neutral-400 bg-neutral-950/10 text-neutral-950 dark:border-[#A8A095]/60 dark:bg-[#A8A095]/15 dark:text-[#f1f1f1]"
-                        : "border-neutral-300 text-neutral-600 hover:bg-neutral-950/5 hover:text-neutral-950 dark:border-white/10 dark:text-[#A8A095] dark:hover:bg-white/10 dark:hover:text-[#f1f1f1]",
-                    ].join(" ")}
-                  >
-                    {option.label}
-                    <span className="tabular-nums">{option.count}</span>
-                  </a>
-                )
-              })}
-            </nav>
-
-            <form action="/" className="w-[min(100%,14rem)] min-w-0 sm:w-60">
+            <form
+              action="/"
+              className="w-[min(100%,14rem)] min-w-0 sm:w-56"
+              onSubmit={(event) => {
+                event.preventDefault()
+                if (searchDebounceRef.current) {
+                  clearTimeout(searchDebounceRef.current)
+                  searchDebounceRef.current = null
+                }
+                applySearch(searchInput)
+              }}
+            >
               <div
                 className={[
-                  "flex h-10 min-w-0 items-center gap-2 rounded-full border px-3 text-neutral-950 transition-colors",
-                  "border-neutral-300 bg-transparent focus-within:border-neutral-500 focus-within:bg-white/70 focus-within:ring-2 focus-within:ring-neutral-500/50",
+                  "flex h-8 min-w-0 items-center gap-1.5 rounded-full border px-2.5 text-neutral-950 transition-colors",
+                  "border-neutral-300 bg-transparent focus-within:border-neutral-500 focus-within:bg-white/70 focus-within:ring-1 focus-within:ring-neutral-500/50",
                   "dark:border-white/10 dark:text-[#f1f1f1] dark:focus-within:border-[#A8A095]/50 dark:focus-within:bg-white/[0.04] dark:focus-within:ring-neutral-300/60",
-                  hasSearch ? "border-neutral-400 dark:border-[#A8A095]/45" : "",
+                  hasSearchInput ? "border-neutral-400 dark:border-[#A8A095]/45" : "",
                 ].join(" ")}
               >
                 <MagnifyingGlassIcon className="size-3.5 shrink-0 text-neutral-500 dark:text-[#A8A095]" aria-hidden />
@@ -657,22 +828,34 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
                   ref={searchInputRef}
                   type="text"
                   name="q"
-                  defaultValue={searchQuery}
+                  value={searchInput}
+                  onChange={(event) => setSearchInput(event.target.value)}
                   placeholder="Pesquisar posts..."
                   aria-label="Pesquisar posts e notas"
+                  autoComplete="off"
                   maxLength={120}
-                  className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-neutral-600 dark:placeholder:text-[#c2bbb1]"
+                  className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-neutral-600 dark:placeholder:text-[#c2bbb1]"
                 />
                 {optimisticFeedMode !== "all" && <input type="hidden" name="mode" value={optimisticFeedMode} />}
-                {hasSearch && (
+                {hasSearchInput && (
                   <>
-                    <span className="h-4 w-px bg-neutral-300 dark:bg-white/10" aria-hidden />
+                    <span className="h-3.5 w-px bg-neutral-300 dark:bg-white/10" aria-hidden />
                     <Link
                       href={modeHref(optimisticFeedMode, "")}
                       data-swipe-ignore
+                      onClick={(event) => {
+                        event.preventDefault()
+                        if (searchDebounceRef.current) {
+                          clearTimeout(searchDebounceRef.current)
+                          searchDebounceRef.current = null
+                        }
+                        setSearchInput("")
+                        applySearch("")
+                        searchInputRef.current?.focus()
+                      }}
                       aria-label="Limpar busca"
                       title="Limpar busca"
-                      className="grid size-8 shrink-0 place-items-center rounded-full text-neutral-600 transition-colors hover:bg-neutral-950/5 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#c2bbb1] dark:hover:bg-white/10 dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
+                      className="grid size-6 shrink-0 place-items-center rounded-full text-neutral-600 transition-colors hover:bg-neutral-950/5 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#c2bbb1] dark:hover:bg-white/10 dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
                     >
                       <XMarkIcon className="size-3" aria-hidden />
                     </Link>

@@ -10,6 +10,7 @@ type Props = {
   readingTime: string
   initialViews?: number
   locale?: PostLocale
+  variant?: "default" | "editorial"
 }
 
 const VIEW_TTL_MS = 24 * 60 * 60 * 1000
@@ -22,7 +23,7 @@ const labels: Record<PostLocale, { readingTime: string; views: string; share: st
   id: { readingTime: "Waktu baca", views: "tayangan", share: "Bagikan", copied: "Tersalin" },
 }
 
-export function PostMetaBar({ publicId, dateLabel, readingTime, initialViews = 0, locale = "pt" }: Props) {
+export function PostMetaBar({ publicId, dateLabel, readingTime, initialViews = 0, locale = "pt", variant = "default" }: Props) {
   const [views, setViews] = useState(initialViews)
   const [copied, setCopied] = useState(false)
   const copy = labels[locale]
@@ -63,6 +64,26 @@ export function PostMetaBar({ publicId, dateLabel, readingTime, initialViews = 0
     await navigator.clipboard.writeText(window.location.href)
     setCopied(true)
     window.setTimeout(() => setCopied(false), 1800)
+  }
+
+  if (variant === "editorial") {
+    return (
+      <div className="post-meta-bar-editorial font-editorial-mono">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+          {dateLabel && <time>{dateLabel}</time>}
+          <span>{readingTime}</span>
+          <span>{displayViews}</span>
+        </div>
+        <button
+          type="button"
+          onClick={share}
+          className="editorial-share-button"
+          aria-label={copy.share}
+        >
+          {copied ? copy.copied : copy.share}
+        </button>
+      </div>
+    )
   }
 
   return (

@@ -22,9 +22,9 @@ export function Header() {
             width={148}
             alt={name}
           />
-          <strong className="text-2xl font-semibold tracking-tight text-neutral-950 dark:text-[#f1f1f1]">
+          <h1 className="text-2xl font-semibold tracking-tight text-neutral-950 dark:text-[#f1f1f1]">
             {name}
-          </strong>
+          </h1>
         </>
       ) : (
         <>

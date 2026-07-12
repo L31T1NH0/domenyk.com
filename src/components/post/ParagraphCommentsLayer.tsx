@@ -16,9 +16,10 @@ type Props = {
   isAdmin?: boolean
   containerSelector?: string
   locale?: PostLocale
+  variant?: "default" | "editorial"
 }
 
-export function ParagraphCommentsLayer({ postId, isAdmin = false, containerSelector = "[data-post-content]", locale = "pt" }: Props) {
+export function ParagraphCommentsLayer({ postId, isAdmin = false, containerSelector = "[data-post-content]", locale = "pt", variant = "default" }: Props) {
   const [activePid, setActivePid] = useState<string | null>(null)
   const [hoveredPid, setHoveredPid] = useState<string | null>(null)
   const [counts, setCounts] = useState<Record<string, number>>({})
@@ -270,8 +271,10 @@ export function ParagraphCommentsLayer({ postId, isAdmin = false, containerSelec
       {canUseDom && activePid && createPortal(
         <div
           className={[
-            "pointer-events-auto fixed right-4 bottom-4 left-4 z-[70] sm:left-auto sm:w-80 xl:bottom-4 xl:right-auto xl:left-[calc(50%+20rem)] xl:w-64",
-            compactTopicsExpanded ? "xl:top-[17rem]" : "xl:top-[14rem]",
+            "pointer-events-auto fixed right-4 bottom-4 left-4 z-[70] sm:left-auto sm:w-80 xl:bottom-4",
+            variant === "editorial"
+              ? "xl:left-auto xl:right-4 xl:top-[8rem] xl:w-72"
+              : `xl:right-auto xl:left-[calc(50%+20rem)] xl:w-64 ${compactTopicsExpanded ? "xl:top-[17rem]" : "xl:top-[14rem]"}`,
           ].join(" ")}
         >
           <ParagraphThread

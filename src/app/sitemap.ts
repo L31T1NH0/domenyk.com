@@ -1,22 +1,21 @@
 import type { MetadataRoute } from "next"
-import { getPosts, getPostsWithPublishedVersions } from "@/lib/db/posts"
+import { getLatestPublishedPostUpdate, getPostsWithPublishedVersions, getPublishedTagUpdates } from "@/lib/db/posts"
 import { getNotes } from "@/lib/db/notes"
 import { absoluteUrl, preferredContentImages } from "@/lib/seo"
 import { getSitemapDescriptors, SITEMAP_PAGE_SIZE } from "@/lib/sitemaps"
 import { POST_LOCALE_DETAILS, POST_LOCALES, postPath } from "@/lib/post-locales"
 
-const FALLBACK_DATE = new Date("2026-04-29T00:00:00.000Z")
+const FALLBACK_DATE = new Date("2026-07-12T00:00:00.000Z")
 
 export async function generateSitemaps() {
   return getSitemapDescriptors()
 }
 
 async function indexSitemap(): Promise<MetadataRoute.Sitemap> {
-  const [{ posts }, { notes }] = await Promise.all([
-    getPosts({ limit: 1 }),
+  const [latestPostDate, { notes }] = await Promise.all([
+    getLatestPublishedPostUpdate(),
     getNotes({ limit: 1 }),
   ])
-  const latestPostDate = posts[0]?.updatedAt
   const latestNoteDate = notes[0] ? (notes[0].updatedAt ?? notes[0].createdAt) : undefined
   const homeLastModified = [latestPostDate, latestNoteDate]
     .filter((date): date is Date => Boolean(date))
@@ -35,7 +34,23 @@ async function indexSitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly",
       priority: 0.7,
     },
+    {
+      url: absoluteUrl("/sobre"),
+      lastModified: FALLBACK_DATE,
+      changeFrequency: "yearly",
+      priority: 0.5,
+    },
   ]
+}
+
+async function topicsSitemap(): Promise<MetadataRoute.Sitemap> {
+  const tags = await getPublishedTagUpdates()
+  return tags.map(({ tag, updatedAt }) => ({
+    url: absoluteUrl(`/temas/${encodeURIComponent(tag)}`),
+    lastModified: updatedAt,
+    changeFrequency: "monthly" as const,
+    priority: 0.6,
+  }))
 }
 
 async function postsSitemap(page: number): Promise<MetadataRoute.Sitemap> {
@@ -81,6 +96,7 @@ async function notesSitemap(page: number): Promise<MetadataRoute.Sitemap> {
 export default async function sitemap({ id }: { id: Promise<string> }): Promise<MetadataRoute.Sitemap> {
   const sitemapId = await id
   if (sitemapId === "index") return indexSitemap()
+  if (sitemapId === "topics") return topicsSitemap()
 
   const match = /^(posts|notes)-(\d+)$/.exec(sitemapId)
   if (!match) return []

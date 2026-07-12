@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Editorial — jornal contemporâneo</title>
+  <style>
+    /*
+      Protótipo isolado. Hipóteses:
+      - O editorial usa o tema escuro existente e o rosa da marca.
+      - PolySans permanece na manchete; Georgia introduz contraste apenas na leitura longa.
+      - As duas colunas aparecem somente quando há largura confortável.
+    */
+    @font-face {
+      font-family: "PolySans";
+      src: url("../src/app/PolySans-Slim.woff2") format("woff2");
+      font-display: swap;
+    }
+
+    :root {
+      color-scheme: dark;
+      --bg: #040404;
+      --ink: #f1f1f1;
+      --muted: #a8a095;
+      --rule: rgba(241, 241, 241, 0.22);
+      --accent: #e00070;
+      --display: "PolySans", Arial, sans-serif;
+      --serif: Georgia, "Times New Roman", serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { scrollbar-gutter: stable; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--serif);
+      text-rendering: optimizeLegibility;
+    }
+
+    a { color: inherit; }
+    img { display: block; max-width: 100%; }
+
+    .site-bar {
+      width: min(100% - 32px, 1120px);
+      margin: 0 auto;
+      min-height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--rule);
+      font-family: var(--display);
+    }
+
+    .brand {
+      font-size: 1.15rem;
+      font-weight: 700;
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+
+    .switch {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      color: var(--muted);
+      font-size: 0.78rem;
+      text-decoration: none;
+    }
+
+    .switch:hover { color: var(--ink); }
+
+    .switches { display: flex; align-items: center; gap: 18px; }
+
+    main {
+      width: min(100% - 32px, 1120px);
+      margin: 0 auto;
+      padding: clamp(32px, 6vw, 76px) 0 80px;
+    }
+
+    .edition-line {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 18px;
+      color: var(--muted);
+      font-family: var(--display);
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .edition-line::before,
+    .edition-line::after {
+      content: "";
+      height: 1px;
+      background: var(--rule);
+    }
+
+    h1 {
+      max-width: 1000px;
+      margin: clamp(26px, 4vw, 48px) auto 0;
+      font-family: var(--display);
+      font-size: clamp(3rem, 8vw, 6rem);
+      line-height: 0.94;
+      letter-spacing: -0.035em;
+      text-align: center;
+      text-wrap: balance;
+    }
+
+    .deck {
+      max-width: 760px;
+      margin: 24px auto 0;
+      color: #d8d4ce;
+      font-size: clamp(1.05rem, 2vw, 1.32rem);
+      line-height: 1.45;
+      text-align: center;
+      text-wrap: pretty;
+    }
+
+    .byline {
+      margin: 28px auto 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: var(--muted);
+      font-family: var(--display);
+      font-size: 0.78rem;
+    }
+
+    .byline img {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+      filter: grayscale(1) brightness(1.2);
+    }
+
+    .hero {
+      margin: clamp(34px, 5vw, 58px) 0 0;
+      border-top: 1px solid var(--rule);
+      border-bottom: 1px solid var(--rule);
+      padding: 12px 0;
+    }
+
+    .hero img {
+      width: 100%;
+      max-height: 560px;
+      object-fit: cover;
+      filter: saturate(0.72) contrast(1.04);
+    }
+
+    .caption {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      margin-top: 9px;
+      color: var(--muted);
+      font-family: var(--display);
+      font-size: 0.7rem;
+      line-height: 1.4;
+    }
+
+    .story {
+      margin-top: clamp(44px, 7vw, 76px);
+    }
+
+    .story h2 {
+      margin: 0 0 24px;
+      padding: 0 0 12px;
+      border-bottom: 3px double var(--rule);
+      font-family: var(--display);
+      font-size: clamp(1.55rem, 3vw, 2.35rem);
+      line-height: 1.05;
+      letter-spacing: -0.025em;
+      text-wrap: balance;
+    }
+
+    .columns {
+      font-size: 1.04rem;
+      line-height: 1.72;
+      letter-spacing: 0.006em;
+    }
+
+    .columns p {
+      margin: 0 0 1.15em;
+      break-inside: avoid;
+      text-wrap: pretty;
+    }
+
+    .lead::first-letter {
+      float: left;
+      margin: 0.03em 0.1em -0.02em 0;
+      color: var(--accent);
+      font-family: var(--display);
+      font-size: 5.4em;
+      font-weight: 800;
+      line-height: 0.76;
+    }
+
+    blockquote {
+      margin: 30px 0;
+      padding: 22px 0;
+      border-top: 1px solid var(--accent);
+      border-bottom: 1px solid var(--accent);
+      color: var(--ink);
+      font-family: var(--display);
+      font-size: clamp(1.55rem, 3vw, 2.5rem);
+      line-height: 1.08;
+      letter-spacing: -0.025em;
+      text-align: center;
+      text-wrap: balance;
+    }
+
+    .end-mark {
+      width: 9px;
+      height: 9px;
+      margin-top: 36px;
+      background: var(--accent);
+    }
+
+    footer {
+      border-top: 1px solid var(--rule);
+      padding: 28px 16px 44px;
+      color: var(--muted);
+      font-family: var(--display);
+      font-size: 0.72rem;
+      text-align: center;
+    }
+
+    @media (min-width: 860px) {
+      .columns {
+        column-count: 2;
+        column-gap: clamp(42px, 5vw, 68px);
+        column-rule: 1px solid var(--rule);
+      }
+      blockquote { column-span: all; }
+    }
+
+    @media (max-width: 620px) {
+      .site-bar { min-height: 54px; }
+      main { padding-top: 28px; }
+      .edition-line { grid-template-columns: 32px auto 1fr; gap: 10px; }
+      .edition-line::before { background: var(--accent); height: 2px; }
+      h1 { text-align: left; margin-top: 26px; }
+      .deck { text-align: left; margin-top: 18px; }
+      .byline { justify-content: flex-start; margin-top: 22px; }
+      .caption { display: block; }
+      .caption span:last-child { display: none; }
+      .columns { font-size: 1rem; line-height: 1.68; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-bar">
+    <a class="brand" href="#">domenyk</a>
+    <nav class="switches" aria-label="Versões do protótipo">
+      <a class="switch" href="editorial-revista-analise.html">Revista</a>
+      <a class="switch" href="editorial-dossie-argumentos.html">Dossiê →</a>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <div class="edition-line"><span>Editorial · Política e sociedade</span></div>
+      <h1>Preconceito é crime?</h1>
+      <p class="deck">Quando uma escolha privada moralmente condenável deve permanecer no campo da crítica — e quando passa a justificar coerção estatal?</p>
+      <div class="byline">
+        <img src="https://domenyk.com/images/profile.jpg" alt="Domenyk">
+        <span>Por Domenyk · 27 de junho de 2026 · 7 min</span>
+      </div>
+
+      <figure class="hero">
+        <img src="https://x4ceaxoe9soax6vc.public.blob.vercel-storage.com/media/ig_0f0b5bff76ca0f03016a3fa93e87a0819197bbcb3d0c97a42c-MzYbLeZWoF1pcv2xl2wz2mKJaTtURQ.webp" alt="Casal em frente a uma pizzaria">
+        <figcaption class="caption"><span>Liberdade de associação, contrato e o limite da punição estatal.</span><span>domenyk.com</span></figcaption>
+      </figure>
+
+      <section class="story">
+        <h2>O caso recente</h2>
+        <div class="columns">
+          <p class="lead">Há algumas semanas, uma pizzaria de Fortaleza criou uma promoção de Dia dos Namorados e excluiu casais LGBT pelo critério interno da empresa. A reação foi imediata: indignação, boicote e a defesa de punição.</p>
+          <p>A distinção central é simples, mas costuma desaparecer no debate público. Uma conduta pode ser moralmente errada sem que, por isso, deva ser tratada como crime.</p>
+          <p>Crime pressupõe agressão, fraude, coerção ou violação de um direito. Se uma empresa anuncia uma condição antes da contratação, não toma propriedade alheia e não quebra acordo previamente firmado, a pergunta jurídica não pode ser substituída apenas pela repulsa moral.</p>
+          <p>Isso não obriga ninguém a aprovar a decisão. Consumidores podem criticar, deixar de comprar e convencer outros a fazer o mesmo. Dissociação também é liberdade.</p>
+          <blockquote>“Condenar uma escolha não é o mesmo que autorizar o Estado a proibi-la.”</blockquote>
+          <p>O ponto não é defender o preconceito. É perguntar quem decide os limites de uma associação privada e quais mecanismos passam a existir quando preferências moralmente reprováveis viram matéria penal.</p>
+          <p>Se toda recusa errada for convertida em crime, contrato deixa de significar consentimento. Passa a significar apenas a obrigação de aceitar as associações aprovadas pela autoridade.</p>
+        </div>
+      </section>
+
+      <section class="story">
+        <h2>O preço do preconceito</h2>
+        <div class="columns">
+          <p>Nada disso torna preconceito privado gratuito. Em mercado, preferência tem preço. Uma empresa que rejeita consumidores abandona demanda, perde reputação e entrega clientes a concorrentes.</p>
+          <p>O mercado não promete santificar ninguém. Faz algo mais frio: precifica escolhas. O proprietário decide se quer perder clientes; o consumidor decide quem deseja sustentar.</p>
+          <p>Esse processo é imperfeito, mas permite resposta sem subordinar a sociedade inteira a uma única regra moral central.</p>
+          <p>Quando propriedade só pode ser usada conforme a moral aprovada pela maioria, o proprietário se transforma em administrador temporário de uma concessão social.</p>
+          <p>A pergunta jurídica continua sendo: houve agressão, fraude, coerção ou quebra contratual? Se não houve, a resposta pertence ao campo da dissociação privada.</p>
+          <div class="end-mark" aria-hidden="true"></div>
+        </div>
+      </section>
+    </article>
+  </main>
+
+  <footer>Protótipo visual · editorial jornal contemporâneo</footer>
+</body>
+</html>
