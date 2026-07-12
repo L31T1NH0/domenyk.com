@@ -6,9 +6,11 @@ import { ChevronLeftIcon } from "@heroicons/react/24/outline"
 
 type Props = {
   boundaryId?: string
+  label?: string
+  href?: string
 }
 
-export function BackHome({ boundaryId = "post-content-boundary" }: Props) {
+export function BackHome({ boundaryId = "post-content-boundary", label = "Voltar", href = "/" }: Props) {
   const linkRef = useRef<HTMLAnchorElement>(null)
   const [top, setTop] = useState("50%")
 
@@ -59,23 +61,23 @@ export function BackHome({ boundaryId = "post-content-boundary" }: Props) {
     <>
       <div className="md:hidden mt-4 mx-0">
         <Link
-          href="/"
+          href={href}
           className="inline-flex w-fit h-fit items-center gap-2 py-1 text-zinc-600 hover:text-zinc-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:text-zinc-300 dark:hover:text-zinc-100 mx-0"
-          aria-label="Voltar para a página inicial"
-          title="Voltar para a página inicial"
+          aria-label={label}
+          title={label}
         >
           <ChevronLeftIcon className="size-5" aria-hidden="true" />
-          <span className="text-sm">Voltar</span>
+          <span className="text-sm">{label}</span>
         </Link>
       </div>
 
       <Link
         ref={linkRef}
-        href="/"
+        href={href}
         className="hidden md:flex fixed left-[calc(50%-18rem)] -translate-x-full -translate-y-1/2 -ml-4 z-40 items-center justify-center p-1.5 rounded-full text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-[top,transform] duration-150 hover:scale-110"
         style={{ top }}
-        aria-label="Voltar para a página inicial"
-        title="Voltar para a página inicial"
+        aria-label={label}
+        title={label}
       >
         <ChevronLeftIcon className="size-7 text-zinc-700 dark:text-zinc-300" aria-hidden="true" />
       </Link>

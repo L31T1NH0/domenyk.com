@@ -98,7 +98,7 @@ export default async function HomePage({
 
       <HomeTimeline
         key={`${feedMode}:${currentPage}:${searchQuery}`}
-        posts={posts.map(serializePostSummary)}
+        posts={posts.map((post) => serializePostSummary(post))}
         totalPosts={totalPosts}
         totalNotes={totalNotes}
         initialNotes={notes.map(serializeNote)}

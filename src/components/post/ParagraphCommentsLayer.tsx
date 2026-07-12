@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/outline"
 import { ParagraphThread } from "./ParagraphThread"
+import type { PostLocale } from "@/lib/post-locales"
 
 type ParagraphPosition = {
   top: number
@@ -14,9 +15,10 @@ type Props = {
   postId: string
   isAdmin?: boolean
   containerSelector?: string
+  locale?: PostLocale
 }
 
-export function ParagraphCommentsLayer({ postId, isAdmin = false, containerSelector = "[data-post-content]" }: Props) {
+export function ParagraphCommentsLayer({ postId, isAdmin = false, containerSelector = "[data-post-content]", locale = "pt" }: Props) {
   const [activePid, setActivePid] = useState<string | null>(null)
   const [hoveredPid, setHoveredPid] = useState<string | null>(null)
   const [counts, setCounts] = useState<Record<string, number>>({})
@@ -115,7 +117,7 @@ export function ParagraphCommentsLayer({ postId, isAdmin = false, containerSelec
     fetch(`/api/comments/${postId}/paragraph-counts`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ paragraphIds: pids }),
+      body: JSON.stringify({ paragraphIds: pids, locale }),
       signal: controller.signal,
     })
       .then((r) => r.ok ? r.json() : {})
@@ -130,7 +132,7 @@ export function ParagraphCommentsLayer({ postId, isAdmin = false, containerSelec
     return () => {
       controller.abort()
     }
-  }, [paragraphIdsKey, postId])
+  }, [locale, paragraphIdsKey, postId])
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -275,6 +277,7 @@ export function ParagraphCommentsLayer({ postId, isAdmin = false, containerSelec
           <ParagraphThread
             postId={postId}
             paragraphId={activePid}
+            locale={locale}
             isAdmin={isAdmin}
             autoFocus={isTouch}
             onCountChange={handleThreadCountChange}

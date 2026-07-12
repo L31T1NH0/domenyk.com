@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from "next/server"
-import { updatePost, deletePost, getPostById, markPostDeleting } from "@/lib/db/posts"
+import {
+  deletePost,
+  getOriginalContentUpdatedAt,
+  getPostById,
+  markPostDeleting,
+  serializePostTranslation,
+  updatePost,
+  updatePostTranslation,
+} from "@/lib/db/posts"
 import { adminOnly } from "@/lib/auth"
 import { toObjectId } from "@/lib/validation"
-import { parsePostPatch } from "@/lib/api/post-input"
+import { parsePostPatch, parsePostTranslation } from "@/lib/api/post-input"
 import { deleteCommentsForParent, getCommentsForParent } from "@/lib/db/comments"
 import { deleteCommentImagesFromContents, queueCommentImagesForCleanup } from "@/lib/db/comment-uploads"
+import { isTranslationLocale } from "@/lib/post-locales"
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -21,8 +30,42 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   if (!existingPost) return NextResponse.json({ error: "Post não encontrado" }, { status: 404 })
 
   try {
+    if (typeof body.locale === "string" && body.locale !== "pt") {
+      if (!isTranslationLocale(body.locale)) {
+        return NextResponse.json({ error: "Idioma inválido" }, { status: 400 })
+      }
+
+      const parsed = parsePostTranslation(body)
+      const existingTranslation = existingPost.translations?.[body.locale]
+      const translation = await updatePostTranslation(
+        id,
+        body.locale,
+        {
+          ...parsed,
+          published: "published" in body ? body.published === true : undefined,
+        },
+        getOriginalContentUpdatedAt(existingPost),
+        existingTranslation
+      )
+
+      return NextResponse.json({
+        ok: true,
+        locale: body.locale,
+        translation: serializePostTranslation(translation),
+      })
+    }
+
     const data = parsePostPatch(body)
     if (body.cover === null) data.showCoverInTimeline = false
+
+    const originalChanged = (["title", "content", "excerpt", "subtitle"] as const).some((field) => (
+      field in data && data[field] !== existingPost[field]
+    )) || (
+      "cover" in data && data.cover?.alt !== existingPost.cover?.alt
+    ) || (
+      "tags" in data && JSON.stringify(data.tags) !== JSON.stringify(existingPost.tags)
+    )
+    if (originalChanged) data.originalContentUpdatedAt = new Date()
 
     if ("published" in body) {
       const published = body.published === true
@@ -35,7 +78,17 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       await updatePost(id, data)
     }
 
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({
+      ok: true,
+      locale: "pt",
+      published: data.published ?? existingPost.published,
+      publishedAt: data.publishedAt?.toISOString() ?? (
+        data.published === false ? undefined : existingPost.publishedAt?.toISOString()
+      ),
+      originalContentUpdatedAt: (
+        data.originalContentUpdatedAt ?? getOriginalContentUpdatedAt(existingPost)
+      ).toISOString(),
+    })
   } catch (err) {
     if (err instanceof Error && err.message.includes("inválido")) {
       return NextResponse.json({ error: err.message }, { status: 400 })

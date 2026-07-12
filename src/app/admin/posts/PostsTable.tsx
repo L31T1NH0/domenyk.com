@@ -13,6 +13,7 @@ import {
   TrashIcon,
 } from "@heroicons/react/24/outline"
 import type { SerializedPostSummary } from "@/lib/db/posts"
+import { isTranslationRevisionStale, POST_LOCALE_DETAILS, TRANSLATION_LOCALES } from "@/lib/post-locales"
 
 type Props = { posts: SerializedPostSummary[] }
 type StatusFilter = "all" | "published" | "draft"
@@ -41,10 +42,47 @@ function postMatchesQuery(post: SerializedPostSummary, query: string) {
     post.slug,
     post.publicId,
     post.excerpt,
+    ...TRANSLATION_LOCALES.flatMap((locale) => {
+      const translation = post.translations?.[locale]
+      return translation ? [translation.title, translation.excerpt, translation.subtitle, ...(translation.tags ?? [])] : []
+    }),
     ...post.tags,
   ]
     .filter(Boolean)
     .some((value) => value!.toLowerCase().includes(normalized))
+}
+
+function TranslationBadges({ post }: { post: SerializedPostSummary }) {
+  const originalUpdatedAt = post.originalContentUpdatedAt ?? post.updatedAt
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-1" aria-label="Estado das traduções">
+      {TRANSLATION_LOCALES.map((locale) => {
+        const translation = post.translations?.[locale]
+        const stale = translation
+          ? isTranslationRevisionStale(translation.sourceUpdatedAt, originalUpdatedAt)
+          : false
+        const label = !translation
+          ? "sem tradução"
+          : stale
+            ? `${translation.published ? "publicado" : "rascunho"}, revisão pendente`
+            : translation.published ? "publicado" : "rascunho"
+        const color = !translation
+          ? "bg-neutral-100 text-neutral-500 dark:bg-white/[0.06] dark:text-neutral-400"
+          : stale
+            ? "bg-orange-100 text-orange-800 dark:bg-orange-500/10 dark:text-orange-300"
+            : translation.published
+              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+              : "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
+
+        return (
+          <span key={locale} title={`${POST_LOCALE_DETAILS[locale].adminLabel}: ${label}`} className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${color}`}>
+            {POST_LOCALE_DETAILS[locale].shortLabel} · {label}
+          </span>
+        )
+      })}
+    </div>
+  )
 }
 
 function StatusBadge({ published }: { published: boolean }) {
@@ -365,6 +403,7 @@ export function PostsTable({ posts: initial }: Props) {
                     <PostFlags post={post} />
                   </div>
                   <p className="mt-1 break-all text-xs text-neutral-500">{post.slug}</p>
+                  <TranslationBadges post={post} />
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-neutral-500">
                     <StatusBadge published={post.published} />
                     <span className="text-right">{formatDate(post.publishedAt ?? post.createdAt)}</span>
@@ -426,6 +465,7 @@ export function PostsTable({ posts: initial }: Props) {
                         <PostFlags post={post} />
                       </div>
                       <p className="mt-0.5 truncate text-xs text-neutral-500">{post.slug}</p>
+                      <TranslationBadges post={post} />
                     </div>
                   </td>
                   {visibleColumns.status && (

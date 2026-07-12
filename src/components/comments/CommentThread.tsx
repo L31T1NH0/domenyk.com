@@ -6,12 +6,13 @@ import { ptBR } from "date-fns/locale"
 import { useComments } from "@/components/comments/useComments"
 import { CommentContent } from "@/components/comments/CommentContent"
 import { RichCommentComposer } from "@/components/comments/RichCommentComposer"
+import type { PostLocale } from "@/lib/post-locales"
 
-type Props = { postId: string; isAdmin?: boolean }
+type Props = { postId: string; locale?: PostLocale; isAdmin?: boolean }
 
-export function CommentThread({ postId, isAdmin = false }: Props) {
+export function CommentThread({ postId, locale = "pt", isAdmin = false }: Props) {
   const { user } = useUser()
-  const { comments, draft, totalCount, submitting, hasMore, loadingOlder, error, setDraft, submit, remove, loadOlder } = useComments(`/api/comments/${postId}`)
+  const { comments, draft, totalCount, submitting, hasMore, loadingOlder, error, setDraft, submit, remove, loadOlder } = useComments(`/api/comments/${postId}?locale=${locale}`)
 
   return (
     <section className="mt-12 flex flex-col gap-6">

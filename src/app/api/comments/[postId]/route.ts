@@ -13,6 +13,8 @@ import {
   extractCommentBlobUrls,
   releaseCommentUploadClaim,
 } from "@/lib/db/comment-uploads"
+import { isPostLocale } from "@/lib/post-locales"
+import { getPostVersion } from "@/lib/post-versions"
 
 type Params = { params: Promise<{ postId: string }> }
 
@@ -25,7 +27,10 @@ export async function GET(req: NextRequest, { params }: Params) {
 
   const [post, admin, userId] = await Promise.all([getPostById(postId), isAdmin(), getAuthUserId()])
   if (!post) return NextResponse.json({ error: "Not found" }, { status: 404 })
-  if (!post.published && !admin) return NextResponse.json({ error: "Not found" }, { status: 404 })
+  const locale = req.nextUrl.searchParams.get("locale") ?? "pt"
+  if (!isPostLocale(locale)) return NextResponse.json({ error: "Idioma inválido" }, { status: 400 })
+  const version = getPostVersion(post, locale)
+  if (!version || (!version.published && !admin)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
   const cursor = req.nextUrl.searchParams.get("cursor") ?? undefined
   if (cursor && !toObjectId(cursor)) return NextResponse.json({ error: "Cursor inválido" }, { status: 400 })
@@ -56,7 +61,10 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const [post, admin] = await Promise.all([getPostById(postId), isAdmin()])
   if (!post) return NextResponse.json({ error: "Not found" }, { status: 404 })
-  if (!post.published && !admin) return NextResponse.json({ error: "Not found" }, { status: 404 })
+  const locale = req.nextUrl.searchParams.get("locale") ?? "pt"
+  if (!isPostLocale(locale)) return NextResponse.json({ error: "Idioma inválido" }, { status: 400 })
+  const version = getPostVersion(post, locale)
+  if (!version || (!version.published && !admin)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
   const body = await req.json().catch(() => null) as { content?: unknown } | null
   const content = parseCommentContent(body?.content)
@@ -85,7 +93,9 @@ export async function POST(req: NextRequest, { params }: Params) {
     await releaseCommentUploadClaim(uploadClaim).catch(() => undefined)
     throw error
   }
-  if (!(await getPostById(postId))) {
+  const currentPost = await getPostById(postId)
+  const currentVersion = currentPost ? getPostVersion(currentPost, locale) : null
+  if (!currentVersion || (!currentVersion.published && !admin)) {
     await deleteComment(comment._id.toString()).catch(() => undefined)
     await releaseCommentUploadClaim(uploadClaim).catch(() => undefined)
     return NextResponse.json({ error: "O post foi removido durante o envio." }, { status: 409 })

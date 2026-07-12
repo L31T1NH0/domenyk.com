@@ -4,6 +4,8 @@ import { getPostByPublicId, incrementPostViewsOnce, serializePost } from "@/lib/
 import { isAdmin } from "@/lib/auth"
 import { rateLimit } from "@/lib/rate-limit"
 import { requestIdentity } from "@/lib/request-identity"
+import { isPostLocale } from "@/lib/post-locales"
+import { getPostVersion } from "@/lib/post-versions"
 
 const VIEW_COOKIE_MAX_AGE = 60 * 60 * 24
 
@@ -30,10 +32,16 @@ export async function GET(
   const post = await getPostByPublicId(publicId)
 
   if (!post) return NextResponse.json({ error: "Not found" }, { status: 404 })
+  const localeParam = req.nextUrl.searchParams.get("locale") ?? "pt"
+  if (!isPostLocale(localeParam)) {
+    return NextResponse.json({ error: "Invalid locale" }, { status: 400 })
+  }
+  const version = getPostVersion(post, localeParam)
+  if (!version) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
   const admin = await isAdmin()
 
-  if (!post.published && !admin) {
+  if (!version.published && !admin) {
     return NextResponse.json({ error: "Not found" }, { status: 404 })
   }
 
@@ -43,27 +51,39 @@ export async function GET(
   let counted = false
 
   let withinViewLimit = true
-  if (shouldTrackView && post.published && !admin && !hasViewCookie) {
+  if (shouldTrackView && version.published && !admin && !hasViewCookie) {
     withinViewLimit = await rateLimit(
       `post-view:${requestIdentity(req)}`,
       { limit: 120, windowMs: 24 * 60 * 60_000 }
     )
   }
 
-  if (shouldTrackView && post.published && !admin && !hasViewCookie && withinViewLimit) {
+  if (shouldTrackView && version.published && !admin && !hasViewCookie && withinViewLimit) {
     const result = await incrementPostViewsOnce(publicId, viewVisitorKey(req, publicId))
     post.views = result.views
     counted = result.counted
   }
 
-  const publicPost = serializePost(post)
+  const publicPost = {
+    ...serializePost(post),
+    title: version.title,
+    content: version.content,
+    excerpt: version.excerpt,
+    subtitle: version.subtitle,
+    cover: version.cover,
+    published: version.published,
+    publishedAt: version.publishedAt?.toISOString(),
+    readingTimeMinutes: version.readingTimeMinutes,
+    updatedAt: version.updatedAt.toISOString(),
+    locale: localeParam,
+  }
   const response = NextResponse.json(
     shouldTrackView
       ? { views: publicPost.views ?? 0, viewCounted: counted }
       : { ...publicPost, viewCounted: counted }
   )
 
-  if (shouldTrackView && post.published && !admin && !hasViewCookie && withinViewLimit) {
+  if (shouldTrackView && version.published && !admin && !hasViewCookie && withinViewLimit) {
     response.cookies.set(cookieName, "1", {
       httpOnly: true,
       maxAge: VIEW_COOKIE_MAX_AGE,

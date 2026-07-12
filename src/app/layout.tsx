@@ -65,9 +65,14 @@ export const metadata: Metadata = {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const nonce = (await headers()).get("x-nonce") ?? undefined
+  const requestHeaders = await headers()
+  const nonce = requestHeaders.get("x-nonce") ?? undefined
+  const requestedLanguage = requestHeaders.get("x-site-language")
+  const documentLanguage = requestedLanguage === "en" || requestedLanguage === "de" || requestedLanguage === "id"
+    ? requestedLanguage
+    : "pt-BR"
   return (
-	    <html lang="pt-BR" className={`${polySans.variable} ${geist.variable} h-full antialiased dark-mode`} suppressHydrationWarning>
+	    <html lang={documentLanguage} className={`${polySans.variable} ${geist.variable} h-full antialiased dark-mode`} suppressHydrationWarning>
 	      <body className="min-h-full flex flex-col dark-mode" suppressHydrationWarning>
 	        <Script
 	          id="theme-bootstrap"

@@ -2,20 +2,30 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { ClockIcon, EyeIcon, ShareIcon } from "@heroicons/react/24/solid"
+import type { PostLocale } from "@/lib/post-locales"
 
 type Props = {
   publicId: string
   dateLabel?: string
   readingTime: string
   initialViews?: number
+  locale?: PostLocale
 }
 
 const VIEW_TTL_MS = 24 * 60 * 60 * 1000
 const pendingViewPublicIds = new Set<string>()
 
-export function PostMetaBar({ publicId, dateLabel, readingTime, initialViews = 0 }: Props) {
+const labels: Record<PostLocale, { readingTime: string; views: string; share: string; copied: string }> = {
+  pt: { readingTime: "Tempo de leitura", views: "views", share: "Compartilhar", copied: "Copiado" },
+  en: { readingTime: "Reading time", views: "views", share: "Share", copied: "Copied" },
+  de: { readingTime: "Lesezeit", views: "Aufrufe", share: "Teilen", copied: "Kopiert" },
+  id: { readingTime: "Waktu baca", views: "tayangan", share: "Bagikan", copied: "Tersalin" },
+}
+
+export function PostMetaBar({ publicId, dateLabel, readingTime, initialViews = 0, locale = "pt" }: Props) {
   const [views, setViews] = useState(initialViews)
   const [copied, setCopied] = useState(false)
+  const copy = labels[locale]
 
   useEffect(() => {
     const storageKey = `post-viewed:${publicId}`
@@ -29,7 +39,7 @@ export function PostMetaBar({ publicId, dateLabel, readingTime, initialViews = 0
     let cancelled = false
     pendingViewPublicIds.add(publicId)
 
-    fetch(`/api/posts/${encodeURIComponent(publicId)}?view=1`, { cache: "no-store" })
+    fetch(`/api/posts/${encodeURIComponent(publicId)}?view=1&locale=${locale}`, { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
       .then((post) => {
         if (!cancelled && typeof post?.views === "number") {
@@ -44,9 +54,9 @@ export function PostMetaBar({ publicId, dateLabel, readingTime, initialViews = 0
     return () => {
       cancelled = true
     }
-  }, [publicId])
+  }, [locale, publicId])
 
-  const displayViews = useMemo(() => `${views} views`, [views])
+  const displayViews = useMemo(() => `${views} ${copy.views}`, [copy.views, views])
 
   async function share() {
     if (typeof window === "undefined") return
@@ -64,13 +74,13 @@ export function PostMetaBar({ publicId, dateLabel, readingTime, initialViews = 0
           <div className="inline-flex items-center gap-2 whitespace-nowrap">
             <span className="inline-flex items-center gap-1">
               <ClockIcon className="h-4 w-4" aria-hidden="true" />
-              <span className="sr-only">Tempo de leitura:</span>
+              <span className="sr-only">{copy.readingTime}:</span>
               {readingTime}
             </span>
             <span aria-hidden className="mx-1 text-zinc-400">•</span>
             <span className="inline-flex items-center gap-1">
               <EyeIcon className="h-4 w-4" aria-hidden="true" />
-              <span className="sr-only">Views:</span>
+              <span className="sr-only">{copy.views}:</span>
               {displayViews}
             </span>
           </div>
@@ -79,11 +89,11 @@ export function PostMetaBar({ publicId, dateLabel, readingTime, initialViews = 0
         <button
           type="button"
           onClick={share}
-          aria-label="Compartilhar"
+          aria-label={copy.share}
           className="justify-self-end inline-flex shrink-0 items-center justify-center gap-1 sm:gap-2 h-7 w-7 p-0 sm:h-auto sm:w-auto sm:px-2 sm:py-1.5 text-xs sm:text-sm font-medium text-cyan-600 hover:text-cyan-700 active:text-cyan-700 rounded-full border border-transparent hover:border-cyan-200/60 dark:hover:border-cyan-800/60 hover:bg-cyan-50 dark:hover:bg-cyan-950/40 transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
         >
           <ShareIcon className="block h-3 w-3 sm:hidden" aria-hidden="true" />
-          <span className="hidden sm:inline">{copied ? "Copiado" : "Compartilhar"}</span>
+          <span className="hidden sm:inline">{copied ? copy.copied : copy.share}</span>
         </button>
       </div>
     </div>

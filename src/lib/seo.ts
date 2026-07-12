@@ -80,6 +80,9 @@ export function buildPageMetadata({
   modifiedTime,
   tags,
   noIndex = false,
+  languages,
+  openGraphLocale = siteConfig.locale,
+  openGraphAlternateLocales,
 }: {
   title?: string
   description?: string
@@ -90,6 +93,9 @@ export function buildPageMetadata({
   modifiedTime?: string
   tags?: string[]
   noIndex?: boolean
+  languages?: Record<string, string>
+  openGraphLocale?: string
+  openGraphAlternateLocales?: string[]
 } = {}): Metadata {
   const url = absoluteUrl(path)
   const imageUrl = absoluteUrl(image)
@@ -98,7 +104,10 @@ export function buildPageMetadata({
   return {
     title,
     description,
-    alternates: { canonical: url },
+    alternates: {
+      canonical: url,
+      languages,
+    },
     robots: noIndex
       ? { index: false, follow: false }
       : {
@@ -117,7 +126,8 @@ export function buildPageMetadata({
       description,
       url,
       siteName: siteConfig.name,
-      locale: siteConfig.locale,
+      locale: openGraphLocale,
+      alternateLocale: openGraphAlternateLocales,
       type,
       images,
       publishedTime,

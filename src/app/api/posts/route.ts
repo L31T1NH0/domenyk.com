@@ -28,5 +28,5 @@ export async function GET(req: NextRequest) {
     excludeHiddenFromTimeline: !admin,
   })
 
-  return NextResponse.json({ posts: posts.map(serializePostSummary), total })
+  return NextResponse.json({ posts: posts.map((post) => serializePostSummary(post)), total })
 }

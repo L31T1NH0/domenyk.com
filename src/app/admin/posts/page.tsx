@@ -4,7 +4,9 @@ import { PostsTable } from "./PostsTable"
 
 export default async function AdminPostsPage() {
   const { posts } = await getPosts({ includeUnpublished: true, limit: 100 })
-  const serializedPosts = posts.map(serializePostSummary)
+  const serializedPosts = posts.map((post) => (
+    serializePostSummary(post, { includeUnpublishedTranslations: true })
+  ))
 
   return (
     <>

@@ -5,19 +5,21 @@ import { useUser } from "@clerk/nextjs"
 import { useComments } from "@/components/comments/useComments"
 import { CommentContent } from "@/components/comments/CommentContent"
 import { RichCommentComposer } from "@/components/comments/RichCommentComposer"
+import type { PostLocale } from "@/lib/post-locales"
 
 type Props = {
   postId: string
   paragraphId: string
+  locale?: PostLocale
   isAdmin?: boolean
   autoFocus?: boolean
   onCountChange?: (count: number) => void
   onClose: () => void
 }
 
-export function ParagraphThread({ postId, paragraphId, isAdmin = false, autoFocus = true, onCountChange, onClose }: Props) {
+export function ParagraphThread({ postId, paragraphId, locale = "pt", isAdmin = false, autoFocus = true, onCountChange, onClose }: Props) {
   const { user } = useUser()
-  const { comments, draft, loaded, totalCount, submitting, hasMore, loadingOlder, error, setDraft, submit, remove, loadOlder } = useComments(`/api/comments/${postId}/paragraph/${paragraphId}`)
+  const { comments, draft, loaded, totalCount, submitting, hasMore, loadingOlder, error, setDraft, submit, remove, loadOlder } = useComments(`/api/comments/${postId}/paragraph/${paragraphId}?locale=${locale}`)
 
   useEffect(() => {
     if (loaded) onCountChange?.(totalCount)

@@ -36,8 +36,18 @@ function allowsDevelopmentAdminFallback(): boolean {
   return process.env.NODE_ENV === "development" && process.env.DEV_ADMIN_ALLOW_ANY_SIGNED_IN === "true"
 }
 
+function documentLanguage(pathname: string): string {
+  const locale = pathname.split("/")[1]
+  if (locale === "en" || locale === "de" || locale === "id") return locale
+  return "pt-BR"
+}
+
 export default clerkMiddleware(async (auth, req) => {
-  if (!isAdminRoute(req.nextUrl.pathname)) return
+  const requestHeaders = new Headers(req.headers)
+  requestHeaders.set("x-site-language", documentLanguage(req.nextUrl.pathname))
+  const continueRequest = () => NextResponse.next({ request: { headers: requestHeaders } })
+
+  if (!isAdminRoute(req.nextUrl.pathname)) return continueRequest()
 
   const adminUserId = process.env.ADMIN_USER_ID
   const isAdminApiRoute = req.nextUrl.pathname.startsWith("/api/admin")
@@ -48,13 +58,15 @@ export default clerkMiddleware(async (auth, req) => {
     }
 
     await auth.protect()
-    return
+    return continueRequest()
   }
 
-  if (!adminUserId && allowsDevelopmentAdminFallback()) return
+  if (!adminUserId && allowsDevelopmentAdminFallback()) return continueRequest()
   if (userId !== adminUserId) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
+
+  return continueRequest()
 }, {
   authorizedParties,
   contentSecurityPolicy: {

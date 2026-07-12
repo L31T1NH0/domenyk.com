@@ -14,6 +14,8 @@ import {
 } from "@/lib/db/comment-uploads"
 import { hasParagraphId } from "@/lib/mdx"
 import { requestIdentity } from "@/lib/request-identity"
+import { isPostLocale } from "@/lib/post-locales"
+import { getPostVersion } from "@/lib/post-versions"
 
 type Params = { params: Promise<{ postId: string; paragraphId: string }> }
 
@@ -29,8 +31,11 @@ export async function GET(req: NextRequest, { params }: Params) {
 
   const [post, admin, userId] = await Promise.all([getPostById(postId), isAdmin(), getAuthUserId()])
   if (!post) return NextResponse.json({ error: "Not found" }, { status: 404 })
-  if (!post.published && !admin) return NextResponse.json({ error: "Not found" }, { status: 404 })
-  if (!hasParagraphId(post.content, paragraphId)) {
+  const locale = req.nextUrl.searchParams.get("locale") ?? "pt"
+  if (!isPostLocale(locale)) return NextResponse.json({ error: "Idioma inválido" }, { status: 400 })
+  const version = getPostVersion(post, locale)
+  if (!version || (!version.published && !admin)) return NextResponse.json({ error: "Not found" }, { status: 404 })
+  if (!hasParagraphId(version.content, paragraphId)) {
     return NextResponse.json({ error: "Parágrafo inexistente" }, { status: 400 })
   }
 
@@ -66,8 +71,11 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const [post, admin] = await Promise.all([getPostById(postId), isAdmin()])
   if (!post) return NextResponse.json({ error: "Not found" }, { status: 404 })
-  if (!post.published && !admin) return NextResponse.json({ error: "Not found" }, { status: 404 })
-  if (!hasParagraphId(post.content, paragraphId)) {
+  const locale = req.nextUrl.searchParams.get("locale") ?? "pt"
+  if (!isPostLocale(locale)) return NextResponse.json({ error: "Idioma inválido" }, { status: 400 })
+  const version = getPostVersion(post, locale)
+  if (!version || (!version.published && !admin)) return NextResponse.json({ error: "Not found" }, { status: 404 })
+  if (!hasParagraphId(version.content, paragraphId)) {
     return NextResponse.json({ error: "Parágrafo inexistente" }, { status: 400 })
   }
 
@@ -100,7 +108,8 @@ export async function POST(req: NextRequest, { params }: Params) {
     throw error
   }
   const currentPost = await getPostById(postId)
-  if (!currentPost || !hasParagraphId(currentPost.content, paragraphId)) {
+  const currentVersion = currentPost ? getPostVersion(currentPost, locale) : null
+  if (!currentVersion || !hasParagraphId(currentVersion.content, paragraphId)) {
     await deleteComment(comment._id.toString()).catch(() => undefined)
     await releaseCommentUploadClaim(uploadClaim).catch(() => undefined)
     return NextResponse.json({ error: "O parágrafo foi removido durante o envio." }, { status: 409 })

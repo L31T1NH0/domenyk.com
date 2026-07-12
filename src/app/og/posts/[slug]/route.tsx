@@ -1,6 +1,8 @@
 import { ImageResponse } from "next/og"
 import { getPostByPublicId, getPostBySlug } from "@/lib/db/posts"
 import { descriptionFromMarkdown, siteConfig } from "@/lib/seo"
+import { isPostLocale } from "@/lib/post-locales"
+import { getPostVersion } from "@/lib/post-versions"
 
 export const runtime = "nodejs"
 
@@ -15,14 +17,17 @@ function trimText(text: string, maxLength: number) {
   return `${truncated.slice(0, truncated.lastIndexOf(" ") || maxLength).trim()}...`
 }
 
-export async function GET(_req: Request, { params }: { params: Promise<{ slug: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const post = (await getPostByPublicId(slug)) ?? (await getPostBySlug(slug))
-  const title = post?.published ? post.title : siteConfig.title
-  const description = post?.published
-    ? (post.excerpt ?? post.subtitle ?? descriptionFromMarkdown(post.content, 120)) || siteConfig.description
+  const localeParam = new URL(req.url).searchParams.get("locale") ?? "pt"
+  const locale = isPostLocale(localeParam) ? localeParam : "pt"
+  const version = post ? getPostVersion(post, locale) : null
+  const title = version?.published ? version.title : siteConfig.title
+  const description = version?.published
+    ? (version.excerpt ?? version.subtitle ?? descriptionFromMarkdown(version.content, 120)) || siteConfig.description
     : siteConfig.description
-  const tags = post?.published ? post.tags.slice(0, 3) : []
+  const tags = version?.published ? version.tags.slice(0, 3) : []
 
   return new ImageResponse(
     (

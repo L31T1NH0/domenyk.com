@@ -3,8 +3,30 @@ import { randomUUID } from "crypto"
 import { getDb } from "./client"
 import { calcReadingTime } from "../reading-time"
 import { toObjectId } from "../validation"
+import {
+  isTranslationRevisionStale,
+  TRANSLATION_LOCALES,
+  type TranslationLocale,
+} from "../post-locales"
 
 export type PostStyle = "standard" | "editorial" | "opinion"
+
+export type PostTranslation = {
+  title: string
+  content: string
+  excerpt?: string
+  subtitle?: string
+  coverAlt?: string
+  tags?: string[]
+  published: boolean
+  publishedAt?: Date
+  readingTimeMinutes: number
+  sourceUpdatedAt: Date
+  createdAt: Date
+  updatedAt: Date
+}
+
+export type PostTranslations = Partial<Record<TranslationLocale, PostTranslation>>
 
 export type Post = {
   _id: ObjectId
@@ -30,19 +52,51 @@ export type Post = {
   paragraphCommentsEnabled?: boolean
   deleting?: boolean
   style: PostStyle
+  originalContentUpdatedAt?: Date
+  translations?: PostTranslations
   createdAt: Date
   updatedAt: Date
 }
 
-export type PostSummary = Omit<Post, "content">
+export type PostTranslationSummary = Omit<PostTranslation, "content">
+export type PostSummary = Omit<Post, "content" | "translations"> & {
+  translations?: Partial<Record<TranslationLocale, PostTranslationSummary>>
+}
 
-export type SerializedPostSummary = Omit<PostSummary, "_id" | "coAuthorUserId" | "deleting" | "publishedAt" | "createdAt" | "updatedAt"> & {
-  _id: string
+export type SerializedPostTranslationSummary = Omit<
+  PostTranslationSummary,
+  "publishedAt" | "sourceUpdatedAt" | "createdAt" | "updatedAt"
+> & {
   publishedAt?: string
+  sourceUpdatedAt: string
   createdAt: string
   updatedAt: string
 }
-export type SerializedPost = SerializedPostSummary & { content: string }
+
+export type SerializedPostTranslation = SerializedPostTranslationSummary & { content: string }
+
+export type SerializedPostSummary = Omit<
+  PostSummary,
+  | "_id"
+  | "coAuthorUserId"
+  | "deleting"
+  | "publishedAt"
+  | "originalContentUpdatedAt"
+  | "translations"
+  | "createdAt"
+  | "updatedAt"
+> & {
+  _id: string
+  publishedAt?: string
+  originalContentUpdatedAt?: string
+  translations?: Partial<Record<TranslationLocale, SerializedPostTranslationSummary>>
+  createdAt: string
+  updatedAt: string
+}
+export type SerializedPost = Omit<SerializedPostSummary, "translations"> & {
+  content: string
+  translations?: Partial<Record<TranslationLocale, SerializedPostTranslation>>
+}
 
 let indexesPromise: Promise<void> | undefined
 let postViewsIndexesPromise: Promise<void> | undefined
@@ -72,7 +126,59 @@ async function ensurePostIndexes(col: Awaited<ReturnType<typeof collectionRaw>>)
   ])
 }
 
-export function serializePostSummary(post: PostSummary): SerializedPostSummary {
+export function getOriginalContentUpdatedAt(post: Pick<Post, "originalContentUpdatedAt" | "updatedAt">): Date {
+  return post.originalContentUpdatedAt ?? post.updatedAt
+}
+
+export function isPostTranslationStale(
+  post: Pick<Post, "originalContentUpdatedAt" | "updatedAt">,
+  translation: Pick<PostTranslation, "sourceUpdatedAt">
+): boolean {
+  return isTranslationRevisionStale(translation.sourceUpdatedAt, getOriginalContentUpdatedAt(post))
+}
+
+export function serializePostTranslationSummary(
+  translation: PostTranslationSummary
+): SerializedPostTranslationSummary {
+  return {
+    title: translation.title,
+    excerpt: translation.excerpt,
+    subtitle: translation.subtitle,
+    coverAlt: translation.coverAlt,
+    tags: translation.tags,
+    published: translation.published,
+    publishedAt: translation.publishedAt?.toISOString(),
+    readingTimeMinutes: translation.readingTimeMinutes,
+    sourceUpdatedAt: translation.sourceUpdatedAt.toISOString(),
+    createdAt: translation.createdAt.toISOString(),
+    updatedAt: translation.updatedAt.toISOString(),
+  }
+}
+
+export function serializePostTranslation(translation: PostTranslation): SerializedPostTranslation {
+  return { ...serializePostTranslationSummary(translation), content: translation.content }
+}
+
+function serializeTranslationSummaries(
+  translations: PostSummary["translations"],
+  includeUnpublished: boolean
+): SerializedPostSummary["translations"] {
+  if (!translations) return undefined
+
+  const serialized: SerializedPostSummary["translations"] = {}
+  for (const locale of TRANSLATION_LOCALES) {
+    const translation = translations[locale]
+    if (!translation || (!includeUnpublished && !translation.published)) continue
+    serialized[locale] = serializePostTranslationSummary(translation)
+  }
+
+  return Object.keys(serialized).length > 0 ? serialized : undefined
+}
+
+export function serializePostSummary(
+  post: PostSummary,
+  { includeUnpublishedTranslations = false }: { includeUnpublishedTranslations?: boolean } = {}
+): SerializedPostSummary {
   return {
     _id: post._id.toString(),
     publicId: post.publicId,
@@ -94,13 +200,29 @@ export function serializePostSummary(post: PostSummary): SerializedPostSummary {
     views: post.views,
     paragraphCommentsEnabled: post.paragraphCommentsEnabled,
     style: post.style,
+    originalContentUpdatedAt: post.originalContentUpdatedAt?.toISOString(),
+    translations: serializeTranslationSummaries(post.translations, includeUnpublishedTranslations),
     createdAt: post.createdAt.toISOString(),
     updatedAt: post.updatedAt.toISOString(),
   }
 }
 
-export function serializePost(post: Post): SerializedPost {
-  return { ...serializePostSummary(post), content: post.content }
+export function serializePost(
+  post: Post,
+  { includeUnpublishedTranslations = false }: { includeUnpublishedTranslations?: boolean } = {}
+): SerializedPost {
+  const translations: SerializedPost["translations"] = {}
+  for (const locale of TRANSLATION_LOCALES) {
+    const translation = post.translations?.[locale]
+    if (!translation || (!includeUnpublishedTranslations && !translation.published)) continue
+    translations[locale] = serializePostTranslation(translation)
+  }
+
+  return {
+    ...serializePostSummary(post, { includeUnpublishedTranslations }),
+    content: post.content,
+    translations: Object.keys(translations).length > 0 ? translations : undefined,
+  }
 }
 
 async function collectionRaw() {
@@ -196,7 +318,14 @@ export async function getPosts(opts: {
 
   const [posts, total] = await Promise.all([
     col
-      .find(filter, { projection: { content: 0 } })
+      .find(filter, {
+        projection: {
+          content: 0,
+          "translations.en.content": 0,
+          "translations.de.content": 0,
+          "translations.id.content": 0,
+        },
+      })
       .sort({ pinned: -1, publishedAt: -1, _id: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
@@ -218,6 +347,44 @@ export async function countPosts(opts: {
   if (opts.excludeHiddenFromTimeline) filter.hiddenFromTimeline = { $ne: true }
   if (opts.search?.trim()) filter.$text = { $search: opts.search.trim() }
   return (await collection()).countDocuments(filter)
+}
+
+const publishedVersionFilter = {
+  deleting: { $ne: true },
+  $or: [
+    { published: true },
+    { "translations.en.published": true },
+    { "translations.de.published": true },
+    { "translations.id.published": true },
+  ],
+}
+
+export async function getPostsWithPublishedVersions({
+  page = 1,
+  limit = 10,
+}: {
+  page?: number
+  limit?: number
+} = {}): Promise<PostSummary[]> {
+  const posts = await (await collection())
+    .find(publishedVersionFilter, {
+      projection: {
+        content: 0,
+        "translations.en.content": 0,
+        "translations.de.content": 0,
+        "translations.id.content": 0,
+      },
+    })
+    .sort({ _id: -1 })
+    .skip((Math.max(1, page) - 1) * limit)
+    .limit(limit)
+    .toArray()
+
+  return ensurePostPublicIds(posts as PostSummary[])
+}
+
+export async function countPostsWithPublishedVersions(): Promise<number> {
+  return (await collection()).countDocuments(publishedVersionFilter)
 }
 
 export async function getPostByPublicId(publicId: string): Promise<Post | null> {
@@ -278,6 +445,7 @@ export async function createPost(data: {
   content: string
   slug: string
   excerpt?: string
+  subtitle?: string
   cover?: Post["cover"]
   showCoverInTimeline?: boolean
   friendImage?: string
@@ -297,6 +465,7 @@ export async function createPost(data: {
     title: data.title,
     content: data.content,
     excerpt: data.excerpt,
+    subtitle: data.subtitle,
     cover: data.cover,
     showCoverInTimeline: data.showCoverInTimeline ?? true,
     friendImage: data.friendImage,
@@ -309,6 +478,7 @@ export async function createPost(data: {
     hiddenFromTimeline: data.hiddenFromTimeline ?? false,
     readingTimeMinutes: calcReadingTime(data.content),
     style: data.style ?? "standard",
+    originalContentUpdatedAt: now,
     createdAt: now,
     updatedAt: now,
   }
@@ -342,6 +512,56 @@ export async function updatePost(
     { _id: objectId },
     Object.keys($unset).length > 0 ? { $set, $unset } : { $set }
   )
+}
+
+export async function updatePostTranslation(
+  id: string,
+  locale: TranslationLocale,
+  data: {
+    title: string
+    content: string
+    excerpt?: string
+    subtitle?: string
+    coverAlt?: string
+    tags?: string[]
+    published?: boolean
+  },
+  sourceUpdatedAt: Date,
+  existing?: PostTranslation
+): Promise<PostTranslation> {
+  const objectId = toObjectId(id)
+  if (!objectId) throw new Error("Invalid post id")
+
+  const now = new Date()
+  const published = data.published ?? existing?.published ?? false
+  const translation: PostTranslation = {
+    title: data.title,
+    content: data.content,
+    excerpt: data.excerpt,
+    subtitle: data.subtitle,
+    coverAlt: data.coverAlt,
+    tags: data.tags ?? existing?.tags ?? [],
+    published,
+    publishedAt: published ? existing?.publishedAt ?? now : undefined,
+    readingTimeMinutes: calcReadingTime(data.content),
+    sourceUpdatedAt,
+    createdAt: existing?.createdAt ?? now,
+    updatedAt: now,
+  }
+
+  const col = await collection()
+  await col.updateOne(
+    { _id: objectId, originalContentUpdatedAt: { $exists: false } },
+    { $set: { originalContentUpdatedAt: sourceUpdatedAt } }
+  )
+
+  const result = await col.updateOne(
+    { _id: objectId, deleting: { $ne: true } },
+    { $set: { [`translations.${locale}`]: translation } }
+  )
+  if (result.matchedCount !== 1) throw new Error("Post not found")
+
+  return translation
 }
 
 export async function publishPost(id: string, publish: boolean): Promise<void> {

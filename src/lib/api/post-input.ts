@@ -42,6 +42,7 @@ export function parsePostPatch(body: Record<string, unknown>) {
     data.slug = slug
   }
   if ("excerpt" in body) data.excerpt = asOptionalString(body.excerpt, 500)
+  if ("subtitle" in body) data.subtitle = asOptionalString(body.subtitle, 500)
   if ("tags" in body) data.tags = asStringArray(body.tags, 20, 40)
   if ("style" in body) data.style = parsePostStyle(body.style, "standard")
   if ("hiddenFromTimeline" in body) data.hiddenFromTimeline = body.hiddenFromTimeline === true
@@ -54,4 +55,20 @@ export function parsePostPatch(body: Record<string, unknown>) {
   if ("background" in body) data.background = parsePostBackground(body.background)
 
   return data
+}
+
+export function parsePostTranslation(body: Record<string, unknown>) {
+  const title = asString(body.title, 180)
+  const content = asString(body.content, 300_000)
+  if (!title) throw new Error("Título inválido.")
+  if (!content) throw new Error("Conteúdo inválido.")
+
+  return {
+    title,
+    content,
+    excerpt: asOptionalString(body.excerpt, 500),
+    subtitle: asOptionalString(body.subtitle, 500),
+    coverAlt: asOptionalString(body.coverAlt, 180),
+    ...("tags" in body ? { tags: asStringArray(body.tags, 20, 40) } : {}),
+  }
 }

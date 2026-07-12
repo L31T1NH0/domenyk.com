@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createPost } from "@/lib/db/posts"
+import { createPost, serializePost } from "@/lib/db/posts"
 import { adminOnly } from "@/lib/auth"
 import { asHttpsUrl, asOptionalString, asSlug, asString, asStringArray, asTrustedImageUrl } from "@/lib/validation"
 import { parsePostBackground, parsePostCover, parsePostStyle } from "@/lib/api/post-input"
@@ -10,6 +10,9 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => null) as Record<string, unknown> | null
   if (!body) return NextResponse.json({ error: "JSON inválido" }, { status: 400 })
+  if ("locale" in body && body.locale !== "pt") {
+    return NextResponse.json({ error: "Salve primeiro a versão original em português." }, { status: 400 })
+  }
 
   const title = asString(body.title, 180)
   const content = asString(body.content, 300_000)
@@ -26,6 +29,7 @@ export async function POST(req: NextRequest) {
       content,
       slug,
       excerpt: asOptionalString(body.excerpt, 500),
+      subtitle: asOptionalString(body.subtitle, 500),
       cover,
       showCoverInTimeline: Boolean(cover) && body.showCoverInTimeline !== false,
       friendImage: asTrustedImageUrl(body.friendImage),
@@ -38,7 +42,7 @@ export async function POST(req: NextRequest) {
       published: body.published === true,
     })
 
-    return NextResponse.json(post, { status: 201 })
+    return NextResponse.json(serializePost(post, { includeUnpublishedTranslations: true }), { status: 201 })
   } catch (err) {
     if (err instanceof Error && err.message.includes("duplicate key")) {
       return NextResponse.json({ error: "Slug ou publicId já existe." }, { status: 409 })
