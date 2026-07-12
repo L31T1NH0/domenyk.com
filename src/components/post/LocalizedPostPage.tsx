@@ -16,7 +16,6 @@ import { getPostVersion, getPublishedPostLocales } from "@/lib/post-versions"
 import { BackHome } from "@/components/BackHome"
 import { ParagraphCommentsLayer } from "@/components/post/ParagraphCommentsLayer"
 import { PostContentShell } from "@/components/post/PostContentShell"
-import { PostLanguageSwitcher } from "@/components/post/PostLanguageSwitcher"
 import { PostMetaBar } from "@/components/post/PostMetaBar"
 import { PostReadingPosition } from "@/components/post/PostReadingPosition"
 import { PostTopics } from "@/components/post/PostTopics"
@@ -24,6 +23,7 @@ import { CommentThread } from "@/components/comments/CommentThread"
 import { PostHeader } from "@/components/PostHeader"
 import { AudioPlayer } from "@/components/AudioPlayer"
 import { DocumentLanguage } from "@/components/DocumentLanguage"
+import { PostLanguageMenuRegistration } from "@/components/public-menu/PublicMenuContext"
 
 const pageCopy: Record<PostLocale, {
   back: string
@@ -171,8 +171,16 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
   return (
     <div className={styleClasses.page} lang={details.htmlLang}>
       <DocumentLanguage language={details.htmlLang} />
+      <PostLanguageMenuRegistration
+        currentLocale={locale}
+        options={selectorLocales.map((availableLocale) => ({
+          locale: availableLocale,
+          href: postPath(post.slug, availableLocale),
+        }))}
+      />
       <script
         nonce={nonce}
+        suppressHydrationWarning
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: jsonLd({
@@ -201,14 +209,6 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
         secondaryImage={coAuthorImageUrl}
         background={version.background}
       />
-      <PostLanguageSwitcher
-        currentLocale={locale}
-        options={selectorLocales.map((availableLocale) => ({
-          locale: availableLocale,
-          href: postPath(post.slug, availableLocale),
-        }))}
-      />
-
       <PostMetaBar
         publicId={version.publicId}
         dateLabel={dateLabel}
