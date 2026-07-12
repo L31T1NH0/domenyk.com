@@ -120,9 +120,6 @@ function PostTimelineItem({
               />
             </span>
             <span className="flex min-w-0 flex-col gap-2">
-              <span className="font-editorial-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[#E00070]">
-                Editorial
-              </span>
               <AutoFitText
                 as="h2"
                 text={post.title.toLocaleUpperCase("pt-BR")}
@@ -182,11 +179,7 @@ function PostTimelineItem({
             />
             <span className="flex flex-wrap items-center gap-3">
               {isEditorial ? (
-                <>
-                  <span className="font-editorial-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[#E00070]">Editorial</span>
-                  <span aria-hidden className="text-neutral-400 dark:text-[#A8A095]/60">·</span>
-                  <span className="font-editorial-mono text-[11px] text-neutral-600 tabular-nums dark:text-[#A8A095]">{post.views ?? 0} views</span>
-                </>
+                <span className="font-editorial-mono text-[11px] text-neutral-600 tabular-nums dark:text-[#A8A095]">{post.views ?? 0} views</span>
               ) : (
                 <>
                   <span className="text-xs text-neutral-600 dark:text-[#A8A095]">{postDateLabel(post)}</span>

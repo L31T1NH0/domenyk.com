@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Opinion — Coluna de convicção</title>
+  <!--
+    HIPÓTESES DE DESIGN
+    - Opinion deve parecer uma voz assumida, não uma reportagem nem um dossiê.
+    - A interface explicita posição, dúvida e contraponto em vez de fingir neutralidade.
+    - Nenhum elemento ultrapassa o container de 36rem usado pelo site.
+    - Imagens não são necessárias: a matéria-prima desta página é o argumento.
+  -->
+  <style>
+    @font-face {
+      font-family: "PolySans";
+      src: url("../src/app/PolySans-Slim.woff2") format("woff2");
+      font-display: swap;
+    }
+
+    :root {
+      color-scheme: dark;
+      --bg: #0a0a0a;
+      --ink: #f4f4ef;
+      --body: #c9c9c2;
+      --muted: #81817a;
+      --rule: rgba(244, 244, 239, 0.16);
+      --rule-strong: rgba(244, 244, 239, 0.32);
+      --acid: #d8ff3e;
+      --acid-soft: rgba(216, 255, 62, 0.10);
+      --display: "PolySans", "Arial Narrow", sans-serif;
+      --mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
+      --container: 36rem;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      background: var(--bg);
+      scroll-behavior: smooth;
+      scrollbar-gutter: stable;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--display);
+      text-rendering: optimizeLegibility;
+    }
+
+    button,
+    summary,
+    a { font: inherit; }
+
+    a { color: inherit; }
+
+    .shell {
+      width: min(calc(100% - 2rem), var(--container));
+      margin-inline: auto;
+      padding-bottom: 7rem;
+    }
+
+    .progress-track {
+      position: fixed;
+      z-index: 10;
+      top: 0;
+      left: 50%;
+      width: min(calc(100% - 2rem), var(--container));
+      height: 2px;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.06);
+      pointer-events: none;
+    }
+
+    .progress-value {
+      display: block;
+      width: var(--progress, 0%);
+      height: 100%;
+      background: var(--acid);
+    }
+
+    .topbar {
+      min-height: 3.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--rule);
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      letter-spacing: 0.02em;
+    }
+
+    .back {
+      display: inline-flex;
+      min-height: 2.75rem;
+      align-items: center;
+      gap: 0.45rem;
+      text-decoration: none;
+      transition: color 140ms ease;
+    }
+
+    .back:hover,
+    .back:focus-visible { color: var(--ink); }
+
+    .post-kind {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--ink);
+      text-transform: uppercase;
+    }
+
+    .post-kind::before {
+      content: "";
+      width: 0.48rem;
+      height: 0.48rem;
+      border-radius: 50%;
+      background: var(--acid);
+      box-shadow: 0 0 0 3px var(--acid-soft);
+    }
+
+    .opening {
+      padding: clamp(3.5rem, 11vw, 6rem) 0 clamp(2.5rem, 8vw, 4.25rem);
+      border-bottom: 1px solid var(--rule-strong);
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 100%;
+      font-size: clamp(3.65rem, 13vw, 5.75rem);
+      font-weight: 700;
+      line-height: 0.86;
+      letter-spacing: -0.04em;
+      text-wrap: balance;
+      overflow-wrap: anywhere;
+    }
+
+    h1 em {
+      display: block;
+      color: var(--acid);
+      font-style: normal;
+    }
+
+    .dek {
+      max-width: 31rem;
+      margin: 2rem 0 0;
+      color: var(--body);
+      font-size: clamp(1.1rem, 4vw, 1.38rem);
+      line-height: 1.42;
+      text-wrap: pretty;
+    }
+
+    .byline {
+      margin-top: 2.2rem;
+      display: grid;
+      grid-template-columns: 2.5rem minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 0.75rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--rule);
+    }
+
+    .avatar {
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 50%;
+      object-fit: cover;
+      filter: grayscale(1) contrast(1.08);
+    }
+
+    .author strong {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .author span,
+    .read-time {
+      display: block;
+      margin-top: 0.15rem;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.64rem;
+    }
+
+    .read-time { text-align: right; }
+
+    .stance {
+      padding: 1.15rem 0 1.3rem;
+      border-bottom: 1px solid var(--rule);
+    }
+
+    .stance-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 0.75rem;
+      font-family: var(--mono);
+      font-size: 0.64rem;
+    }
+
+    .stance-head strong {
+      color: var(--acid);
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .stance-head span { color: var(--muted); }
+
+    .stance-line {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      padding-top: 0.8rem;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.58rem;
+    }
+
+    .stance-line::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto;
+      height: 1px;
+      background: var(--rule-strong);
+    }
+
+    .stance-line::after {
+      content: "";
+      position: absolute;
+      top: -0.22rem;
+      left: 76%;
+      width: 0.48rem;
+      height: 0.48rem;
+      border-radius: 50%;
+      background: var(--acid);
+      box-shadow: 0 0 0 4px var(--bg);
+    }
+
+    .stance-line span:nth-child(2) { text-align: center; }
+    .stance-line span:last-child { text-align: right; }
+
+    .article {
+      padding-top: clamp(3rem, 9vw, 5rem);
+    }
+
+    .lead {
+      margin: 0 0 3rem;
+      color: var(--ink);
+      font-size: clamp(1.32rem, 4.5vw, 1.62rem);
+      line-height: 1.5;
+      letter-spacing: -0.015em;
+    }
+
+    .lead::first-letter {
+      color: var(--acid);
+      font-size: 1.65em;
+      font-weight: 700;
+    }
+
+    .argument {
+      display: grid;
+      grid-template-columns: 2.4rem minmax(0, 1fr);
+      column-gap: 0.85rem;
+      padding: 2.5rem 0;
+      border-top: 1px solid var(--rule);
+    }
+
+    .argument-number {
+      padding-top: 0.26rem;
+      color: var(--acid);
+      font-family: var(--mono);
+      font-size: 0.66rem;
+    }
+
+    .argument-copy { min-width: 0; }
+
+    h2 {
+      margin: 0 0 1.4rem;
+      font-size: clamp(1.65rem, 6vw, 2.35rem);
+      font-weight: 650;
+      line-height: 1.03;
+      letter-spacing: -0.03em;
+      text-wrap: balance;
+    }
+
+    .argument p {
+      margin: 0;
+      color: var(--body);
+      font-size: 1.04rem;
+      line-height: 1.7;
+      text-wrap: pretty;
+    }
+
+    .argument p + p { margin-top: 1.25rem; }
+
+    .voice-note {
+      position: relative;
+      margin: 0.5rem 0 3rem;
+      padding: clamp(1.4rem, 5vw, 2rem);
+      background: var(--acid);
+      color: #101108;
+    }
+
+    .voice-note::before {
+      content: "eu diria assim";
+      display: block;
+      margin-bottom: 1.25rem;
+      font-family: var(--mono);
+      font-size: 0.61rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .voice-note p {
+      margin: 0;
+      font-size: clamp(1.7rem, 6vw, 2.5rem);
+      font-weight: 700;
+      line-height: 1.02;
+      letter-spacing: -0.035em;
+      text-wrap: balance;
+    }
+
+    .correction {
+      color: var(--muted);
+      text-decoration-color: var(--acid);
+      text-decoration-line: line-through;
+      text-decoration-thickness: 0.12em;
+    }
+
+    .aside-word {
+      color: var(--acid);
+      font-family: var(--mono);
+      font-size: 0.68em;
+      vertical-align: 0.16em;
+    }
+
+    details {
+      margin: 0 0 3rem;
+      border-block: 1px solid var(--rule-strong);
+    }
+
+    summary {
+      min-height: 4rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      color: var(--ink);
+      cursor: pointer;
+      list-style: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    summary::-webkit-details-marker { display: none; }
+
+    summary::after {
+      content: "+";
+      color: var(--acid);
+      font-family: var(--mono);
+      font-size: 1.25rem;
+      font-weight: 400;
+    }
+
+    details[open] summary::after { content: "−"; }
+
+    .counterpoint {
+      padding: 0 0 1.5rem;
+      color: var(--body);
+      font-size: 0.95rem;
+      line-height: 1.65;
+    }
+
+    .closing {
+      padding: 3rem 0;
+      border-block: 1px solid var(--rule-strong);
+    }
+
+    .closing p {
+      margin: 0;
+      color: var(--ink);
+      font-size: clamp(1.7rem, 6vw, 2.6rem);
+      font-weight: 700;
+      line-height: 1.04;
+      letter-spacing: -0.035em;
+      text-wrap: balance;
+    }
+
+    .closing p span { color: var(--acid); }
+
+    .reader-position {
+      padding-top: 3rem;
+    }
+
+    .reader-position h2 {
+      margin-bottom: 0.5rem;
+      font-size: 1.3rem;
+    }
+
+    .reader-position > p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+
+    .position-buttons {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.4rem;
+      margin-top: 1.25rem;
+    }
+
+    .position-buttons button {
+      min-width: 0;
+      min-height: 2.75rem;
+      border: 1px solid var(--rule-strong);
+      border-radius: 0;
+      background: transparent;
+      color: var(--body);
+      cursor: pointer;
+      font-size: 0.72rem;
+      transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+    }
+
+    .position-buttons button:hover,
+    .position-buttons button:focus-visible {
+      border-color: var(--acid);
+      color: var(--ink);
+      outline: none;
+    }
+
+    .position-buttons button[aria-pressed="true"] {
+      border-color: var(--acid);
+      background: var(--acid);
+      color: #101108;
+      font-weight: 700;
+    }
+
+    .response {
+      min-height: 1.3rem;
+      margin-top: 0.8rem;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.62rem;
+    }
+
+    .endmark {
+      margin-top: 4rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.62rem;
+    }
+
+    .endmark::before {
+      content: "";
+      width: 2rem;
+      height: 0.55rem;
+      background: var(--acid);
+    }
+
+    .endmark span:first-of-type { flex: 1; }
+
+    @media (max-width: 32rem) {
+      h1 { font-size: clamp(3.35rem, 18vw, 5rem); }
+
+      .byline {
+        grid-template-columns: 2.5rem minmax(0, 1fr);
+      }
+
+      .read-time {
+        grid-column: 2;
+        text-align: left;
+      }
+
+      .argument {
+        grid-template-columns: 1.8rem minmax(0, 1fr);
+        column-gap: 0.6rem;
+      }
+
+      .position-buttons {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress-track" aria-hidden="true"><span class="progress-value"></span></div>
+
+  <main class="shell">
+    <nav class="topbar" aria-label="Navegação do post">
+      <a class="back" href="#">← voltar</a>
+      <span class="post-kind">opinion</span>
+    </nav>
+
+    <header class="opening">
+      <h1>Você não precisa <em>ter opinião</em> sobre tudo.</h1>
+      <p class="dek">A urgência de se posicionar sobre cada assunto não produz gente mais consciente. Produz certezas frágeis em velocidade industrial.</p>
+
+      <div class="byline">
+        <img class="avatar" src="../public/images/profile.jpg" alt="Retrato de Domenyk">
+        <div class="author">
+          <strong>Domenyk</strong>
+          <span>uma posição pessoal, sujeita a revisão</span>
+        </div>
+        <span class="read-time">6 min · 12 jul 2026</span>
+      </div>
+    </header>
+
+    <section class="stance" aria-label="Grau de convicção do autor">
+      <div class="stance-head">
+        <strong>posição do autor</strong>
+        <span>convicção 76%</span>
+      </div>
+      <div class="stance-line" aria-hidden="true">
+        <span>suspeita</span>
+        <span>posição</span>
+        <span>certeza</span>
+      </div>
+    </section>
+
+    <article class="article">
+      <p class="lead">Existe uma pressão silenciosa para que toda pessoa pareça pronta. Pronta para explicar, julgar, condenar e oferecer uma solução antes que o assunto tenha terminado de acontecer.</p>
+
+      <section class="argument">
+        <span class="argument-number">I</span>
+        <div class="argument-copy">
+          <h2>A opinião virou comprovante de presença.</h2>
+          <p>Não basta acompanhar uma notícia. É preciso demonstrar publicamente que você a viu e, de preferência, escolher um lado antes do fim do dia. O silêncio passou a ser interpretado como ignorância, covardia ou cumplicidade.</p>
+          <p>Esse mecanismo recompensa a velocidade, não a compreensão. Quem formula a frase mais definitiva primeiro ocupa o espaço. Quem ainda está lendo parece atrasado.</p>
+        </div>
+      </section>
+
+      <aside class="voice-note">
+        <p>“Ainda não sei” é uma resposta adulta, não uma falha de caráter.</p>
+      </aside>
+
+      <section class="argument">
+        <span class="argument-number">II</span>
+        <div class="argument-copy">
+          <h2>Certeza também é uma performance.</h2>
+          <p>Grande parte do debate público não acontece para convencer alguém. Acontece para provar pertencimento. A frase serve menos como argumento e mais como senha: confirma que o autor sabe qual emoção o grupo espera dele.</p>
+          <p>Nesse ambiente, mudar de ideia custa caro. A pessoa não revisa apenas uma conclusão; ela arrisca a própria posição dentro do grupo que a aplaudiu. Por isso tanta gente prefere defender uma explicação ruim a admitir que falou cedo demais.</p>
+        </div>
+      </section>
+
+      <details>
+        <summary>A objeção mais forte a este texto</summary>
+        <div class="counterpoint">Se todo mundo esperar domínio completo antes de falar, especialistas e autoridades monopolizam o debate. A participação pública exige algum direito ao erro. Concordo. O problema não é falar sem saber tudo; é esconder a incerteza e apresentar intuição como sentença.</div>
+      </details>
+
+      <section class="argument">
+        <span class="argument-number">III</span>
+        <div class="argument-copy">
+          <h2>Não proponho silêncio. Proponho precisão.</h2>
+          <p>Há uma diferença entre dizer <span class="correction">“isso é óbvio”</span> e dizer “com o que sei agora, minha impressão é esta”. A segunda forma não enfraquece o argumento. Ela informa ao leitor qual peso deve atribuir à conclusão.</p>
+          <p>Opinião honesta deveria carregar sua margem de erro. <span class="aside-word">[inclusive esta]</span> Isso permite que convicções existam sem fingir que nasceram definitivas.</p>
+        </div>
+      </section>
+
+      <section class="closing">
+        <p>Você pode escolher uma posição e ainda deixar uma porta aberta para a realidade <span>entrar.</span></p>
+      </section>
+    </article>
+
+    <section class="reader-position" aria-labelledby="reader-position-title">
+      <h2 id="reader-position-title">E você, onde ficou?</h2>
+      <p>A resposta não vira placar. Ela só encerra a leitura com uma posição consciente.</p>
+      <div class="position-buttons" role="group" aria-label="Sua posição sobre o texto">
+        <button type="button" aria-pressed="false" data-response="discordo">Discordo</button>
+        <button type="button" aria-pressed="false" data-response="duvida">Ainda em dúvida</button>
+        <button type="button" aria-pressed="false" data-response="concordo">Concordo</button>
+      </div>
+      <p class="response" aria-live="polite"></p>
+    </section>
+
+    <footer class="endmark">
+      <span>fim da posição</span>
+      <span>domenyk.com</span>
+    </footer>
+  </main>
+
+  <script>
+    const root = document.documentElement;
+    const response = document.querySelector(".response");
+    const buttons = Array.from(document.querySelectorAll("[data-response]"));
+    const responseCopy = {
+      discordo: "posição registrada: discordância",
+      duvida: "posição registrada: dúvida preservada",
+      concordo: "posição registrada: concordância"
+    };
+
+    function updateProgress() {
+      const max = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
+      root.style.setProperty("--progress", `${Math.min(100, (window.scrollY / max) * 100)}%`);
+    }
+
+    buttons.forEach((button) => {
+      button.addEventListener("click", () => {
+        buttons.forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === button)));
+        response.textContent = responseCopy[button.dataset.response];
+      });
+    });
+
+    updateProgress();
+    window.addEventListener("scroll", updateProgress, { passive: true });
+    window.addEventListener("resize", updateProgress);
+  </script>
+</body>
+</html>

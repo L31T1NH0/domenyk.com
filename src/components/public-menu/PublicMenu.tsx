@@ -242,7 +242,7 @@ export function PublicMenu() {
 
               <div className={isLoaded && isSignedIn ? "border-t border-zinc-200 pt-1.5 dark:border-white/10" : "pt-1"}>
                 {isPostPage && (
-                  <>
+                  <div>
                     <Link href="/" role="menuitem" onClick={() => closeMenu()} className={ITEM_CLASS_NAME}>
                       <HomeIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
                       Início
@@ -251,19 +251,23 @@ export function PublicMenu() {
                       <PencilSquareIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
                       Notas
                     </Link>
-                  </>
+                  </div>
                 )}
-                <button type="button" role="menuitem" onClick={toggleTheme} className={ITEM_CLASS_NAME}>
-                  {darkMode
-                    ? <SunIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
-                    : <MoonIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />}
-                  <span className="flex-1">Tema</span>
-                  <span className="text-[11px] text-zinc-500 dark:text-zinc-400">{darkMode ? "Escuro" : "Claro"}</span>
-                </button>
-                <Link href="/sobre" role="menuitem" onClick={() => closeMenu()} className={ITEM_CLASS_NAME}>
-                  <InformationCircleIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
-                  Sobre
-                </Link>
+                <div className={isPostPage ? "mt-1 border-t border-zinc-200 pt-1.5 dark:border-white/10" : ""}>
+                  <button type="button" role="menuitem" onClick={toggleTheme} className={ITEM_CLASS_NAME}>
+                    {darkMode
+                      ? <SunIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
+                      : <MoonIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />}
+                    <span className="flex-1">Tema</span>
+                    <span className="text-[11px] text-zinc-500 dark:text-zinc-400">{darkMode ? "Escuro" : "Claro"}</span>
+                  </button>
+                </div>
+                <div className="mt-1 border-t border-zinc-200 pt-1.5 dark:border-white/10">
+                  <Link href="/sobre" role="menuitem" onClick={() => closeMenu()} className={ITEM_CLASS_NAME}>
+                    <InformationCircleIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
+                    Sobre
+                  </Link>
+                </div>
               </div>
 
               {options.length > 1 && (
