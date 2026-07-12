@@ -5,6 +5,7 @@
     opacity: 0;
     transform: translateY(-4px) scale(0.98);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -20,6 +21,7 @@
     animation: none;
   }
 }
+
 @custom-variant dark (&:where(.dark-mode, .dark-mode *));
 
 :root {
@@ -73,24 +75,36 @@ body.dark-mode {
   transition: background-color 0.1s, color 0.1s;
 }
 
-::-webkit-scrollbar { width: 12px; }
-::-webkit-scrollbar-track { background: #f1f1f1; }
+::-webkit-scrollbar {
+  width: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
 ::-webkit-scrollbar-thumb {
   background-color: #888;
   border-radius: 10px;
   border: 3px solid #f1f1f1;
 }
-::-webkit-scrollbar-thumb:hover { background: #555; }
 
-a { text-decoration: none; }
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+a {
+  text-decoration: none;
+}
 
 img {
-  @apply rounded-md;
   filter: grayscale(100%);
   transition: filter 300ms ease;
 }
 
-img:hover { filter: grayscale(0); }
+img:hover {
+  filter: grayscale(0);
+}
 
 .banner {
   @apply rounded-xl grayscale-0 w-full h-auto object-scale-down;
@@ -176,7 +190,7 @@ html.light-mode [data-public-shell] .post-content h5 {
   @apply rounded-full bg-zinc-800/60;
 }
 
-.post-content [data-role="author-reference"] > img {
+.post-content [data-role="author-reference"]>img {
   @apply rounded-full object-cover cursor-default;
   width: 1em;
   height: 1em;
@@ -220,13 +234,13 @@ html.light-mode [data-public-shell] .post-content h5 {
   letter-spacing: 0;
 }
 
-.post-content-editorial > p:first-of-type {
+.post-content-editorial>p:first-of-type {
   color: #f6f0e7;
   font-size: 1.12em;
   line-height: 1.7;
 }
 
-.post-content-editorial > p:first-of-type::first-letter {
+.post-content-editorial>p:first-of-type::first-letter {
   float: left;
   margin: 0.08em 0.12em 0 0;
   color: #c9bda9;
@@ -273,7 +287,7 @@ html.light-mode [data-public-shell] .post-content h5 {
   line-height: 1.7;
 }
 
-.post-content-opinion > p:first-of-type {
+.post-content-opinion>p:first-of-type {
   border-left: 1px solid rgb(224 0 112 / 80%);
   padding: 0.2rem 0 0.2rem 1rem;
   color: #f7dce9;
@@ -327,7 +341,7 @@ html.light-mode [data-public-shell] .post-style-editorial {
   --link-color: #7a684d;
 }
 
-html.light-mode [data-public-shell] .post-content-editorial > p:first-of-type,
+html.light-mode [data-public-shell] .post-content-editorial>p:first-of-type,
 html.light-mode [data-public-shell] .post-content-editorial h2,
 html.light-mode [data-public-shell] .post-content-editorial h3,
 html.light-mode [data-public-shell] .post-content-editorial blockquote {
@@ -342,7 +356,7 @@ html.light-mode [data-public-shell] .post-style-opinion {
   --link-color: #b00058;
 }
 
-html.light-mode [data-public-shell] .post-content-opinion > p:first-of-type,
+html.light-mode [data-public-shell] .post-content-opinion>p:first-of-type,
 html.light-mode [data-public-shell] .post-content-opinion h2,
 html.light-mode [data-public-shell] .post-content-opinion h3,
 html.light-mode [data-public-shell] .post-content-opinion blockquote,
@@ -370,7 +384,7 @@ html.light-mode [data-public-shell] .post-content-opinion strong {
   border-radius: 0.375rem;
 }
 
-.note-content-timeline [data-timeline-crop-frame] > img[data-timeline-cropped="true"] {
+.note-content-timeline [data-timeline-crop-frame]>img[data-timeline-cropped="true"] {
   position: relative;
   top: calc(50% + 37.5px);
   transform: translateY(-50%);
@@ -558,5 +572,7 @@ html.light-mode [data-public-shell] .note-content a:hover {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [data-scroll-progress-bar] { transition: none; }
+  [data-scroll-progress-bar] {
+    transition: none;
+  }
 }
