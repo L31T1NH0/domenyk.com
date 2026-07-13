@@ -6,7 +6,7 @@ import { headers } from "next/headers"
 import { getPostByPublicId, getPostBySlug, getRelatedPosts, type Post, type PostStyle } from "@/lib/db/posts"
 import { isAdmin } from "@/lib/auth"
 import { renderMarkdown } from "@/lib/mdx"
-import { absoluteUrl, buildPageMetadata, descriptionFromMarkdown, jsonLd, preferredContentImages, siteConfig } from "@/lib/seo"
+import { absoluteUrl, authorJsonLd, buildPageMetadata, descriptionFromMarkdown, jsonLd, preferredContentImages, siteConfig } from "@/lib/seo"
 import { getCachedClerkUserImage } from "@/lib/clerk-users"
 import {
   POST_LOCALE_DETAILS,
@@ -158,7 +158,10 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
   const details = POST_LOCALE_DETAILS[locale]
   const copy = pageCopy[locale]
   const postId = version._id.toString()
-  const html = await renderMarkdown(version.content, { coAuthorImageUrl })
+  const html = await renderMarkdown(version.content, {
+    coAuthorImageUrl,
+    defaultImageAlt: `Imagem relacionada a “${version.title}”`,
+  })
   const dateLabel = version.publishedAt
     ? new Intl.DateTimeFormat(details.htmlLang, { dateStyle: "long" }).format(version.publishedAt)
     : undefined
@@ -210,7 +213,7 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
                 image: postStructuredImages,
                 datePublished: version.publishedAt?.toISOString(),
                 dateModified: version.updatedAt.toISOString(),
-                author: { "@id": `${siteConfig.url}/#person` },
+                author: authorJsonLd(),
                 publisher: { "@id": `${siteConfig.url}/#person` },
                 inLanguage: details.htmlLang,
                 keywords: version.tags,

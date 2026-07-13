@@ -461,7 +461,7 @@ export function PostsTable({ posts: initial }: Props) {
                   <td className="max-w-[28rem] px-4 py-3">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="truncate font-medium text-neutral-950 dark:text-neutral-100">{post.title}</p>
+                        <Link href={`/admin/posts/${post._id}`} className="truncate font-medium text-neutral-950 hover:underline dark:text-neutral-100">{post.title}</Link>
                         <PostFlags post={post} />
                       </div>
                       <p className="mt-0.5 truncate text-xs text-neutral-500">{post.slug}</p>

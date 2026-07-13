@@ -63,6 +63,13 @@ export type PostSummary = Omit<Post, "content" | "translations"> & {
   translations?: Partial<Record<TranslationLocale, PostTranslationSummary>>
 }
 
+export type SitemapPost = Pick<
+  Post,
+  "slug" | "content" | "cover" | "published" | "pinned" | "updatedAt"
+> & {
+  translations?: Partial<Record<TranslationLocale, Pick<PostTranslation, "content" | "published" | "updatedAt">>>
+}
+
 export type SerializedPostTranslationSummary = Omit<
   PostTranslationSummary,
   "publishedAt" | "sourceUpdatedAt" | "createdAt" | "updatedAt"
@@ -365,14 +372,25 @@ export async function getPostsWithPublishedVersions({
 }: {
   page?: number
   limit?: number
-} = {}): Promise<PostSummary[]> {
+} = {}): Promise<SitemapPost[]> {
   const posts = await (await collection())
     .find(publishedVersionFilter, {
       projection: {
-        content: 0,
-        "translations.en.content": 0,
-        "translations.de.content": 0,
-        "translations.id.content": 0,
+        slug: 1,
+        content: 1,
+        cover: 1,
+        published: 1,
+        pinned: 1,
+        updatedAt: 1,
+        "translations.en.content": 1,
+        "translations.en.published": 1,
+        "translations.en.updatedAt": 1,
+        "translations.de.content": 1,
+        "translations.de.published": 1,
+        "translations.de.updatedAt": 1,
+        "translations.id.content": 1,
+        "translations.id.published": 1,
+        "translations.id.updatedAt": 1,
       },
     })
     .sort({ _id: -1 })
@@ -380,7 +398,7 @@ export async function getPostsWithPublishedVersions({
     .limit(limit)
     .toArray()
 
-  return ensurePostPublicIds(posts as PostSummary[])
+  return posts as SitemapPost[]
 }
 
 export async function countPostsWithPublishedVersions(): Promise<number> {
@@ -424,6 +442,22 @@ export async function getPostsByTag(tag: string, limit = 50): Promise<PostSummar
     .limit(Math.max(1, Math.min(limit, 100)))
     .toArray()
   return ensurePostPublicIds(posts as PostSummary[])
+}
+
+export async function getPublishedPostsByIds(ids: ObjectId[]): Promise<PostSummary[]> {
+  if (ids.length === 0) return []
+  const posts = await (await collection())
+    .find(
+      { _id: { $in: ids }, published: true, deleting: { $ne: true } },
+      { projection: { content: 0, "translations.en.content": 0, "translations.de.content": 0, "translations.id.content": 0 } }
+    )
+    .toArray()
+  const byId = new Map(posts.map((post) => [post._id.toString(), post as PostSummary]))
+  const ordered = ids.flatMap((id) => {
+    const post = byId.get(id.toString())
+    return post ? [post] : []
+  })
+  return ensurePostPublicIds(ordered)
 }
 
 export async function getRelatedPosts(post: Pick<Post, "_id" | "tags">, limit = 3): Promise<PostSummary[]> {

@@ -25,6 +25,7 @@ export type MarkdownImagePolicy =
 export type MarkdownRenderOptions = {
   authorImageUrl?: string
   coAuthorImageUrl?: string | null
+  defaultImageAlt?: string
   imagePolicy?: MarkdownImagePolicy
 }
 
@@ -321,6 +322,24 @@ function rehypeDemoteBodyH1() {
   }
 }
 
+function rehypeImageAltFallback(defaultImageAlt?: string) {
+  return (tree: Root) => {
+    if (!defaultImageAlt?.trim()) return
+    let imageIndex = 0
+    visit(tree, "element", (node: Element, _index, parent) => {
+      if (
+        node.tagName !== "img" ||
+        (parent?.type === "element" && parent.properties?.dataRole === "author-reference")
+      ) return
+      imageIndex += 1
+      const alt = node.properties?.alt
+      if (typeof alt === "string" && alt.trim()) return
+      node.properties = node.properties ?? {}
+      node.properties.alt = imageIndex === 1 ? defaultImageAlt.trim() : `${defaultImageAlt.trim()} (${imageIndex})`
+    })
+  }
+}
+
 function rehypePrefixFragmentLinks() {
   return (tree: Root) => {
     visit(tree, "element", (node: Element) => {
@@ -343,6 +362,7 @@ function createProcessor(
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeRaw)
     .use(rehypeRestrictImages, options.imagePolicy)
+    .use(rehypeImageAltFallback, options.defaultImageAlt)
     .use(rehypeParagraphIds, onParagraphId)
     .use(rehypeDemoteBodyH1)
     .use(rehypeSlug)
@@ -377,6 +397,7 @@ export function hasParagraphId(
   const optionsKey = JSON.stringify({
     authorImageUrl: options.authorImageUrl ?? null,
     coAuthorImageUrl: options.coAuthorImageUrl ?? null,
+    defaultImageAlt: options.defaultImageAlt ?? null,
     imagePolicy: options.imagePolicy ?? null,
   })
   const cacheKey = createHash("sha256")

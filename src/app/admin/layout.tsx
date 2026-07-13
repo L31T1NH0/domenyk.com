@@ -22,7 +22,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <div className="admin-brand">
             <Link href="/admin" className="min-w-0">
               <span className="admin-brand-mark">D</span>
-              <span><strong>domenyk</strong><small>Administração</small></span>
+              <span><strong>Domenyk Admin</strong><small>Painel editorial</small></span>
             </Link>
             <ClerkButton />
           </div>

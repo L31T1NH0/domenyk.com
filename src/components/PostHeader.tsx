@@ -25,7 +25,7 @@ function Avatar({
   const isProfileImage = src === "/images/profile.jpg"
 
   return (
-    <Link href="/">
+    <Link href={isProfileImage ? "/sobre" : "/"} rel={isProfileImage ? "author" : undefined}>
       <Image
         priority={src === "/images/profile.jpg"}
         src={src}

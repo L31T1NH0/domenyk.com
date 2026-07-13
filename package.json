@@ -10,6 +10,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "seo:audit": "node --env-file-if-exists=.env.local scripts/audit-seo.mjs",
+    "seo:audit:rendered": "node scripts/audit-rendered-seo.mjs http://localhost:3000",
     "test": "node --conditions=react-server --test tests/*.test.mjs"
   },
   "dependencies": {

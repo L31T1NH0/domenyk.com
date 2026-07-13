@@ -12,8 +12,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params
   if (!toObjectId(id)) return NextResponse.json({ error: "ID inválido" }, { status: 400 })
 
-  const body = await req.json().catch(() => null) as { title?: unknown; content?: unknown; images?: unknown } | null
-  const title = asString(body?.title, 120)?.trim() || undefined
+  const body = await req.json().catch(() => null) as { title?: unknown; seoTitle?: unknown; seoDescription?: unknown; content?: unknown; images?: unknown } | null
+  const title = body && "title" in body ? asString(body.title, 120)?.trim() || null : undefined
+  const seoTitle = body && "seoTitle" in body ? asString(body.seoTitle, 120)?.trim() || null : undefined
+  const seoDescription = body && "seoDescription" in body ? asString(body.seoDescription, 300)?.trim() || null : undefined
   const content = asString(body?.content, 20_000) ?? ""
   const normalizedContent = normalizeNoteContent(content)
 
@@ -22,7 +24,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   const images = body && "images" in body ? asTrustedImageUrlArray(body.images, 6) : undefined
-  const note = await updateNote(id, { title, content: normalizedContent, images })
+  const note = await updateNote(id, { title, seoTitle, seoDescription, content: normalizedContent, images })
 
   if (!note) return NextResponse.json({ error: "Nota não encontrada" }, { status: 404 })
 

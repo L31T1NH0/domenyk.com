@@ -10,6 +10,20 @@ export const siteConfig = {
   image: "/opengraph-image",
 }
 
+export const authorTopics = [
+  "política",
+  "economia",
+  "liberalismo",
+  "filosofia",
+  "instituições",
+  "tecnologia",
+  "debate público",
+]
+
+export const authorProfiles = [
+  "https://www.instagram.com/dome.nyk_/",
+]
+
 function getSiteUrl() {
   const rawUrl =
     process.env.NEXT_PUBLIC_SITE_URL ??
@@ -78,6 +92,23 @@ export function preferredContentImages({
   images?.forEach((image) => urls.add(image))
   if (markdown) imageUrlsFromMarkdown(markdown).forEach((image) => urls.add(image))
   return [...urls]
+}
+
+export function authorJsonLd() {
+  return {
+    "@type": "Person",
+    "@id": `${siteConfig.url}/#person`,
+    name: siteConfig.author,
+    url: absoluteUrl("/sobre"),
+    image: absoluteUrl("/images/profile.jpg"),
+    description: "Autor de um blog independente sobre política, economia, liberalismo, filosofia, instituições e tecnologia.",
+    knowsAbout: authorTopics,
+    sameAs: authorProfiles,
+  }
+}
+
+export function isNoteIndexable(note: { seoTitle?: string; seoDescription?: string }): boolean {
+  return Boolean(note.seoTitle?.trim() && note.seoDescription?.trim())
 }
 
 export function buildPageMetadata({

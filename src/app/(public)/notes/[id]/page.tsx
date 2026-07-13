@@ -6,7 +6,7 @@ import { notFound } from "next/navigation"
 import { Header } from "@/components/Header"
 import { BackHome } from "@/components/BackHome"
 import { getNote, serializeNote } from "@/lib/db/notes"
-import { absoluteUrl, buildPageMetadata, descriptionFromMarkdown, jsonLd, noteDisplayTitle, preferredContentImages, siteConfig } from "@/lib/seo"
+import { absoluteUrl, authorJsonLd, buildPageMetadata, descriptionFromMarkdown, isNoteIndexable, jsonLd, noteDisplayTitle, preferredContentImages, siteConfig } from "@/lib/seo"
 import { headers } from "next/headers"
 
 type Props = { params: Promise<{ id: string }> }
@@ -18,14 +18,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const note = await getCachedNote(id)
   if (!note) return {}
 
-  const title = noteDisplayTitle(note)
-  const description = descriptionFromMarkdown(note.content) || siteConfig.description
+  const indexable = isNoteIndexable(note)
+  const title = note.seoTitle?.trim() || noteDisplayTitle(note)
+  const description = note.seoDescription?.trim() || descriptionFromMarkdown(note.content) || siteConfig.description
   const [image] = preferredContentImages({
     images: note.images,
     markdown: note.content,
   })
 
-  return buildPageMetadata({
+  const metadata = buildPageMetadata({
     title,
     description,
     path: `/notes/${note._id.toString()}`,
@@ -33,7 +34,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     type: "article",
     publishedTime: note.publishedAt.toISOString(),
     modifiedTime: (note.updatedAt ?? note.createdAt).toISOString(),
+    noIndex: !indexable,
   })
+
+  return indexable ? metadata : { ...metadata, robots: { index: false, follow: true } }
 }
 
 export default async function NotePage({ params }: Props) {
@@ -43,9 +47,9 @@ export default async function NotePage({ params }: Props) {
   if (!note) notFound()
 
   const serializedNote = serializeNote(note)
-  const title = noteDisplayTitle(note)
+  const title = note.seoTitle?.trim() || noteDisplayTitle(note)
   const noteUrl = absoluteUrl(`/notes/${serializedNote._id}`)
-  const description = descriptionFromMarkdown(serializedNote.content) || siteConfig.description
+  const description = note.seoDescription?.trim() || descriptionFromMarkdown(serializedNote.content) || siteConfig.description
   const noteImages = preferredContentImages({
     images: serializedNote.images,
     markdown: serializedNote.content,
@@ -71,7 +75,7 @@ export default async function NotePage({ params }: Props) {
                 image: structuredImages,
                 datePublished: serializedNote.publishedAt,
                 dateModified: serializedNote.updatedAt,
-                author: { "@id": `${siteConfig.url}/#person` },
+                author: authorJsonLd(),
                 publisher: { "@id": `${siteConfig.url}/#person` },
                 inLanguage: "pt-BR",
                 isAccessibleForFree: true,

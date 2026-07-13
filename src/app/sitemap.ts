@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next"
-import { getLatestPublishedPostUpdate, getPostsWithPublishedVersions, getPublishedTagUpdates } from "@/lib/db/posts"
-import { getNotes } from "@/lib/db/notes"
+import { getLatestPublishedPostUpdate, getPostsWithPublishedVersions } from "@/lib/db/posts"
+import { getIndexableNotes } from "@/lib/db/notes"
+import { getActiveThemeUpdates } from "@/lib/db/themes"
 import { absoluteUrl, preferredContentImages } from "@/lib/seo"
 import { getSitemapDescriptors, SITEMAP_PAGE_SIZE } from "@/lib/sitemaps"
 import { POST_LOCALE_DETAILS, POST_LOCALES, postPath } from "@/lib/post-locales"
@@ -12,9 +13,9 @@ export async function generateSitemaps() {
 }
 
 async function indexSitemap(): Promise<MetadataRoute.Sitemap> {
-  const [latestPostDate, { notes }] = await Promise.all([
+  const [latestPostDate, notes] = await Promise.all([
     getLatestPublishedPostUpdate(),
-    getNotes({ limit: 1 }),
+    getIndexableNotes({ limit: 1 }),
   ])
   const latestNoteDate = notes[0] ? (notes[0].updatedAt ?? notes[0].createdAt) : undefined
   const homeLastModified = [latestPostDate, latestNoteDate]
@@ -40,13 +41,19 @@ async function indexSitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "yearly",
       priority: 0.5,
     },
+    {
+      url: absoluteUrl("/fale-comigo"),
+      lastModified: FALLBACK_DATE,
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
   ]
 }
 
 async function topicsSitemap(): Promise<MetadataRoute.Sitemap> {
-  const tags = await getPublishedTagUpdates()
-  return tags.map(({ tag, updatedAt }) => ({
-    url: absoluteUrl(`/temas/${encodeURIComponent(tag)}`),
+  const themes = await getActiveThemeUpdates()
+  return themes.map(({ slug, updatedAt }) => ({
+    url: absoluteUrl(`/temas/${encodeURIComponent(slug)}`),
     lastModified: updatedAt,
     changeFrequency: "monthly" as const,
     priority: 0.6,
@@ -72,7 +79,10 @@ async function postsSitemap(page: number): Promise<MetadataRoute.Sitemap> {
         lastModified: translation?.updatedAt ?? post.updatedAt,
         changeFrequency: "monthly" as const,
         priority: post.pinned ? 0.9 : 0.8,
-        images: preferredContentImages({ cover: post.cover?.url }).map(absoluteUrl),
+        images: preferredContentImages({
+          cover: post.cover?.url,
+          markdown: locale === "pt" ? post.content : translation?.content,
+        }).map(absoluteUrl),
         alternates: { languages },
       }
     })
@@ -80,7 +90,7 @@ async function postsSitemap(page: number): Promise<MetadataRoute.Sitemap> {
 }
 
 async function notesSitemap(page: number): Promise<MetadataRoute.Sitemap> {
-  const { notes } = await getNotes({ page: page + 1, limit: SITEMAP_PAGE_SIZE })
+  const notes = await getIndexableNotes({ page: page + 1, limit: SITEMAP_PAGE_SIZE })
   return notes.map((note) => ({
     url: absoluteUrl(`/notes/${note._id.toString()}`),
     lastModified: note.updatedAt ?? note.createdAt,

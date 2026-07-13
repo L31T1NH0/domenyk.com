@@ -1,12 +1,35 @@
 import { ObjectId } from "mongodb"
 import { getDb } from "./client"
 import { renderMarkdownSync } from "../mdx"
+import { isNoteIndexable, noteDisplayTitle } from "../seo"
 import { toObjectId } from "../validation"
 
-export type Note = { _id: ObjectId; title?: string; content: string; images?: string[]; publishedAt: Date; createdAt: Date; updatedAt?: Date; deleting?: boolean }
-export type SerializedNote = Omit<Note, "_id" | "deleting" | "publishedAt" | "createdAt" | "updatedAt"> & {
-  _id: string; publishedAt: string; createdAt: string; updatedAt: string; contentHtml: string
+export type Note = {
+  _id: ObjectId
+  title?: string
+  seoTitle?: string
+  seoDescription?: string
+  content: string
+  images?: string[]
+  publishedAt: Date
+  createdAt: Date
+  updatedAt?: Date
+  deleting?: boolean
 }
+export type SerializedNote = Omit<Note, "_id" | "deleting" | "publishedAt" | "createdAt" | "updatedAt"> & {
+  _id: string
+  publishedAt: string
+  createdAt: string
+  updatedAt: string
+  contentHtml: string
+  indexable: boolean
+}
+
+const indexableNoteFilter = {
+  deleting: { $ne: true },
+  seoTitle: { $type: "string", $regex: /\S/ },
+  seoDescription: { $type: "string", $regex: /\S/ },
+} as const
 
 function protectImages(content: string): { protected: string; images: string[] } {
   const images: string[] = []
@@ -60,12 +83,18 @@ export function serializeNote(note: Note): SerializedNote {
   const content = normalizeNoteContent(note.content)
   return {
     _id: note._id.toString(),
+    title: note.title,
+    seoTitle: note.seoTitle,
+    seoDescription: note.seoDescription,
     content,
     images: note.images,
     publishedAt: note.publishedAt.toISOString(),
     createdAt: note.createdAt.toISOString(),
     updatedAt: (note.updatedAt ?? note.createdAt).toISOString(),
-    contentHtml: renderMarkdownSync(content),
+    contentHtml: renderMarkdownSync(content, {
+      defaultImageAlt: `Imagem relacionada a “${noteDisplayTitle({ title: note.title, content })}”`,
+    }),
+    indexable: isNoteIndexable(note),
   }
 }
 
@@ -107,34 +136,58 @@ export async function countNotes(search?: string): Promise<number> {
   return (await collection()).countDocuments(filter)
 }
 
+export async function getIndexableNotes(opts: { page?: number; limit?: number } = {}): Promise<Note[]> {
+  const page = Math.max(1, opts.page ?? 1)
+  const limit = Math.max(1, opts.limit ?? 20)
+  return (await collection())
+    .find(indexableNoteFilter)
+    .sort({ _id: -1 })
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .toArray()
+}
+
+export async function countIndexableNotes(): Promise<number> {
+  return (await collection()).countDocuments(indexableNoteFilter)
+}
+
 export async function getNote(id: string): Promise<Note | null> {
   const objectId = toObjectId(id)
   if (!objectId) return null
   return (await collection()).findOne({ _id: objectId, deleting: { $ne: true } })
 }
 
-export async function createNote(data: { title?: string; content: string; images?: string[] }): Promise<Note> {
+export async function createNote(data: { title?: string; seoTitle?: string; seoDescription?: string; content: string; images?: string[] }): Promise<Note> {
   const col = await collection()
   const now = new Date()
   const note: Omit<Note, "_id"> = {
     ...(data.title ? { title: data.title } : {}),
+    ...(data.seoTitle ? { seoTitle: data.seoTitle } : {}),
+    ...(data.seoDescription ? { seoDescription: data.seoDescription } : {}),
     content: normalizeNoteContent(data.content), images: data.images, publishedAt: now, createdAt: now, updatedAt: now,
   }
   const result = await col.insertOne(note as Note)
   return { ...note, _id: result.insertedId }
 }
 
-export async function updateNote(id: string, data: { title?: string; content: string; images?: string[] }): Promise<Note | null> {
+export async function updateNote(id: string, data: { title?: string | null; seoTitle?: string | null; seoDescription?: string | null; content: string; images?: string[] }): Promise<Note | null> {
   const objectId = toObjectId(id)
   if (!objectId) return null
 
   const update: Partial<Note> = { content: normalizeNoteContent(data.content), updatedAt: new Date() }
   if (data.title) update.title = data.title
+  if (data.seoTitle) update.seoTitle = data.seoTitle
+  if (data.seoDescription) update.seoDescription = data.seoDescription
   if (data.images !== undefined) update.images = data.images
+
+  const $unset: Record<string, ""> = {}
+  if (data.title === null) $unset.title = ""
+  if (data.seoTitle === null) $unset.seoTitle = ""
+  if (data.seoDescription === null) $unset.seoDescription = ""
 
   return (await collection()).findOneAndUpdate(
     { _id: objectId },
-    data.title ? { $set: update } : { $set: update, $unset: { title: "" } },
+    Object.keys($unset).length > 0 ? { $set: update, $unset } : { $set: update },
     { returnDocument: "after" }
   )
 }

@@ -1,12 +1,14 @@
 "use client"
 
-import { FormEvent, useEffect, useState } from "react"
+import { FormEvent, KeyboardEvent, useEffect, useId, useRef, useState } from "react"
 import { useClerk, useUser } from "@clerk/nextjs"
 import {
   ArchiveBoxIcon,
+  CheckIcon,
   ChevronDownIcon,
   PaperAirplaneIcon,
 } from "@heroicons/react/24/outline"
+import { MESSAGE_CATEGORIES, messageCategoryLabel } from "@/lib/message-categories"
 
 type Entry = { _id: string; authorName: string; body: string; createdAt: string; readAt?: string; isOwn: boolean }
 type Thread = { _id: string; subject: string; category: string; status: string; archivedAt?: string; entries?: Entry[]; updatedAt: string; lastMessage?: { body: string; createdAt: string } | null }
@@ -19,13 +21,6 @@ const STATUS_LABELS: Record<string, string> = {
   closed: "Encerrado",
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  idea: "Ideia",
-  correction: "Correção",
-  improvement: "Melhoria",
-  other: "Outro",
-}
-
 const FIELD_CLASS_NAME = "block min-h-11 w-full rounded-lg border border-zinc-300 bg-white/40 px-3.5 py-2.5 text-[15px] text-zinc-950 outline-none transition-[border-color,background-color,box-shadow] placeholder:text-zinc-500 hover:border-zinc-400 focus-visible:border-zinc-500 focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-zinc-500/25 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-white/[0.03] dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:hover:border-zinc-600 dark:focus-visible:border-zinc-500 dark:focus-visible:bg-white/[0.05] dark:focus-visible:ring-zinc-400/25"
 const SECONDARY_BUTTON_CLASS_NAME = "inline-flex min-h-11 items-center justify-center rounded-lg border border-zinc-300 px-4 text-sm font-medium text-zinc-800 outline-none transition-colors hover:border-zinc-400 hover:bg-zinc-100 focus-visible:ring-2 focus-visible:ring-zinc-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f4f4f4] active:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-200 dark:hover:border-zinc-600 dark:hover:bg-white/[0.07] dark:focus-visible:ring-zinc-300 dark:focus-visible:ring-offset-[#040404] dark:active:bg-white/10"
 
@@ -36,10 +31,15 @@ function formatDate(value: string) {
 export function Correspondence() {
   const { isLoaded, isSignedIn } = useUser()
   const clerk = useClerk()
+  const categoryListboxId = useId()
+  const categoryRootRef = useRef<HTMLDivElement>(null)
+  const categoryTriggerRef = useRef<HTMLButtonElement>(null)
+  const categoryOptionRefs = useRef<Array<HTMLButtonElement | null>>([])
   const [threads, setThreads] = useState<Thread[] | null>(null)
   const [subject, setSubject] = useState("")
   const [body, setBody] = useState("")
   const [category, setCategory] = useState("idea")
+  const [categoryOpen, setCategoryOpen] = useState(false)
   const [reply, setReply] = useState<Record<string, string>>({})
   const [pendingAction, setPendingAction] = useState<string | null>(null)
   const [error, setError] = useState("")
@@ -83,6 +83,28 @@ export function Correspondence() {
       })
     return () => { cancelled = true }
   }, [isSignedIn, archived])
+
+  useEffect(() => {
+    if (!categoryOpen) return
+
+    function handlePointerDown(event: PointerEvent) {
+      if (!categoryRootRef.current?.contains(event.target as Node)) setCategoryOpen(false)
+    }
+
+    function handleEscape(event: globalThis.KeyboardEvent) {
+      if (event.key !== "Escape") return
+      event.preventDefault()
+      setCategoryOpen(false)
+      categoryTriggerRef.current?.focus()
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown)
+    document.addEventListener("keydown", handleEscape)
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown)
+      document.removeEventListener("keydown", handleEscape)
+    }
+  }, [categoryOpen])
 
   async function send(event: FormEvent) {
     event.preventDefault()
@@ -150,7 +172,40 @@ export function Correspondence() {
     setError("")
   }
 
+  function focusCategoryOption(index: number) {
+    requestAnimationFrame(() => categoryOptionRefs.current[index]?.focus())
+  }
+
+  function handleCategoryTriggerKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return
+    event.preventDefault()
+    setCategoryOpen(true)
+    const selectedIndex = MESSAGE_CATEGORIES.findIndex((option) => option.value === category)
+    focusCategoryOption(event.key === "ArrowDown" ? selectedIndex : Math.max(0, selectedIndex - 1))
+  }
+
+  function handleCategoryListKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return
+    event.preventDefault()
+    const currentIndex = categoryOptionRefs.current.indexOf(document.activeElement as HTMLButtonElement)
+    const nextIndex = event.key === "Home"
+      ? 0
+      : event.key === "End"
+        ? MESSAGE_CATEGORIES.length - 1
+        : event.key === "ArrowDown"
+          ? (currentIndex + 1 + MESSAGE_CATEGORIES.length) % MESSAGE_CATEGORIES.length
+          : (currentIndex - 1 + MESSAGE_CATEGORIES.length) % MESSAGE_CATEGORIES.length
+    categoryOptionRefs.current[nextIndex]?.focus()
+  }
+
+  function selectCategory(value: string) {
+    setCategory(value)
+    setCategoryOpen(false)
+    categoryTriggerRef.current?.focus()
+  }
+
   const isBusy = pendingAction !== null
+  const selectedCategory = MESSAGE_CATEGORIES.find((option) => option.value === category) ?? MESSAGE_CATEGORIES[0]
 
   if (!isLoaded) return (
     <div className="py-12 sm:py-16" aria-label="Carregando página">
@@ -199,19 +254,61 @@ export function Correspondence() {
         <form onSubmit={send} className="mt-6 space-y-5">
           <div>
             <label className="block text-sm font-medium" htmlFor="category">Categoria</label>
-            <div className="relative mt-2">
-              <select
+            <div
+              ref={categoryRootRef}
+              className="relative mt-2"
+              onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setCategoryOpen(false)
+              }}
+            >
+              <button
+                ref={categoryTriggerRef}
+                type="button"
                 id="category"
-                value={category}
-                onChange={(event) => setCategory(event.target.value)}
-                className={`${FIELD_CLASS_NAME} cursor-pointer appearance-none pr-11`}
+                aria-haspopup="listbox"
+                aria-expanded={categoryOpen}
+                aria-controls={categoryOpen ? categoryListboxId : undefined}
+                onClick={() => setCategoryOpen((open) => !open)}
+                onKeyDown={handleCategoryTriggerKeyDown}
+                className={`${FIELD_CLASS_NAME} flex min-h-14 cursor-pointer items-center justify-between gap-4 text-left`}
               >
-                <option value="idea">Ideia</option>
-                <option value="correction">Correção</option>
-                <option value="improvement">Melhoria</option>
-                <option value="other">Outro</option>
-              </select>
-              <ChevronDownIcon aria-hidden className="pointer-events-none absolute right-3.5 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold">{selectedCategory.label}</span>
+                  <span className="mt-0.5 block truncate text-xs font-normal text-zinc-500 dark:text-zinc-400">{selectedCategory.description}</span>
+                </span>
+                <ChevronDownIcon aria-hidden className={`size-4 shrink-0 text-zinc-500 transition-transform duration-200 motion-reduce:transition-none ${categoryOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {categoryOpen && (
+                <div
+                  id={categoryListboxId}
+                  role="listbox"
+                  aria-label="Escolha uma categoria"
+                  onKeyDown={handleCategoryListKeyDown}
+                  className="public-menu-panel absolute z-50 mt-2 max-h-[min(28rem,calc(100dvh-8rem))] w-full overflow-y-auto overscroll-contain rounded-lg border border-zinc-300 bg-[#f4f4f4] p-1.5 shadow-[0_6px_8px_rgba(0,0,0,0.12)] dark:border-zinc-700 dark:bg-[#151515] dark:shadow-[0_6px_8px_rgba(0,0,0,0.38)]"
+                >
+                  {MESSAGE_CATEGORIES.map((option, index) => {
+                    const isSelected = option.value === category
+                    return (
+                      <button
+                        key={option.value}
+                        ref={(element) => { categoryOptionRefs.current[index] = element }}
+                        type="button"
+                        role="option"
+                        aria-selected={isSelected}
+                        onClick={() => selectCategory(option.value)}
+                        className={`flex min-h-14 w-full items-center gap-3 rounded-md px-3 py-2 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zinc-500 dark:focus-visible:ring-zinc-300 ${isSelected ? "bg-zinc-200/80 text-zinc-950 dark:bg-white/10 dark:text-white" : "text-zinc-800 hover:bg-zinc-200/60 dark:text-zinc-200 dark:hover:bg-white/[0.07]"}`}
+                      >
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-semibold">{option.label}</span>
+                          <span className="mt-0.5 block text-xs font-normal text-zinc-500 dark:text-zinc-400">{option.description}</span>
+                        </span>
+                        <CheckIcon aria-hidden className={`size-4 shrink-0 ${isSelected ? "opacity-100" : "opacity-0"}`} />
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
@@ -310,7 +407,7 @@ export function Correspondence() {
                     <span className="min-w-0 flex-1">
                       <span className="flex min-w-0 items-center gap-2">
                         <span className="truncate text-[15px] font-semibold text-zinc-950 dark:text-zinc-100">{thread.subject}</span>
-                        <span className="shrink-0 rounded-full bg-zinc-200 px-2 py-0.5 text-[11px] text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">{CATEGORY_LABELS[thread.category] ?? "Outro"}</span>
+                        <span className="shrink-0 rounded-full bg-zinc-200 px-2 py-0.5 text-[11px] text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">{messageCategoryLabel(thread.category)}</span>
                       </span>
                       {thread.lastMessage && <span className="mt-1.5 block truncate text-sm text-zinc-500">{thread.lastMessage.body}</span>}
                     </span>

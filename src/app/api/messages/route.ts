@@ -4,6 +4,7 @@ import { createNotification } from "@/lib/db/notifications"
 import { getAdminUserId, getAuthUser } from "@/lib/auth"
 import { rateLimit } from "@/lib/rate-limit"
 import { requestIdentity } from "@/lib/request-identity"
+import { isMessageCategory, messageCategoryLabel } from "@/lib/message-categories"
 
 function clean(value: unknown, max: number) {
   return typeof value === "string" ? value.trim().slice(0, max) : ""
@@ -33,11 +34,10 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null) as { subject?: unknown; body?: unknown; category?: unknown } | null
   const subject = clean(body?.subject, 120)
   const message = clean(body?.body, 5000)
-  const category = typeof body?.category === "string" && ["idea", "correction", "improvement", "other"].includes(body.category)
-    ? body.category as MessageThread["category"] : "other"
+  const category: MessageThread["category"] = isMessageCategory(body?.category) ? body.category : "other"
   if (subject.length < 3 || message.length < 10) return NextResponse.json({ error: "Escreva um assunto e uma mensagem mais completos." }, { status: 400 })
   const thread = await createMessageThread({ ownerId: user.id, ownerName: user.name, subject, body: message, category })
   const adminId = getAdminUserId()
-  if (adminId) await createNotification({ recipientId: adminId, actorId: user.id, kind: "message", title: `Nova mensagem: ${subject}`, description: `${user.name} enviou uma ideia.`, href: `/admin/messages#${thread._id}` }).catch(() => null)
+  if (adminId) await createNotification({ recipientId: adminId, actorId: user.id, kind: "message", title: `Nova mensagem: ${subject}`, description: `${user.name} enviou uma mensagem na categoria “${messageCategoryLabel(category).toLocaleLowerCase("pt-BR")}”.`, href: `/admin/messages#${thread._id}` }).catch(() => null)
   return NextResponse.json(serializeMessageThread(thread, user.id), { status: 201 })
 }

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { messageCategoryLabel } from "@/lib/message-categories"
 
 type Entry = { _id: string; authorName: string; body: string; createdAt: string; readAt?: string; isOwn: boolean }
 type Thread = { _id: string; ownerName: string; subject: string; category: string; status: string; entries?: Entry[]; updatedAt: string; lastMessage?: { body: string } | null }
@@ -83,7 +84,7 @@ export function AdminMessages() {
   return <div className="grid min-h-[32rem] overflow-hidden rounded-xl border border-neutral-200 bg-white lg:grid-cols-[18rem_1fr] dark:border-neutral-800 dark:bg-neutral-950">
     <aside className="border-b border-neutral-200 lg:border-b-0 lg:border-r dark:border-neutral-800">
       <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3 text-sm font-medium dark:border-neutral-800"><span>{archived ? "Arquivadas" : "Caixa de entrada"}</span><button onClick={() => setArchived((value) => !value)} className="text-xs font-normal text-neutral-500 underline-offset-4 hover:underline">{archived ? "Atuais" : "Arquivo"}</button></div>
-      {threads.length === 0 ? <p className="p-4 text-sm text-neutral-500">Nenhuma mensagem aqui.</p> : threads.map((item) => <button key={item._id} onClick={() => void selectThread(item._id)} className={`block w-full border-b border-neutral-100 px-4 py-3 text-left dark:border-neutral-900 ${selected === item._id ? "bg-neutral-100 dark:bg-neutral-900" : "hover:bg-neutral-50 dark:hover:bg-neutral-900/60"}`}><span className="block truncate text-sm font-medium">{item.subject}</span>{item.lastMessage && <span className="mt-1 block truncate text-xs text-neutral-500">{item.lastMessage.body}</span>}<span className="mt-1 flex justify-between gap-2 text-[11px] text-neutral-500"><span className="truncate">{item.ownerName} · {categoryLabel(item.category)}</span><time>{new Date(item.updatedAt).toLocaleDateString("pt-BR")}</time></span></button>)}
+      {threads.length === 0 ? <p className="p-4 text-sm text-neutral-500">Nenhuma mensagem aqui.</p> : threads.map((item) => <button key={item._id} onClick={() => void selectThread(item._id)} className={`block w-full border-b border-neutral-100 px-4 py-3 text-left dark:border-neutral-900 ${selected === item._id ? "bg-neutral-100 dark:bg-neutral-900" : "hover:bg-neutral-50 dark:hover:bg-neutral-900/60"}`}><span className="block truncate text-sm font-medium">{item.subject}</span>{item.lastMessage && <span className="mt-1 block truncate text-xs text-neutral-500">{item.lastMessage.body}</span>}<span className="mt-1 flex justify-between gap-2 text-[11px] text-neutral-500"><span className="truncate">{item.ownerName} · {messageCategoryLabel(item.category).toLocaleLowerCase("pt-BR")}</span><time>{new Date(item.updatedAt).toLocaleDateString("pt-BR")}</time></span></button>)}
       {hasMore && <button onClick={() => void loadMore()} className="w-full px-4 py-3 text-sm text-neutral-500 hover:text-neutral-950 dark:hover:text-white">Carregar anteriores</button>}
     </aside>
     <section className="min-w-0 p-5 sm:p-7">
@@ -106,5 +107,4 @@ function Action({ children, onClick, disabled, tone }: { children: React.ReactNo
   return <button disabled={disabled} onClick={onClick} className={`rounded-md border px-3 py-1.5 text-xs disabled:opacity-40 ${color}`}>{children}</button>
 }
 
-function categoryLabel(category: string) { return category === "idea" ? "ideia" : category === "correction" ? "correção" : category === "improvement" ? "melhoria" : "outro" }
 function statusLabel(status: string) { return status === "open" ? "aguardando" : status === "accepted" ? "aceita" : status === "declined" ? "negada" : status === "closed" ? "encerrada" : "respondida" }

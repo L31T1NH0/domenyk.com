@@ -1,42 +1,24 @@
 "use client"
 
-import { useState } from "react"
-import { formatDistanceToNow } from "date-fns"
+import { useMemo, useState } from "react"
+import Link from "next/link"
+import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import { MagnifyingGlassIcon } from "@heroicons/react/24/outline"
 import type { SerializedNote } from "@/lib/db/notes"
 
-type Props = { notes: SerializedNote[] }
-
-export function AdminNotesTable({ notes: initial }: Props) {
-  const [notes, setNotes] = useState(initial)
-
-  async function remove(id: string) {
-    if (!window.confirm("Deletar esta nota? Esta ação não pode ser desfeita.")) return
-    await fetch(`/api/admin/notes/${id}`, { method: "DELETE" })
-    setNotes((prev) => prev.filter((n) => n._id !== id))
-  }
-
-  return (
-    <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm dark:border-neutral-900 dark:bg-neutral-950">
-      <div className="border-b border-neutral-200 px-4 py-3 text-xs font-medium uppercase tracking-wide text-neutral-400 dark:border-neutral-900">
-        Notas
-      </div>
-      <div className="divide-y divide-neutral-100 dark:divide-neutral-900">
-      {notes.map((note) => (
-        <div key={note._id} className="flex gap-3 px-4 py-3 transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-900/60">
-          <div className="min-w-0 flex-1">
-            <p className="line-clamp-3 break-words text-sm sm:truncate">{note.content}</p>
-            <time className="text-xs text-neutral-400">
-              {formatDistanceToNow(new Date(note.publishedAt), { addSuffix: true, locale: ptBR })}
-            </time>
-          </div>
-          <button onClick={() => remove(note._id)} aria-label="Excluir nota" className="shrink-0 rounded-md px-2 py-1 text-sm text-neutral-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-300">
-            Excluir
-          </button>
-        </div>
-      ))}
-      {notes.length === 0 && <p className="px-4 py-10 text-center text-sm text-neutral-500">Nenhuma nota publicada.</p>}
-      </div>
-    </div>
-  )
+export function AdminNotesTable({ notes }: { notes: SerializedNote[] }) {
+  const [query, setQuery] = useState("")
+  const filtered = useMemo(() => notes.filter((note) => `${note.title ?? ""} ${note.seoTitle ?? ""} ${note.content}`.toLowerCase().includes(query.trim().toLowerCase())), [notes, query])
+  return <section className="admin-list">
+    <div className="admin-list-toolbar"><div><strong>Todas as notas</strong><small>{filtered.length} de {notes.length}</small></div><label className="admin-search"><MagnifyingGlassIcon /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar notas" /></label></div>
+    <header className="admin-list-header admin-note-row"><span>Nota</span><span>SEO</span><span>Publicada</span><span aria-hidden /></header>
+    {filtered.map((note) => <Link href={`/admin/notes/${note._id}`} key={note._id} className="admin-list-row admin-note-row">
+      <span className="admin-list-primary"><strong>{note.title || note.seoTitle || "Nota sem título"}</strong><small>{note.content}</small></span>
+      <span><span className={`admin-status ${note.indexable ? "is-positive" : "is-warning"}`}>{note.indexable ? "Indexável" : "Não indexável"}</span></span>
+      <time>{format(new Date(note.publishedAt), "dd MMM yyyy", { locale: ptBR })}</time>
+      <span className="admin-list-action">Abrir</span>
+    </Link>)}
+    {filtered.length === 0 && <p className="admin-empty">Nenhuma nota encontrada.</p>}
+  </section>
 }

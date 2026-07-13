@@ -1,10 +1,11 @@
 import type { Metadata } from "next"
+import { BackHome } from "@/components/BackHome"
 import { Header } from "@/components/Header"
 import { absoluteUrl, buildPageMetadata, jsonLd, siteConfig } from "@/lib/seo"
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Sobre mim",
-  description: "Sobre Domenyk e a proposta editorial deste site.",
+  title: "Sobre Domenyk: política, economia e liberalismo",
+  description: "Conheça Domenyk, autor de um blog independente sobre política, economia, liberalismo, filosofia, instituições e tecnologia, com foco em causalidade, incentivos e consequências.",
   path: "/sobre",
 })
 
@@ -22,7 +23,8 @@ export default function AboutPage() {
                 "@type": "ProfilePage",
                 "@id": `${absoluteUrl("/sobre")}#profile`,
                 url: absoluteUrl("/sobre"),
-                name: "Sobre mim",
+                name: "Sobre Domenyk",
+                description: "Domenyk é autor de um blog independente sobre política, economia, liberalismo, filosofia, instituições e tecnologia.",
                 mainEntity: { "@id": `${siteConfig.url}/#person` },
                 inLanguage: "pt-BR",
               },
@@ -106,6 +108,8 @@ export default function AboutPage() {
           <p className="text-base font-semibold text-neutral-950 dark:text-white">Elas iluminam quando nos ajudam a enxergar aquilo que antes não conseguíamos ver.</p>
         </div>
       </article>
+      <div id="about-content-boundary" />
+      <BackHome boundaryId="about-content-boundary" label="Voltar para a página inicial" />
     </>
   )
 }

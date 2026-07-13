@@ -56,6 +56,18 @@ test("omitting imagePolicy preserves trusted post and note image behavior", () =
   assert.match(html, /<img src="https:\/\/images\.example\/post\.webp"/)
 })
 
+test("fills empty image alt text with a contextual fallback without replacing authored text", () => {
+  const html = renderMarkdownSync([
+    "![](https://images.example/empty.webp)",
+    "![Descrição própria](https://images.example/authored.webp)",
+    "![](https://images.example/second-empty.webp)",
+  ].join("\n\n"), { defaultImageAlt: "Imagem relacionada ao texto" })
+
+  assert.match(html, /alt="Imagem relacionada ao texto"/)
+  assert.match(html, /alt="Descrição própria"/)
+  assert.match(html, /alt="Imagem relacionada ao texto \(3\)"/)
+})
+
 test("paragraph IDs preserve the first legacy ID and disambiguate duplicates and collisions", () => {
   const sharedPrefix = "x".repeat(80)
   const markdown = [

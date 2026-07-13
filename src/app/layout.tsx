@@ -3,7 +3,7 @@ import { ClerkProvider } from "@clerk/nextjs"
 import { Analytics } from "@vercel/analytics/next"
 import localFont from "next/font/local"
 import { headers } from "next/headers"
-import { absoluteUrl, jsonLd, siteConfig } from "@/lib/seo"
+import { absoluteUrl, authorJsonLd, jsonLd, siteConfig } from "@/lib/seo"
 import "./globals.css"
 
 const polySans = localFont({
@@ -108,15 +108,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 		                  inLanguage: "pt-BR",
 		                  publisher: { "@id": `${siteConfig.url}/#person` },
 		                },
-		                {
-		                  "@type": "Person",
-		                  "@id": `${siteConfig.url}/#person`,
-		                  name: siteConfig.author,
-		                  url: absoluteUrl("/sobre"),
-		                  image: absoluteUrl("/images/profile.jpg"),
-		                  description: siteConfig.description,
-		                  knowsAbout: ["política", "liberalismo", "instituições", "debate público"],
-		                },
+		                authorJsonLd(),
 		              ],
 		            }),
 	          }}

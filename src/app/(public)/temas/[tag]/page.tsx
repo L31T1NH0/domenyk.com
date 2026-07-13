@@ -3,32 +3,42 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import { cache } from "react"
 import { Header } from "@/components/Header"
-import { getPostsByTag } from "@/lib/db/posts"
+import { getThemeBySlug, getThemePosts } from "@/lib/db/themes"
 import { absoluteUrl, buildPageMetadata, jsonLd, siteConfig } from "@/lib/seo"
 
 type Props = { params: Promise<{ tag: string }> }
 
-function topicPath(tag: string) {
-  return `/temas/${encodeURIComponent(tag)}`
+const getCachedTheme = cache((slug: string) => getThemeBySlug(slug, { activeOnly: true }))
+
+function slugFromParam(value: string) {
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return ""
+  }
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { tag } = await params
-  if (!tag || tag.length > 120) return {}
+  const slug = slugFromParam((await params).tag)
+  if (!slug || slug.length > 100) return {}
+  const theme = await getCachedTheme(slug)
+  if (!theme) return {}
   return buildPageMetadata({
-    title: tag,
-    description: `Textos de Domenyk sobre ${tag}.`,
-    path: topicPath(tag),
+    title: theme.name,
+    description: theme.description,
+    path: `/temas/${theme.slug}`,
   })
 }
 
-export default async function TopicPage({ params }: Props) {
-  const { tag } = await params
-  if (!tag || tag.length > 120) notFound()
-  const posts = await getPostsByTag(tag)
-  if (posts.length === 0) notFound()
-  const url = absoluteUrl(topicPath(tag))
+export default async function ThemePage({ params }: Props) {
+  const slug = slugFromParam((await params).tag)
+  if (!slug || slug.length > 100) notFound()
+  const theme = await getCachedTheme(slug)
+  if (!theme) notFound()
+  const posts = await getThemePosts(theme)
+  const url = absoluteUrl(`/temas/${theme.slug}`)
 
   return (
     <>
@@ -43,8 +53,8 @@ export default async function TopicPage({ params }: Props) {
                 "@type": "CollectionPage",
                 "@id": `${url}#collection`,
                 url,
-                name: tag,
-                description: `Textos de Domenyk sobre ${tag}.`,
+                name: theme.name,
+                description: theme.description,
                 inLanguage: "pt-BR",
                 publisher: { "@id": `${siteConfig.url}/#person` },
                 mainEntity: {
@@ -61,8 +71,7 @@ export default async function TopicPage({ params }: Props) {
                 "@type": "BreadcrumbList",
                 itemListElement: [
                   { "@type": "ListItem", position: 1, name: "Início", item: absoluteUrl("/") },
-                  { "@type": "ListItem", position: 2, name: "Temas" },
-                  { "@type": "ListItem", position: 3, name: tag, item: url },
+                  { "@type": "ListItem", position: 2, name: theme.name, item: url },
                 ],
               },
             ],
@@ -70,8 +79,10 @@ export default async function TopicPage({ params }: Props) {
         }}
       />
       <section className="flex flex-col">
-        <h1 className="text-balance text-xl font-semibold tracking-tight text-neutral-950 dark:text-[#f1f1f1]">{tag}</h1>
-        <p className="mt-1 text-sm text-neutral-600 dark:text-zinc-400">{posts.length} {posts.length === 1 ? "texto" : "textos"}</p>
+        <p className="mb-2 text-xs font-medium uppercase tracking-[.14em] text-neutral-500 dark:text-zinc-500">Tema</p>
+        <h1 className="text-balance text-xl font-semibold tracking-tight text-neutral-950 dark:text-[#f1f1f1]">{theme.name}</h1>
+        <p className="mt-2 max-w-prose text-sm leading-relaxed text-neutral-600 dark:text-zinc-400">{theme.description}</p>
+        <p className="mt-3 text-xs text-neutral-500 dark:text-zinc-500">{posts.length} {posts.length === 1 ? "texto selecionado" : "textos selecionados"}</p>
         <ol className="mt-6 divide-y divide-neutral-200 border-y border-neutral-200 dark:divide-white/10 dark:border-white/10">
           {posts.map((post) => (
             <li key={post.publicId} className="py-4">
@@ -89,6 +100,7 @@ export default async function TopicPage({ params }: Props) {
               </article>
             </li>
           ))}
+          {posts.length === 0 && <li className="py-10 text-sm text-neutral-500">Nenhum texto foi selecionado para este tema ainda.</li>}
         </ol>
       </section>
     </>

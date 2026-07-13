@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { headers } from "next/headers"
+import { notFound } from "next/navigation"
 import { countPosts, getPosts, serializePostSummary } from "@/lib/db/posts"
 import { countNotes, getNotes, serializeNote } from "@/lib/db/notes"
 import { getTimelinePage } from "@/lib/db/timeline"
@@ -85,7 +86,8 @@ export default async function HomePage({
       ? totalNotes
       : totalPosts + totalNotes
   const totalPages = Math.max(1, Math.ceil(activeTotal / HOME_TIMELINE_PAGE_SIZE))
-  const currentPage = Math.min(requestedPage, totalPages)
+  if (requestedPage > totalPages) notFound()
+  const currentPage = requestedPage
 
   let posts = [] as Awaited<ReturnType<typeof getPosts>>["posts"]
   let notes = [] as Awaited<ReturnType<typeof getNotes>>["notes"]

@@ -3,6 +3,7 @@ import "server-only"
 import { ObjectId } from "mongodb"
 import { getDb } from "./client"
 import { toObjectId } from "../validation"
+import type { MessageCategory } from "../message-categories"
 
 export type MessageEntry = {
   _id: ObjectId
@@ -18,7 +19,7 @@ export type MessageThread = {
   ownerId: string
   ownerName: string
   subject: string
-  category: "idea" | "correction" | "improvement" | "other"
+  category: MessageCategory
   status: "open" | "answered" | "accepted" | "declined" | "closed"
   entries: MessageEntry[]
   createdAt: Date
