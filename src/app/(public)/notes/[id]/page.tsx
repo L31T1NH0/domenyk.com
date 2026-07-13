@@ -60,7 +60,7 @@ export default async function NotePage({ params }: Props) {
   return (
     <>
       <Header />
-      <NoteViewTracker noteId={serializedNote._id} minimumVisibleMs={serializedNote.readingEstimate.directViewThresholdMs} />
+      <NoteViewTracker noteId={serializedNote._id} />
       <script
         nonce={nonce}
         type="application/ld+json"

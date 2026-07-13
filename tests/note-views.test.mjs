@@ -17,10 +17,8 @@ test("scales safe view thresholds with note length and complexity", () => {
   const medium = estimateNoteReading(Array.from({ length: 180 }, (_, index) => `palavra${index}`).join(" ") + ".")
   const dense = estimateNoteReading(Array.from({ length: 500 }, () => "institucionalização").join(" ") + ".", 2)
 
-  assert.equal(short.directViewThresholdMs, 7_000)
-  assert.ok(medium.directViewThresholdMs > short.directViewThresholdMs)
-  assert.ok(dense.directViewThresholdMs > medium.directViewThresholdMs)
-  assert.equal(dense.directViewThresholdMs, 45_000)
+  assert.ok(medium.impressionThresholdMs > short.impressionThresholdMs)
+  assert.ok(dense.impressionThresholdMs > medium.impressionThresholdMs)
   assert.equal(dense.impressionThresholdMs, 32_000)
   assert.ok(short.impressionVisibleRatio > dense.impressionVisibleRatio)
   assert.equal(dense.complexity, "densa")

@@ -3,7 +3,6 @@ export type NoteReadingEstimate = {
   sentenceCount: number
   effectiveWordsPerMinute: number
   estimatedReadingSeconds: number
-  directViewThresholdMs: number
   impressionThresholdMs: number
   impressionVisibleRatio: number
   complexity: "leve" | "moderada" | "densa"
@@ -40,7 +39,6 @@ export function estimateNoteReading(markdown: string, galleryImages = 0): NoteRe
   const structurePenalty = clamp(structuralMarkers / Math.max(8, wordCount) * 1.8, 0, 0.12)
   const effectiveWordsPerMinute = Math.round(clamp(225 / (1 + sentencePenalty + lexicalPenalty + structurePenalty), 150, 225))
   const estimatedReadingSeconds = Math.max(4, Math.ceil(wordCount / effectiveWordsPerMinute * 60 + imageCount * 4))
-  const directViewThresholdMs = clamp(Math.round(estimatedReadingSeconds * 0.35), 7, 45) * 1000
   const impressionThresholdMs = clamp(Math.round(estimatedReadingSeconds * 0.25), 7, 32) * 1000
   const impressionVisibleRatio = wordCount <= 90 ? 0.7 : wordCount <= 200 ? 0.55 : wordCount <= 350 ? 0.4 : 0.3
   const complexityScore = sentencePenalty + lexicalPenalty + structurePenalty
@@ -51,7 +49,6 @@ export function estimateNoteReading(markdown: string, galleryImages = 0): NoteRe
     sentenceCount,
     effectiveWordsPerMinute,
     estimatedReadingSeconds,
-    directViewThresholdMs,
     impressionThresholdMs,
     impressionVisibleRatio,
     complexity,
