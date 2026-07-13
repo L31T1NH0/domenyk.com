@@ -169,13 +169,14 @@ export function PublicMenu() {
   }
 
   const isPostPage = /(?:^|\/)posts\/[^/]+$/.test(pathname)
+  const hasUnreadItems = unreadMessages > 0 || unreadNotifications > 0
 
   return (
     <div ref={rootRef} className="relative z-40">
       <button
         ref={triggerRef}
         type="button"
-        aria-label="Abrir menu"
+        aria-label={hasUnreadItems ? "Abrir menu, há mensagens ou notificações não lidas" : "Abrir menu"}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
@@ -193,6 +194,12 @@ export function PublicMenu() {
           <Bars3Icon className="size-5" aria-hidden />
         )}
       </button>
+      {isLoaded && isSignedIn && hasUnreadItems && (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute bottom-0 right-0 size-2.5 rounded-full bg-red-600 ring-2 ring-[#f4f4f4] dark:bg-red-500 dark:ring-[#040404]"
+        />
+      )}
 
       {open && (
         <div
