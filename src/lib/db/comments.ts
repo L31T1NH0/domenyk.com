@@ -186,6 +186,23 @@ export async function getComment(id: string): Promise<Comment | null> {
   return comment ? normalizeComment(comment) : null
 }
 
+function databaseValueToJson(value: unknown): unknown {
+  if (value instanceof ObjectId) return value.toHexString()
+  if (value instanceof Date) return value.toISOString()
+  if (Array.isArray(value)) return value.map(databaseValueToJson)
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, databaseValueToJson(child)]))
+  }
+  return value
+}
+
+export async function getCommentDatabaseRecord(id: string): Promise<Record<string, unknown> | null> {
+  const objectId = toObjectId(id)
+  if (!objectId) return null
+  const comment = await (await collection()).findOne({ _id: objectId })
+  return comment ? databaseValueToJson(comment) as Record<string, unknown> : null
+}
+
 export async function createComment(data: {
   postId: string
   paragraphId?: string

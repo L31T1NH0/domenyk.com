@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from "next/server"
-import { deleteComment, getComment } from "@/lib/db/comments"
+import { deleteComment, getComment, getCommentDatabaseRecord } from "@/lib/db/comments"
 import { adminOnly } from "@/lib/auth"
 import { deleteCommentImagesFromContent, queueCommentImagesForCleanup } from "@/lib/db/comment-uploads"
+
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const unauthorized = await adminOnly()
+  if (unauthorized) return unauthorized
+
+  const { id } = await params
+  const record = await getCommentDatabaseRecord(id)
+  if (!record) return NextResponse.json({ error: "Comentário não encontrado." }, { status: 404 })
+  return NextResponse.json({ record })
+}
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const unauthorized = await adminOnly()

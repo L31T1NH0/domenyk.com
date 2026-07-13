@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -15,6 +15,11 @@ export function CommentsTable({ comments: initial }: { comments: AdminComment[] 
   const [query, setQuery] = useState("")
   const [filter, setFilter] = useState<Filter>("all")
   const [error, setError] = useState("")
+  const [detailId, setDetailId] = useState<string | null>(null)
+  const [detailRecord, setDetailRecord] = useState<Record<string, unknown> | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detailError, setDetailError] = useState("")
+  const detailRequest = useRef(0)
   const filtered = useMemo(() => comments.filter((comment) => {
     if (filter !== "all" && comment.parent.type !== filter) return false
     const search = `${comment.authorName} ${comment.content} ${comment.parent.title}`.toLocaleLowerCase("pt-BR")
@@ -27,6 +32,34 @@ export function CommentsTable({ comments: initial }: { comments: AdminComment[] 
     const response = await fetch(`/api/admin/comments/${id}`, { method: "DELETE" })
     if (response.ok) return setComments((current) => current.filter((comment) => comment._id !== id))
     setError("Não foi possível excluir o comentário.")
+  }
+
+  async function toggleDetails(id: string) {
+    const request = ++detailRequest.current
+    if (detailId === id) {
+      setDetailId(null)
+      setDetailRecord(null)
+      setDetailError("")
+      return
+    }
+
+    setDetailId(id)
+    setDetailRecord(null)
+    setDetailError("")
+    setDetailLoading(true)
+    const response = await fetch(`/api/admin/comments/${id}`, { cache: "no-store" })
+    const data = await response.json().catch(() => null) as { record?: Record<string, unknown>; error?: string } | null
+    if (request !== detailRequest.current) return
+    setDetailLoading(false)
+    if (!response.ok || !data?.record) return setDetailError(data?.error ?? "Não foi possível carregar os detalhes.")
+    setDetailRecord(data.record)
+  }
+
+  function detailValue(value: unknown) {
+    if (value === null) return "null"
+    if (value === undefined) return "undefined"
+    if (typeof value === "string") return value
+    return JSON.stringify(value, null, 2)
   }
 
   return <section className="admin-list admin-comments-list">
@@ -59,7 +92,16 @@ export function CommentsTable({ comments: initial }: { comments: AdminComment[] 
           {publicHref && <Link href={publicHref} target="_blank" className="admin-comment-public-link">Abrir conversa <ArrowTopRightOnSquareIcon /></Link>}
         </div>
         <time dateTime={comment.createdAt}>{formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true, locale: ptBR })}</time>
-        <button type="button" onClick={() => remove(comment._id)} aria-label={`Excluir comentário de ${comment.authorName}`} className="admin-comment-delete"><TrashIcon /></button>
+        <div className="admin-comment-actions">
+          <button type="button" onClick={() => toggleDetails(comment._id)} aria-expanded={detailId === comment._id} aria-controls={`comment-details-${comment._id}`} className="admin-comment-details-button">{detailId === comment._id ? "Fechar" : "Detalhes"}</button>
+          <button type="button" onClick={() => remove(comment._id)} aria-label={`Excluir comentário de ${comment.authorName}`} className="admin-comment-delete"><TrashIcon /></button>
+        </div>
+        {detailId === comment._id && <div id={`comment-details-${comment._id}`} className="admin-comment-details">
+          <header><div><strong>Registro no banco de dados</strong><span>Leitura direta da coleção <code>comments</code></span></div><small>{detailRecord ? `${Object.keys(detailRecord).length} campos` : ""}</small></header>
+          {detailLoading && <p className="admin-comment-details-state">Consultando o registro atual…</p>}
+          {detailError && <p className="admin-form-error" role="alert">{detailError}</p>}
+          {detailRecord && <div className="admin-comment-details-table-wrap"><table><thead><tr><th scope="col">Campo</th><th scope="col">Tipo</th><th scope="col">Valor armazenado</th></tr></thead><tbody>{Object.entries(detailRecord).map(([field, value]) => <tr key={field}><th scope="row">{field}</th><td>{value === null ? "null" : Array.isArray(value) ? "array" : typeof value}</td><td><pre>{detailValue(value)}</pre></td></tr>)}</tbody></table></div>}
+        </div>}
       </article>
     })}
     {filtered.length === 0 && <p className="admin-empty">Nenhum comentário encontrado.</p>}
