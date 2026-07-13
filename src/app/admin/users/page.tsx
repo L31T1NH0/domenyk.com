@@ -29,11 +29,7 @@ export default async function AdminUsersPage() {
 
   return (
     <>
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-400">Admin</p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">Usuários</h1>
-        <p className="mt-1 text-sm text-neutral-500">Contas do Clerk, papéis e atividade de comentários.</p>
-      </div>
+      <header className="admin-page-header"><div><h1>Pessoas</h1><p>Contas do Clerk, papéis e atividade de comentários.</p></div></header>
 
       <section className="overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#080808]">
         <div className="border-b border-neutral-200 px-4 py-3 dark:border-white/10">

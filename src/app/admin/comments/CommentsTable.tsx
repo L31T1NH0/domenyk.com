@@ -42,11 +42,12 @@ export function CommentsTable({ comments: initial }: Props) {
             </div>
             <p className="line-clamp-3 break-words text-sm text-neutral-600 dark:text-neutral-400 sm:truncate">{c.content}</p>
           </div>
-          <button onClick={() => remove(c._id)} className="shrink-0 rounded-md px-2 py-1 text-sm text-neutral-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-300">
-            ✕
+          <button onClick={() => remove(c._id)} aria-label="Excluir comentário" className="shrink-0 rounded-md px-2 py-1 text-sm text-neutral-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-300">
+            Excluir
           </button>
         </div>
       ))}
+      {comments.length === 0 && <p className="px-4 py-10 text-center text-sm text-neutral-500">Nenhum comentário para moderar.</p>}
       </div>
     </div>
   )

@@ -37,6 +37,7 @@ export function PublicMenu() {
   const [open, setOpen] = useState(false)
   const [admin, setAdmin] = useState(false)
   const [unreadMessages, setUnreadMessages] = useState(0)
+  const [unreadNotifications, setUnreadNotifications] = useState(0)
   const [view, setView] = useState<"main" | "account">("main")
   const menuId = useId()
   const rootRef = useRef<HTMLDivElement>(null)
@@ -55,6 +56,29 @@ export function PublicMenu() {
       .then((data) => { if (!cancelled) setUnreadMessages(Math.max(0, Number(data.unread) || 0)) })
     return () => { cancelled = true }
   }, [isLoaded, isSignedIn])
+
+  useEffect(() => {
+    if (!admin) return
+    let cancelled = false
+
+    function refreshUnreadNotifications() {
+      fetch("/api/notifications", { cache: "no-store" })
+        .then((response) => response.ok ? response.json() : { unread: 0 })
+        .then((data) => {
+          if (!cancelled) setUnreadNotifications(Math.max(0, Number(data.unread) || 0))
+        })
+    }
+
+    refreshUnreadNotifications()
+    const interval = window.setInterval(refreshUnreadNotifications, 45_000)
+    const onFocus = () => refreshUnreadNotifications()
+    window.addEventListener("focus", onFocus)
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+      window.removeEventListener("focus", onFocus)
+    }
+  }, [admin, open])
 
   function menuItems() {
     return Array.from(
@@ -287,7 +311,8 @@ export function PublicMenu() {
                   {isLoaded && isSignedIn && admin && (
                     <Link href="/notificacoes" role="menuitem" onClick={() => closeMenu()} className={ITEM_CLASS_NAME}>
                       <BellIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
-                      Notificações
+                      <span className="flex-1">Notificações</span>
+                      {unreadNotifications > 0 && <span aria-label={`${unreadNotifications} notificações não lidas`} className="min-w-5 rounded-full bg-zinc-950 px-1.5 py-0.5 text-center text-[10px] font-medium text-white dark:bg-white dark:text-zinc-950">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>}
                     </Link>
                   )}
                   <Link href="/sobre" role="menuitem" onClick={() => closeMenu()} className={ITEM_CLASS_NAME}>

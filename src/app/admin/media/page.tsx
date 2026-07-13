@@ -7,10 +7,7 @@ export default async function AdminMediaPage() {
 
   return (
     <>
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-400">Assets</p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">Media</h1>
-      </div>
+      <header className="admin-page-header"><div><h1>Mídia</h1><p>Envie e organize imagens usadas no conteúdo.</p></div></header>
       <MediaLibrary initialMedia={serializedMedia} />
     </>
   )

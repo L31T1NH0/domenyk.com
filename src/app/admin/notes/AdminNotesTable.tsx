@@ -30,11 +30,12 @@ export function AdminNotesTable({ notes: initial }: Props) {
               {formatDistanceToNow(new Date(note.publishedAt), { addSuffix: true, locale: ptBR })}
             </time>
           </div>
-          <button onClick={() => remove(note._id)} className="shrink-0 rounded-md px-2 py-1 text-sm text-neutral-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-300">
-            ✕
+          <button onClick={() => remove(note._id)} aria-label="Excluir nota" className="shrink-0 rounded-md px-2 py-1 text-sm text-neutral-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-300">
+            Excluir
           </button>
         </div>
       ))}
+      {notes.length === 0 && <p className="px-4 py-10 text-center text-sm text-neutral-500">Nenhuma nota publicada.</p>}
       </div>
     </div>
   )

@@ -7,10 +7,7 @@ export default async function AdminCommentsPage() {
 
   return (
     <>
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-400">Moderação</p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">Comentários</h1>
-      </div>
+      <header className="admin-page-header"><div><h1>Comentários</h1><p>Modere as conversas publicadas nos posts e nas notas.</p></div></header>
       <CommentsTable comments={serializedComments} />
     </>
   )

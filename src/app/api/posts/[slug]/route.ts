@@ -6,8 +6,9 @@ import { rateLimit } from "@/lib/rate-limit"
 import { requestIdentity } from "@/lib/request-identity"
 import { isPostLocale } from "@/lib/post-locales"
 import { getPostVersion } from "@/lib/post-versions"
-import { getAdminUserId } from "@/lib/auth"
+import { getAdminUserId, getAuthUserId } from "@/lib/auth"
 import { aggregateNotification } from "@/lib/db/notifications"
+import { recordActivityEvent } from "@/lib/db/activity"
 
 const VIEW_COOKIE_MAX_AGE = 60 * 60 * 24
 
@@ -64,6 +65,14 @@ export async function GET(
     const result = await incrementPostViewsOnce(publicId, viewVisitorKey(req, publicId))
     post.views = result.views
     counted = result.counted
+    if (result.counted) {
+      const userId = await getAuthUserId()
+      await recordActivityEvent({
+        type: "post_view", visitorKey: requestIdentity(req), isAuthenticated: Boolean(userId),
+        ...(userId ? { userId } : {}), postId: post._id, postPublicId: post.publicId,
+        postSlug: post.slug, postTitle: version.title, locale: localeParam,
+      }).catch(() => undefined)
+    }
     const adminId = getAdminUserId()
     if (result.counted && adminId) await aggregateNotification({
       recipientId: adminId, kind: "view", aggregateKey: `view:${publicId}`,

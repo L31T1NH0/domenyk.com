@@ -17,6 +17,7 @@ import { hasParagraphId } from "@/lib/mdx"
 import { requestIdentity } from "@/lib/request-identity"
 import { isPostLocale } from "@/lib/post-locales"
 import { getPostVersion } from "@/lib/post-versions"
+import { recordActivityEvent } from "@/lib/db/activity"
 
 type Params = { params: Promise<{ postId: string; paragraphId: string }> }
 
@@ -116,6 +117,12 @@ export async function POST(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "O parágrafo foi removido durante o envio." }, { status: 409 })
   }
   await commitCommentUploadClaim(uploadClaim).catch(() => undefined)
+
+  await recordActivityEvent({
+    type: "comment_created", visitorKey: requestIdentity(req), isAuthenticated: true,
+    userId: user.id, userName: user.name, postId: post._id, postPublicId: post.publicId,
+    postSlug: post.slug, postTitle: version.title, locale,
+  }).catch(() => undefined)
 
   const adminId = getAdminUserId()
   if (adminId) await createNotification({
