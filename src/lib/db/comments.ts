@@ -3,6 +3,7 @@ import { getDb } from "./client"
 import { renderMarkdownSync, type MarkdownRenderOptions } from "../mdx"
 import { toObjectId } from "../validation"
 import { MAX_COMMENT_IMAGES } from "@/lib/api/comment-input"
+import { noteDisplayTitle } from "../seo"
 
 export type Comment = {
   _id: ObjectId
@@ -23,6 +24,14 @@ export type SerializedComment = Omit<Comment, "_id" | "postId" | "authorId" | "c
   updatedAt: string
   contentHtml: string
   canDelete: boolean
+}
+
+export type CommentParentSummary = {
+  id: string
+  type: "post" | "note" | "removed"
+  title: string
+  adminHref?: string
+  publicHref?: string
 }
 
 type StoredComment = Partial<Comment> & {
@@ -233,6 +242,52 @@ export async function getRecentComments(limit = 20): Promise<Comment[]> {
   const col = await collection()
   const comments = await col.find({}).sort({ createdAt: -1 }).limit(limit).toArray()
   return comments.map(normalizeComment)
+}
+
+export async function getCommentParentSummaries(parentIds: ObjectId[]): Promise<Map<string, CommentParentSummary>> {
+  const uniqueIds = [...new Map(parentIds.map((id) => [id.toString(), id])).values()]
+  const summaries = new Map<string, CommentParentSummary>()
+  if (uniqueIds.length === 0) return summaries
+
+  const db = await getDb()
+  const [posts, notes] = await Promise.all([
+    db.collection<{ _id: ObjectId; title: string; slug: string; deleting?: boolean }>("posts")
+      .find({ _id: { $in: uniqueIds }, deleting: { $ne: true } }, { projection: { title: 1, slug: 1 } })
+      .toArray(),
+    db.collection<{ _id: ObjectId; title?: string; content: string; deleting?: boolean }>("notes")
+      .find({ _id: { $in: uniqueIds }, deleting: { $ne: true } }, { projection: { title: 1, content: 1 } })
+      .toArray(),
+  ])
+
+  for (const post of posts) {
+    const id = post._id.toString()
+    summaries.set(id, {
+      id,
+      type: "post",
+      title: post.title,
+      adminHref: `/admin/posts/${id}`,
+      publicHref: `/posts/${encodeURIComponent(post.slug)}`,
+    })
+  }
+
+  for (const note of notes) {
+    const id = note._id.toString()
+    if (summaries.has(id)) continue
+    summaries.set(id, {
+      id,
+      type: "note",
+      title: noteDisplayTitle(note),
+      adminHref: `/admin/notes/${id}`,
+      publicHref: `/notes/${id}`,
+    })
+  }
+
+  for (const id of uniqueIds) {
+    const value = id.toString()
+    if (!summaries.has(value)) summaries.set(value, { id: value, type: "removed", title: "Conteúdo removido" })
+  }
+
+  return summaries
 }
 
 export async function getCommentCountsByAuthor(authorIds: string[]): Promise<Map<string, number>> {

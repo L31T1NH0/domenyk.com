@@ -1,9 +1,13 @@
-import { getRecentComments, serializeComment } from "@/lib/db/comments"
+import { getCommentParentSummaries, getRecentComments, serializeComment } from "@/lib/db/comments"
 import { CommentsTable } from "./CommentsTable"
 
 export default async function AdminCommentsPage() {
   const comments = await getRecentComments(50)
-  const serializedComments = comments.map((comment) => serializeComment(comment, true))
+  const parents = await getCommentParentSummaries(comments.map((comment) => comment.postId))
+  const serializedComments = comments.map((comment) => ({
+    ...serializeComment(comment, true),
+    parent: parents.get(comment.postId.toString())!,
+  }))
 
   return (
     <>
