@@ -5,6 +5,10 @@ import { NextResponse } from "next/server"
 
 const ADMIN_USER_ID = process.env.ADMIN_USER_ID!
 
+export function getAdminUserId(): string | null {
+  return ADMIN_USER_ID || null
+}
+
 function allowsDevelopmentAdminFallback(): boolean {
   return process.env.NODE_ENV === "development" && process.env.DEV_ADMIN_ALLOW_ANY_SIGNED_IN === "true"
 }

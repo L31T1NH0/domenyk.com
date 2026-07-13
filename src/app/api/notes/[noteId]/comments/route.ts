@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getAuthUser, getAuthUserId, isAdmin } from "@/lib/auth"
+import { getAdminUserId, getAuthUser, getAuthUserId, isAdmin } from "@/lib/auth"
+import { createNotification } from "@/lib/db/notifications"
 import { createComment, deleteComment, getCommentsPage, serializeComment, MAX_COMMENTS_PER_RESPONSE } from "@/lib/db/comments"
 import { getNote } from "@/lib/db/notes"
 import { rateLimit } from "@/lib/rate-limit"
@@ -89,6 +90,12 @@ export async function POST(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "A nota foi removida durante o envio." }, { status: 409 })
   }
   await commitCommentUploadClaim(uploadClaim).catch(() => undefined)
+
+  const adminId = getAdminUserId()
+  if (adminId) await createNotification({
+    recipientId: adminId, actorId: user.id, kind: "comment",
+    title: "Novo comentário em uma nota", description: `${user.name} comentou em uma nota.`, href: `/notes/${noteId}`,
+  }).catch(() => null)
 
   return NextResponse.json(serializeComment(comment, true), { status: 201 })
 }

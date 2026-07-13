@@ -6,6 +6,8 @@ import { rateLimit } from "@/lib/rate-limit"
 import { requestIdentity } from "@/lib/request-identity"
 import { isPostLocale } from "@/lib/post-locales"
 import { getPostVersion } from "@/lib/post-versions"
+import { getAdminUserId } from "@/lib/auth"
+import { aggregateNotification } from "@/lib/db/notifications"
 
 const VIEW_COOKIE_MAX_AGE = 60 * 60 * 24
 
@@ -62,6 +64,12 @@ export async function GET(
     const result = await incrementPostViewsOnce(publicId, viewVisitorKey(req, publicId))
     post.views = result.views
     counted = result.counted
+    const adminId = getAdminUserId()
+    if (result.counted && adminId) await aggregateNotification({
+      recipientId: adminId, kind: "view", aggregateKey: `view:${publicId}`,
+      title: `Novas visualizações em ${version.title}`,
+      description: `O post chegou a ${result.views} visualizações.`, href: `/posts/${post.slug}`,
+    }).catch(() => undefined)
   }
 
   const publicPost = {

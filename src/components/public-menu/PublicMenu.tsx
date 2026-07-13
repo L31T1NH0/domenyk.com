@@ -9,12 +9,14 @@ import {
   ArrowRightEndOnRectangleIcon,
   ArrowRightStartOnRectangleIcon,
   Bars3Icon,
+  BellIcon,
   CheckIcon,
   ChevronRightIcon,
   Cog6ToothIcon,
   LanguageIcon,
   HomeIcon,
   InformationCircleIcon,
+  EnvelopeIcon,
   MoonIcon,
   PencilSquareIcon,
   SunIcon,
@@ -33,12 +35,26 @@ export function PublicMenu() {
   const { currentLocale, options } = usePublicMenu()
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
+  const [admin, setAdmin] = useState(false)
+  const [unreadMessages, setUnreadMessages] = useState(0)
   const [view, setView] = useState<"main" | "account">("main")
   const menuId = useId()
   const rootRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const accountBackRef = useRef<HTMLButtonElement>(null)
   const focusFirstOnOpenRef = useRef(false)
+
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) return
+    let cancelled = false
+    fetch("/api/account/admin", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : { admin: false })
+      .then((data) => { if (!cancelled) setAdmin(data.admin === true) })
+    fetch("/api/messages/unread", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : { unread: 0 })
+      .then((data) => { if (!cancelled) setUnreadMessages(Math.max(0, Number(data.unread) || 0)) })
+    return () => { cancelled = true }
+  }, [isLoaded, isSignedIn])
 
   function menuItems() {
     return Array.from(
@@ -263,6 +279,17 @@ export function PublicMenu() {
                   </button>
                 </div>
                 <div className="mt-1 border-t border-zinc-200 pt-1.5 dark:border-white/10">
+                  <Link href="/fale-comigo" role="menuitem" onClick={() => closeMenu()} className={ITEM_CLASS_NAME}>
+                    <EnvelopeIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
+                    <span className="flex-1">Fale comigo</span>
+                    {unreadMessages > 0 && <span aria-label={`${unreadMessages} mensagens não lidas`} className="min-w-5 rounded-full bg-zinc-950 px-1.5 py-0.5 text-center text-[10px] font-medium text-white dark:bg-white dark:text-zinc-950">{unreadMessages > 99 ? "99+" : unreadMessages}</span>}
+                  </Link>
+                  {isLoaded && isSignedIn && admin && (
+                    <Link href="/notificacoes" role="menuitem" onClick={() => closeMenu()} className={ITEM_CLASS_NAME}>
+                      <BellIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
+                      Notificações
+                    </Link>
+                  )}
                   <Link href="/sobre" role="menuitem" onClick={() => closeMenu()} className={ITEM_CLASS_NAME}>
                     <InformationCircleIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
                     Sobre

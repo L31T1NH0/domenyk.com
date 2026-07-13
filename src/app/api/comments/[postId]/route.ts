@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getCommentsPage, createComment, deleteComment, serializeComment, MAX_COMMENTS_PER_RESPONSE } from "@/lib/db/comments"
-import { getAuthUser, getAuthUserId, isAdmin } from "@/lib/auth"
+import { getAdminUserId, getAuthUser, getAuthUserId, isAdmin } from "@/lib/auth"
+import { createNotification } from "@/lib/db/notifications"
 import { getPostById } from "@/lib/db/posts"
 import { toObjectId } from "@/lib/validation"
 import { rateLimit } from "@/lib/rate-limit"
@@ -101,6 +102,13 @@ export async function POST(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "O post foi removido durante o envio." }, { status: 409 })
   }
   await commitCommentUploadClaim(uploadClaim).catch(() => undefined)
+
+  const adminId = getAdminUserId()
+  if (adminId) await createNotification({
+    recipientId: adminId, actorId: user.id, kind: "comment",
+    title: `Novo comentário em ${version.title}`,
+    description: `${user.name} comentou no post.`, href: `/posts/${post.slug}`,
+  }).catch(() => null)
 
   return NextResponse.json(serializeComment(comment, true), { status: 201 })
 }
