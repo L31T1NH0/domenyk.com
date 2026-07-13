@@ -4,8 +4,6 @@ import { AutoFitText } from "@/components/text/AutoFitText"
 
 type Props = {
   title: string
-  subtitle?: string
-  summary?: string
   cover?: { url: string; alt?: string }
   secondaryImage?: string | null
   background?: { color?: string; imageUrl?: string }
@@ -44,8 +42,6 @@ function Avatar({
 
 export function PostHeader({
   title,
-  subtitle,
-  summary,
   cover,
   secondaryImage,
   background,
@@ -77,9 +73,6 @@ export function PostHeader({
         <div className="editorial-cover-copy">
           <h1 className="editorial-cover-title">{title}</h1>
           <div className="editorial-cover-details">
-            {(summary || subtitle) && (
-              <p className="editorial-cover-thesis">{summary || subtitle}</p>
-            )}
             <div className="editorial-byline" aria-label="Autoria">
               <div className="flex -space-x-3">
                 <Avatar src="/images/profile.jpg" alt="Domenyk" size="post" />
@@ -115,16 +108,6 @@ export function PostHeader({
             {secondaryImage && <Avatar src={secondaryImage} alt="Coautor" size="post" />}
           </div>
           <AutoFitText as="h1" text={title} minSize={14} maxSize={19} maxLines={2} className="text-white" />
-          {subtitle && (
-            <AutoFitText
-              as="p"
-              text={subtitle}
-              minSize={10}
-              maxSize={12}
-              maxLines={2}
-              className="text-zinc-300 drop-shadow"
-            />
-          )}
         </div>
       </div>
     )
@@ -147,16 +130,6 @@ export function PostHeader({
         maxLines={3}
         className="w-full text-center text-neutral-950 dark:text-[#f1f1f1]"
       />
-      {subtitle && (
-        <AutoFitText
-          as="p"
-          text={subtitle}
-          minSize={12}
-          maxSize={14}
-          maxLines={3}
-          className="w-full text-center text-neutral-600 dark:text-zinc-300"
-        />
-      )}
     </div>
   )
 }

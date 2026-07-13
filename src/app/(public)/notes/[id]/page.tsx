@@ -93,9 +93,12 @@ export default async function NotePage({ params }: Props) {
         }}
       />
       <article className="flex flex-col gap-4 border-y border-neutral-200 py-6 dark:border-white/10">
-        <h1 className={note.title ? "text-balance text-lg font-semibold leading-snug text-neutral-950 dark:text-[#f1f1f1]" : "sr-only"}>
+        <h1 className={note.title || note.seoTitle ? "text-balance text-lg font-semibold leading-snug text-neutral-950 dark:text-[#f1f1f1]" : "sr-only"}>
           {title}
         </h1>
+        {note.seoDescription?.trim() && (
+          <p className="text-sm leading-relaxed text-neutral-600 dark:text-[#c2bbb1]">{note.seoDescription.trim()}</p>
+        )}
         <time className="text-xs text-neutral-500 dark:text-[#A8A095]/75" dateTime={serializedNote.publishedAt}>
           {format(new Date(serializedNote.publishedAt), "d 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR })}
         </time>

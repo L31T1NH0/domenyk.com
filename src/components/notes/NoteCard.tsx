@@ -28,6 +28,7 @@ import { noteDisplayTitle } from "@/lib/seo"
 
 type Props = {
   note: SerializedNote
+  showMetadata?: boolean
   isAdmin?: boolean
   onDelete?: (id: string) => Promise<void> | void
   onUpdate?: (note: SerializedNote) => void
@@ -181,7 +182,7 @@ function NoteCommentsPanel({ comments, loading = false, hasMore = false, loading
   )
 }
 
-export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = false, deleting = false }: Props) {
+export function NoteCard({ note, showMetadata = false, isAdmin, onDelete, onUpdate, cropTallImages = false, deleting = false }: Props) {
   const contentRef = useRef<HTMLDivElement>(null)
   const editEditorRef = useRef<LexicalEditorInstance | null>(null)
   const commentsButtonRef = useRef<HTMLButtonElement>(null)
@@ -433,6 +434,8 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
   const commentActionLabel = commentsLoaded && comments.length > 0 ? "ver comentários" : "comentar"
   const notePath = `/notes/${note._id}`
   const displayTitle = noteDisplayTitle(note)
+  const visibleTitle = note.seoTitle?.trim() || note.title?.trim()
+  const visibleDescription = note.seoDescription?.trim()
 
   return (
     <article className="group relative flex w-full min-w-0 flex-col gap-2.5 border-y border-neutral-200 pb-5 pt-1 dark:border-white/10">
@@ -472,14 +475,18 @@ export function NoteCard({ note, isAdmin, onDelete, onUpdate, cropTallImages = f
         )}
       </div>
 
-      {note.title ? (
+      {showMetadata && visibleTitle ? (
         <h2 className="text-[15px] font-semibold leading-snug text-neutral-950 dark:text-[#f1f1f1]">
           <Link href={notePath} className="rounded-sm hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:focus-visible:ring-neutral-300">
-            {note.title}
+            {visibleTitle}
           </Link>
         </h2>
       ) : (
         <h2 className="sr-only"><Link href={notePath}>{displayTitle}</Link></h2>
+      )}
+
+      {showMetadata && visibleDescription && !editing && (
+        <p className="text-sm leading-relaxed text-neutral-600 dark:text-[#c2bbb1]">{visibleDescription}</p>
       )}
 
       {editing ? (

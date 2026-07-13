@@ -19,6 +19,7 @@ import { ParagraphCommentsLayer } from "@/components/post/ParagraphCommentsLayer
 import { PostContentShell } from "@/components/post/PostContentShell"
 import { PostMetaBar } from "@/components/post/PostMetaBar"
 import { PostReadingPosition } from "@/components/post/PostReadingPosition"
+import { PostDescriptionDisclosure } from "@/components/post/PostDescriptionDisclosure"
 import { PostTopics } from "@/components/post/PostTopics"
 import { EditorialSectionNav } from "@/components/post/EditorialSectionNav"
 import { CommentThread } from "@/components/comments/CommentThread"
@@ -31,6 +32,8 @@ const pageCopy: Record<PostLocale, {
   back: string
   draft: string
   edit: string
+  showDescription: string
+  hideDescription: string
   minute: (minutes: number) => string
   styleLabels: Record<PostStyle, string>
   editorial: { structure: string; thesis: string; reading: string; topics: string }
@@ -39,6 +42,8 @@ const pageCopy: Record<PostLocale, {
     back: "Voltar para a página inicial",
     draft: "rascunho",
     edit: "Editar post",
+    showDescription: "ver descrição",
+    hideDescription: "ocultar descrição",
     minute: (minutes) => `${minutes} min`,
     styleLabels: { standard: "", editorial: "Editorial", opinion: "Opinião" },
     editorial: { structure: "Estrutura", thesis: "Tese central", reading: "Leitura", topics: "Assuntos" },
@@ -47,6 +52,8 @@ const pageCopy: Record<PostLocale, {
     back: "Back to the home page",
     draft: "draft",
     edit: "Edit post",
+    showDescription: "show description",
+    hideDescription: "hide description",
     minute: (minutes) => `${minutes} min read`,
     styleLabels: { standard: "", editorial: "Editorial", opinion: "Opinion" },
     editorial: { structure: "Structure", thesis: "Central thesis", reading: "Reading", topics: "Topics" },
@@ -55,6 +62,8 @@ const pageCopy: Record<PostLocale, {
     back: "Zur Startseite",
     draft: "Entwurf",
     edit: "Beitrag bearbeiten",
+    showDescription: "Beschreibung anzeigen",
+    hideDescription: "Beschreibung ausblenden",
     minute: (minutes) => `${minutes} Min. Lesezeit`,
     styleLabels: { standard: "", editorial: "Editorial", opinion: "Meinung" },
     editorial: { structure: "Struktur", thesis: "Zentrale These", reading: "Lesezeit", topics: "Themen" },
@@ -63,6 +72,8 @@ const pageCopy: Record<PostLocale, {
     back: "Kembali ke beranda",
     draft: "draf",
     edit: "Edit tulisan",
+    showDescription: "lihat deskripsi",
+    hideDescription: "sembunyikan deskripsi",
     minute: (minutes) => `${minutes} menit baca`,
     styleLabels: { standard: "", editorial: "Editorial", opinion: "Opini" },
     editorial: { structure: "Struktur", thesis: "Tesis utama", reading: "Waktu baca", topics: "Topik" },
@@ -165,7 +176,7 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
   const dateLabel = version.publishedAt
     ? new Intl.DateTimeFormat(details.htmlLang, { dateStyle: "long" }).format(version.publishedAt)
     : undefined
-  const subtitle = version.subtitle ?? version.excerpt
+  const visibleDescription = version.subtitle ?? version.excerpt
   const description = (version.excerpt ?? version.subtitle ?? descriptionFromMarkdown(version.content)) || siteConfig.description
   const style = version.style ?? "standard"
   const styleClasses = getPostStyleClasses(style)
@@ -233,13 +244,11 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
       />
       <PostHeader
         title={version.title}
-        subtitle={subtitle}
         cover={version.cover}
         secondaryImage={coAuthorImageUrl}
         background={version.background}
         variant={style === "editorial" ? "editorial" : "default"}
         editorialLabel={styleLabel}
-        summary={description}
       />
       <PostMetaBar
         publicId={version.publicId}
@@ -263,9 +272,7 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
               <PostReadingPosition postId={`${postId}:${locale}`} updatedAt={version.updatedAt.toISOString()} />
               <ParagraphCommentsLayer postId={postId} locale={locale} isAdmin={admin} variant="editorial" />
             </div>
-            <aside className="editorial-margin-notes" aria-label={copy.editorial.thesis}>
-              <p className="editorial-margin-label">{copy.editorial.thesis}</p>
-              <p className="editorial-margin-thesis">{description}</p>
+            <aside className="editorial-margin-notes" aria-label={copy.editorial.reading}>
               <dl>
                 <div>
                   <dt>{copy.editorial.reading}</dt>
@@ -291,6 +298,13 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
       </article>
 
       <div id="post-content-boundary" className={["mt-8 border-t border-zinc-200/80 pt-5 dark:border-zinc-700/80", style === "editorial" ? "editorial-post-footer" : ""].join(" ")}>
+        {visibleDescription && (
+          <PostDescriptionDisclosure
+            description={visibleDescription}
+            showLabel={copy.showDescription}
+            hideLabel={copy.hideDescription}
+          />
+        )}
         {version.tags.length > 0 && (
           <div className="mb-5 flex flex-wrap items-center gap-2">
             {version.tags.map((tag) => (

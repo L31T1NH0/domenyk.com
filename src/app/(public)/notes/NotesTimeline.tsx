@@ -103,6 +103,7 @@ export function NotesTimeline({
             <NoteCard
               key={note._id}
               note={note}
+              showMetadata
               isAdmin={isAdmin}
               onDelete={handleDelete}
               onUpdate={handleUpdate}
