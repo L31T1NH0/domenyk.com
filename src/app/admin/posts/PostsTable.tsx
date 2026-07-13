@@ -10,8 +10,8 @@ import {
   EyeSlashIcon,
   MagnifyingGlassIcon,
   PencilSquareIcon,
-  TrashIcon,
 } from "@heroicons/react/24/outline"
+import { DeleteActionMenu } from "@/components/actions/DeleteActionMenu"
 import type { SerializedPostSummary } from "@/lib/db/posts"
 import { isTranslationRevisionStale, POST_LOCALE_DETAILS, TRANSLATION_LOCALES } from "@/lib/post-locales"
 
@@ -107,7 +107,7 @@ type PostRowActionsProps = {
   compact?: boolean
   onTogglePublish: (post: SerializedPostSummary) => void
   onTogglePin: (post: SerializedPostSummary) => void
-  onRemove: (id: string) => void
+  onRemove: (id: string) => Promise<void>
 }
 
 function PostRowActions({ post, compact = false, onTogglePublish, onTogglePin, onRemove }: PostRowActionsProps) {
@@ -125,9 +125,13 @@ function PostRowActions({ post, compact = false, onTogglePublish, onTogglePin, o
       <Link href={`/admin/posts/${post._id}/edit`} className={`grid ${iconSize} place-items-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-950 dark:hover:bg-white/10 dark:hover:text-neutral-100`} aria-label={`Editar ${post.title}`}>
         <PencilSquareIcon className="size-4" aria-hidden />
       </Link>
-      <button type="button" onClick={() => onRemove(post._id)} className={`grid ${iconSize} place-items-center rounded-md text-neutral-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-300`} aria-label={`Deletar ${post.title}`}>
-        <TrashIcon className="size-4" aria-hidden />
-      </button>
+      <DeleteActionMenu
+        title={`Excluir “${post.title}”?`}
+        description="O post e seus comentários serão apagados permanentemente."
+        onDelete={() => onRemove(post._id)}
+        triggerAriaLabel={`Opções de ${post.title}`}
+        triggerClassName={`grid ${iconSize} place-items-center rounded-md text-neutral-500 outline-none transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-white`}
+      />
     </div>
   )
 }
@@ -217,7 +221,6 @@ export function PostsTable({ posts: initial }: Props) {
   }
 
   async function remove(ids: string[]) {
-    if (!confirm(ids.length === 1 ? "Deletar este post?" : `Deletar ${ids.length} posts?`)) return
     setBusyAction("delete")
     setActionError("")
     try {
@@ -226,7 +229,9 @@ export function PostsTable({ posts: initial }: Props) {
       setPosts((prev) => prev.filter((post) => !ids.includes(post._id)))
       setSelected({})
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Não foi possível deletar os posts.")
+      const message = err instanceof Error ? err.message : "Não foi possível deletar os posts."
+      setActionError(message)
+      throw new Error(message)
     } finally {
       setBusyAction(null)
     }
@@ -369,15 +374,15 @@ export function PostsTable({ posts: initial }: Props) {
               <ArrowDownTrayIcon className="size-3.5" aria-hidden />
               Baixar textos
             </button>
-            <button
-              type="button"
-              onClick={() => remove(selectedIds)}
+            <DeleteActionMenu
+              title={selectedIds.length === 1 ? "Excluir o post selecionado?" : `Excluir ${selectedIds.length} posts?`}
+              description={selectedIds.length === 1 ? "O post e seus comentários serão apagados permanentemente." : "Os posts selecionados e seus comentários serão apagados permanentemente."}
+              onDelete={() => remove(selectedIds)}
               disabled={busyAction === "delete"}
-              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-red-500 transition hover:bg-red-50 dark:hover:bg-red-500/10"
-            >
-              <TrashIcon className="size-3.5" aria-hidden />
-              Deletar
-            </button>
+              triggerLabel="Deletar"
+              triggerVariant="text"
+              triggerClassName="inline-flex min-h-8 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-red-600 outline-none transition hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-red-600 disabled:opacity-40 dark:text-red-400 dark:hover:bg-red-500/10"
+            />
           </div>
         )}
       </div>

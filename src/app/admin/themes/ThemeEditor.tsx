@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowDownIcon, ArrowUpIcon, MagnifyingGlassIcon, TrashIcon } from "@heroicons/react/24/outline"
+import { DeleteActionMenu } from "@/components/actions/DeleteActionMenu"
+import { ArrowDownIcon, ArrowUpIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline"
 import type { SerializedPostSummary } from "@/lib/db/posts"
 import type { SerializedTheme } from "@/lib/db/themes"
 
@@ -57,9 +58,13 @@ export function ThemeEditor({ theme, posts }: Props) {
   }
 
   async function remove() {
-    if (!theme || !confirm(`Excluir o tema “${theme.name}”? Os posts não serão excluídos.`)) return
+    if (!theme) return
     const response = await fetch(`/api/admin/themes/${theme._id}`, { method: "DELETE" })
-    if (!response.ok) return setError("Não foi possível excluir o tema.")
+    if (!response.ok) {
+      const message = "Não foi possível excluir o tema."
+      setError(message)
+      throw new Error(message)
+    }
     router.push("/admin/temas")
     router.refresh()
   }
@@ -86,7 +91,7 @@ export function ThemeEditor({ theme, posts }: Props) {
                 <span className="admin-order-actions">
                   <button type="button" onClick={() => move(index, -1)} disabled={index === 0} aria-label={`Subir ${post.title}`}><ArrowUpIcon /></button>
                   <button type="button" onClick={() => move(index, 1)} disabled={index === selectedPosts.length - 1} aria-label={`Descer ${post.title}`}><ArrowDownIcon /></button>
-                  <button type="button" onClick={() => setPostIds((ids) => ids.filter((id) => id !== post._id))} aria-label={`Remover ${post.title}`}><TrashIcon /></button>
+                  <button type="button" onClick={() => setPostIds((ids) => ids.filter((id) => id !== post._id))} aria-label={`Retirar ${post.title} deste tema`}><XMarkIcon /></button>
                 </span>
               </div>
             ))}
@@ -109,7 +114,7 @@ export function ThemeEditor({ theme, posts }: Props) {
         <section><header><h2>Resumo</h2></header><dl className="admin-inspector-list"><div><dt>Textos</dt><dd>{postIds.length}</dd></div><div><dt>Indexação</dt><dd>{active ? "Permitida" : "Bloqueada"}</dd></div></dl></section>
         {error && <p className="admin-form-error" role="alert">{error}</p>}
         <button type="button" className="admin-button-primary admin-save-button" onClick={save} disabled={saving}>{saving ? "Salvando…" : "Salvar alterações"}</button>
-        {theme && <button type="button" className="admin-button-danger" onClick={remove}>Excluir tema</button>}
+        {theme && <DeleteActionMenu title={`Excluir o tema “${theme.name}”?`} description="O tema será apagado, mas os posts relacionados permanecerão no site." onDelete={remove} triggerLabel="Excluir tema" triggerVariant="button" triggerClassName="admin-button-danger" />}
       </aside>
     </div>
   )

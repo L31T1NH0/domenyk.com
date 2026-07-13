@@ -23,6 +23,7 @@ import { usePretextContentFontSize } from "@/components/text/usePretextTextMetri
 import { CommentContent } from "@/components/comments/CommentContent"
 import { RichCommentComposer } from "@/components/comments/RichCommentComposer"
 import { useComments, type Comment } from "@/components/comments/useComments"
+import { DeleteActionMenu } from "@/components/actions/DeleteActionMenu"
 import type { SerializedNote } from "@/lib/db/notes"
 import { noteDisplayTitle } from "@/lib/seo"
 import { NOTE_VIEW_TTL_MS, type NoteViewSource } from "@/lib/note-views"
@@ -58,7 +59,7 @@ type NoteCommentsPanelProps = {
   isAdmin?: boolean
   onDraftChange: (draft: string) => void
   onSubmit: (content?: string) => Promise<boolean | void> | boolean | void
-  onRemove: (id: string) => void
+  onRemove: (id: string) => Promise<boolean>
   onLoadOlder: () => Promise<void> | void
   onClose: () => void
   returnFocusRef: RefObject<HTMLButtonElement | null>
@@ -150,16 +151,7 @@ function NoteCommentsPanel({ comments, loading = false, hasMore = false, loading
                     className="mt-0.5 break-words leading-relaxed text-neutral-700 dark:text-[#d8d4ce]"
                   />
                 </div>
-                {(isAdmin || comment.canDelete) && (
-                  <button
-                    type="button"
-                    onClick={() => onRemove(comment._id)}
-                    aria-label="Deletar comentário"
-                    className="grid size-8 shrink-0 place-items-center rounded-full text-neutral-500 transition-colors hover:bg-red-50 hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:text-[#A8A095] dark:hover:bg-red-950/40 dark:hover:text-red-300"
-                  >
-                    <XMarkIcon className="size-3" aria-hidden />
-                  </button>
-                )}
+                {(isAdmin || comment.canDelete) && <DeleteActionMenu title="Excluir comentário?" onDelete={async () => { if (!(await onRemove(comment._id))) throw new Error("Não foi possível excluir o comentário.") }} triggerAriaLabel="Opções do comentário" triggerClassName="grid size-8 shrink-0 place-items-center rounded-full text-neutral-500 outline-none transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#A8A095] dark:hover:bg-white/10 dark:hover:text-white" />}
               </div>
             ))}
           </div>
@@ -384,11 +376,6 @@ export function NoteCard({ note, showMetadata = false, viewContext, isAdmin, onD
     }
   }
 
-  function confirmDelete() {
-    if (deleting || !window.confirm("Deletar esta nota? Esta ação não pode ser desfeita.")) return
-    void onDelete?.(note._id)
-  }
-
   useEffect(() => {
     if (!activeImage) return
     const dialog = lightboxDialogRef.current
@@ -530,15 +517,15 @@ export function NoteCard({ note, showMetadata = false, viewContext, isAdmin, onD
               </button>
             )}
             {onDelete && !editing && (
-              <button
-                type="button"
-                onClick={confirmDelete}
+              <DeleteActionMenu
+                title="Excluir esta nota?"
+                description="A nota, seus comentários e suas métricas internas serão apagados permanentemente."
+                onDelete={() => onDelete(note._id)}
                 disabled={deleting}
-                aria-label={deleting ? "Deletando nota" : "Deletar nota"}
-                className="min-h-8 rounded px-2 text-xs leading-none text-neutral-500 transition-colors hover:bg-red-50 hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 disabled:cursor-wait disabled:opacity-50 dark:text-[#A8A095] dark:hover:bg-red-950/40 dark:hover:text-red-300"
-              >
-                {deleting ? "deletando..." : "deletar"}
-              </button>
+                triggerLabel="Excluir"
+                triggerVariant="text"
+                triggerClassName="inline-flex min-h-8 items-center gap-1 rounded px-2 text-xs leading-none text-neutral-500 outline-none transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:cursor-wait disabled:opacity-50 dark:text-[#A8A095] dark:hover:bg-white/10 dark:hover:text-white"
+              />
             )}
           </div>
         )}

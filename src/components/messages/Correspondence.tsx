@@ -8,6 +8,7 @@ import {
   ChevronDownIcon,
   PaperAirplaneIcon,
 } from "@heroicons/react/24/outline"
+import { DeleteActionMenu } from "@/components/actions/DeleteActionMenu"
 import { MESSAGE_CATEGORIES, messageCategoryLabel } from "@/lib/message-categories"
 
 type Entry = { _id: string; authorName: string; body: string; createdAt: string; readAt?: string; isOwn: boolean }
@@ -155,12 +156,15 @@ export function Correspondence() {
   }
 
   async function deleteThread(id: string) {
-    if (!window.confirm("Excluir este assunto e todas as respostas? Esta ação não pode ser desfeita.")) return
     setPendingAction(`delete:${id}`)
     setError("")
     const response = await fetch(`/api/messages/${id}`, { method: "DELETE" })
     setPendingAction(null)
-    if (!response.ok) return setError("Não foi possível excluir o assunto.")
+    if (!response.ok) {
+      const message = "Não foi possível excluir o assunto."
+      setError(message)
+      throw new Error(message)
+    }
     setThreads((current) => current?.filter((thread) => thread._id !== id) ?? [])
     setSelected(null)
   }
@@ -470,14 +474,15 @@ export function Correspondence() {
                           )}
 
                           <div className="mt-4 flex justify-end">
-                            <button
-                              type="button"
+                            <DeleteActionMenu
+                              title={`Excluir “${thread.subject}”?`}
+                              description="O assunto e todas as respostas serão apagados permanentemente."
+                              onDelete={() => deleteThread(thread._id)}
                               disabled={isBusy}
-                              onClick={() => void deleteThread(thread._id)}
-                              className="min-h-11 rounded-md px-2 text-xs font-medium text-red-700 outline-none transition-colors hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-red-600 disabled:opacity-40 dark:text-red-400 dark:hover:bg-red-500/10"
-                            >
-                              Excluir assunto
-                            </button>
+                              triggerLabel="Excluir assunto"
+                              triggerVariant="text"
+                              triggerClassName="inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-xs font-medium text-red-700 outline-none transition-colors hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-red-600 disabled:opacity-40 dark:text-red-400 dark:hover:bg-red-500/10"
+                            />
                           </div>
                         </>
                       )}

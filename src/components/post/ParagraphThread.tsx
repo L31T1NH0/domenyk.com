@@ -5,6 +5,7 @@ import { useUser } from "@clerk/nextjs"
 import { useComments } from "@/components/comments/useComments"
 import { CommentContent } from "@/components/comments/CommentContent"
 import { RichCommentComposer } from "@/components/comments/RichCommentComposer"
+import { DeleteActionMenu } from "@/components/actions/DeleteActionMenu"
 import type { PostLocale } from "@/lib/post-locales"
 
 type Props = {
@@ -78,16 +79,7 @@ export function ParagraphThread({ postId, paragraphId, locale = "pt", isAdmin = 
                 className="text-neutral-600 dark:text-[#A8A095]"
               />
             </div>
-            {(isAdmin || c.canDelete) && (
-              <button
-                type="button"
-                onClick={() => remove(c._id)}
-                aria-label="Deletar comentário"
-                className="h-5 w-5 shrink-0 rounded-full text-neutral-400 transition-colors hover:bg-red-500/10 hover:text-red-500"
-              >
-                ✕
-              </button>
-            )}
+            {(isAdmin || c.canDelete) && <DeleteActionMenu title="Excluir comentário?" onDelete={async () => { if (!(await remove(c._id))) throw new Error("Não foi possível excluir o comentário.") }} triggerAriaLabel="Opções do comentário" triggerClassName="grid size-6 shrink-0 place-items-center rounded-md text-neutral-400 outline-none transition-colors hover:bg-neutral-950/10 hover:text-neutral-950 focus-visible:ring-2 focus-visible:ring-neutral-500 dark:hover:bg-white/10 dark:hover:text-white" />}
           </div>
         ))}
       </div>

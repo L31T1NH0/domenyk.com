@@ -1,7 +1,8 @@
 "use client"
 
-import { ClipboardDocumentIcon, TrashIcon } from "@heroicons/react/24/outline"
+import { ClipboardDocumentIcon } from "@heroicons/react/24/outline"
 import { useRef, useState } from "react"
+import { DeleteActionMenu } from "@/components/actions/DeleteActionMenu"
 import type { SerializedMediaItem } from "@/lib/blob"
 
 type Props = { initialMedia: SerializedMediaItem[] }
@@ -41,8 +42,6 @@ export function MediaLibrary({ initialMedia }: Props) {
   }
 
   async function remove(item: SerializedMediaItem) {
-    if (!confirm("Deletar esta imagem permanentemente dos assets?")) return
-
     setDeletingUrl(item.url)
     setError("")
     try {
@@ -55,7 +54,9 @@ export function MediaLibrary({ initialMedia }: Props) {
       if (!res.ok) throw new Error(data.error ?? "Erro ao deletar imagem.")
       setMedia((prev) => prev.filter((asset) => asset.url !== item.url))
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao deletar imagem.")
+      const message = err instanceof Error ? err.message : "Erro ao deletar imagem."
+      setError(message)
+      throw new Error(message)
     } finally {
       setDeletingUrl(null)
     }
@@ -109,16 +110,14 @@ export function MediaLibrary({ initialMedia }: Props) {
               >
                 <ClipboardDocumentIcon className="size-5" aria-hidden />
               </button>
-              <button
-                type="button"
-                onClick={() => remove(item)}
+              <DeleteActionMenu
+                title="Excluir esta imagem?"
+                description="O arquivo será apagado permanentemente dos assets e poderá deixar referências quebradas no site."
+                onDelete={() => remove(item)}
                 disabled={deletingUrl === item.url}
-                className="grid size-9 place-items-center rounded-full bg-white/90 text-red-600 hover:bg-white disabled:cursor-wait disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-white"
-                aria-label="Deletar permanentemente"
-                title="Deletar permanentemente"
-              >
-                <TrashIcon className="size-5" aria-hidden />
-              </button>
+                triggerAriaLabel={`Opções da imagem ${item.pathname}`}
+                triggerClassName="grid size-9 place-items-center rounded-full bg-white/90 text-neutral-700 outline-none transition-colors hover:bg-white focus-visible:ring-2 focus-visible:ring-white disabled:cursor-wait disabled:opacity-60"
+              />
             </div>
             {copied === item.url && (
               <span className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-black/70 px-2 py-1 text-xs text-white">

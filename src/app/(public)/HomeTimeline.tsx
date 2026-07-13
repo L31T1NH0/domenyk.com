@@ -698,7 +698,9 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
       setNoteCount((prev) => Math.max(0, prev - 1))
       router.refresh()
     } catch (caughtError) {
-      setNoteError(caughtError instanceof Error ? caughtError.message : "Não foi possível deletar a nota.")
+      const message = caughtError instanceof Error ? caughtError.message : "Não foi possível deletar a nota."
+      setNoteError(message)
+      throw new Error(message)
     } finally {
       setDeletingNoteId(null)
     }

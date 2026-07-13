@@ -44,7 +44,9 @@ export function NotesTimeline({
       }
       setNotes((prev) => prev.filter((note) => note._id !== id))
     } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : "Não foi possível deletar a nota.")
+      const message = caughtError instanceof Error ? caughtError.message : "Não foi possível deletar a nota."
+      setError(message)
+      throw new Error(message)
     } finally {
       setDeletingId(null)
     }

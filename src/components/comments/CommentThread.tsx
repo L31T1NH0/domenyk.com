@@ -6,6 +6,7 @@ import { ptBR } from "date-fns/locale"
 import { useComments } from "@/components/comments/useComments"
 import { CommentContent } from "@/components/comments/CommentContent"
 import { RichCommentComposer } from "@/components/comments/RichCommentComposer"
+import { DeleteActionMenu } from "@/components/actions/DeleteActionMenu"
 import type { PostLocale } from "@/lib/post-locales"
 
 type Props = { postId: string; locale?: PostLocale; isAdmin?: boolean }
@@ -46,11 +47,7 @@ export function CommentThread({ postId, locale = "pt", isAdmin = false }: Props)
                 <time className="text-xs text-neutral-400">
                   {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true, locale: ptBR })}
                 </time>
-                {(isAdmin || c.canDelete) && (
-                  <button onClick={() => remove(c._id)} className="text-xs text-neutral-300 hover:text-red-400 ml-auto">
-                    deletar
-                  </button>
-                )}
+                {(isAdmin || c.canDelete) && <span className="ml-auto"><DeleteActionMenu title="Excluir comentário?" onDelete={async () => { if (!(await remove(c._id))) throw new Error("Não foi possível excluir o comentário.") }} triggerLabel="Excluir" triggerVariant="text" /></span>}
               </div>
               <CommentContent
                 comment={c}

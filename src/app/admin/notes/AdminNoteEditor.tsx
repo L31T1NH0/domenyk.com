@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { DeleteActionMenu } from "@/components/actions/DeleteActionMenu"
 import type { SerializedNote } from "@/lib/db/notes"
 import type { NoteMetrics } from "@/lib/db/note-metrics"
 
@@ -26,9 +27,12 @@ export function AdminNoteEditor({ note, metrics }: { note: SerializedNote; metri
   }
 
   async function remove() {
-    if (!confirm("Excluir esta nota? Esta ação não pode ser desfeita.")) return
     const response = await fetch(`/api/admin/notes/${note._id}`, { method: "DELETE" })
-    if (!response.ok) return setMessage("Não foi possível excluir a nota.")
+    if (!response.ok) {
+      const error = "Não foi possível excluir a nota."
+      setMessage(error)
+      throw new Error(error)
+    }
     router.push("/admin/notes"); router.refresh()
   }
 
@@ -48,7 +52,7 @@ export function AdminNoteEditor({ note, metrics }: { note: SerializedNote; metri
       <section><header><h2>Prévia de busca</h2></header><div className="admin-search-preview"><span>domenyk.com › notes › {note._id}</span><strong>{seoTitle || "Título SEO da nota"}</strong><p>{seoDescription || "A descrição usada pelo Google aparecerá aqui."}</p></div></section>
       {message && <p className={message === "Alterações salvas." ? "admin-form-success" : "admin-form-error"} role="status">{message}</p>}
       <button type="button" className="admin-button-primary admin-save-button" disabled={saving || !content.trim()} onClick={save}>{saving ? "Salvando…" : "Salvar alterações"}</button>
-      <button type="button" className="admin-button-danger" onClick={remove}>Excluir nota</button>
+      <DeleteActionMenu title="Excluir esta nota?" onDelete={remove} triggerLabel="Excluir nota" triggerVariant="button" triggerClassName="admin-button-danger" />
     </aside>
   </div>
 }

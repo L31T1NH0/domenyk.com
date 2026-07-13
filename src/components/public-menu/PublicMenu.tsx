@@ -73,10 +73,12 @@ export function PublicMenu() {
     const interval = window.setInterval(refreshUnreadNotifications, 45_000)
     const onFocus = () => refreshUnreadNotifications()
     window.addEventListener("focus", onFocus)
+    window.addEventListener("notifications:changed", refreshUnreadNotifications)
     return () => {
       cancelled = true
       window.clearInterval(interval)
       window.removeEventListener("focus", onFocus)
+      window.removeEventListener("notifications:changed", refreshUnreadNotifications)
     }
   }, [admin, open])
 
@@ -222,26 +224,14 @@ export function PublicMenu() {
                 <span className="font-medium">Conta</span>
               </button>
 
-              <div className="mt-1 flex min-w-0 items-center gap-2.5 border-t border-zinc-200 px-2.5 py-3 dark:border-white/10">
-                <img src={user.imageUrl} alt="" className="size-9 shrink-0 rounded-full object-cover !grayscale-0" />
-                <div className="min-w-0">
-                  <p className="truncate text-[13px] font-medium text-zinc-950 dark:text-white">
-                    {user.fullName ?? user.username ?? "Conta"}
-                  </p>
-                  <p className="truncate text-[11px] text-zinc-500 dark:text-zinc-400">
-                    {user.primaryEmailAddress?.emailAddress ?? "Conectado"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="border-t border-zinc-200 pt-1.5 dark:border-white/10">
+              <div className="mt-1 border-t border-zinc-200 pt-1.5 dark:border-white/10">
                 <button type="button" role="menuitem" onClick={manageAccount} className={ITEM_CLASS_NAME}>
                   <UserCircleIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
                   <span className="flex-1">Gerenciar conta</span>
                   <ChevronRightIcon className="size-3.5 text-zinc-400" aria-hidden />
                 </button>
-                <button type="button" role="menuitem" onClick={signOut} className={`${ITEM_CLASS_NAME} text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10`}>
-                  <ArrowRightStartOnRectangleIcon className="size-[18px]" aria-hidden />
+                <button type="button" role="menuitem" onClick={signOut} className={ITEM_CLASS_NAME}>
+                  <ArrowRightStartOnRectangleIcon className="size-[18px] text-zinc-500 transition-colors group-hover:text-red-600 group-focus-visible:text-red-600 dark:text-zinc-400 dark:group-hover:text-red-400 dark:group-focus-visible:text-red-400" aria-hidden />
                   Sair
                 </button>
               </div>
@@ -319,7 +309,7 @@ export function PublicMenu() {
                     <Link href="/notificacoes" role="menuitem" onClick={() => closeMenu()} className={ITEM_CLASS_NAME}>
                       <BellIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
                       <span className="flex-1">Notificações</span>
-                      {unreadNotifications > 0 && <span aria-label={`${unreadNotifications} notificações não lidas`} className="min-w-5 rounded-full bg-zinc-950 px-1.5 py-0.5 text-center text-[10px] font-medium text-white dark:bg-white dark:text-zinc-950">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>}
+                      {unreadNotifications > 0 && <span aria-label={`${unreadNotifications} notificações não lidas`} className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold leading-none text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>}
                     </Link>
                   )}
                   <Link href="/sobre" role="menuitem" onClick={() => closeMenu()} className={ITEM_CLASS_NAME}>

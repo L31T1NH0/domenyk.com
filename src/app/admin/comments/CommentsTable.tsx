@@ -4,7 +4,8 @@ import { useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { ArrowTopRightOnSquareIcon, MagnifyingGlassIcon, TrashIcon } from "@heroicons/react/24/outline"
+import { ArrowTopRightOnSquareIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline"
+import { DeleteActionMenu } from "@/components/actions/DeleteActionMenu"
 import type { CommentParentSummary, SerializedComment } from "@/lib/db/comments"
 
 type AdminComment = SerializedComment & { parent: CommentParentSummary }
@@ -27,11 +28,12 @@ export function CommentsTable({ comments: initial }: { comments: AdminComment[] 
   }), [comments, filter, query])
 
   async function remove(id: string) {
-    if (!confirm("Excluir este comentário? Esta ação não pode ser desfeita.")) return
     setError("")
     const response = await fetch(`/api/admin/comments/${id}`, { method: "DELETE" })
     if (response.ok) return setComments((current) => current.filter((comment) => comment._id !== id))
-    setError("Não foi possível excluir o comentário.")
+    const message = "Não foi possível excluir o comentário."
+    setError(message)
+    throw new Error(message)
   }
 
   async function toggleDetails(id: string) {
@@ -94,7 +96,7 @@ export function CommentsTable({ comments: initial }: { comments: AdminComment[] 
         <time dateTime={comment.createdAt}>{formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true, locale: ptBR })}</time>
         <div className="admin-comment-actions">
           <button type="button" onClick={() => toggleDetails(comment._id)} aria-expanded={detailId === comment._id} aria-controls={`comment-details-${comment._id}`} className="admin-comment-details-button">{detailId === comment._id ? "Fechar" : "Detalhes"}</button>
-          <button type="button" onClick={() => remove(comment._id)} aria-label={`Excluir comentário de ${comment.authorName}`} className="admin-comment-delete"><TrashIcon /></button>
+          <DeleteActionMenu title="Excluir comentário?" description={`O comentário de ${comment.authorName} será removido permanentemente.`} onDelete={() => remove(comment._id)} triggerAriaLabel={`Opções do comentário de ${comment.authorName}`} triggerClassName="admin-comment-delete" />
         </div>
         {detailId === comment._id && <div id={`comment-details-${comment._id}`} className="admin-comment-details">
           <header><div><strong>Registro no banco de dados</strong><span>Leitura direta da coleção <code>comments</code></span></div><small>{detailRecord ? `${Object.keys(detailRecord).length} campos` : ""}</small></header>

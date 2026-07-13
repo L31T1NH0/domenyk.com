@@ -74,6 +74,13 @@ export async function markAllNotificationsRead(recipientId: string) {
   await (await collection()).updateMany({ recipientId, readAt: { $exists: false } }, { $set: { readAt: new Date() } })
 }
 
+export async function deleteNotification(id: string, recipientId: string) {
+  const _id = toObjectId(id)
+  if (!_id) return false
+  const result = await (await collection()).deleteOne({ _id, recipientId })
+  return result.deletedCount > 0
+}
+
 export async function deleteNotificationsForMessageThread(threadId: string) {
   await (await collection()).deleteMany({
     href: { $in: [`/admin/messages#${threadId}`, `/fale-comigo#${threadId}`] },

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { DeleteActionMenu } from "@/components/actions/DeleteActionMenu"
 import { messageCategoryLabel } from "@/lib/message-categories"
 
 type Entry = { _id: string; authorName: string; body: string; createdAt: string; readAt?: string; isOwn: boolean }
@@ -63,11 +64,13 @@ export function AdminMessages() {
   }
 
   async function deleteThread() {
-    if (!thread || !window.confirm("Excluir permanentemente este assunto e todas as respostas?")) return
+    if (!thread) return
     setBusy(true)
     const response = await fetch(`/api/messages/${thread._id}`, { method: "DELETE" })
     setBusy(false)
-    if (response.ok) { setThreads((current) => current?.filter((item) => item._id !== thread._id) ?? []); setSelected(null) }
+    if (!response.ok) throw new Error("Não foi possível excluir o assunto.")
+    setThreads((current) => current?.filter((item) => item._id !== thread._id) ?? [])
+    setSelected(null)
   }
 
   async function loadMore() {
@@ -91,7 +94,7 @@ export function AdminMessages() {
       {!thread ? <p className="text-sm text-neutral-500">Selecione uma mensagem.</p> : <>
         <div className="border-b border-neutral-200 pb-4 dark:border-neutral-800">
           <div className="flex items-start justify-between gap-4"><div><h1 className="text-xl font-semibold">{thread.subject}</h1><p className="mt-1 text-sm text-neutral-500">Enviado por {thread.ownerName}</p></div><span className="rounded-full border border-neutral-300 px-2 py-1 text-xs text-neutral-600 dark:border-neutral-700 dark:text-neutral-400">{statusLabel(thread.status)}</span></div>
-          <div className="mt-4 flex flex-wrap gap-2"><Action onClick={() => changeStatus("accepted")} disabled={busy} tone="success">Aceitar sugestão</Action><Action onClick={() => changeStatus("declined")} disabled={busy} tone="danger">Negar</Action><Action onClick={() => changeStatus(thread.status === "closed" ? "open" : "closed")} disabled={busy}>{thread.status === "closed" ? "Reabrir" : "Encerrar"}</Action><Action onClick={archiveThread} disabled={busy}>{archived ? "Desarquivar" : "Arquivar"}</Action><Action onClick={deleteThread} disabled={busy} tone="danger">Excluir</Action></div>
+          <div className="mt-4 flex flex-wrap gap-2"><Action onClick={() => changeStatus("accepted")} disabled={busy} tone="success">Aceitar sugestão</Action><Action onClick={() => changeStatus("declined")} disabled={busy} tone="danger">Negar</Action><Action onClick={() => changeStatus(thread.status === "closed" ? "open" : "closed")} disabled={busy}>{thread.status === "closed" ? "Reabrir" : "Encerrar"}</Action><Action onClick={archiveThread} disabled={busy}>{archived ? "Desarquivar" : "Arquivar"}</Action><DeleteActionMenu title={`Excluir “${thread.subject}”?`} description="O assunto e todas as respostas serão apagados permanentemente." onDelete={deleteThread} triggerLabel="Excluir" triggerVariant="text" disabled={busy} /></div>
         </div>
         {!thread.entries ? <p className="py-6 text-sm text-neutral-500">Carregando conversa…</p> : <>
           <ol className="space-y-6 py-6">{thread.entries.map((entry) => <li key={entry._id}><div className="flex justify-between gap-3 text-xs text-neutral-500"><strong className="font-medium text-neutral-800 dark:text-neutral-200">{entry.authorName}</strong><span><time>{new Date(entry.createdAt).toLocaleString("pt-BR")}</time>{entry.isOwn && <span className="ml-2">· {entry.readAt ? `lida em ${new Date(entry.readAt).toLocaleString("pt-BR")}` : "não lida"}</span>}</span></div><p className="mt-2 whitespace-pre-wrap text-sm leading-6">{entry.body}</p></li>)}</ol>
