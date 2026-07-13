@@ -8,6 +8,7 @@ import { BackHome } from "@/components/BackHome"
 import { getNote, serializeNote } from "@/lib/db/notes"
 import { absoluteUrl, authorJsonLd, buildPageMetadata, descriptionFromMarkdown, isNoteIndexable, jsonLd, noteDisplayTitle, preferredContentImages, siteConfig } from "@/lib/seo"
 import { headers } from "next/headers"
+import { NoteViewTracker } from "@/components/notes/NoteViewTracker"
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -59,6 +60,7 @@ export default async function NotePage({ params }: Props) {
   return (
     <>
       <Header />
+      <NoteViewTracker noteId={serializedNote._id} minimumVisibleMs={serializedNote.readingEstimate.directViewThresholdMs} />
       <script
         nonce={nonce}
         type="application/ld+json"

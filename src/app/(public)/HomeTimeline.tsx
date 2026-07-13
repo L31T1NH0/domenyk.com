@@ -885,6 +885,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
                   <li key={item.id} className="min-w-0">
                     <NoteCard
                       note={item.note}
+                      viewContext="home"
                       isAdmin={isAdmin}
                       onDelete={handleDelete}
                       onUpdate={handleUpdate}

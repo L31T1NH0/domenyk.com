@@ -1127,3 +1127,9 @@ html.light-mode [data-public-shell] .note-content a:hover {
   .admin-comment-details { margin-left: 0; }
   .admin-comment-details > header { flex-direction: column; }
 }
+
+@media (min-width: 781px) {
+  .admin-note-row {
+    grid-template-columns: minmax(260px, 1fr) 120px 85px 110px 60px;
+  }
+}

@@ -25,10 +25,12 @@ import { RichCommentComposer } from "@/components/comments/RichCommentComposer"
 import { useComments, type Comment } from "@/components/comments/useComments"
 import type { SerializedNote } from "@/lib/db/notes"
 import { noteDisplayTitle } from "@/lib/seo"
+import { NOTE_VIEW_TTL_MS, type NoteViewSource } from "@/lib/note-views"
 
 type Props = {
   note: SerializedNote
   showMetadata?: boolean
+  viewContext?: Exclude<NoteViewSource, "direct">
   isAdmin?: boolean
   onDelete?: (id: string) => Promise<void> | void
   onUpdate?: (note: SerializedNote) => void
@@ -43,6 +45,7 @@ type ActiveImage = {
 
 const TIMELINE_IMAGE_CROP_MAX_HEIGHT = 416
 const TIMELINE_IMAGE_CROP_MIN_RATIO = 1.12
+const pendingNoteImpressions = new Set<string>()
 
 type NoteCommentsPanelProps = {
   comments: Comment[]
@@ -182,7 +185,8 @@ function NoteCommentsPanel({ comments, loading = false, hasMore = false, loading
   )
 }
 
-export function NoteCard({ note, showMetadata = false, isAdmin, onDelete, onUpdate, cropTallImages = false, deleting = false }: Props) {
+export function NoteCard({ note, showMetadata = false, viewContext, isAdmin, onDelete, onUpdate, cropTallImages = false, deleting = false }: Props) {
+  const articleRef = useRef<HTMLElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const editEditorRef = useRef<LexicalEditorInstance | null>(null)
   const commentsButtonRef = useRef<HTMLButtonElement>(null)
@@ -224,6 +228,71 @@ export function NoteCard({ note, showMetadata = false, isAdmin, onDelete, onUpda
   const touchStartRef = useRef(0)
   const activeImageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const closeThreshold = 80
+
+  useEffect(() => {
+    if (!viewContext) return
+    const element = articleRef.current
+    if (!element) return
+    const pendingKey = `${viewContext}:${note._id}`
+    const storageKey = `note-viewed:${pendingKey}`
+    const now = Date.now()
+    try {
+      const previous = Number(localStorage.getItem(storageKey) ?? 0)
+      if (previous && now - previous < NOTE_VIEW_TTL_MS) return
+    } catch {}
+    if (pendingNoteImpressions.has(pendingKey)) return
+
+    let timer: ReturnType<typeof setTimeout> | null = null
+    let stopped = false
+    let sufficientlyVisible = false
+
+    const clearImpressionTimer = () => {
+      if (!timer) return
+      clearTimeout(timer)
+      timer = null
+    }
+
+    const countImpression = () => {
+      timer = null
+      if (stopped) return
+      pendingNoteImpressions.add(pendingKey)
+      observer.disconnect()
+      document.removeEventListener("visibilitychange", syncImpressionTimer)
+      fetch(`/api/notes/${note._id}/view`, {
+        method: "POST",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source: viewContext }),
+      }).then((response) => {
+        if (response.ok) {
+          try { localStorage.setItem(storageKey, String(Date.now())) } catch {}
+        }
+      }).catch(() => undefined).finally(() => pendingNoteImpressions.delete(pendingKey))
+    }
+
+    const syncImpressionTimer = () => {
+      clearImpressionTimer()
+      if (sufficientlyVisible && document.visibilityState === "visible") {
+        timer = setTimeout(countImpression, note.readingEstimate.impressionThresholdMs)
+      }
+    }
+
+    const observer = new IntersectionObserver(([entry]) => {
+      const nextVisibility = entry.isIntersecting
+        && entry.intersectionRatio >= note.readingEstimate.impressionVisibleRatio
+      if (nextVisibility === sufficientlyVisible) return
+      sufficientlyVisible = nextVisibility
+      syncImpressionTimer()
+    }, { threshold: [0, note.readingEstimate.impressionVisibleRatio] })
+    document.addEventListener("visibilitychange", syncImpressionTimer)
+    observer.observe(element)
+    return () => {
+      stopped = true
+      observer.disconnect()
+      document.removeEventListener("visibilitychange", syncImpressionTimer)
+      clearImpressionTimer()
+    }
+  }, [note._id, note.readingEstimate.impressionThresholdMs, note.readingEstimate.impressionVisibleRatio, viewContext])
 
   const applyTimelineImageCrops = useCallback(() => {
     const content = contentRef.current
@@ -438,7 +507,7 @@ export function NoteCard({ note, showMetadata = false, isAdmin, onDelete, onUpda
   const visibleDescription = note.seoDescription?.trim()
 
   return (
-    <article className="group relative flex w-full min-w-0 flex-col gap-2.5 border-y border-neutral-200 pb-5 pt-1 dark:border-white/10">
+    <article ref={articleRef} className="group relative flex w-full min-w-0 flex-col gap-2.5 border-y border-neutral-200 pb-5 pt-1 dark:border-white/10">
       <div className="flex items-center">
         <Link
           href={notePath}

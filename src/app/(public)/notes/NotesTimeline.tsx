@@ -104,6 +104,7 @@ export function NotesTimeline({
               key={note._id}
               note={note}
               showMetadata
+              viewContext="notes"
               isAdmin={isAdmin}
               onDelete={handleDelete}
               onUpdate={handleUpdate}

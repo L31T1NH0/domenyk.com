@@ -3,8 +3,9 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import type { SerializedNote } from "@/lib/db/notes"
+import type { NoteMetrics } from "@/lib/db/note-metrics"
 
-export function AdminNoteEditor({ note }: { note: SerializedNote }) {
+export function AdminNoteEditor({ note, metrics }: { note: SerializedNote; metrics: Omit<NoteMetrics, "updatedAt"> }) {
   const router = useRouter()
   const [title, setTitle] = useState(note.title ?? "")
   const [content, setContent] = useState(note.content)
@@ -39,6 +40,7 @@ export function AdminNoteEditor({ note }: { note: SerializedNote }) {
       </div></section>
     </main>
     <aside className="admin-inspector">
+      <section><header><h2>Audiência interna</h2><span className="admin-status is-muted">Privado</span></header><dl className="admin-inspector-list"><div><dt>Views reais</dt><dd>{metrics.directViews}</dd></div><div><dt>Exposições na home</dt><dd>{metrics.homeImpressions}</dd></div><div><dt>Exposições em /notes</dt><dd>{metrics.notesImpressions}</dd></div><div><dt>Leitura estimada</dt><dd>{note.readingEstimate.estimatedReadingSeconds}s</dd></div><div><dt>Complexidade</dt><dd>{note.readingEstimate.complexity}</dd></div><div><dt>Margem para view real</dt><dd>{note.readingEstimate.directViewThresholdMs / 1000}s</dd></div><div><dt>Margem para exposição</dt><dd>{note.readingEstimate.impressionThresholdMs / 1000}s · {Math.round(note.readingEstimate.impressionVisibleRatio * 100)}%</dd></div></dl><p className="admin-inspector-copy mt-3">A margem considera palavras, frases, densidade lexical, estrutura e imagens. Tempo em aba oculta não deve contar.</p></section>
       <section><header><h2>SEO</h2><span className={`admin-status ${indexable ? "is-positive" : "is-warning"}`}>{indexable ? "Indexável" : "Não indexável"}</span></header><p className="admin-inspector-copy">{indexable ? "A nota pode entrar no Google e no sitemap." : "Preencha os dois campos para liberar a indexação."}</p><div className="admin-inspector-fields">
         <label className="admin-field"><span>Título SEO</span><input value={seoTitle} maxLength={120} onChange={(event) => setSeoTitle(event.target.value)} /><small>{seoTitle.length}/120</small></label>
         <label className="admin-field"><span>Descrição SEO</span><textarea value={seoDescription} maxLength={300} rows={5} onChange={(event) => setSeoDescription(event.target.value)} /><small>{seoDescription.length}/300</small></label>

@@ -3,6 +3,8 @@ import { getDb } from "./client"
 import { renderMarkdownSync } from "../mdx"
 import { isNoteIndexable, noteDisplayTitle } from "../seo"
 import { toObjectId } from "../validation"
+import { deleteNoteMetrics } from "./note-metrics"
+import { estimateNoteReading, type NoteReadingEstimate } from "../note-reading"
 
 export type Note = {
   _id: ObjectId
@@ -23,6 +25,7 @@ export type SerializedNote = Omit<Note, "_id" | "deleting" | "publishedAt" | "cr
   updatedAt: string
   contentHtml: string
   indexable: boolean
+  readingEstimate: NoteReadingEstimate
 }
 
 const indexableNoteFilter = {
@@ -95,6 +98,7 @@ export function serializeNote(note: Note): SerializedNote {
       defaultImageAlt: `Imagem relacionada a “${noteDisplayTitle({ title: note.title, content })}”`,
     }),
     indexable: isNoteIndexable(note),
+    readingEstimate: estimateNoteReading(content, note.images?.length ?? 0),
   }
 }
 
@@ -196,6 +200,7 @@ export async function deleteNote(id: string): Promise<boolean> {
   const objectId = toObjectId(id)
   if (!objectId) return false
   const result = await (await collection()).deleteOne({ _id: objectId })
+  if (result.deletedCount === 1) await deleteNoteMetrics(id)
   return result.deletedCount === 1
 }
 
