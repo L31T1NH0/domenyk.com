@@ -88,6 +88,13 @@ export async function getMessageThreadForOwner(id: string, ownerId: string) {
   return _id ? (await collection()).findOne({ _id, ownerId }) : null
 }
 
+export async function deleteMessageThread(id: string, ownerId?: string) {
+  const _id = toObjectId(id)
+  if (!_id) return false
+  const result = await (await collection()).deleteOne({ _id, ...(ownerId ? { ownerId } : {}) })
+  return result.deletedCount > 0
+}
+
 export async function markMessageThreadRead(id: string, readerId: string, ownerId?: string) {
   const _id = toObjectId(id)
   if (!_id) return null

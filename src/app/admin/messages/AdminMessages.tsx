@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 
 type Entry = { _id: string; authorName: string; body: string; createdAt: string; readAt?: string; isOwn: boolean }
-type Thread = { _id: string; ownerName: string; subject: string; category: string; status: string; archivedAt?: string; entries?: Entry[]; updatedAt: string; lastMessage?: { body: string; createdAt: string } | null }
+type Thread = { _id: string; ownerName: string; subject: string; category: string; status: string; entries?: Entry[]; updatedAt: string; lastMessage?: { body: string } | null }
 
 export function AdminMessages() {
   const [threads, setThreads] = useState<Thread[] | null>(null)
@@ -13,6 +13,8 @@ export function AdminMessages() {
   const [cursor, setCursor] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(false)
   const [archived, setArchived] = useState(false)
+  const thread = threads?.find((item) => item._id === selected)
+
   async function selectThread(id: string) {
     setSelected(id)
     const response = await fetch(`/api/messages/${id}`, { cache: "no-store" })
@@ -20,12 +22,89 @@ export function AdminMessages() {
     const detail = await response.json()
     setThreads((current) => current?.map((item) => item._id === id ? detail : item) ?? [])
   }
-  useEffect(() => { fetch(`/api/admin/messages${archived ? "?archived=1" : ""}`, { cache: "no-store" }).then((r) => r.json()).then((data) => { setThreads(data.items); setCursor(data.nextCursor); setHasMore(data.hasMore); const fromHash = window.location.hash.slice(1); const initial = data.items.some((item: Thread) => item._id === fromHash) ? fromHash : data.items[0]?._id ?? null; setSelected(initial); if (initial) void selectThread(initial) }) }, [archived])
-  const thread = threads?.find((item) => item._id === selected)
-  async function answer() { if (!thread || !reply.trim()) return; setBusy(true); const response = await fetch(`/api/messages/${thread._id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body: reply }) }); const updated = await response.json(); setBusy(false); if (response.ok) { setThreads((current) => current?.map((item) => item._id === updated._id ? updated : item) ?? []); setReply("") } }
-  async function changeStatus(status: "open" | "accepted" | "declined" | "closed") { if (!thread) return; setBusy(true); const response = await fetch(`/api/messages/${thread._id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) }); const updated = await response.json(); setBusy(false); if (response.ok) setThreads((current) => current?.map((item) => item._id === updated._id ? updated : item) ?? []) }
-  async function archiveThread() { if (!thread) return; setBusy(true); const response = await fetch(`/api/messages/${thread._id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ archived: !archived }) }); setBusy(false); if (response.ok) { setThreads((current) => current?.filter((item) => item._id !== thread._id) ?? []); setSelected(null) } }
-  async function loadMore() { if (!cursor) return; const params = new URLSearchParams({ cursor, ...(archived ? { archived: "1" } : {}) }); const response = await fetch(`/api/admin/messages?${params}`, { cache: "no-store" }); if (!response.ok) return; const data = await response.json(); setThreads((current) => [...(current ?? []), ...data.items]); setCursor(data.nextCursor); setHasMore(data.hasMore) }
+
+  useEffect(() => {
+    fetch(`/api/admin/messages${archived ? "?archived=1" : ""}`, { cache: "no-store" })
+      .then((response) => response.json())
+      .then((data) => {
+        setThreads(data.items); setCursor(data.nextCursor); setHasMore(data.hasMore)
+        const fromHash = window.location.hash.slice(1)
+        const initial = data.items.some((item: Thread) => item._id === fromHash) ? fromHash : data.items[0]?._id ?? null
+        setSelected(initial)
+        if (initial) void selectThread(initial)
+      })
+  }, [archived])
+
+  async function answer() {
+    if (!thread || !reply.trim()) return
+    setBusy(true)
+    const response = await fetch(`/api/messages/${thread._id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body: reply }) })
+    const updated = await response.json(); setBusy(false)
+    if (response.ok) { setThreads((current) => current?.map((item) => item._id === updated._id ? updated : item) ?? []); setReply("") }
+  }
+
+  async function patchThread(payload: object) {
+    if (!thread) return null
+    setBusy(true)
+    const response = await fetch(`/api/messages/${thread._id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
+    const updated = await response.json(); setBusy(false)
+    return response.ok ? updated : null
+  }
+
+  async function changeStatus(status: "open" | "accepted" | "declined" | "closed") {
+    const updated = await patchThread({ status })
+    if (updated) setThreads((current) => current?.map((item) => item._id === updated._id ? updated : item) ?? [])
+  }
+
+  async function archiveThread() {
+    const updated = await patchThread({ archived: !archived })
+    if (updated) { setThreads((current) => current?.filter((item) => item._id !== updated._id) ?? []); setSelected(null) }
+  }
+
+  async function deleteThread() {
+    if (!thread || !window.confirm("Excluir permanentemente este assunto e todas as respostas?")) return
+    setBusy(true)
+    const response = await fetch(`/api/messages/${thread._id}`, { method: "DELETE" })
+    setBusy(false)
+    if (response.ok) { setThreads((current) => current?.filter((item) => item._id !== thread._id) ?? []); setSelected(null) }
+  }
+
+  async function loadMore() {
+    if (!cursor) return
+    const params = new URLSearchParams({ cursor, ...(archived ? { archived: "1" } : {}) })
+    const response = await fetch(`/api/admin/messages?${params}`, { cache: "no-store" })
+    if (!response.ok) return
+    const data = await response.json()
+    setThreads((current) => [...(current ?? []), ...data.items]); setCursor(data.nextCursor); setHasMore(data.hasMore)
+  }
+
   if (!threads) return <p className="text-sm text-neutral-500">Carregando mensagens…</p>
-  return <div className="grid min-h-[32rem] overflow-hidden rounded-xl border border-neutral-200 bg-white lg:grid-cols-[18rem_1fr] dark:border-neutral-800 dark:bg-neutral-950"><aside className="border-b border-neutral-200 lg:border-b-0 lg:border-r dark:border-neutral-800"><div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3 text-sm font-medium dark:border-neutral-800"><span>{archived ? "Arquivadas" : "Caixa de entrada"}</span><button onClick={() => setArchived((value) => !value)} className="text-xs font-normal text-neutral-500 underline-offset-4 hover:underline">{archived ? "Atuais" : "Arquivo"}</button></div>{threads.length === 0 ? <p className="p-4 text-sm text-neutral-500">Nenhuma mensagem aqui.</p> : threads.map((item) => <button key={item._id} onClick={() => void selectThread(item._id)} className={`block w-full border-b border-neutral-100 px-4 py-3 text-left dark:border-neutral-900 ${selected === item._id ? "bg-neutral-100 dark:bg-neutral-900" : "hover:bg-neutral-50 dark:hover:bg-neutral-900/60"}`}><span className="block truncate text-sm font-medium">{item.subject}</span>{item.lastMessage && <span className="mt-1 block truncate text-xs text-neutral-500">{item.lastMessage.body}</span>}<span className="mt-1 flex justify-between gap-2 text-[11px] text-neutral-500"><span className="truncate">{item.ownerName} · {item.category === "idea" ? "ideia" : item.category === "correction" ? "correção" : item.category === "improvement" ? "melhoria" : "outro"}</span><time>{new Date(item.updatedAt).toLocaleDateString("pt-BR")}</time></span></button>)}{hasMore && <button onClick={() => void loadMore()} className="w-full px-4 py-3 text-sm text-neutral-500 hover:text-neutral-950 dark:hover:text-white">Carregar anteriores</button>}</aside><section className="min-w-0 p-5 sm:p-7">{thread ? <><div className="border-b border-neutral-200 pb-4 dark:border-neutral-800"><div className="flex items-start justify-between gap-4"><div><h1 className="text-xl font-semibold">{thread.subject}</h1><p className="mt-1 text-sm text-neutral-500">Enviado por {thread.ownerName}</p></div><span className="rounded-full border border-neutral-300 px-2 py-1 text-xs text-neutral-600 dark:border-neutral-700 dark:text-neutral-400">{thread.status === "open" ? "aguardando" : thread.status === "accepted" ? "aceita" : thread.status === "declined" ? "negada" : thread.status === "closed" ? "encerrada" : "respondida"}</span></div><div className="mt-4 flex flex-wrap gap-2"><button disabled={busy} onClick={() => changeStatus("accepted")} className="rounded-md border border-emerald-700 px-3 py-1.5 text-xs text-emerald-700 disabled:opacity-40 dark:border-emerald-500 dark:text-emerald-400">Aceitar sugestão</button><button disabled={busy} onClick={() => changeStatus("declined")} className="rounded-md border border-red-700 px-3 py-1.5 text-xs text-red-700 disabled:opacity-40 dark:border-red-500 dark:text-red-400">Negar</button><button disabled={busy} onClick={() => changeStatus(thread.status === "closed" ? "open" : "closed")} className="rounded-md border border-neutral-400 px-3 py-1.5 text-xs disabled:opacity-40 dark:border-neutral-600">{thread.status === "closed" ? "Reabrir" : "Encerrar"}</button><button disabled={busy} onClick={archiveThread} className="rounded-md border border-neutral-400 px-3 py-1.5 text-xs disabled:opacity-40 dark:border-neutral-600">{archived ? "Desarquivar" : "Arquivar"}</button></div></div>{thread.entries ? <><ol className="space-y-6 py-6">{thread.entries.map((entry) => <li key={entry._id}><div className="flex justify-between gap-3 text-xs text-neutral-500"><strong className="font-medium text-neutral-800 dark:text-neutral-200">{entry.authorName}</strong><span><time>{new Date(entry.createdAt).toLocaleString("pt-BR")}</time>{entry.isOwn && <span className="ml-2">· {entry.readAt ? `lida em ${new Date(entry.readAt).toLocaleString("pt-BR")}` : "não lida"}</span>}</span></div><p className="mt-2 whitespace-pre-wrap text-sm leading-6">{entry.body}</p></li>)}</ol>{thread.status === "closed" ? <p className="border-t border-neutral-200 pt-5 text-sm text-neutral-500 dark:border-neutral-800">Conversa encerrada. Reabra para responder.</p> : <div className="border-t border-neutral-200 pt-5 dark:border-neutral-800"><label htmlFor="admin-reply" className="text-sm font-medium">Responder</label><textarea id="admin-reply" value={reply} onChange={(e) => setReply(e.target.value)} rows={5} className="mt-2 w-full resize-y rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-neutral-500 dark:border-neutral-700" /><div className="mt-3 flex justify-end"><button disabled={busy || !reply.trim()} onClick={answer} className="rounded-md bg-neutral-950 px-4 py-2 text-sm font-medium text-white disabled:opacity-40 dark:bg-white dark:text-neutral-950">{busy ? "Enviando…" : "Enviar resposta"}</button></div></div>}</> : <p className="py-6 text-sm text-neutral-500">Carregando conversa…</p>}</> : <p className="text-sm text-neutral-500">Selecione uma mensagem.</p>}</section></div>
+
+  return <div className="grid min-h-[32rem] overflow-hidden rounded-xl border border-neutral-200 bg-white lg:grid-cols-[18rem_1fr] dark:border-neutral-800 dark:bg-neutral-950">
+    <aside className="border-b border-neutral-200 lg:border-b-0 lg:border-r dark:border-neutral-800">
+      <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3 text-sm font-medium dark:border-neutral-800"><span>{archived ? "Arquivadas" : "Caixa de entrada"}</span><button onClick={() => setArchived((value) => !value)} className="text-xs font-normal text-neutral-500 underline-offset-4 hover:underline">{archived ? "Atuais" : "Arquivo"}</button></div>
+      {threads.length === 0 ? <p className="p-4 text-sm text-neutral-500">Nenhuma mensagem aqui.</p> : threads.map((item) => <button key={item._id} onClick={() => void selectThread(item._id)} className={`block w-full border-b border-neutral-100 px-4 py-3 text-left dark:border-neutral-900 ${selected === item._id ? "bg-neutral-100 dark:bg-neutral-900" : "hover:bg-neutral-50 dark:hover:bg-neutral-900/60"}`}><span className="block truncate text-sm font-medium">{item.subject}</span>{item.lastMessage && <span className="mt-1 block truncate text-xs text-neutral-500">{item.lastMessage.body}</span>}<span className="mt-1 flex justify-between gap-2 text-[11px] text-neutral-500"><span className="truncate">{item.ownerName} · {categoryLabel(item.category)}</span><time>{new Date(item.updatedAt).toLocaleDateString("pt-BR")}</time></span></button>)}
+      {hasMore && <button onClick={() => void loadMore()} className="w-full px-4 py-3 text-sm text-neutral-500 hover:text-neutral-950 dark:hover:text-white">Carregar anteriores</button>}
+    </aside>
+    <section className="min-w-0 p-5 sm:p-7">
+      {!thread ? <p className="text-sm text-neutral-500">Selecione uma mensagem.</p> : <>
+        <div className="border-b border-neutral-200 pb-4 dark:border-neutral-800">
+          <div className="flex items-start justify-between gap-4"><div><h1 className="text-xl font-semibold">{thread.subject}</h1><p className="mt-1 text-sm text-neutral-500">Enviado por {thread.ownerName}</p></div><span className="rounded-full border border-neutral-300 px-2 py-1 text-xs text-neutral-600 dark:border-neutral-700 dark:text-neutral-400">{statusLabel(thread.status)}</span></div>
+          <div className="mt-4 flex flex-wrap gap-2"><Action onClick={() => changeStatus("accepted")} disabled={busy} tone="success">Aceitar sugestão</Action><Action onClick={() => changeStatus("declined")} disabled={busy} tone="danger">Negar</Action><Action onClick={() => changeStatus(thread.status === "closed" ? "open" : "closed")} disabled={busy}>{thread.status === "closed" ? "Reabrir" : "Encerrar"}</Action><Action onClick={archiveThread} disabled={busy}>{archived ? "Desarquivar" : "Arquivar"}</Action><Action onClick={deleteThread} disabled={busy} tone="danger">Excluir</Action></div>
+        </div>
+        {!thread.entries ? <p className="py-6 text-sm text-neutral-500">Carregando conversa…</p> : <>
+          <ol className="space-y-6 py-6">{thread.entries.map((entry) => <li key={entry._id}><div className="flex justify-between gap-3 text-xs text-neutral-500"><strong className="font-medium text-neutral-800 dark:text-neutral-200">{entry.authorName}</strong><span><time>{new Date(entry.createdAt).toLocaleString("pt-BR")}</time>{entry.isOwn && <span className="ml-2">· {entry.readAt ? `lida em ${new Date(entry.readAt).toLocaleString("pt-BR")}` : "não lida"}</span>}</span></div><p className="mt-2 whitespace-pre-wrap text-sm leading-6">{entry.body}</p></li>)}</ol>
+          {thread.status === "closed" ? <p className="border-t border-neutral-200 pt-5 text-sm text-neutral-500 dark:border-neutral-800">Conversa encerrada. Reabra para responder.</p> : <div className="border-t border-neutral-200 pt-5 dark:border-neutral-800"><label htmlFor="admin-reply" className="text-sm font-medium">Responder</label><textarea id="admin-reply" value={reply} onChange={(event) => setReply(event.target.value)} rows={5} className="mt-2 w-full resize-y rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-neutral-500 dark:border-neutral-700" /><div className="mt-3 flex justify-end"><button disabled={busy || !reply.trim()} onClick={answer} className="rounded-md bg-neutral-950 px-4 py-2 text-sm font-medium text-white disabled:opacity-40 dark:bg-white dark:text-neutral-950">{busy ? "Enviando…" : "Enviar resposta"}</button></div></div>}
+        </>}
+      </>}
+    </section>
+  </div>
 }
+
+function Action({ children, onClick, disabled, tone }: { children: React.ReactNode; onClick: () => void; disabled: boolean; tone?: "success" | "danger" }) {
+  const color = tone === "success" ? "border-emerald-700 text-emerald-700 dark:border-emerald-500 dark:text-emerald-400" : tone === "danger" ? "border-red-700 text-red-700 dark:border-red-500 dark:text-red-400" : "border-neutral-400 dark:border-neutral-600"
+  return <button disabled={disabled} onClick={onClick} className={`rounded-md border px-3 py-1.5 text-xs disabled:opacity-40 ${color}`}>{children}</button>
+}
+
+function categoryLabel(category: string) { return category === "idea" ? "ideia" : category === "correction" ? "correção" : category === "improvement" ? "melhoria" : "outro" }
+function statusLabel(status: string) { return status === "open" ? "aguardando" : status === "accepted" ? "aceita" : status === "declined" ? "negada" : status === "closed" ? "encerrada" : "respondida" }

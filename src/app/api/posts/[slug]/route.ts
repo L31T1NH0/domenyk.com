@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createHash } from "crypto"
 import { getPostByPublicId, incrementPostViewsOnce, serializePost } from "@/lib/db/posts"
-import { isAdmin } from "@/lib/auth"
+import { getAdminUserId, getAuthUser, isAdmin } from "@/lib/auth"
 import { rateLimit } from "@/lib/rate-limit"
 import { requestIdentity } from "@/lib/request-identity"
 import { isPostLocale } from "@/lib/post-locales"
 import { getPostVersion } from "@/lib/post-versions"
-import { getAdminUserId, getAuthUserId } from "@/lib/auth"
-import { aggregateNotification } from "@/lib/db/notifications"
+import { aggregateNotification, createNotification } from "@/lib/db/notifications"
 import { recordActivityEvent } from "@/lib/db/activity"
 
 const VIEW_COOKIE_MAX_AGE = 60 * 60 * 24
@@ -65,20 +64,31 @@ export async function GET(
     const result = await incrementPostViewsOnce(publicId, viewVisitorKey(req, publicId))
     post.views = result.views
     counted = result.counted
+    const viewer = result.counted ? await getAuthUser() : null
     if (result.counted) {
-      const userId = await getAuthUserId()
       await recordActivityEvent({
-        type: "post_view", visitorKey: requestIdentity(req), isAuthenticated: Boolean(userId),
-        ...(userId ? { userId } : {}), postId: post._id, postPublicId: post.publicId,
+        type: "post_view", visitorKey: requestIdentity(req), isAuthenticated: Boolean(viewer),
+        ...(viewer ? { userId: viewer.id, userName: viewer.name } : {}), postId: post._id, postPublicId: post.publicId,
         postSlug: post.slug, postTitle: version.title, locale: localeParam,
       }).catch(() => undefined)
     }
     const adminId = getAdminUserId()
-    if (result.counted && adminId) await aggregateNotification({
-      recipientId: adminId, kind: "view", aggregateKey: `view:${publicId}`,
-      title: `Novas visualizações em ${version.title}`,
-      description: `O post chegou a ${result.views} visualizações.`, href: `/posts/${post.slug}`,
-    }).catch(() => undefined)
+    if (result.counted && adminId) {
+      if (viewer) {
+        await createNotification({
+          recipientId: adminId, actorId: viewer.id, kind: "view",
+          title: `${viewer.name} visitou ${version.title}`,
+          description: `Visita de usuário autenticado · ${result.views} visualizações no total.`,
+          href: `/posts/${post.slug}`,
+        }).catch(() => undefined)
+      } else {
+        await aggregateNotification({
+          recipientId: adminId, kind: "view", aggregateKey: `view:${publicId}`,
+          title: `Novas visualizações em ${version.title}`,
+          description: `O post chegou a ${result.views} visualizações.`, href: `/posts/${post.slug}`,
+        }).catch(() => undefined)
+      }
+    }
   }
 
   const publicPost = {

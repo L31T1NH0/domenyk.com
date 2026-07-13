@@ -71,6 +71,16 @@ export function Correspondence() {
     setThreads((current) => current.map((thread) => thread._id === id ? data : thread)); setReply((current) => ({ ...current, [id]: "" }))
   }
 
+  async function deleteThread(id: string) {
+    if (!window.confirm("Excluir este assunto e todas as respostas? Esta ação não pode ser desfeita.")) return
+    setBusy(true); setError("")
+    const response = await fetch(`/api/messages/${id}`, { method: "DELETE" })
+    setBusy(false)
+    if (!response.ok) return setError("Não foi possível excluir o assunto.")
+    setThreads((current) => current.filter((thread) => thread._id !== id))
+    setSelected(null)
+  }
+
   if (!isLoaded) return <p className="py-16 text-sm text-zinc-500">Carregando…</p>
   if (!isSignedIn) return (
     <div className="py-16">
@@ -99,7 +109,7 @@ export function Correspondence() {
           <article id={thread._id} key={thread._id} className="border-b border-zinc-300 py-7 dark:border-zinc-800">
             <button type="button" onClick={() => void openThread(thread._id)} className="flex w-full items-baseline justify-between gap-4 text-left"><span className="min-w-0"><span className="block font-semibold">{thread.subject}</span>{thread.lastMessage && <span className="mt-1 block truncate text-sm text-zinc-500">{thread.lastMessage.body}</span>}</span><span className="shrink-0 text-right text-xs text-zinc-500">{STATUS_LABELS[thread.status] ?? thread.status}<time className="mt-1 block">{new Date(thread.updatedAt).toLocaleDateString("pt-BR")}</time></span></button>
             {selected === thread._id && <><ol className="mt-5 space-y-5">{thread.entries?.map((entry) => <li key={entry._id}><div className="flex items-baseline justify-between gap-3 text-xs text-zinc-500"><strong className="font-medium text-zinc-700 dark:text-zinc-300">{entry.authorName}</strong><span><time>{new Date(entry.createdAt).toLocaleDateString("pt-BR")}</time>{entry.isOwn && <span className="ml-2">· {entry.readAt ? "lido" : "não lido"}</span>}</span></div><p className="mt-1 whitespace-pre-wrap text-sm leading-6">{entry.body}</p></li>) ?? <li className="text-sm text-zinc-500">Carregando…</li>}</ol>
-            {thread.status === "closed" ? <p className="mt-5 text-sm text-zinc-500">Este assunto foi encerrado.</p> : <div className="mt-5 flex gap-2"><textarea aria-label={`Responder a ${thread.subject}`} value={reply[thread._id] ?? ""} onChange={(e) => setReply((current) => ({ ...current, [thread._id]: e.target.value }))} rows={2} maxLength={5000} className="min-w-0 flex-1 resize-y rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700" placeholder="Acrescentar algo…" /><button type="button" disabled={busy || !reply[thread._id]?.trim() || !thread.entries} onClick={() => answer(thread._id)} className="self-end rounded-md border border-zinc-400 px-3 py-2 text-sm disabled:opacity-40 dark:border-zinc-600">Responder</button></div>}</>}
+            {thread.status === "closed" ? <p className="mt-5 text-sm text-zinc-500">Este assunto foi encerrado.</p> : <div className="mt-5 flex gap-2"><textarea aria-label={`Responder a ${thread.subject}`} value={reply[thread._id] ?? ""} onChange={(e) => setReply((current) => ({ ...current, [thread._id]: e.target.value }))} rows={2} maxLength={5000} className="min-w-0 flex-1 resize-y rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700" placeholder="Acrescentar algo…" /><button type="button" disabled={busy || !reply[thread._id]?.trim() || !thread.entries} onClick={() => answer(thread._id)} className="self-end rounded-md border border-zinc-400 px-3 py-2 text-sm disabled:opacity-40 dark:border-zinc-600">Responder</button></div>}<div className="mt-4 flex justify-end"><button type="button" disabled={busy} onClick={() => void deleteThread(thread._id)} className="text-xs text-red-700 underline-offset-4 hover:underline disabled:opacity-40 dark:text-red-400">Excluir assunto</button></div></>}
           </article>
         ))}
         {hasMore && <button type="button" onClick={() => void loadMore()} className="mt-6 rounded-md border border-zinc-400 px-3 py-2 text-sm dark:border-zinc-600">Carregar assuntos anteriores</button>}

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { addMessageReply, getMessageThread, getMessageThreadForOwner, markMessageThreadRead, serializeMessageThread, setMessageThreadArchived, setMessageThreadStatus, type MessageThread } from "@/lib/db/messages"
-import { createNotification } from "@/lib/db/notifications"
+import { addMessageReply, deleteMessageThread, getMessageThread, getMessageThreadForOwner, markMessageThreadRead, serializeMessageThread, setMessageThreadArchived, setMessageThreadStatus, type MessageThread } from "@/lib/db/messages"
+import { createNotification, deleteNotificationsForMessageThread } from "@/lib/db/notifications"
 import { getAdminUserId, getAuthUser, isAdmin } from "@/lib/auth"
 import { rateLimit } from "@/lib/rate-limit"
 import { requestIdentity } from "@/lib/request-identity"
@@ -59,4 +59,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const updated = await setMessageThreadStatus(id, json.status as MessageThread["status"])
   if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 })
   return NextResponse.json(serializeMessageThread(updated, user.id))
+}
+
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getAuthUser()
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const { id } = await params
+  const admin = await isAdmin()
+  const deleted = await deleteMessageThread(id, admin ? undefined : user.id)
+  if (!deleted) return NextResponse.json({ error: "Not found" }, { status: 404 })
+  await deleteNotificationsForMessageThread(id).catch(() => undefined)
+  return NextResponse.json({ ok: true })
 }

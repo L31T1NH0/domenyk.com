@@ -74,6 +74,12 @@ export async function markAllNotificationsRead(recipientId: string) {
   await (await collection()).updateMany({ recipientId, readAt: { $exists: false } }, { $set: { readAt: new Date() } })
 }
 
+export async function deleteNotificationsForMessageThread(threadId: string) {
+  await (await collection()).deleteMany({
+    href: { $in: [`/admin/messages#${threadId}`, `/fale-comigo#${threadId}`] },
+  })
+}
+
 export function serializeNotification(notification: Notification) {
   return {
     ...notification,
