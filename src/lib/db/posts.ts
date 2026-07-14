@@ -5,6 +5,7 @@ import { calcReadingTime } from "../reading-time"
 import { toObjectId } from "../validation"
 import {
   isTranslationRevisionStale,
+  slugifyPostTitle,
   TRANSLATION_LOCALES,
   type TranslationLocale,
 } from "../post-locales"
@@ -12,6 +13,8 @@ import {
 export type PostStyle = "standard" | "editorial" | "opinion"
 
 export type PostTranslation = {
+  slug?: string
+  slugAliases?: string[]
   title: string
   content: string
   excerpt?: string
@@ -67,7 +70,7 @@ export type SitemapPost = Pick<
   Post,
   "slug" | "content" | "cover" | "published" | "pinned" | "updatedAt"
 > & {
-  translations?: Partial<Record<TranslationLocale, Pick<PostTranslation, "content" | "published" | "updatedAt">>>
+  translations?: Partial<Record<TranslationLocale, Pick<PostTranslation, "slug" | "title" | "content" | "published" | "updatedAt">>>
 }
 
 export type SerializedPostTranslationSummary = Omit<
@@ -130,6 +133,10 @@ async function ensurePostIndexes(col: Awaited<ReturnType<typeof collectionRaw>>)
     col.createIndex({ slug: 1 }, { unique: true }),
     col.createIndex({ published: 1, publishedAt: -1 }),
     col.createIndex({ title: "text", content: "text", tags: "text" }),
+    ...TRANSLATION_LOCALES.map((locale) => col.createIndex(
+      { [`translations.${locale}.slug`]: 1 },
+      { unique: true, sparse: true }
+    )),
   ])
 }
 
@@ -148,6 +155,7 @@ export function serializePostTranslationSummary(
   translation: PostTranslationSummary
 ): SerializedPostTranslationSummary {
   return {
+    slug: translation.slug,
     title: translation.title,
     excerpt: translation.excerpt,
     subtitle: translation.subtitle,
@@ -383,12 +391,18 @@ export async function getPostsWithPublishedVersions({
         pinned: 1,
         updatedAt: 1,
         "translations.en.content": 1,
+        "translations.en.slug": 1,
+        "translations.en.title": 1,
         "translations.en.published": 1,
         "translations.en.updatedAt": 1,
         "translations.de.content": 1,
+        "translations.de.slug": 1,
+        "translations.de.title": 1,
         "translations.de.published": 1,
         "translations.de.updatedAt": 1,
         "translations.id.content": 1,
+        "translations.id.slug": 1,
+        "translations.id.title": 1,
         "translations.id.published": 1,
         "translations.id.updatedAt": 1,
       },
@@ -490,6 +504,36 @@ export async function getPostBySlug(slug: string): Promise<Post | null> {
   const col = await collection()
   const post = await col.findOne({ slug, deleting: { $ne: true } })
   return post ? ensurePostPublicId(post) : null
+}
+
+export async function getPostByLocalizedSlug(
+  locale: TranslationLocale,
+  slug: string
+): Promise<Post | null> {
+  const col = await collection()
+  const translationPath = `translations.${locale}`
+  const post = await col.findOne({
+    deleting: { $ne: true },
+    $or: [
+      { [`${translationPath}.slug`]: slug },
+      { [`${translationPath}.slugAliases`]: slug },
+    ],
+  })
+  if (post) return ensurePostPublicId(post)
+
+  // Resolve translations created before localized slugs were stored.
+  const legacyCandidates = await col.find(
+    { [`${translationPath}.title`]: { $type: "string" }, deleting: { $ne: true } },
+    { projection: { [`${translationPath}.title`]: 1 } }
+  ).toArray()
+  const legacy = legacyCandidates.find((candidate) => {
+    const translation = candidate.translations?.[locale]
+    return translation && slugifyPostTitle(translation.title) === slug
+  })
+  if (!legacy) return null
+
+  const fullPost = await col.findOne({ _id: legacy._id, deleting: { $ne: true } })
+  return fullPost ? ensurePostPublicId(fullPost) : null
 }
 
 export async function incrementPostViews(publicId: string): Promise<number> {
@@ -619,8 +663,16 @@ export async function updatePostTranslation(
   if (!objectId) throw new Error("Invalid post id")
 
   const now = new Date()
+  const slug = slugifyPostTitle(data.title)
+  if (!slug) throw new Error("Título traduzido inválido para gerar a URL.")
   const published = data.published ?? existing?.published ?? false
+  const slugAliases = Array.from(new Set([
+    ...(existing?.slugAliases ?? []),
+    ...(existing?.slug && existing.slug !== slug ? [existing.slug] : []),
+  ])).filter((alias) => alias !== slug)
   const translation: PostTranslation = {
+    slug,
+    ...(slugAliases.length > 0 ? { slugAliases } : {}),
     title: data.title,
     content: data.content,
     excerpt: data.excerpt,

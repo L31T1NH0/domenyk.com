@@ -61,6 +61,37 @@ export function postPath(slug: string, locale: PostLocale = "pt"): string {
   return locale === "pt" ? `/posts/${encodedSlug}` : `/${locale}/posts/${encodedSlug}`
 }
 
+export function slugifyPostTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[ßẞ]/g, "ss")
+    .replace(/æ/g, "ae")
+    .replace(/œ/g, "oe")
+    .replace(/ø/g, "o")
+    .replace(/ł/g, "l")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 180)
+    .replace(/-$/g, "")
+}
+
+type LocalizedSlugPost = {
+  slug: string
+  translations?: Partial<Record<TranslationLocale, { title: string; slug?: string }>>
+}
+
+export function localizedPostSlug(post: LocalizedSlugPost, locale: PostLocale): string {
+  if (locale === "pt") return post.slug
+  const translation = post.translations?.[locale]
+  return translation?.slug || (translation ? slugifyPostTitle(translation.title) : post.slug) || post.slug
+}
+
+export function localizedPostPath(post: LocalizedSlugPost, locale: PostLocale = "pt"): string {
+  return postPath(localizedPostSlug(post, locale), locale)
+}
+
 export function isTranslationRevisionStale(
   sourceUpdatedAt: string | Date,
   originalContentUpdatedAt: string | Date

@@ -3,14 +3,15 @@ import { cache } from "react"
 import Link from "next/link"
 import { notFound, permanentRedirect } from "next/navigation"
 import { headers } from "next/headers"
-import { getPostByPublicId, getPostBySlug, getRelatedPosts, type Post, type PostStyle } from "@/lib/db/posts"
+import { getPostByLocalizedSlug, getPostByPublicId, getPostBySlug, getRelatedPosts, type Post, type PostStyle } from "@/lib/db/posts"
 import { isAdmin } from "@/lib/auth"
 import { renderMarkdown } from "@/lib/mdx"
 import { absoluteUrl, authorJsonLd, buildPageMetadata, descriptionFromMarkdown, jsonLd, preferredContentImages, siteConfig } from "@/lib/seo"
 import { getCachedClerkUserImage } from "@/lib/clerk-users"
 import {
   POST_LOCALE_DETAILS,
-  postPath,
+  localizedPostPath,
+  localizedPostSlug,
   type PostLocale,
 } from "@/lib/post-locales"
 import { getPostVersion, getPublishedPostLocales } from "@/lib/post-versions"
@@ -18,6 +19,7 @@ import { BackHome } from "@/components/BackHome"
 import { ParagraphCommentsLayer } from "@/components/post/ParagraphCommentsLayer"
 import { PostContentShell } from "@/components/post/PostContentShell"
 import { PostMetaBar } from "@/components/post/PostMetaBar"
+import { PostEngagementTracker } from "@/components/post/PostEngagementTracker"
 import { PostReadingPosition } from "@/components/post/PostReadingPosition"
 import { PostDescriptionDisclosure } from "@/components/post/PostDescriptionDisclosure"
 import { PostTopics } from "@/components/post/PostTopics"
@@ -102,21 +104,26 @@ function getPostStyleClasses(style: PostStyle) {
   return { page: "", article: "mt-6", eyebrow: "", content: "" }
 }
 
-const findPost = cache(async function findPost(slug: string): Promise<Post | null> {
-  return (await getPostBySlug(slug)) ?? (await getPostByPublicId(slug))
+const findPost = cache(async function findPost(slug: string, locale: PostLocale): Promise<Post | null> {
+  if (locale === "pt") {
+    return (await getPostBySlug(slug)) ?? (await getPostByPublicId(slug))
+  }
+  return (await getPostByLocalizedSlug(locale, slug))
+    ?? (await getPostBySlug(slug))
+    ?? (await getPostByPublicId(slug))
 })
 
 function languageUrls(post: Post) {
   const urls = Object.fromEntries(getPublishedPostLocales(post).map((locale) => [
     POST_LOCALE_DETAILS[locale].htmlLang,
-    absoluteUrl(postPath(post.slug, locale)),
+    absoluteUrl(localizedPostPath(post, locale)),
   ]))
-  if (post.published) urls["x-default"] = absoluteUrl(postPath(post.slug, "pt"))
+  if (post.published) urls["x-default"] = absoluteUrl(localizedPostPath(post, "pt"))
   return urls
 }
 
 export async function getLocalizedPostMetadata(slug: string, locale: PostLocale): Promise<Metadata> {
-  const post = await findPost(slug)
+  const post = await findPost(slug, locale)
   if (!post) return {}
   const version = getPostVersion(post, locale)
   if (!version) return {}
@@ -127,7 +134,7 @@ export async function getLocalizedPostMetadata(slug: string, locale: PostLocale)
   }
 
   const details = POST_LOCALE_DETAILS[locale]
-  const canonicalPath = postPath(post.slug, locale)
+  const canonicalPath = localizedPostPath(post, locale)
   const description = (version.excerpt ?? version.subtitle ?? descriptionFromMarkdown(version.content)) || siteConfig.description
   const [preferredImage] = preferredContentImages({ cover: version.cover?.url, markdown: version.content })
   const publishedLocales = getPublishedPostLocales(post)
@@ -152,9 +159,9 @@ export async function getLocalizedPostMetadata(slug: string, locale: PostLocale)
 
 export async function LocalizedPostPage({ slug, locale }: { slug: string; locale: PostLocale }) {
   const nonce = (await headers()).get("x-nonce") ?? undefined
-  const post = await findPost(slug)
+  const post = await findPost(slug, locale)
   if (!post) notFound()
-  if (post.slug !== slug) permanentRedirect(postPath(post.slug, locale))
+  if (localizedPostSlug(post, locale) !== slug) permanentRedirect(localizedPostPath(post, locale))
 
   const version = getPostVersion(post, locale)
   if (!version) notFound()
@@ -181,7 +188,7 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
   const style = version.style ?? "standard"
   const styleClasses = getPostStyleClasses(style)
   const styleLabel = copy.styleLabels[style]
-  const postUrl = absoluteUrl(postPath(post.slug, locale))
+  const postUrl = absoluteUrl(localizedPostPath(post, locale))
   const postImages = preferredContentImages({ cover: version.cover?.url, markdown: version.content })
   const postStructuredImages = (postImages.length > 0 ? postImages : [siteConfig.image]).map(absoluteUrl)
   const publishedLocales = getPublishedPostLocales(post)
@@ -193,7 +200,7 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
     .filter((relatedPost) => locale === "pt" ? relatedPost.published : relatedPost.translations?.[locale]?.published === true)
     .map((relatedPost) => ({
       publicId: relatedPost.publicId,
-      href: postPath(relatedPost.slug, locale),
+      href: localizedPostPath(relatedPost, locale),
       title: locale === "pt" ? relatedPost.title : relatedPost.translations?.[locale]?.title ?? relatedPost.title,
     }))
 
@@ -204,7 +211,7 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
         currentLocale={locale}
         options={selectorLocales.map((availableLocale) => ({
           locale: availableLocale,
-          href: postPath(post.slug, availableLocale),
+          href: localizedPostPath(post, availableLocale),
         }))}
       />
       <script
@@ -258,6 +265,7 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
         locale={locale}
         variant={style === "editorial" ? "editorial" : "default"}
       />
+      <PostEngagementTracker publicId={version.publicId} readingTimeMinutes={version.readingTimeMinutes} />
       {!version.published && <p className="mt-2 text-xs text-amber-400">{copy.draft}</p>}
 
       <article className={["relative flex flex-col gap-6", styleClasses.article].join(" ")}>

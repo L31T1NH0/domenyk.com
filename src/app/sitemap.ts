@@ -4,7 +4,7 @@ import { getIndexableNotes } from "@/lib/db/notes"
 import { getActiveThemeUpdates } from "@/lib/db/themes"
 import { absoluteUrl, preferredContentImages } from "@/lib/seo"
 import { getSitemapDescriptors, SITEMAP_PAGE_SIZE } from "@/lib/sitemaps"
-import { POST_LOCALE_DETAILS, POST_LOCALES, postPath } from "@/lib/post-locales"
+import { localizedPostPath, POST_LOCALE_DETAILS, POST_LOCALES } from "@/lib/post-locales"
 
 const FALLBACK_DATE = new Date("2026-07-12T00:00:00.000Z")
 
@@ -68,14 +68,14 @@ async function postsSitemap(page: number): Promise<MetadataRoute.Sitemap> {
     ))
     const languages = Object.fromEntries(locales.map((locale) => [
       POST_LOCALE_DETAILS[locale].htmlLang,
-      absoluteUrl(postPath(post.slug, locale)),
+      absoluteUrl(localizedPostPath(post, locale)),
     ]))
-    if (post.published) languages["x-default"] = absoluteUrl(postPath(post.slug, "pt"))
+    if (post.published) languages["x-default"] = absoluteUrl(localizedPostPath(post, "pt"))
 
     return locales.map((locale) => {
       const translation = locale === "pt" ? undefined : post.translations?.[locale]
       return {
-        url: absoluteUrl(postPath(post.slug, locale)),
+        url: absoluteUrl(localizedPostPath(post, locale)),
         lastModified: translation?.updatedAt ?? post.updatedAt,
         changeFrequency: "monthly" as const,
         priority: post.pinned ? 0.9 : 0.8,

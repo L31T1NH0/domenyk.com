@@ -38,6 +38,6 @@ export async function POST(req: NextRequest) {
   if (subject.length < 3 || message.length < 10) return NextResponse.json({ error: "Escreva um assunto e uma mensagem mais completos." }, { status: 400 })
   const thread = await createMessageThread({ ownerId: user.id, ownerName: user.name, subject, body: message, category })
   const adminId = getAdminUserId()
-  if (adminId) await createNotification({ recipientId: adminId, actorId: user.id, kind: "message", title: `Nova mensagem: ${subject}`, description: `${user.name} enviou uma mensagem na categoria “${messageCategoryLabel(category).toLocaleLowerCase("pt-BR")}”.`, href: `/admin/messages#${thread._id}` }).catch(() => null)
+  if (adminId) await createNotification({ recipientId: adminId, actorId: user.id, actorImageUrl: user.imageUrl, kind: "message", title: `Nova mensagem: ${subject}`, description: `${user.name} enviou uma mensagem na categoria “${messageCategoryLabel(category).toLocaleLowerCase("pt-BR")}”.`, href: `/admin/messages#${thread._id}` }).catch(() => null)
   return NextResponse.json(serializeMessageThread(thread, user.id), { status: 201 })
 }

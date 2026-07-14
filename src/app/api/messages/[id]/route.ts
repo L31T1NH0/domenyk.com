@@ -37,7 +37,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const updated = await addMessageReply(id, { authorId: user.id, authorName: user.name, body, isAdmin: admin, ownerId: admin ? undefined : user.id })
   if (!updated) return NextResponse.json({ error: "Esta conversa atingiu o limite de respostas." }, { status: 409 })
   const recipientId = admin ? null : getAdminUserId()
-  if (recipientId) await createNotification({ recipientId, actorId: user.id, kind: "reply", title: `Resposta em: ${thread.subject}`, description: `${user.name} respondeu à mensagem.`, href: `/admin/messages#${id}` }).catch(() => null)
+  if (recipientId) await createNotification({ recipientId, actorId: user.id, actorImageUrl: user.imageUrl, kind: "reply", title: `Resposta em: ${thread.subject}`, description: `${user.name} respondeu à mensagem.`, href: `/admin/messages#${id}` }).catch(() => null)
   return NextResponse.json(serializeMessageThread(updated, user.id))
 }
 

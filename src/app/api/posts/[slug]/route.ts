@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createHash } from "crypto"
+import { createHash, randomUUID } from "crypto"
 import { getPostByPublicId, incrementPostViewsOnce, serializePost } from "@/lib/db/posts"
 import { getAdminUserId, getAuthUser, isAdmin } from "@/lib/auth"
 import { rateLimit } from "@/lib/rate-limit"
@@ -8,6 +8,7 @@ import { isPostLocale } from "@/lib/post-locales"
 import { getPostVersion } from "@/lib/post-versions"
 import { aggregateNotification, createNotification } from "@/lib/db/notifications"
 import { recordActivityEvent } from "@/lib/db/activity"
+import { viewRequestDetails } from "@/lib/view-request-details"
 
 const VIEW_COOKIE_MAX_AGE = 60 * 60 * 24
 
@@ -51,6 +52,7 @@ export async function GET(
   const cookieName = viewCookieName(publicId)
   const hasViewCookie = req.cookies.has(cookieName)
   let counted = false
+  let readingToken: string | undefined
 
   let withinViewLimit = true
   if (shouldTrackView && version.published && !admin && !hasViewCookie) {
@@ -74,19 +76,29 @@ export async function GET(
     }
     const adminId = getAdminUserId()
     if (result.counted && adminId) {
+      readingToken = randomUUID()
+      const details = { ...viewRequestDetails(req, {
+        referrer: req.nextUrl.searchParams.get("referrer"),
+        landingPage: req.nextUrl.searchParams.get("landingPage"),
+        language: req.nextUrl.searchParams.get("language"),
+        visitorType: req.nextUrl.searchParams.get("visitorType"),
+        utmSource: req.nextUrl.searchParams.get("utmSource"),
+        utmMedium: req.nextUrl.searchParams.get("utmMedium"),
+        utmCampaign: req.nextUrl.searchParams.get("utmCampaign"),
+      }), id: readingToken }
       if (viewer) {
         await createNotification({
-          recipientId: adminId, actorId: viewer.id, kind: "view",
+          recipientId: adminId, actorId: viewer.id, actorImageUrl: viewer.imageUrl, kind: "view",
           title: `${viewer.name} visitou ${version.title}`,
           description: `Visita de usuário autenticado · ${result.views} visualizações no total.`,
           href: `/posts/${post.slug}`,
-        }).catch(() => undefined)
+        }, details).catch(() => undefined)
       } else {
         await aggregateNotification({
           recipientId: adminId, kind: "view", aggregateKey: `view:${publicId}`,
           title: `Novas visualizações em ${version.title}`,
           description: `O post chegou a ${result.views} visualizações.`, href: `/posts/${post.slug}`,
-        }).catch(() => undefined)
+        }, details).catch(() => undefined)
       }
     }
   }
@@ -106,7 +118,7 @@ export async function GET(
   }
   const response = NextResponse.json(
     shouldTrackView
-      ? { views: publicPost.views ?? 0, viewCounted: counted }
+      ? { views: publicPost.views ?? 0, viewCounted: counted, readingToken }
       : { ...publicPost, viewCounted: counted }
   )
 

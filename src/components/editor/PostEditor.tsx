@@ -7,6 +7,7 @@ import {
   POST_LOCALES,
   POST_LOCALE_DETAILS,
   isTranslationRevisionStale,
+  slugifyPostTitle,
   type PostLocale,
   type TranslationLocale,
 } from "@/lib/post-locales"
@@ -71,15 +72,6 @@ type VersionState = {
 }
 
 type VersionStates = Record<PostLocale, VersionState>
-
-function slugify(text: string) {
-  return text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-}
 
 function emptyDraft(): LocalizedDraft {
   return { title: "", subtitle: "", excerpt: "", coverAlt: "", tags: "", content: "" }
@@ -232,7 +224,7 @@ export function PostEditor({ post }: Props) {
 
   function handleTitleChange(value: string) {
     updateActiveDraft({ title: value })
-    if (activeLocale === "pt" && !slugEdited) setSlug(slugify(value))
+    if (activeLocale === "pt" && !slugEdited) setSlug(slugifyPostTitle(value))
   }
 
   const handleContentChange = useCallback((markdown: string) => {

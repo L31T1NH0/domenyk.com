@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react"
 import { ClockIcon, EyeIcon, ShareIcon } from "@heroicons/react/24/solid"
 import type { PostLocale } from "@/lib/post-locales"
+import { viewClientContext } from "@/lib/view-referrer"
+import { recordCurrentPostAction, setPostEngagement } from "@/lib/post-engagement"
 
 type Props = {
   publicId: string
@@ -40,12 +42,14 @@ export function PostMetaBar({ publicId, dateLabel, readingTime, initialViews = 0
     let cancelled = false
     pendingViewPublicIds.add(publicId)
 
-    fetch(`/api/posts/${encodeURIComponent(publicId)}?view=1&locale=${locale}`, { cache: "no-store" })
+    const query = new URLSearchParams({ view: "1", locale, ...viewClientContext() })
+    fetch(`/api/posts/${encodeURIComponent(publicId)}?${query}`, { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
       .then((post) => {
         if (!cancelled && typeof post?.views === "number") {
           setViews(post.views)
           localStorage.setItem(storageKey, String(now))
+          if (typeof post.readingToken === "string") setPostEngagement(publicId, post.readingToken)
         }
       })
       .finally(() => {
@@ -62,6 +66,7 @@ export function PostMetaBar({ publicId, dateLabel, readingTime, initialViews = 0
   async function share() {
     if (typeof window === "undefined") return
     await navigator.clipboard.writeText(window.location.href)
+    void recordCurrentPostAction("copied_link")
     setCopied(true)
     window.setTimeout(() => setCopied(false), 1800)
   }

@@ -1,6 +1,7 @@
 import { ScrollProgressEffect } from "@/components/ScrollProgressEffect"
 import { PublicMenu } from "@/components/public-menu/PublicMenu"
 import { PublicMenuProvider } from "@/components/public-menu/PublicMenuContext"
+import { ViewReferrerTracker } from "@/components/ViewReferrerTracker"
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
   const currentYear = new Date().getFullYear()
@@ -10,6 +11,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
       <div data-public-shell data-scroll-progress-root className="mx-auto mb-4 flex w-full max-w-[36rem] flex-col overflow-x-visible px-4 sm:w-[min(100%,34.5rem)] sm:max-w-[100vw]">
         <div aria-hidden data-scroll-progress-bar />
         <ScrollProgressEffect />
+        <ViewReferrerTracker />
         <header className="flex items-center justify-end py-1">
           <PublicMenu />
         </header>

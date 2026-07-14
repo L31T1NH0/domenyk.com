@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import { NOTE_VIEW_TTL_MS } from "@/lib/note-views"
+import { viewClientContext } from "@/lib/view-referrer"
 
 const pendingDirectViews = new Set<string>()
 
@@ -21,7 +22,7 @@ export function NoteViewTracker({ noteId }: { noteId: string }) {
       method: "POST",
       cache: "no-store",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ source: "direct" }),
+      body: JSON.stringify({ source: "direct", ...viewClientContext() }),
     }).then((response) => {
       if (!cancelled && response.ok) {
         try { localStorage.setItem(storageKey, String(Date.now())) } catch {}

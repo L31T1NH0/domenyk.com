@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
+import { recordCurrentPostAction } from "@/lib/post-engagement"
 
 export type Comment = {
   _id: string
@@ -142,6 +143,7 @@ export function useComments(endpoint: string, { enabled = true }: UseCommentsOpt
       loadedRef.current = true
       setLoaded(true)
       setDraft("")
+      void recordCurrentPostAction("commented")
       return true
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "Não foi possível publicar o comentário.")

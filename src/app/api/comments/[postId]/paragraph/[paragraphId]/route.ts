@@ -126,7 +126,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const adminId = getAdminUserId()
   if (adminId) await createNotification({
-    recipientId: adminId, actorId: user.id, kind: "comment",
+    recipientId: adminId, actorId: user.id, actorImageUrl: user.imageUrl, kind: "comment",
     title: `Comentário em um trecho de ${version.title}`,
     description: `${user.name} comentou em um parágrafo.`, href: `/posts/${post.slug}#${paragraphId}`,
   }).catch(() => null)

@@ -10,6 +10,7 @@ import {
 } from "@heroicons/react/24/outline"
 import { DeleteActionMenu } from "@/components/actions/DeleteActionMenu"
 import { MESSAGE_CATEGORIES, messageCategoryLabel } from "@/lib/message-categories"
+import { recordLatestPostMessage } from "@/lib/post-engagement"
 
 type Entry = { _id: string; authorName: string; body: string; createdAt: string; readAt?: string; isOwn: boolean }
 type Thread = { _id: string; subject: string; category: string; status: string; archivedAt?: string; entries?: Entry[]; updatedAt: string; lastMessage?: { body: string; createdAt: string } | null }
@@ -123,6 +124,7 @@ export function Correspondence() {
     setSelected(data._id)
     setSubject("")
     setBody("")
+    void recordLatestPostMessage()
   }
 
   async function loadMore() {
