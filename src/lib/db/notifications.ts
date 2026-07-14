@@ -1,5 +1,6 @@
 import "server-only"
 
+import { randomUUID } from "crypto"
 import { ObjectId } from "mongodb"
 import { getDb } from "./client"
 import { toObjectId } from "../validation"
@@ -123,6 +124,12 @@ export async function aggregateNotification(
     ],
     { upsert: true }
   )
+  await sendAdminPush({
+    title: data.title,
+    body: data.description,
+    url: data.href,
+    tag: `admin-${data.kind}-${randomUUID()}`,
+  }).catch(() => undefined)
 }
 
 export async function listNotifications(recipientId: string, limit = 50) {
