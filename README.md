@@ -12,6 +12,17 @@ Use Node.js 22 (see `.nvmrc`) and configure these environment variables in `.env
 - `NEXT_PUBLIC_SITE_URL`
 - `CLERK_AUTHORIZED_PARTIES` (comma-separated trusted origins, when using previews or extra domains)
 - `REQUEST_IDENTITY_SECRET` (recommended separate HMAC secret for rate limits and view deduplication; falls back to `CLERK_SECRET_KEY`)
+- `VAPID_PUBLIC_KEY` (public Web Push key)
+- `VAPID_PRIVATE_KEY` (private Web Push key; never expose it to the browser)
+- `VAPID_SUBJECT` (a contact URI such as `mailto:you@example.com`)
+
+Generate the Web Push key pair once with:
+
+```bash
+npm run push:keys
+```
+
+Copy the generated values to `.env.local` and to the corresponding Vercel environment variables. Keep the same pair across deployments; replacing it invalidates existing browser subscriptions.
 
 First, run the development server:
 

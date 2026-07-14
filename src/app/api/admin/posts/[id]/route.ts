@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+import { after, NextRequest, NextResponse } from "next/server"
 import {
   deletePost,
   getOriginalContentUpdatedAt,
@@ -14,6 +14,8 @@ import { parsePostPatch, parsePostTranslation } from "@/lib/api/post-input"
 import { deleteCommentsForParent, getCommentsForParent } from "@/lib/db/comments"
 import { deleteCommentImagesFromContents, queueCommentImagesForCleanup } from "@/lib/db/comment-uploads"
 import { isTranslationLocale } from "@/lib/post-locales"
+import { sendReaderPush } from "@/lib/push"
+import { descriptionFromMarkdown } from "@/lib/seo"
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -76,6 +78,23 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
     if (Object.keys(data).length > 0) {
       await updatePost(id, data)
+    }
+
+    if (data.published === true && !existingPost.published) {
+      const title = data.title ?? existingPost.title
+      const content = data.content ?? existingPost.content
+      const excerpt = data.excerpt ?? existingPost.excerpt
+      const slug = data.slug ?? existingPost.slug
+      after(() => sendReaderPush({
+        dedupeKey: `post:published:${id}:pt`,
+        source: "automatic",
+        topic: "posts",
+        contentType: "post",
+        contentId: id,
+        title: `Novo post: ${title}`,
+        body: excerpt?.trim() || descriptionFromMarkdown(content, 180),
+        url: `/posts/${slug}`,
+      }).catch(() => undefined))
     }
 
     return NextResponse.json({

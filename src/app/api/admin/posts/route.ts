@@ -1,8 +1,10 @@
-import { NextRequest, NextResponse } from "next/server"
+import { after, NextRequest, NextResponse } from "next/server"
 import { createPost, serializePost } from "@/lib/db/posts"
 import { adminOnly } from "@/lib/auth"
 import { asHttpsUrl, asOptionalString, asSlug, asString, asStringArray, asTrustedImageUrl } from "@/lib/validation"
 import { parsePostBackground, parsePostCover, parsePostStyle } from "@/lib/api/post-input"
+import { sendReaderPush } from "@/lib/push"
+import { descriptionFromMarkdown } from "@/lib/seo"
 
 export async function POST(req: NextRequest) {
   const unauthorized = await adminOnly()
@@ -41,6 +43,19 @@ export async function POST(req: NextRequest) {
       hiddenFromTimeline: body.hiddenFromTimeline === true,
       published: body.published === true,
     })
+
+    if (post.published) {
+      after(() => sendReaderPush({
+        dedupeKey: `post:published:${post._id.toString()}:pt`,
+        source: "automatic",
+        topic: "posts",
+        contentType: "post",
+        contentId: post._id.toString(),
+        title: `Novo post: ${post.title}`,
+        body: post.excerpt?.trim() || descriptionFromMarkdown(post.content, 180),
+        url: `/posts/${post.slug}`,
+      }).catch(() => undefined))
+    }
 
     return NextResponse.json(serializePost(post, { includeUnpublishedTranslations: true }), { status: 201 })
   } catch (err) {

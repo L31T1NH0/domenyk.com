@@ -300,6 +300,10 @@ export function PublicMenu() {
                   </button>
                 </div>
                 <div className="mt-1 border-t border-zinc-200 pt-1.5 dark:border-white/10">
+                  <Link href="/acompanhar" role="menuitem" onClick={() => closeMenu()} className={ITEM_CLASS_NAME}>
+                    <BellIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
+                    Receber atualizações
+                  </Link>
                   <Link href="/fale-comigo" role="menuitem" onClick={() => closeMenu()} className={ITEM_CLASS_NAME}>
                     <EnvelopeIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
                     <span className="flex-1">Fale comigo</span>

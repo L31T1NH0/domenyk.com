@@ -3,6 +3,7 @@ import "server-only"
 import { ObjectId } from "mongodb"
 import { getDb } from "./client"
 import { toObjectId } from "../validation"
+import { sendAdminPush } from "../push"
 
 export type NotificationKind = "comment" | "message" | "reply" | "view"
 
@@ -76,6 +77,12 @@ export async function createNotification(
     createdAt: now,
     updatedAt: now,
   } as Notification)
+  await sendAdminPush({
+    title: data.title,
+    body: data.description,
+    url: data.href,
+    tag: `admin-${data.kind}-${result.insertedId.toString()}`,
+  }).catch(() => undefined)
   return result.insertedId
 }
 

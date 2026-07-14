@@ -12,6 +12,7 @@
     "lint": "eslint",
     "seo:audit": "node --env-file-if-exists=.env.local scripts/audit-seo.mjs",
     "seo:audit:rendered": "node scripts/audit-rendered-seo.mjs http://localhost:3000",
+    "push:keys": "web-push generate-vapid-keys",
     "test": "node --conditions=react-server --test tests/*.test.mjs"
   },
   "dependencies": {
@@ -46,13 +47,15 @@
     "server-only": "0.0.1",
     "sharp": "^0.34.5",
     "unified": "^11.0.5",
-    "unist-util-visit": "^5.1.0"
+    "unist-util-visit": "^5.1.0",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^22.20.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/web-push": "^3.6.4",
     "eslint": "^9",
     "eslint-config-next": "^16.2.10",
     "tailwindcss": "^4",
