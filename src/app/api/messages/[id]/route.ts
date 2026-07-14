@@ -4,6 +4,7 @@ import { createNotification, deleteNotificationsForMessageThread } from "@/lib/d
 import { getAdminUserId, getAuthUser, isAdmin } from "@/lib/auth"
 import { rateLimit } from "@/lib/rate-limit"
 import { requestIdentity } from "@/lib/request-identity"
+import { sendMessageReplyPush } from "@/lib/push"
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getAuthUser()
@@ -38,6 +39,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!updated) return NextResponse.json({ error: "Esta conversa atingiu o limite de respostas." }, { status: 409 })
   const recipientId = admin ? null : getAdminUserId()
   if (recipientId) await createNotification({ recipientId, actorId: user.id, actorImageUrl: user.imageUrl, kind: "reply", title: `Resposta em: ${thread.subject}`, description: `${user.name} respondeu à mensagem.`, href: `/admin/messages#${id}` }).catch(() => null)
+  if (admin) {
+    await sendMessageReplyPush(thread.ownerId, {
+      title: `Domenyk respondeu: ${thread.subject}`,
+      body: "Abra a conversa para ler a resposta.",
+      url: `/fale-comigo#${id}`,
+      tag: `message-reply-${id}-${updated.entries.at(-1)?._id.toString() ?? Date.now()}`,
+    }).catch(() => undefined)
+  }
   return NextResponse.json(serializeMessageThread(updated, user.id))
 }
 

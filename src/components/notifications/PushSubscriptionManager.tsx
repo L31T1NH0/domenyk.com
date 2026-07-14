@@ -1,17 +1,12 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { useUser } from "@clerk/nextjs"
 import { BellAlertIcon, BellSlashIcon } from "@heroicons/react/24/outline"
+import { applicationServerKey } from "@/lib/client-push"
 
 type Topic = "posts" | "notes"
 type State = "loading" | "ready" | "saving" | "enabled" | "denied" | "unsupported" | "unconfigured" | "error"
-
-function applicationServerKey(value: string) {
-  const padding = "=".repeat((4 - value.length % 4) % 4)
-  const base64 = (value + padding).replace(/-/g, "+").replace(/_/g, "/")
-  const raw = window.atob(base64)
-  return Uint8Array.from(raw, (character) => character.charCodeAt(0))
-}
 
 export function PushSubscriptionManager({
   showAdminEvents = false,
@@ -20,11 +15,13 @@ export function PushSubscriptionManager({
   showAdminEvents?: boolean
   compact?: boolean
 }) {
+  const { isLoaded, isSignedIn, user } = useUser()
   const [state, setState] = useState<State>("loading")
   const [publicKey, setPublicKey] = useState("")
   const [subscription, setSubscription] = useState<PushSubscription | null>(null)
   const [topics, setTopics] = useState<Topic[]>([])
   const [adminEvents, setAdminEvents] = useState(false)
+  const [messageEvents, setMessageEvents] = useState(false)
   const [message, setMessage] = useState("")
 
   const load = useCallback(async () => {
@@ -57,10 +54,11 @@ export function PushSubscriptionManager({
         body: JSON.stringify({ endpoint: current.endpoint }),
       })
       const status = statusResponse.ok
-        ? await statusResponse.json() as { topics?: Topic[]; adminEvents?: boolean }
-        : { topics: [] as Topic[], adminEvents: false }
+        ? await statusResponse.json() as { topics?: Topic[]; adminEvents?: boolean; messageEvents?: boolean }
+        : { topics: [] as Topic[], adminEvents: false, messageEvents: false }
       setTopics(status.topics ?? [])
       setAdminEvents(status.adminEvents === true)
+      setMessageEvents(status.messageEvents === true)
       setState("enabled")
     } catch {
       setState("error")
@@ -76,14 +74,14 @@ export function PushSubscriptionManager({
       window.clearTimeout(timer)
       window.removeEventListener("push:preferences-changed", refresh)
     }
-  }, [load])
+  }, [load, user?.id])
 
-  async function persist(current: PushSubscription, nextTopics: Topic[], nextAdminEvents: boolean) {
+  async function persist(current: PushSubscription, nextTopics: Topic[], nextAdminEvents: boolean, nextMessageEvents: boolean) {
     const json = current.toJSON()
     const response = await fetch("/api/push/subscriptions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...json, topics: nextTopics, adminEvents: nextAdminEvents }),
+      body: JSON.stringify({ ...json, topics: nextTopics, adminEvents: nextAdminEvents, messageEvents: nextMessageEvents }),
     })
     if (!response.ok) {
       const data = await response.json().catch(() => null) as { error?: string } | null
@@ -107,10 +105,12 @@ export function PushSubscriptionManager({
       })
       const nextTopics: Topic[] = ["posts", "notes"]
       const nextAdminEvents = false
-      await persist(current, nextTopics, nextAdminEvents)
+      const nextMessageEvents = false
+      await persist(current, nextTopics, nextAdminEvents, nextMessageEvents)
       setSubscription(current)
       setTopics(nextTopics)
       setAdminEvents(nextAdminEvents)
+      setMessageEvents(nextMessageEvents)
       setState("enabled")
       setMessage("Notificações ativadas neste dispositivo.")
     } catch (error) {
@@ -119,18 +119,20 @@ export function PushSubscriptionManager({
     }
   }
 
-  async function updatePreference(topic: Topic | "admin", checked: boolean) {
+  async function updatePreference(topic: Topic | "admin" | "messages", checked: boolean) {
     if (!subscription) return
-    const nextTopics = topic === "admin"
+    const nextTopics = topic === "admin" || topic === "messages"
       ? topics
       : checked ? Array.from(new Set([...topics, topic])) : topics.filter((item) => item !== topic)
     const nextAdminEvents = topic === "admin" ? checked : adminEvents
+    const nextMessageEvents = topic === "messages" ? checked : messageEvents
     setState("saving")
     setMessage("")
     try {
-      await persist(subscription, nextTopics, nextAdminEvents)
+      await persist(subscription, nextTopics, nextAdminEvents, nextMessageEvents)
       setTopics(nextTopics)
       setAdminEvents(nextAdminEvents)
+      setMessageEvents(nextMessageEvents)
       setState("enabled")
       setMessage("Preferências salvas.")
     } catch (error) {
@@ -153,6 +155,7 @@ export function PushSubscriptionManager({
       setSubscription(null)
       setTopics([])
       setAdminEvents(false)
+      setMessageEvents(false)
       setState("ready")
       setMessage("Notificações desativadas neste dispositivo.")
     } catch {
@@ -196,6 +199,12 @@ export function PushSubscriptionManager({
           <span className={`${compact ? "text-xs" : "text-sm"} text-zinc-700 dark:text-zinc-200`}>Novas notas</span>
           <input type="checkbox" checked={topics.includes("notes")} onChange={(event) => void updatePreference("notes", event.target.checked)} className="size-4 accent-zinc-950 dark:accent-white" />
         </label>
+        {isLoaded && isSignedIn && (
+          <label className={`flex cursor-pointer items-center justify-between gap-4 rounded-md px-2 py-1.5 hover:bg-zinc-100 dark:hover:bg-white/[0.06] ${compact ? "min-h-10" : "min-h-10"}`}>
+            <span><span className={`block text-zinc-700 dark:text-zinc-200 ${compact ? "text-xs" : "text-sm"}`}>Mensagens privadas</span><span className={`block text-zinc-500 dark:text-zinc-400 ${compact ? "mt-0.5 text-[10px] leading-4" : "text-xs"}`}>Quando Domenyk responder uma conversa</span></span>
+            <input type="checkbox" checked={messageEvents} onChange={(event) => void updatePreference("messages", event.target.checked)} className="size-4 accent-zinc-950 dark:accent-white" />
+          </label>
+        )}
         {showAdminEvents && (
           <label className={`flex cursor-pointer items-center justify-between gap-4 rounded-md px-2 py-1.5 hover:bg-zinc-100 dark:hover:bg-white/[0.06] ${compact ? "min-h-10" : "min-h-10"}`}>
             <span><span className={`block text-zinc-700 dark:text-zinc-200 ${compact ? "text-xs" : "text-sm"}`}>Atividade privada</span><span className={`block text-zinc-500 dark:text-zinc-400 ${compact ? "mt-0.5 text-[10px] leading-4" : "text-xs"}`}>Comentários, mensagens e visitas identificadas</span></span>

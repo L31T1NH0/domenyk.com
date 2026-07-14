@@ -4,9 +4,10 @@ import {
   deletePushSubscription,
   getPushSubscription,
   PUSH_TOPICS,
-  revokeAdminPushSubscription,
+  revokePrivatePushSubscription,
   upsertPushSubscription,
   verifyAdminPushSubscription,
+  verifyMessagePushSubscription,
   type PushTopic,
 } from "@/lib/db/push-subscriptions"
 import { rateLimit } from "@/lib/rate-limit"
@@ -70,14 +71,18 @@ export async function PUT(req: NextRequest) {
   if (!validEndpoint(body?.endpoint)) return NextResponse.json({ error: "Inscrição inválida." }, { status: 400 })
   const subscription = await getPushSubscription(body.endpoint)
   const admin = await isAdmin()
-  const userId = admin ? await getAuthUserId() : null
+  const userId = await getAuthUserId()
   if (subscription?.adminEvents && userId && subscription.adminUserId === userId) {
     await verifyAdminPushSubscription(body.endpoint, userId)
+  }
+  if (subscription?.messageEvents && userId && subscription.messageUserId === userId) {
+    await verifyMessagePushSubscription(body.endpoint, userId)
   }
   return NextResponse.json({
     subscribed: Boolean(subscription),
     topics: subscription?.topics ?? [],
     adminEvents: admin ? subscription?.adminEvents === true : false,
+    messageEvents: Boolean(userId && subscription?.messageEvents && subscription.messageUserId === userId),
   })
 }
 
@@ -93,6 +98,7 @@ export async function POST(req: NextRequest) {
     keys?: { p256dh?: unknown; auth?: unknown }
     topics?: unknown
     adminEvents?: unknown
+    messageEvents?: unknown
   } | null
   if (
     !validEndpoint(body?.endpoint) ||
@@ -102,8 +108,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Inscrição inválida." }, { status: 400 })
   }
 
-  const admin = await isAdmin()
-  const userId = admin ? await getAuthUserId() : null
+  const userId = await getAuthUserId()
+  const admin = userId ? await isAdmin() : false
   await upsertPushSubscription({
     endpoint: body.endpoint,
     expirationTime: typeof body.expirationTime === "number" ? body.expirationTime : null,
@@ -111,22 +117,21 @@ export async function POST(req: NextRequest) {
     topics: topicsFrom(body.topics),
     userAgent: req.headers.get("user-agent")?.slice(0, 300),
     ...(admin && userId ? { admin: { enabled: body.adminEvents === true, userId } } : {}),
+    ...(userId ? { messages: { enabled: body.messageEvents === true, userId } } : {}),
   })
   return NextResponse.json({ ok: true })
 }
 
 export async function PATCH(req: NextRequest) {
   if (!sameSite(req)) return NextResponse.json({ error: "Origem não permitida." }, { status: 403 })
-  if (!(await rateLimit(`push-admin-revoke:${requestIdentity(req)}`, { limit: 10, windowMs: 60 * 60_000 }))) {
+  if (!(await rateLimit(`push-private-revoke:${requestIdentity(req)}`, { limit: 10, windowMs: 60 * 60_000 }))) {
     return NextResponse.json({ error: "Muitas tentativas. Tente novamente mais tarde." }, { status: 429 })
   }
-  const admin = await isAdmin()
-  if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   const userId = await getAuthUserId()
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const body = await req.json().catch(() => null) as { endpoint?: unknown } | null
   if (!validEndpoint(body?.endpoint)) return NextResponse.json({ error: "Inscrição inválida." }, { status: 400 })
-  await revokeAdminPushSubscription(body.endpoint, userId)
+  await revokePrivatePushSubscription(body.endpoint, userId)
   return NextResponse.json({ ok: true })
 }
 

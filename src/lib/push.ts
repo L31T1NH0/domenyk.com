@@ -7,6 +7,7 @@ import {
   completePushCampaign,
   deletePushSubscriptions,
   listAdminPushSubscriptions,
+  listMessagePushSubscriptions,
   listPushSubscriptionsForTopic,
   recordPushFailure,
   recordPushSuccess,
@@ -19,7 +20,7 @@ export type PushPayload = {
   body: string
   url: string
   tag: string
-  kind: "post" | "note" | "admin"
+  kind: "post" | "note" | "admin" | "message"
 }
 
 function vapidConfig() {
@@ -112,5 +113,13 @@ export async function sendAdminPush(payload: Omit<PushPayload, "kind" | "tag"> &
     ...payload,
     kind: "admin",
     tag: payload.tag ?? `admin-${Date.now()}`,
+  })
+}
+
+export async function sendMessageReplyPush(userId: string, payload: Omit<PushPayload, "kind" | "tag"> & { tag?: string }) {
+  return deliver(await listMessagePushSubscriptions(userId), {
+    ...payload,
+    kind: "message",
+    tag: payload.tag ?? `message-${Date.now()}`,
   })
 }

@@ -11,6 +11,7 @@ import {
 import { DeleteActionMenu } from "@/components/actions/DeleteActionMenu"
 import { MESSAGE_CATEGORIES, messageCategoryLabel } from "@/lib/message-categories"
 import { recordLatestPostMessage } from "@/lib/post-engagement"
+import { messagePushPreference, setMessagePushPreference } from "@/lib/client-push"
 
 type Entry = { _id: string; authorName: string; body: string; createdAt: string; readAt?: string; isOwn: boolean }
 type Thread = { _id: string; subject: string; category: string; status: string; archivedAt?: string; entries?: Entry[]; updatedAt: string; lastMessage?: { body: string; createdAt: string } | null }
@@ -31,7 +32,7 @@ function formatDate(value: string) {
 }
 
 export function Correspondence() {
-  const { isLoaded, isSignedIn } = useUser()
+  const { isLoaded, isSignedIn, user } = useUser()
   const clerk = useClerk()
   const categoryListboxId = useId()
   const categoryRootRef = useRef<HTMLDivElement>(null)
@@ -45,6 +46,9 @@ export function Correspondence() {
   const [reply, setReply] = useState<Record<string, string>>({})
   const [pendingAction, setPendingAction] = useState<string | null>(null)
   const [error, setError] = useState("")
+  const [notice, setNotice] = useState("")
+  const [notifyReplies, setNotifyReplies] = useState(false)
+  const [storedNotifyReplies, setStoredNotifyReplies] = useState(false)
   const [selected, setSelected] = useState<string | null>(null)
   const [loadingThread, setLoadingThread] = useState<string | null>(null)
   const [cursor, setCursor] = useState<string | null>(null)
@@ -72,7 +76,7 @@ export function Correspondence() {
   }
 
   useEffect(() => {
-    if (!isSignedIn) return
+    if (!isSignedIn || !user?.id) return
     let cancelled = false
     fetch(`/api/messages${archived ? "?archived=1" : ""}`, { cache: "no-store" })
       .then((response) => response.ok ? response.json() : { items: [] })
@@ -84,7 +88,37 @@ export function Correspondence() {
         }
       })
     return () => { cancelled = true }
-  }, [isSignedIn, archived])
+  }, [isSignedIn, user?.id, archived])
+
+  useEffect(() => {
+    if (!threads || selected || typeof window === "undefined") return
+    const fromHash = window.location.hash.slice(1)
+    if (!fromHash || !threads.some((thread) => thread._id === fromHash)) return
+    let cancelled = false
+    fetch(`/api/messages/${fromHash}`, { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : null)
+      .then((detail) => {
+        if (!cancelled && detail) {
+          setThreads((current) => current?.map((thread) => thread._id === fromHash ? detail : thread) ?? [])
+          setSelected(fromHash)
+        }
+      })
+    return () => { cancelled = true }
+  }, [threads, selected])
+
+  useEffect(() => {
+    if (!isSignedIn || !user?.id) return
+    let cancelled = false
+    messagePushPreference()
+      .then((enabled) => {
+        if (!cancelled) {
+          setNotifyReplies(enabled)
+          setStoredNotifyReplies(enabled)
+        }
+      })
+      .catch(() => undefined)
+    return () => { cancelled = true }
+  }, [isSignedIn, user?.id])
 
   useEffect(() => {
     if (!categoryOpen) return
@@ -112,6 +146,17 @@ export function Correspondence() {
     event.preventDefault()
     setPendingAction("send")
     setError("")
+    setNotice("")
+    let notificationWarning = ""
+    if (notifyReplies || storedNotifyReplies) {
+      try {
+        await setMessagePushPreference(notifyReplies)
+        setStoredNotifyReplies(notifyReplies)
+      } catch (cause) {
+        notificationWarning = cause instanceof Error ? cause.message : "Não foi possível configurar as notificações."
+        setNotifyReplies(false)
+      }
+    }
     const response = await fetch("/api/messages", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -124,6 +169,11 @@ export function Correspondence() {
     setSelected(data._id)
     setSubject("")
     setBody("")
+    setNotice(notificationWarning
+      ? `Mensagem enviada, mas ${notificationWarning.toLocaleLowerCase("pt-BR")}`
+      : notifyReplies
+        ? "Mensagem enviada. Você será avisado neste dispositivo quando eu responder."
+        : "Mensagem enviada.")
     void recordLatestPostMessage()
   }
 
@@ -353,8 +403,28 @@ export function Correspondence() {
             />
           </div>
 
+          <label className="flex cursor-pointer items-start gap-3 border-t border-zinc-300 pt-4 dark:border-zinc-800">
+            <input
+              type="checkbox"
+              checked={notifyReplies}
+              onChange={(event) => setNotifyReplies(event.target.checked)}
+              disabled={isBusy}
+              className="mt-1 size-4 shrink-0 accent-zinc-950 dark:accent-white"
+            />
+            <span>
+              <span className="block text-sm font-medium text-zinc-800 dark:text-zinc-200">Avisar quando eu responder</span>
+              <span className="mt-0.5 block text-xs leading-5 text-zinc-500 dark:text-zinc-400">Ativa notificações privadas neste dispositivo. Você pode mudar isso depois no menu.</span>
+            </span>
+          </label>
+
           <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-h-5 text-sm text-red-700 dark:text-red-400" role="alert" aria-live="polite">{error}</div>
+            <div className="min-h-5 text-sm" aria-live="polite">
+              {error
+                ? <span className="text-red-700 dark:text-red-400" role="alert">{error}</span>
+                : notice
+                  ? <span className="text-zinc-600 dark:text-zinc-300" role="status">{notice}</span>
+                  : null}
+            </div>
             <button
               disabled={isBusy}
               className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-zinc-950 px-5 text-sm font-semibold text-white outline-none transition-colors hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-zinc-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f4f4f4] active:bg-black disabled:cursor-wait disabled:opacity-50 sm:w-auto dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 dark:focus-visible:ring-zinc-300 dark:focus-visible:ring-offset-[#040404]"

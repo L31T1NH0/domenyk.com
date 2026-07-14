@@ -15,6 +15,9 @@ export type StoredPushSubscription = {
   adminEvents: boolean
   adminUserId?: string
   adminVerifiedAt?: Date
+  messageEvents: boolean
+  messageUserId?: string
+  messageVerifiedAt?: Date
   userAgent?: string
   failureCount: number
   lastSuccessAt?: Date
@@ -57,6 +60,7 @@ async function subscriptions() {
     col.createIndex({ endpoint: 1 }, { unique: true }),
     col.createIndex({ topics: 1, updatedAt: -1 }),
     col.createIndex({ adminEvents: 1, adminUserId: 1 }),
+    col.createIndex({ messageEvents: 1, messageUserId: 1 }),
     col.createIndex({ retentionUntil: 1 }, { expireAfterSeconds: 0 }),
     col.updateMany(
       { retentionUntil: { $exists: false } },
@@ -89,6 +93,7 @@ export async function upsertPushSubscription(data: {
   topics: PushTopic[]
   userAgent?: string
   admin?: { enabled: boolean; userId: string }
+  messages?: { enabled: boolean; userId: string }
 }) {
   const now = new Date()
   const $set: Record<string, unknown> = {
@@ -122,6 +127,21 @@ export async function upsertPushSubscription(data: {
     $unset.adminVerifiedAt = ""
   }
 
+  if (data.messages) {
+    $set.messageEvents = data.messages.enabled
+    if (data.messages.enabled) {
+      $set.messageUserId = data.messages.userId
+      $set.messageVerifiedAt = now
+    } else {
+      $unset.messageUserId = ""
+      $unset.messageVerifiedAt = ""
+    }
+  } else {
+    $set.messageEvents = false
+    $unset.messageUserId = ""
+    $unset.messageVerifiedAt = ""
+  }
+
   await (await subscriptions()).updateOne(
     { endpoint: data.endpoint },
     {
@@ -141,17 +161,31 @@ export async function deletePushSubscription(endpoint: string) {
   await (await subscriptions()).deleteOne({ endpoint })
 }
 
-export async function revokeAdminPushSubscription(endpoint: string, adminUserId: string) {
-  await (await subscriptions()).updateOne(
-    { endpoint, adminUserId },
-    { $set: { adminEvents: false, updatedAt: new Date() }, $unset: { adminUserId: "", adminVerifiedAt: "" } }
-  )
+export async function revokePrivatePushSubscription(endpoint: string, userId: string) {
+  const col = await subscriptions()
+  await Promise.all([
+    col.updateOne(
+      { endpoint, adminUserId: userId },
+      { $set: { adminEvents: false, updatedAt: new Date() }, $unset: { adminUserId: "", adminVerifiedAt: "" } }
+    ),
+    col.updateOne(
+      { endpoint, messageUserId: userId },
+      { $set: { messageEvents: false, updatedAt: new Date() }, $unset: { messageUserId: "", messageVerifiedAt: "" } }
+    ),
+  ])
 }
 
 export async function verifyAdminPushSubscription(endpoint: string, adminUserId: string) {
   await (await subscriptions()).updateOne(
     { endpoint, adminEvents: true, adminUserId },
     { $set: { adminVerifiedAt: new Date(), retentionUntil: retentionDate(SUBSCRIPTION_RETENTION_MS) } }
+  )
+}
+
+export async function verifyMessagePushSubscription(endpoint: string, userId: string) {
+  await (await subscriptions()).updateOne(
+    { endpoint, messageEvents: true, messageUserId: userId },
+    { $set: { messageVerifiedAt: new Date(), retentionUntil: retentionDate(SUBSCRIPTION_RETENTION_MS) } }
   )
 }
 
@@ -183,6 +217,14 @@ export async function listPushSubscriptionsForTopic(topic: PushTopic) {
 
 export async function listAdminPushSubscriptions(adminUserId: string) {
   return (await subscriptions()).find({ adminEvents: true, adminUserId, adminVerifiedAt: { $type: "date" } }).toArray()
+}
+
+export async function listMessagePushSubscriptions(userId: string) {
+  return (await subscriptions()).find({
+    messageEvents: true,
+    messageUserId: userId,
+    messageVerifiedAt: { $type: "date" },
+  }).toArray()
 }
 
 export async function recordPushSuccess(endpoint: string) {

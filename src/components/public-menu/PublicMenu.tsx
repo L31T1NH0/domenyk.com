@@ -185,7 +185,7 @@ export function PublicMenu() {
 
   async function signOut() {
     closeMenu()
-    if (admin && "serviceWorker" in navigator) {
+    if (isSignedIn && "serviceWorker" in navigator) {
       let subscription: PushSubscription | null = null
       try {
         const registration = await navigator.serviceWorker.getRegistration("/")
