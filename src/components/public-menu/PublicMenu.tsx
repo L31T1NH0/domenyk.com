@@ -36,7 +36,7 @@ export function PublicMenu() {
   const { currentLocale, options } = usePublicMenu()
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
-  const [admin, setAdmin] = useState(false)
+  const [verifiedAdminUserId, setVerifiedAdminUserId] = useState<string | null>(null)
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [unreadNotifications, setUnreadNotifications] = useState(0)
   const [view, setView] = useState<"main" | "account" | "notifications">("main")
@@ -49,16 +49,18 @@ export function PublicMenu() {
   const focusFirstOnOpenRef = useRef(false)
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn) return
+    if (!isLoaded || !isSignedIn || !user?.id) return
     let cancelled = false
     fetch("/api/account/admin", { cache: "no-store" })
       .then((response) => response.ok ? response.json() : { admin: false })
-      .then((data) => { if (!cancelled) setAdmin(data.admin === true) })
+      .then((data) => { if (!cancelled) setVerifiedAdminUserId(data.admin === true ? user.id : null) })
     fetch("/api/messages/unread", { cache: "no-store" })
       .then((response) => response.ok ? response.json() : { unread: 0 })
       .then((data) => { if (!cancelled) setUnreadMessages(Math.max(0, Number(data.unread) || 0)) })
     return () => { cancelled = true }
-  }, [isLoaded, isSignedIn])
+  }, [isLoaded, isSignedIn, user?.id])
+
+  const admin = Boolean(isLoaded && isSignedIn && user?.id && verifiedAdminUserId === user.id)
 
   useEffect(() => {
     if (!admin) return
@@ -181,9 +183,28 @@ export function PublicMenu() {
     clerk.openSignIn()
   }
 
-  function signOut() {
+  async function signOut() {
     closeMenu()
-    void clerk.signOut({ redirectUrl: "/" })
+    if (admin && "serviceWorker" in navigator) {
+      let subscription: PushSubscription | null = null
+      try {
+        const registration = await navigator.serviceWorker.getRegistration("/")
+        subscription = await registration?.pushManager.getSubscription() ?? null
+        if (subscription) {
+          const response = await fetch("/api/push/subscriptions", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ endpoint: subscription.endpoint }),
+            keepalive: true,
+          })
+          if (!response.ok) throw new Error("Não foi possível revogar os alertas privados.")
+        }
+      } catch {
+        await subscription?.unsubscribe().catch(() => false)
+      }
+    }
+    setVerifiedAdminUserId(null)
+    await clerk.signOut({ redirectUrl: "/" })
   }
 
   const isPostPage = /(?:^|\/)posts\/[^/]+$/.test(pathname)
@@ -240,7 +261,7 @@ export function PublicMenu() {
               </button>
               <div className="mt-1 border-t border-zinc-200 px-1.5 pb-1 pt-3 dark:border-white/10">
                 <p className="mb-3 text-[11px] leading-[1.55] text-zinc-500 dark:text-zinc-400">Escolha o que deseja receber neste dispositivo.</p>
-                <PushSubscriptionManager compact showAdminEvents={admin} />
+                <PushSubscriptionManager compact showAdminEvents={Boolean(isLoaded && isSignedIn && admin)} />
               </div>
             </div>
           ) : view === "account" && isLoaded && isSignedIn && user ? (
@@ -262,7 +283,7 @@ export function PublicMenu() {
                   <span className="flex-1">Gerenciar conta</span>
                   <ChevronRightIcon className="size-3.5 text-zinc-400" aria-hidden />
                 </button>
-                <button type="button" role="menuitem" onClick={signOut} className={ITEM_CLASS_NAME}>
+                <button type="button" role="menuitem" onClick={() => void signOut()} className={ITEM_CLASS_NAME}>
                   <ArrowRightStartOnRectangleIcon className="size-[18px] text-zinc-500 transition-colors group-hover:text-red-600 group-focus-visible:text-red-600 dark:text-zinc-400 dark:group-hover:text-red-400 dark:group-focus-visible:text-red-400" aria-hidden />
                   Sair
                 </button>

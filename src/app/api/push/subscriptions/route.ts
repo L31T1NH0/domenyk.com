@@ -4,7 +4,9 @@ import {
   deletePushSubscription,
   getPushSubscription,
   PUSH_TOPICS,
+  revokeAdminPushSubscription,
   upsertPushSubscription,
+  verifyAdminPushSubscription,
   type PushTopic,
 } from "@/lib/db/push-subscriptions"
 import { rateLimit } from "@/lib/rate-limit"
@@ -20,8 +22,18 @@ const ALLOWED_PUSH_HOSTS = [
 ]
 
 function sameSite(req: NextRequest) {
+  if (process.env.NODE_ENV !== "production") return true
+  const requestOrigin = new URL(req.url).origin
+  const origin = req.headers.get("origin")
+  if (origin) {
+    try {
+      if (new URL(origin).origin !== requestOrigin) return false
+    } catch {
+      return false
+    }
+  }
   const site = req.headers.get("sec-fetch-site")
-  return process.env.NODE_ENV !== "production" || site === "same-origin" || site === "same-site"
+  return site === "same-origin"
 }
 
 function validEndpoint(value: unknown): value is string {
@@ -36,8 +48,10 @@ function validEndpoint(value: unknown): value is string {
   }
 }
 
-function validKey(value: unknown, max: number): value is string {
-  return typeof value === "string" && value.length >= 16 && value.length <= max && /^[A-Za-z0-9_-]+$/.test(value)
+function validKey(value: unknown, bytes: number, firstByte?: number): value is string {
+  if (typeof value !== "string" || !/^[A-Za-z0-9_-]+$/.test(value)) return false
+  const decoded = Buffer.from(value, "base64url")
+  return decoded.length === bytes && (firstByte === undefined || decoded[0] === firstByte)
 }
 
 function topicsFrom(value: unknown): PushTopic[] {
@@ -49,10 +63,17 @@ function topicsFrom(value: unknown): PushTopic[] {
 
 export async function PUT(req: NextRequest) {
   if (!sameSite(req)) return NextResponse.json({ error: "Origem não permitida." }, { status: 403 })
+  if (!(await rateLimit(`push-status:${requestIdentity(req)}`, { limit: 60, windowMs: 60 * 60_000 }))) {
+    return NextResponse.json({ error: "Muitas tentativas. Tente novamente mais tarde." }, { status: 429 })
+  }
   const body = await req.json().catch(() => null) as { endpoint?: unknown } | null
   if (!validEndpoint(body?.endpoint)) return NextResponse.json({ error: "Inscrição inválida." }, { status: 400 })
   const subscription = await getPushSubscription(body.endpoint)
   const admin = await isAdmin()
+  const userId = admin ? await getAuthUserId() : null
+  if (subscription?.adminEvents && userId && subscription.adminUserId === userId) {
+    await verifyAdminPushSubscription(body.endpoint, userId)
+  }
   return NextResponse.json({
     subscribed: Boolean(subscription),
     topics: subscription?.topics ?? [],
@@ -75,8 +96,8 @@ export async function POST(req: NextRequest) {
   } | null
   if (
     !validEndpoint(body?.endpoint) ||
-    !validKey(body?.keys?.p256dh, 256) ||
-    !validKey(body?.keys?.auth, 128)
+    !validKey(body?.keys?.p256dh, 65, 0x04) ||
+    !validKey(body?.keys?.auth, 16)
   ) {
     return NextResponse.json({ error: "Inscrição inválida." }, { status: 400 })
   }
@@ -94,8 +115,26 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true })
 }
 
+export async function PATCH(req: NextRequest) {
+  if (!sameSite(req)) return NextResponse.json({ error: "Origem não permitida." }, { status: 403 })
+  if (!(await rateLimit(`push-admin-revoke:${requestIdentity(req)}`, { limit: 10, windowMs: 60 * 60_000 }))) {
+    return NextResponse.json({ error: "Muitas tentativas. Tente novamente mais tarde." }, { status: 429 })
+  }
+  const admin = await isAdmin()
+  if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  const userId = await getAuthUserId()
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const body = await req.json().catch(() => null) as { endpoint?: unknown } | null
+  if (!validEndpoint(body?.endpoint)) return NextResponse.json({ error: "Inscrição inválida." }, { status: 400 })
+  await revokeAdminPushSubscription(body.endpoint, userId)
+  return NextResponse.json({ ok: true })
+}
+
 export async function DELETE(req: NextRequest) {
   if (!sameSite(req)) return NextResponse.json({ error: "Origem não permitida." }, { status: 403 })
+  if (!(await rateLimit(`push-delete:${requestIdentity(req)}`, { limit: 20, windowMs: 60 * 60_000 }))) {
+    return NextResponse.json({ error: "Muitas tentativas. Tente novamente mais tarde." }, { status: 429 })
+  }
   const body = await req.json().catch(() => null) as { endpoint?: unknown } | null
   if (!validEndpoint(body?.endpoint)) return NextResponse.json({ error: "Inscrição inválida." }, { status: 400 })
   await deletePushSubscription(body.endpoint)

@@ -1,14 +1,19 @@
 import { randomUUID } from "crypto"
 import { NextRequest, NextResponse } from "next/server"
-import { adminOnly } from "@/lib/auth"
+import { adminOnly, getAuthUserId } from "@/lib/auth"
 import { getNote } from "@/lib/db/notes"
 import { getPostById } from "@/lib/db/posts"
 import { sendReaderPush } from "@/lib/push"
 import { asString } from "@/lib/validation"
+import { rateLimit } from "@/lib/rate-limit"
 
 export async function POST(req: NextRequest) {
   const denied = await adminOnly()
   if (denied) return denied
+  const adminId = await getAuthUserId()
+  if (!adminId || !(await rateLimit(`admin-push-send:${adminId}`, { limit: 5, windowMs: 60 * 60_000 }))) {
+    return NextResponse.json({ error: "Limite de cinco disparos por hora atingido." }, { status: 429 })
+  }
   const body = await req.json().catch(() => null) as {
     contentType?: unknown
     contentId?: unknown

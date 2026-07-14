@@ -14,11 +14,13 @@ export type StoredPushSubscription = {
   topics: PushTopic[]
   adminEvents: boolean
   adminUserId?: string
+  adminVerifiedAt?: Date
   userAgent?: string
   failureCount: number
   lastSuccessAt?: Date
   createdAt: Date
   updatedAt: Date
+  retentionUntil: Date
 }
 
 export type PushCampaign = {
@@ -36,6 +38,14 @@ export type PushCampaign = {
   failedCount: number
   createdAt: Date
   completedAt?: Date
+  retentionUntil: Date
+}
+
+const SUBSCRIPTION_RETENTION_MS = 365 * 24 * 60 * 60_000
+const CAMPAIGN_RETENTION_MS = 180 * 24 * 60 * 60_000
+
+function retentionDate(duration: number) {
+  return new Date(Date.now() + duration)
 }
 
 let subscriptionIndexes: Promise<unknown> | undefined
@@ -47,6 +57,11 @@ async function subscriptions() {
     col.createIndex({ endpoint: 1 }, { unique: true }),
     col.createIndex({ topics: 1, updatedAt: -1 }),
     col.createIndex({ adminEvents: 1, adminUserId: 1 }),
+    col.createIndex({ retentionUntil: 1 }, { expireAfterSeconds: 0 }),
+    col.updateMany(
+      { retentionUntil: { $exists: false } },
+      { $set: { retentionUntil: retentionDate(SUBSCRIPTION_RETENTION_MS) } }
+    ),
   ])
   await subscriptionIndexes
   return col
@@ -57,6 +72,11 @@ async function campaigns() {
   campaignIndexes ??= Promise.all([
     col.createIndex({ dedupeKey: 1 }, { unique: true }),
     col.createIndex({ createdAt: -1 }),
+    col.createIndex({ retentionUntil: 1 }, { expireAfterSeconds: 0 }),
+    col.updateMany(
+      { retentionUntil: { $exists: false } },
+      { $set: { retentionUntil: retentionDate(CAMPAIGN_RETENTION_MS) } }
+    ),
   ])
   await campaignIndexes
   return col
@@ -78,6 +98,7 @@ export async function upsertPushSubscription(data: {
     userAgent: data.userAgent,
     failureCount: 0,
     updatedAt: now,
+    retentionUntil: retentionDate(SUBSCRIPTION_RETENTION_MS),
   }
   const $unset: Record<string, ""> = {}
   const $setOnInsert: Record<string, unknown> = {
@@ -88,10 +109,17 @@ export async function upsertPushSubscription(data: {
 
   if (data.admin) {
     $set.adminEvents = data.admin.enabled
-    if (data.admin.enabled) $set.adminUserId = data.admin.userId
-    else $unset.adminUserId = ""
+    if (data.admin.enabled) {
+      $set.adminUserId = data.admin.userId
+      $set.adminVerifiedAt = now
+    } else {
+      $unset.adminUserId = ""
+      $unset.adminVerifiedAt = ""
+    }
   } else {
-    $setOnInsert.adminEvents = false
+    $set.adminEvents = false
+    $unset.adminUserId = ""
+    $unset.adminVerifiedAt = ""
   }
 
   await (await subscriptions()).updateOne(
@@ -113,6 +141,37 @@ export async function deletePushSubscription(endpoint: string) {
   await (await subscriptions()).deleteOne({ endpoint })
 }
 
+export async function revokeAdminPushSubscription(endpoint: string, adminUserId: string) {
+  await (await subscriptions()).updateOne(
+    { endpoint, adminUserId },
+    { $set: { adminEvents: false, updatedAt: new Date() }, $unset: { adminUserId: "", adminVerifiedAt: "" } }
+  )
+}
+
+export async function verifyAdminPushSubscription(endpoint: string, adminUserId: string) {
+  await (await subscriptions()).updateOne(
+    { endpoint, adminEvents: true, adminUserId },
+    { $set: { adminVerifiedAt: new Date(), retentionUntil: retentionDate(SUBSCRIPTION_RETENTION_MS) } }
+  )
+}
+
+export async function revokeAdminPushDevice(id: string, adminUserId: string) {
+  if (!ObjectId.isValid(id)) return false
+  const result = await (await subscriptions()).updateOne(
+    { _id: new ObjectId(id), adminUserId },
+    { $set: { adminEvents: false, updatedAt: new Date() }, $unset: { adminUserId: "", adminVerifiedAt: "" } }
+  )
+  return result.modifiedCount > 0
+}
+
+export async function revokeAllAdminPushDevices(adminUserId: string) {
+  const result = await (await subscriptions()).updateMany(
+    { adminEvents: true, adminUserId },
+    { $set: { adminEvents: false, updatedAt: new Date() }, $unset: { adminUserId: "", adminVerifiedAt: "" } }
+  )
+  return result.modifiedCount
+}
+
 export async function deletePushSubscriptions(endpoints: string[]) {
   if (endpoints.length === 0) return
   await (await subscriptions()).deleteMany({ endpoint: { $in: endpoints } })
@@ -123,18 +182,26 @@ export async function listPushSubscriptionsForTopic(topic: PushTopic) {
 }
 
 export async function listAdminPushSubscriptions(adminUserId: string) {
-  return (await subscriptions()).find({ adminEvents: true, adminUserId }).toArray()
+  return (await subscriptions()).find({ adminEvents: true, adminUserId, adminVerifiedAt: { $type: "date" } }).toArray()
 }
 
 export async function recordPushSuccess(endpoint: string) {
+  const now = new Date()
   await (await subscriptions()).updateOne(
     { endpoint },
-    { $set: { lastSuccessAt: new Date(), failureCount: 0 } }
+    { $set: {
+      lastSuccessAt: now,
+      failureCount: 0,
+      updatedAt: now,
+      retentionUntil: retentionDate(SUBSCRIPTION_RETENTION_MS),
+    } }
   )
 }
 
 export async function recordPushFailure(endpoint: string) {
   await (await subscriptions()).updateOne({ endpoint }, { $inc: { failureCount: 1 } })
+  const result = await (await subscriptions()).deleteOne({ endpoint, failureCount: { $gte: 3 } })
+  return result.deletedCount > 0
 }
 
 export async function pushSubscriptionCounts() {
@@ -143,12 +210,12 @@ export async function pushSubscriptionCounts() {
     col.countDocuments(),
     col.countDocuments({ topics: "posts" }),
     col.countDocuments({ topics: "notes" }),
-    col.countDocuments({ adminEvents: true }),
+    col.countDocuments({ adminEvents: true, adminVerifiedAt: { $type: "date" } }),
   ])
   return { devices, posts, notes, adminDevices }
 }
 
-export async function claimPushCampaign(data: Omit<PushCampaign, "_id" | "status" | "sentCount" | "failedCount" | "createdAt" | "completedAt">) {
+export async function claimPushCampaign(data: Omit<PushCampaign, "_id" | "status" | "sentCount" | "failedCount" | "createdAt" | "completedAt" | "retentionUntil">) {
   const campaign: PushCampaign = {
     ...data,
     _id: new ObjectId(),
@@ -156,6 +223,7 @@ export async function claimPushCampaign(data: Omit<PushCampaign, "_id" | "status
     sentCount: 0,
     failedCount: 0,
     createdAt: new Date(),
+    retentionUntil: retentionDate(CAMPAIGN_RETENTION_MS),
   }
   try {
     await (await campaigns()).insertOne(campaign)

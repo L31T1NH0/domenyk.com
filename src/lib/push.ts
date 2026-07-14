@@ -68,7 +68,10 @@ async function deliver(subscriptions: StoredPushSubscription[], payload: PushPay
           ? Number(error.statusCode)
           : undefined
         if (statusCode === 404 || statusCode === 410) expired.push(subscription.endpoint)
-        else await recordPushFailure(subscription.endpoint).catch(() => undefined)
+        else {
+          const removed = await recordPushFailure(subscription.endpoint).catch(() => false)
+          if (removed) expired.push(subscription.endpoint)
+        }
       }
     }))
   }

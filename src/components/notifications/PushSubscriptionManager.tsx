@@ -70,7 +70,12 @@ export function PushSubscriptionManager({
 
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0)
-    return () => window.clearTimeout(timer)
+    const refresh = () => void load()
+    window.addEventListener("push:preferences-changed", refresh)
+    return () => {
+      window.clearTimeout(timer)
+      window.removeEventListener("push:preferences-changed", refresh)
+    }
   }, [load])
 
   async function persist(current: PushSubscription, nextTopics: Topic[], nextAdminEvents: boolean) {
@@ -101,7 +106,7 @@ export function PushSubscriptionManager({
         applicationServerKey: applicationServerKey(publicKey),
       })
       const nextTopics: Topic[] = ["posts", "notes"]
-      const nextAdminEvents = showAdminEvents
+      const nextAdminEvents = false
       await persist(current, nextTopics, nextAdminEvents)
       setSubscription(current)
       setTopics(nextTopics)
