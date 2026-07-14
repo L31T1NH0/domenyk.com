@@ -24,6 +24,7 @@ import {
 } from "@heroicons/react/24/outline"
 import { POST_LOCALE_DETAILS } from "@/lib/post-locales"
 import { useThemeSwitcher } from "@/components/ThemeSwitcher"
+import { PushSubscriptionManager } from "@/components/notifications/PushSubscriptionManager"
 import { usePublicMenu } from "./PublicMenuContext"
 
 const ITEM_CLASS_NAME = "group flex min-h-9 w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-[13px] text-zinc-700 outline-none transition-colors hover:bg-zinc-100 focus-visible:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-white/[0.07] dark:focus-visible:bg-white/[0.07]"
@@ -38,11 +39,13 @@ export function PublicMenu() {
   const [admin, setAdmin] = useState(false)
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [unreadNotifications, setUnreadNotifications] = useState(0)
-  const [view, setView] = useState<"main" | "account">("main")
+  const [view, setView] = useState<"main" | "account" | "notifications">("main")
   const menuId = useId()
   const rootRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const accountBackRef = useRef<HTMLButtonElement>(null)
+  const notificationsBackRef = useRef<HTMLButtonElement>(null)
+  const notificationsTriggerRef = useRef<HTMLButtonElement>(null)
   const focusFirstOnOpenRef = useRef(false)
 
   useEffect(() => {
@@ -111,6 +114,16 @@ export function PublicMenu() {
     })
   }
 
+  function openNotificationsView() {
+    setView("notifications")
+    requestAnimationFrame(() => notificationsBackRef.current?.focus())
+  }
+
+  function closeNotificationsView() {
+    setView("main")
+    requestAnimationFrame(() => notificationsTriggerRef.current?.focus())
+  }
+
   useEffect(() => {
     if (!open) return
     if (focusFirstOnOpenRef.current) {
@@ -126,6 +139,8 @@ export function PublicMenu() {
       event.preventDefault()
       if (view === "account") {
         closeAccountView()
+      } else if (view === "notifications") {
+        closeNotificationsView()
       } else {
         closeMenu({ restoreFocus: true })
       }
@@ -140,6 +155,7 @@ export function PublicMenu() {
   }, [open, view])
 
   function handleMenuKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (view === "notifications") return
     if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return
     const items = menuItems()
     if (items.length === 0) return
@@ -206,12 +222,28 @@ export function PublicMenu() {
       {open && (
         <div
           id={menuId}
-          role="menu"
-          aria-label={view === "account" ? "Menu da conta" : "Menu do site"}
+          role={view === "notifications" ? "dialog" : "menu"}
+          aria-label={view === "account" ? "Menu da conta" : view === "notifications" ? "Configurar notificações" : "Menu do site"}
           onKeyDown={handleMenuKeyDown}
-          className="public-menu-panel absolute right-0 top-11 w-[min(17rem,calc(100vw-2rem))] origin-top-right rounded-[10px] border border-zinc-200 bg-white p-1.5 text-zinc-950 shadow-[0_6px_8px_rgba(0,0,0,0.12)] sm:left-0 sm:right-auto sm:origin-top-left dark:border-white/10 dark:bg-[#151515] dark:text-zinc-100 dark:shadow-[0_6px_8px_rgba(0,0,0,0.38)]"
+          className={`${view === "notifications" ? "w-[min(19rem,calc(100vw-2rem))]" : "w-[min(17rem,calc(100vw-2rem))]"} public-menu-panel absolute right-0 top-11 origin-top-right rounded-[10px] border border-zinc-200 bg-white p-1.5 text-zinc-950 shadow-[0_6px_8px_rgba(0,0,0,0.12)] sm:left-0 sm:right-auto sm:origin-top-left dark:border-white/10 dark:bg-[#151515] dark:text-zinc-100 dark:shadow-[0_6px_8px_rgba(0,0,0,0.38)]`}
         >
-          {view === "account" && isLoaded && isSignedIn && user ? (
+          {view === "notifications" ? (
+            <div className="p-1">
+              <button
+                ref={notificationsBackRef}
+                type="button"
+                onClick={closeNotificationsView}
+                className={ITEM_CLASS_NAME}
+              >
+                <ArrowLeftIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
+                <span className="font-medium">Notificações</span>
+              </button>
+              <div className="mt-1 border-t border-zinc-200 px-1.5 pb-1 pt-3 dark:border-white/10">
+                <p className="mb-3 text-[11px] leading-[1.55] text-zinc-500 dark:text-zinc-400">Escolha o que deseja receber neste dispositivo.</p>
+                <PushSubscriptionManager compact showAdminEvents={admin} />
+              </div>
+            </div>
+          ) : view === "account" && isLoaded && isSignedIn && user ? (
             <>
               <button
                 ref={accountBackRef}
@@ -300,22 +332,39 @@ export function PublicMenu() {
                   </button>
                 </div>
                 <div className="mt-1 border-t border-zinc-200 pt-1.5 dark:border-white/10">
-                  <Link href="/acompanhar" role="menuitem" onClick={() => closeMenu()} className={ITEM_CLASS_NAME}>
-                    <BellIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
-                    Receber atualizações
-                  </Link>
                   <Link href="/fale-comigo" role="menuitem" onClick={() => closeMenu()} className={ITEM_CLASS_NAME}>
                     <EnvelopeIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
                     <span className="flex-1">Fale comigo</span>
                     {unreadMessages > 0 && <span aria-label={`${unreadMessages} mensagens não lidas`} className="min-w-5 rounded-full bg-zinc-950 px-1.5 py-0.5 text-center text-[10px] font-medium text-white dark:bg-white dark:text-zinc-950">{unreadMessages > 99 ? "99+" : unreadMessages}</span>}
                   </Link>
-                  {isLoaded && isSignedIn && admin && (
-                    <Link href="/notificacoes" role="menuitem" onClick={() => closeMenu()} className={ITEM_CLASS_NAME}>
+                  {isLoaded && isSignedIn && admin ? (
+                    <div className="grid grid-cols-[minmax(0,1fr)_2rem] items-center gap-0.5">
+                      <Link href="/notificacoes" role="menuitem" onClick={() => closeMenu()} className={ITEM_CLASS_NAME}>
+                        <BellIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
+                        <span className="flex-1">Notificações</span>
+                        {unreadNotifications > 0 && <span aria-label={`${unreadNotifications} notificações não lidas`} className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold leading-none text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>}
+                      </Link>
+                      <button
+                        ref={notificationsTriggerRef}
+                        type="button"
+                        role="menuitem"
+                        onClick={openNotificationsView}
+                        aria-label="Configurar notificações neste dispositivo"
+                        title="Configurar notificações"
+                        className="grid size-8 place-items-center rounded-md text-zinc-500 outline-none transition-colors hover:bg-zinc-100 hover:text-zinc-950 focus-visible:bg-zinc-100 focus-visible:ring-2 focus-visible:ring-zinc-500 dark:text-zinc-400 dark:hover:bg-white/[0.07] dark:hover:text-white dark:focus-visible:bg-white/[0.07] dark:focus-visible:ring-zinc-300"
+                      >
+                        <Cog6ToothIcon className="size-[17px]" aria-hidden />
+                      </button>
+                    </div>
+                  ) : (
+                    <button ref={notificationsTriggerRef} type="button" role="menuitem" onClick={openNotificationsView} className={ITEM_CLASS_NAME}>
                       <BellIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
-                      <span className="flex-1">Notificações</span>
-                      {unreadNotifications > 0 && <span aria-label={`${unreadNotifications} notificações não lidas`} className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold leading-none text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>}
-                    </Link>
+                      <span className="flex-1">Receber atualizações</span>
+                      <ChevronRightIcon className="size-3.5 text-zinc-400" aria-hidden />
+                    </button>
                   )}
+                </div>
+                <div className="mt-1 border-t border-zinc-200 pt-1.5 dark:border-white/10">
                   <Link href="/sobre" role="menuitem" onClick={() => closeMenu()} className={ITEM_CLASS_NAME}>
                     <InformationCircleIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
                     Sobre

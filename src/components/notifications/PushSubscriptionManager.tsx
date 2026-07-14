@@ -13,7 +13,13 @@ function applicationServerKey(value: string) {
   return Uint8Array.from(raw, (character) => character.charCodeAt(0))
 }
 
-export function PushSubscriptionManager({ showAdminEvents = false }: { showAdminEvents?: boolean }) {
+export function PushSubscriptionManager({
+  showAdminEvents = false,
+  compact = false,
+}: {
+  showAdminEvents?: boolean
+  compact?: boolean
+}) {
   const [state, setState] = useState<State>("loading")
   const [publicKey, setPublicKey] = useState("")
   const [subscription, setSubscription] = useState<PushSubscription | null>(null)
@@ -150,10 +156,12 @@ export function PushSubscriptionManager({ showAdminEvents = false }: { showAdmin
     }
   }
 
-  if (state === "loading") return <p className="text-sm text-zinc-500 dark:text-zinc-400">Consultando este dispositivo…</p>
-  if (state === "unsupported") return <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">Este navegador não oferece notificações para sites.</p>
-  if (state === "unconfigured") return <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">As notificações ainda não foram configuradas pelo site.</p>
-  if (state === "denied") return <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">As notificações estão bloqueadas nas configurações do navegador. Altere a permissão do site para poder ativá-las.</p>
+  const bodyTextClass = compact ? "text-xs leading-5" : "text-sm leading-relaxed"
+
+  if (state === "loading") return <p className={`${bodyTextClass} text-zinc-500 dark:text-zinc-400`}>Consultando este dispositivo…</p>
+  if (state === "unsupported") return <p className={`${bodyTextClass} text-zinc-600 dark:text-zinc-300`}>Este navegador não oferece notificações para sites.</p>
+  if (state === "unconfigured") return <p className={`${bodyTextClass} text-zinc-600 dark:text-zinc-300`}>As notificações ainda não foram configuradas pelo site.</p>
+  if (state === "denied") return <p className={`${bodyTextClass} text-zinc-600 dark:text-zinc-300`}>As notificações estão bloqueadas nas configurações do navegador. Altere a permissão do site para poder ativá-las.</p>
 
   if (!subscription) return (
     <div>
@@ -161,41 +169,41 @@ export function PushSubscriptionManager({ showAdminEvents = false }: { showAdmin
         type="button"
         onClick={enable}
         disabled={state === "saving" || !publicKey}
-        className="inline-flex min-h-10 items-center gap-2 rounded-md bg-zinc-950 px-3.5 py-2 text-sm font-medium text-white outline-none transition-colors hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-zinc-500 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 dark:focus-visible:ring-zinc-300 dark:focus-visible:ring-offset-[#040404]"
+        className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-zinc-950 px-3.5 py-2 font-medium text-white outline-none transition-colors hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-zinc-500 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 dark:focus-visible:ring-zinc-300 dark:focus-visible:ring-offset-[#040404] ${compact ? "w-full text-xs" : "text-sm"}`}
       >
         <BellAlertIcon className="size-[18px]" aria-hidden />
         {state === "saving" ? "Ativando…" : "Ativar notificações"}
       </button>
-      {message && <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-300" role="status">{message}</p>}
+      {message && <p className={`mt-3 text-zinc-600 dark:text-zinc-300 ${compact ? "text-xs leading-5" : "text-sm"}`} role="status">{message}</p>}
     </div>
   )
 
   const disabled = state === "saving"
   return (
     <div>
-      <fieldset disabled={disabled} className="space-y-2.5">
-        <legend className="mb-3 text-sm font-medium text-zinc-950 dark:text-white">Avisar neste dispositivo sobre</legend>
-        <label className="flex min-h-10 cursor-pointer items-center justify-between gap-4 rounded-md px-2 py-1.5 hover:bg-zinc-100 dark:hover:bg-white/[0.06]">
-          <span className="text-sm text-zinc-700 dark:text-zinc-200">Novos posts</span>
+      <fieldset disabled={disabled} className={compact ? "space-y-1" : "space-y-2.5"}>
+        <legend className={`font-medium text-zinc-950 dark:text-white ${compact ? "mb-2 text-xs" : "mb-3 text-sm"}`}>Avisar neste dispositivo sobre</legend>
+        <label className={`flex cursor-pointer items-center justify-between gap-4 rounded-md px-2 py-1.5 hover:bg-zinc-100 dark:hover:bg-white/[0.06] ${compact ? "min-h-9" : "min-h-10"}`}>
+          <span className={`${compact ? "text-xs" : "text-sm"} text-zinc-700 dark:text-zinc-200`}>Novos posts</span>
           <input type="checkbox" checked={topics.includes("posts")} onChange={(event) => void updatePreference("posts", event.target.checked)} className="size-4 accent-zinc-950 dark:accent-white" />
         </label>
-        <label className="flex min-h-10 cursor-pointer items-center justify-between gap-4 rounded-md px-2 py-1.5 hover:bg-zinc-100 dark:hover:bg-white/[0.06]">
-          <span className="text-sm text-zinc-700 dark:text-zinc-200">Novas notas</span>
+        <label className={`flex cursor-pointer items-center justify-between gap-4 rounded-md px-2 py-1.5 hover:bg-zinc-100 dark:hover:bg-white/[0.06] ${compact ? "min-h-9" : "min-h-10"}`}>
+          <span className={`${compact ? "text-xs" : "text-sm"} text-zinc-700 dark:text-zinc-200`}>Novas notas</span>
           <input type="checkbox" checked={topics.includes("notes")} onChange={(event) => void updatePreference("notes", event.target.checked)} className="size-4 accent-zinc-950 dark:accent-white" />
         </label>
         {showAdminEvents && (
-          <label className="flex min-h-10 cursor-pointer items-center justify-between gap-4 rounded-md px-2 py-1.5 hover:bg-zinc-100 dark:hover:bg-white/[0.06]">
-            <span><span className="block text-sm text-zinc-700 dark:text-zinc-200">Atividade privada</span><span className="block text-xs text-zinc-500 dark:text-zinc-400">Comentários, mensagens e visitas identificadas</span></span>
+          <label className={`flex cursor-pointer items-center justify-between gap-4 rounded-md px-2 py-1.5 hover:bg-zinc-100 dark:hover:bg-white/[0.06] ${compact ? "min-h-10" : "min-h-10"}`}>
+            <span><span className={`block text-zinc-700 dark:text-zinc-200 ${compact ? "text-xs" : "text-sm"}`}>Atividade privada</span><span className={`block text-zinc-500 dark:text-zinc-400 ${compact ? "mt-0.5 text-[10px] leading-4" : "text-xs"}`}>Comentários, mensagens e visitas identificadas</span></span>
             <input type="checkbox" checked={adminEvents} onChange={(event) => void updatePreference("admin", event.target.checked)} className="size-4 accent-zinc-950 dark:accent-white" />
           </label>
         )}
       </fieldset>
-      <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-zinc-200 pt-4 dark:border-white/10">
-        <button type="button" onClick={() => void disable()} disabled={disabled} className="inline-flex min-h-9 items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-zinc-600 outline-none hover:bg-zinc-100 hover:text-zinc-950 focus-visible:ring-2 focus-visible:ring-zinc-500 disabled:opacity-60 dark:text-zinc-300 dark:hover:bg-white/[0.07] dark:hover:text-white">
+      <div className={`flex flex-wrap items-center gap-3 border-t border-zinc-200 dark:border-white/10 ${compact ? "mt-3 pt-3" : "mt-4 pt-4"}`}>
+        <button type="button" onClick={() => void disable()} disabled={disabled} className={`inline-flex min-h-9 items-center gap-2 rounded-md px-2.5 py-1.5 text-zinc-600 outline-none hover:bg-zinc-100 hover:text-zinc-950 focus-visible:ring-2 focus-visible:ring-zinc-500 disabled:opacity-60 dark:text-zinc-300 dark:hover:bg-white/[0.07] dark:hover:text-white ${compact ? "text-xs" : "text-sm"}`}>
           <BellSlashIcon className="size-[17px]" aria-hidden />
           Desativar neste dispositivo
         </button>
-        {message && <p className="text-sm text-zinc-500 dark:text-zinc-400" role="status">{message}</p>}
+        {message && <p className={`${compact ? "text-xs leading-5" : "text-sm"} text-zinc-500 dark:text-zinc-400`} role="status">{message}</p>}
       </div>
     </div>
   )
