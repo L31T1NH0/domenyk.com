@@ -21,10 +21,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <div className="admin-frame">
         <aside className="admin-sidebar">
           <div className="admin-brand">
-            <Link href="/admin" className="min-w-0">
-              <span className="admin-brand-mark">D</span>
-              <span><strong>Domenyk Admin</strong><small>Painel editorial</small></span>
-            </Link>
             <AdminMenu />
           </div>
 
@@ -42,10 +38,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </aside>
 
         <header className="admin-mobile-header">
-          <Link href="/admin" className="admin-mobile-brand">
-            <span className="admin-brand-mark">D</span>
-            <span><strong>Domenyk Admin</strong><small>Painel editorial</small></span>
-          </Link>
           <AdminMenu />
         </header>
 

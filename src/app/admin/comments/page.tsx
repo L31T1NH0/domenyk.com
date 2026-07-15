@@ -1,5 +1,6 @@
 import { getCommentParentSummaries, getRecentComments, serializeComment } from "@/lib/db/comments"
 import { CommentsTable } from "./CommentsTable"
+import { AdminCommandHeader } from "../AdminCommandHeader"
 
 export default async function AdminCommentsPage() {
   const comments = await getRecentComments(50)
@@ -11,7 +12,7 @@ export default async function AdminCommentsPage() {
 
   return (
     <>
-      <header className="admin-page-header"><div><h1>Comentários</h1><p>Modere as conversas publicadas nos posts e nas notas.</p></div></header>
+      <AdminCommandHeader title="Comentários" description="Modere as conversas publicadas nos posts e nas notas." />
       <CommentsTable comments={serializedComments} />
     </>
   )

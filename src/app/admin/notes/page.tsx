@@ -1,6 +1,7 @@
 import { getNotes, serializeNote } from "@/lib/db/notes"
 import { AdminNotesTable } from "./AdminNotesTable"
 import { getNoteMetricsMap } from "@/lib/db/note-metrics"
+import { AdminCommandHeader } from "../AdminCommandHeader"
 
 export default async function AdminNotesPage() {
   const { notes } = await getNotes({ limit: 100 })
@@ -12,10 +13,7 @@ export default async function AdminNotesPage() {
 
   return (
     <>
-      <header className="admin-page-header"><div>
-        <h1>Notas</h1>
-        <p>Revise conteúdo e libere a indexação somente quando o SEO estiver completo.</p>
-      </div></header>
+      <AdminCommandHeader title="Notas" description="Revise conteúdo e libere a indexação somente quando o SEO estiver completo." />
       <AdminNotesTable notes={serializedNotes} />
       <p className="admin-page-note">Novas notas começam fora do Google. Abra uma nota para preencher título e descrição SEO.</p>
     </>

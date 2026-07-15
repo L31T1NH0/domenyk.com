@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { getPosts, serializePostSummary } from "@/lib/db/posts"
 import { PostsTable } from "./PostsTable"
+import { AdminCommandHeader } from "../AdminCommandHeader"
 
 export default async function AdminPostsPage() {
   const { posts } = await getPosts({ includeUnpublished: true, limit: 100 })
@@ -10,15 +11,11 @@ export default async function AdminPostsPage() {
 
   return (
     <>
-      <header className="admin-page-header">
-        <div><h1>Posts</h1><p>Escreva, publique e acompanhe seu acervo editorial.</p></div>
-        <Link
-          href="/admin/posts/new"
-          className="admin-button-primary"
-        >
-          Novo post
-        </Link>
-      </header>
+      <AdminCommandHeader
+        title="Posts"
+        description="Escreva, publique e acompanhe seu acervo editorial."
+        actions={<Link href="/admin/posts/new" className="admin-button-primary">Novo post</Link>}
+      />
       <PostsTable posts={serializedPosts} />
     </>
   )

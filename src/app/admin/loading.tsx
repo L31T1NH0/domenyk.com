@@ -5,14 +5,14 @@ export default function AdminLoading() {
         <span className="admin-skeleton admin-skeleton-title" />
         <span className="admin-skeleton admin-skeleton-copy" />
       </header>
-      <section className="admin-loading-metrics" aria-hidden>
-        {Array.from({ length: 4 }, (_, index) => <span key={index} className="admin-skeleton" />)}
-      </section>
-      <section className="admin-loading-panel" aria-hidden>
-        <span className="admin-skeleton admin-skeleton-copy" />
-        <span className="admin-skeleton admin-skeleton-row" />
-        <span className="admin-skeleton admin-skeleton-row" />
-        <span className="admin-skeleton admin-skeleton-row" />
+      <section className="admin-loading-workspace" aria-hidden>
+        <header><span className="admin-skeleton admin-skeleton-copy" /><span className="admin-skeleton admin-skeleton-control" /></header>
+        <div>
+          <span className="admin-skeleton admin-skeleton-row" />
+          <span className="admin-skeleton admin-skeleton-row" />
+          <span className="admin-skeleton admin-skeleton-row" />
+          <span className="admin-skeleton admin-skeleton-row" />
+        </div>
       </section>
       <span className="sr-only">Carregando conteúdo do painel.</span>
     </div>

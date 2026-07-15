@@ -70,19 +70,19 @@ export function ThemeEditor({ theme, posts }: Props) {
   }
 
   return (
-    <div className="admin-resource-layout">
-      <main className="admin-resource-main">
-        <section className="admin-section">
-          <header><div><h2>Identidade do tema</h2><p>Nome, endereço e texto que explicam a coleção.</p></div></header>
-          <div className="admin-form-grid">
+    <div className="admin-theme-workspace">
+      <section className="admin-theme-identity">
+        <header className="admin-workspace-header"><div><h2>Identidade do tema</h2><p>Nome, endereço e texto que explicam a coleção.</p></div></header>
+        <div className="admin-form-grid">
             <label className="admin-field"><span>Nome</span><input value={name} maxLength={80} onChange={(event) => { setName(event.target.value); if (!slugTouched) setSlug(slugify(event.target.value)) }} /></label>
             <label className="admin-field"><span>Slug</span><div className="admin-input-prefix"><span>/temas/</span><input value={slug} maxLength={100} onChange={(event) => { setSlugTouched(true); setSlug(slugify(event.target.value)) }} /></div></label>
             <label className="admin-field admin-field-wide"><span>Descrição</span><textarea value={description} maxLength={500} rows={4} onChange={(event) => setDescription(event.target.value)} /><small>{description.length}/500</small></label>
-          </div>
-        </section>
+        </div>
+      </section>
 
-        <section className="admin-section">
-          <header><div><h2>Textos selecionados</h2><p>A ordem abaixo é a ordem da página pública.</p></div><span className="admin-section-count">{selectedPosts.length}</span></header>
+      <div className="admin-theme-texts">
+        <section className="admin-theme-selected">
+          <header className="admin-workspace-header"><div><h2>Textos selecionados</h2><p>A ordem abaixo é a ordem da página pública.</p></div><span className="admin-section-count">{selectedPosts.length}</span></header>
           <div className="admin-order-list">
             {selectedPosts.map((post, index) => (
               <div key={post._id} className="admin-order-row">
@@ -99,23 +99,20 @@ export function ThemeEditor({ theme, posts }: Props) {
           </div>
         </section>
 
-        <section className="admin-section">
-          <header><div><h2>Adicionar textos</h2><p>Um post pode fazer parte de vários temas.</p></div></header>
-          <label className="admin-search"><MagnifyingGlassIcon /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por título ou slug" /></label>
+        <section className="admin-theme-available">
+          <header className="admin-workspace-header"><div><h2>Adicionar textos</h2><p>Um post pode fazer parte de vários temas.</p></div></header>
+          <label className="admin-control-search admin-theme-search"><MagnifyingGlassIcon aria-hidden /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por título ou slug" /></label>
           <div className="admin-pick-list">
             {availablePosts.slice(0, 30).map((post) => <button key={post._id} type="button" onClick={() => setPostIds((ids) => [...ids, post._id])}><span><strong>{post.title}</strong><small>{post.slug}</small></span><span>Adicionar</span></button>)}
             {availablePosts.length === 0 && <p className="admin-empty">Nenhum post disponível para este filtro.</p>}
           </div>
         </section>
-      </main>
+      </div>
 
-      <aside className="admin-inspector">
-        <section><header><h2>Publicação</h2></header><label className="admin-toggle-row"><span><strong>Tema ativo</strong><small>Permite a página pública e a entrada no sitemap.</small></span><input type="checkbox" checked={active} onChange={(event) => setActive(event.target.checked)} /></label></section>
-        <section><header><h2>Resumo</h2></header><dl className="admin-inspector-list"><div><dt>Textos</dt><dd>{postIds.length}</dd></div><div><dt>Indexação</dt><dd>{active ? "Permitida" : "Bloqueada"}</dd></div></dl></section>
-        {error && <p className="admin-form-error" role="alert">{error}</p>}
-        <button type="button" className="admin-button-primary admin-save-button" onClick={save} disabled={saving}>{saving ? "Salvando…" : "Salvar alterações"}</button>
-        {theme && <DeleteActionMenu title={`Excluir o tema “${theme.name}”?`} description="O tema será apagado, mas os posts relacionados permanecerão no site." onDelete={remove} triggerLabel="Excluir tema" triggerVariant="button" triggerClassName="admin-button-danger" />}
-      </aside>
+      <footer className="admin-theme-footer">
+        <div className="admin-theme-publish"><label className="admin-toggle-row"><span><strong>Tema ativo</strong><small>Permite a página pública e a entrada no sitemap.</small></span><input type="checkbox" checked={active} onChange={(event) => setActive(event.target.checked)} /></label><dl><div><dt>Textos</dt><dd>{postIds.length}</dd></div><div><dt>Indexação</dt><dd>{active ? "Permitida" : "Bloqueada"}</dd></div></dl></div>
+        <div className="admin-theme-submit">{error && <p className="admin-form-error" role="alert">{error}</p>}<div className="admin-editor-actions">{theme && <DeleteActionMenu title={`Excluir o tema “${theme.name}”?`} description="O tema será apagado, mas os posts relacionados permanecerão no site." onDelete={remove} triggerLabel="Excluir tema" triggerVariant="button" triggerClassName="admin-button-danger" />}<button type="button" className="admin-button-primary" onClick={save} disabled={saving}>{saving ? "Salvando…" : "Salvar alterações"}</button></div></div>
+      </footer>
     </div>
   )
 }

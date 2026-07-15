@@ -73,8 +73,8 @@ export function ManualPushComposer({ content }: { content: PushContentOption[] }
   const notes = content.filter((item) => item.type === "note")
 
   return (
-    <section className="admin-list admin-push-composer">
-      <header className="admin-block-header"><div><strong>Disparo editorial</strong><small>Destaque um conteúdo já publicado</small></div></header>
+    <section className="admin-notification-composer">
+      <header className="admin-workspace-header"><div><h2>Disparo editorial</h2><p>Destaque um conteúdo já publicado</p></div></header>
       <div className="admin-push-grid">
         <div className="admin-push-fields">
           <label className="admin-field">

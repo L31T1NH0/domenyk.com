@@ -6,6 +6,7 @@ import { getPosts } from "@/lib/db/posts"
 import { descriptionFromMarkdown, noteDisplayTitle } from "@/lib/seo"
 import { ManualPushComposer, type PushContentOption } from "./ManualPushComposer"
 import { AdminPushDevices, type AdminPushDevice } from "./AdminPushDevices"
+import { AdminCommandHeader } from "../AdminCommandHeader"
 
 function deviceLabel(userAgent?: string) {
   if (!userAgent) return "Dispositivo não identificado"
@@ -59,37 +60,41 @@ export default async function AdminPushPage() {
 
   return (
     <>
-      <header className="admin-page-header"><div><h1>Notificações push</h1><p>Assinaturas, alertas privados e disparos editoriais.</p></div></header>
-      <section className="admin-metrics">
+      <AdminCommandHeader title="Notificações push" description="Assinaturas, alertas privados e disparos editoriais." />
+      <section className="admin-push-summary" aria-label="Resumo das assinaturas">
         {[
           ["Dispositivos", counts.devices],
           ["Inscritos em posts", counts.posts],
           ["Inscritos em notas", counts.notes],
           ["Seus dispositivos", counts.adminDevices],
-        ].map(([label, value]) => <div key={label} className="admin-metric"><span>{label}</span><strong>{value}</strong></div>)}
+        ].map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}
       </section>
 
       <ManualPushComposer content={content} />
 
-      <section className="admin-list">
-        <header className="admin-block-header"><div><strong>Este dispositivo</strong><small>Alertas administrativos e publicações</small></div></header>
-        <div className="admin-block-body"><PushSubscriptionManager showAdminEvents /></div>
-      </section>
+      <div className="admin-notification-grid">
+        <div className="admin-notification-devices">
+          <section className="admin-workspace-panel">
+            <header className="admin-workspace-header"><div><h2>Este dispositivo</h2><p>Alertas administrativos e publicações</p></div></header>
+            <div className="admin-block-body"><PushSubscriptionManager showAdminEvents /></div>
+          </section>
 
-      <section className="admin-list">
-        <header className="admin-block-header"><div><strong>Dispositivos administrativos</strong><small>Revogue o acesso privado de aparelhos que você não usa mais</small></div></header>
-        <AdminPushDevices devices={devices} />
-      </section>
+          <section className="admin-workspace-panel">
+            <header className="admin-workspace-header"><div><h2>Dispositivos administrativos</h2><p>Revogue o acesso privado de aparelhos que você não usa mais</p></div></header>
+            <AdminPushDevices devices={devices} />
+          </section>
+        </div>
 
-      <section className="admin-list">
-        <header className="admin-block-header"><div><strong>Disparos recentes</strong><small>{campaigns.length} registros</small></div></header>
-        {campaigns.length === 0 ? <p className="admin-empty">Nenhuma notificação enviada ainda.</p> : campaigns.map((campaign) => (
-          <div key={campaign._id.toString()} className="admin-push-campaign">
-            <div><strong>{campaign.title}</strong><span>{campaign.source === "manual" ? "Manual" : "Automático"} · {campaign.topic === "posts" ? "Posts" : "Notas"}</span></div>
-            <div><span>{campaign.sentCount} enviados · {campaign.failedCount} falhas</span><time>{campaign.createdAt.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Fortaleza" })}</time></div>
-          </div>
-        ))}
-      </section>
+        <section className="admin-workspace-panel admin-notification-history">
+          <header className="admin-workspace-header"><div><h2>Disparos recentes</h2><p>{campaigns.length} registros</p></div></header>
+          {campaigns.length === 0 ? <p className="admin-empty">Nenhuma notificação enviada ainda.</p> : campaigns.map((campaign) => (
+            <div key={campaign._id.toString()} className="admin-push-campaign">
+              <div><strong>{campaign.title}</strong><span>{campaign.source === "manual" ? "Manual" : "Automático"} · {campaign.topic === "posts" ? "Posts" : "Notas"}</span></div>
+              <div><span>{campaign.sentCount} enviados · {campaign.failedCount} falhas</span><time>{campaign.createdAt.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Fortaleza" })}</time></div>
+            </div>
+          ))}
+        </section>
+      </div>
     </>
   )
 }

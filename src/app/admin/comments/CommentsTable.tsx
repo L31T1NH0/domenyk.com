@@ -64,39 +64,39 @@ export function CommentsTable({ comments: initial }: { comments: AdminComment[] 
     return JSON.stringify(value, null, 2)
   }
 
-  return <section className="admin-list admin-comments-list">
-    <div className="admin-list-toolbar">
-      <div><strong>Comentários recentes</strong><small>{filtered.length} de {comments.length}</small></div>
-      <div className="admin-comments-tools">
-        <label className="admin-search"><MagnifyingGlassIcon /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar comentário, autor ou post" /></label>
-        <select value={filter} onChange={(event) => setFilter(event.target.value as Filter)} aria-label="Filtrar pelo tipo de conteúdo">
+  return <section className="admin-comments-workspace">
+    <div className="admin-records-toolbar">
+      <div className="admin-records-toolbar-row">
+        <div><strong>Comentários recentes</strong><small>{filtered.length} de {comments.length} registros</small></div>
+        <div className="admin-record-controls">
+        <label className="admin-control-search"><MagnifyingGlassIcon aria-hidden /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar comentário, autor ou post" /></label>
+        <select className="admin-control" value={filter} onChange={(event) => setFilter(event.target.value as Filter)} aria-label="Filtrar pelo tipo de conteúdo">
           <option value="all">Posts e notas</option><option value="post">Somente posts</option><option value="note">Somente notas</option>
         </select>
+        </div>
       </div>
     </div>
     {error && <p className="admin-form-error admin-comments-error" role="alert">{error}</p>}
-    <div className="admin-comments-head"><span>Comentário</span><span>Publicado em</span><span>Quando</span><span aria-hidden /></div>
     {filtered.map((comment) => {
       const publicHref = comment.parent.publicHref && comment.paragraphId
         ? `${comment.parent.publicHref}#${comment.paragraphId}`
         : comment.parent.publicHref
-      return <article key={comment._id} className="admin-comment-row">
-        <div className="admin-comment-main">
+      return <article key={comment._id} className="admin-comment-record">
+        <div className="admin-comment-message">
           {comment.authorImageUrl ? <img src={comment.authorImageUrl} alt="" /> : <span className="admin-comment-avatar">{comment.authorName.slice(0, 1).toUpperCase()}</span>}
-          <div className="admin-comment-body">
-            <div className="admin-comment-author"><strong>{comment.authorName}</strong>{comment.paragraphId && <span>Comentário em parágrafo</span>}</div>
-            <div className="note-content comment-content admin-comment-content" dangerouslySetInnerHTML={{ __html: comment.contentHtml }} />
+          <div>
+            <header><strong>{comment.authorName}</strong>{comment.paragraphId && <span>Em um parágrafo</span>}</header>
+            <div className="note-content comment-content admin-comment-copy" dangerouslySetInnerHTML={{ __html: comment.contentHtml }} />
           </div>
         </div>
-        <div className="admin-comment-parent">
-          <span>{comment.parent.type === "post" ? "Post" : comment.parent.type === "note" ? "Nota" : "Origem"}</span>
+        <div className="admin-comment-context">
+          <span>Em {comment.parent.type === "post" ? "post" : comment.parent.type === "note" ? "nota" : "conteúdo"}</span>
           {comment.parent.adminHref ? <Link href={comment.parent.adminHref}>{comment.parent.title}</Link> : <strong>{comment.parent.title}</strong>}
           {publicHref && <Link href={publicHref} target="_blank" className="admin-comment-public-link">Abrir conversa <ArrowTopRightOnSquareIcon /></Link>}
         </div>
-        <time dateTime={comment.createdAt}>{formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true, locale: ptBR })}</time>
-        <div className="admin-comment-actions">
-          <button type="button" onClick={() => toggleDetails(comment._id)} aria-expanded={detailId === comment._id} aria-controls={`comment-details-${comment._id}`} className="admin-comment-details-button">{detailId === comment._id ? "Fechar" : "Detalhes"}</button>
-          <DeleteActionMenu title="Excluir comentário?" description={`O comentário de ${comment.authorName} será removido permanentemente.`} onDelete={() => remove(comment._id)} triggerAriaLabel={`Opções do comentário de ${comment.authorName}`} triggerClassName="admin-comment-delete" />
+        <div className="admin-comment-meta">
+          <time dateTime={comment.createdAt}>{formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true, locale: ptBR })}</time>
+          <div className="admin-comment-actions"><button type="button" onClick={() => toggleDetails(comment._id)} aria-expanded={detailId === comment._id} aria-controls={`comment-details-${comment._id}`} className="admin-comment-details-button">{detailId === comment._id ? "Fechar" : "Detalhes"}</button><DeleteActionMenu title="Excluir comentário?" description={`O comentário de ${comment.authorName} será removido permanentemente.`} onDelete={() => remove(comment._id)} triggerAriaLabel={`Opções do comentário de ${comment.authorName}`} triggerClassName="admin-comment-delete" /></div>
         </div>
         {detailId === comment._id && <div id={`comment-details-${comment._id}`} className="admin-comment-details">
           <header><div><strong>Registro no banco de dados</strong><span>Leitura direta da coleção <code>comments</code></span></div><small>{detailRecord ? `${Object.keys(detailRecord).length} campos` : ""}</small></header>
