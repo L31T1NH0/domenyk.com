@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react"
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type SVGProps } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useClerk, useUser } from "@clerk/nextjs"
@@ -19,7 +19,6 @@ import {
   EnvelopeIcon,
   MoonIcon,
   PencilSquareIcon,
-  Squares2X2Icon,
   SunIcon,
   UserCircleIcon,
 } from "@heroicons/react/24/outline"
@@ -29,6 +28,15 @@ import { PushSubscriptionManager } from "@/components/notifications/PushSubscrip
 import { usePublicMenu } from "./PublicMenuContext"
 
 const ITEM_CLASS_NAME = "group flex min-h-9 w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-[13px] text-zinc-700 outline-none transition-colors hover:bg-zinc-100 focus-visible:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-white/[0.07] dark:focus-visible:bg-white/[0.07]"
+
+function CrownIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="m3 7 3 10h12l3-10-5.5 4.5L12 5l-3.5 6.5L3 7Z" />
+      <path d="M6 20h12" />
+    </svg>
+  )
+}
 
 export function PublicMenu() {
   const { isLoaded, isSignedIn, user } = useUser()
@@ -347,8 +355,8 @@ export function PublicMenu() {
                 <div className={isPostPage ? "mt-1 border-t border-zinc-200 pt-1.5 dark:border-white/10" : ""}>
                   {admin && (
                     <Link href="/admin" role="menuitem" onClick={() => closeMenu()} className={ITEM_CLASS_NAME}>
-                      <Squares2X2Icon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
-                      Administração
+                      <CrownIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
+                      Admin
                     </Link>
                   )}
                   <button type="button" role="menuitem" onClick={toggleTheme} className={ITEM_CLASS_NAME}>
