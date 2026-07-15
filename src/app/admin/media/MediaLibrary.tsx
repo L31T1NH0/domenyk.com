@@ -1,11 +1,17 @@
 "use client"
 
-import { ClipboardDocumentIcon } from "@heroicons/react/24/outline"
+import { ArrowUpTrayIcon, CheckIcon, ClipboardDocumentIcon } from "@heroicons/react/24/outline"
 import { useRef, useState } from "react"
 import { DeleteActionMenu } from "@/components/actions/DeleteActionMenu"
 import type { SerializedMediaItem } from "@/lib/blob"
 
 type Props = { initialMedia: SerializedMediaItem[] }
+
+function formatBytes(value: number) {
+  if (value < 1024) return `${value} B`
+  if (value < 1024 * 1024) return `${Math.round(value / 1024)} KB`
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`
+}
 
 export function MediaLibrary({ initialMedia }: Props) {
   const [media, setMedia] = useState(initialMedia)
@@ -63,10 +69,9 @@ export function MediaLibrary({ initialMedia }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="admin-media-library">
       <div
-        className="flex cursor-pointer flex-col items-center gap-3 rounded-lg border border-dashed border-neutral-300 bg-white p-5 text-center shadow-sm transition-colors hover:border-neutral-500 dark:border-neutral-800 dark:bg-neutral-950 dark:hover:border-neutral-600 sm:p-8"
-        onClick={() => fileRef.current?.click()}
+        className="admin-media-dropzone"
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
           e.preventDefault()
@@ -82,33 +87,41 @@ export function MediaLibrary({ initialMedia }: Props) {
           onChange={(e) => { if (e.target.files?.[0]) upload(e.target.files[0]) }}
         />
         {uploading ? (
-          <p className="text-sm text-neutral-400">Enviando...</p>
+          <div className="admin-media-upload-state" role="status">
+            <span className="admin-media-upload-icon"><ArrowUpTrayIcon aria-hidden /></span>
+            <span><strong>Enviando imagem</strong><small>O arquivo aparecerá na biblioteca assim que terminar.</small></span>
+          </div>
         ) : (
-          <>
-            <p className="text-sm font-medium text-neutral-700 dark:text-neutral-200">Arraste ou clique para enviar</p>
-            <p className="text-xs text-neutral-400">PNG, JPG, WebP</p>
-          </>
+          <div className="admin-media-upload-state">
+            <span className="admin-media-upload-icon"><ArrowUpTrayIcon aria-hidden /></span>
+            <span><strong>Envie uma imagem</strong><small>Arraste um arquivo para esta área ou escolha no dispositivo. PNG, JPG e WebP.</small></span>
+            <button type="button" className="admin-button-secondary" onClick={() => fileRef.current?.click()}>Escolher arquivo</button>
+          </div>
         )}
       </div>
-      {error && <p className="text-sm text-red-500">{error}</p>}
+      {error && <p className="admin-form-error" role="alert">{error}</p>}
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
+      <section className="admin-media-section">
+        <header><div><h2>Biblioteca</h2><p>{media.length} {media.length === 1 ? "arquivo disponível" : "arquivos disponíveis"}</p></div></header>
+        <div className="admin-media-grid">
         {media.map((item) => (
-          <div
+          <figure
             key={item.url}
-            className="group relative aspect-square overflow-hidden rounded-lg border border-neutral-200 bg-neutral-100 shadow-sm dark:border-neutral-900 dark:bg-neutral-900"
+            className="admin-media-item"
             title={item.pathname}
           >
-            <img src={item.url} alt="" className="w-full h-full object-cover" style={{ filter: "none" }} />
-            <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/55 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
+            <div className="admin-media-preview"><img src={item.url} alt="" /></div>
+            <figcaption>
+              <span className="admin-media-meta"><strong>{item.pathname}</strong><small>{formatBytes(item.size)}</small></span>
+              <span className="admin-media-actions">
               <button
                 type="button"
                 onClick={() => copyUrl(item.url)}
-                className="grid size-9 place-items-center rounded-full bg-white/90 text-neutral-700 hover:bg-white focus:outline-none focus:ring-2 focus:ring-white"
+                className="admin-icon-button"
                 aria-label={copied === item.url ? "URL copiada" : "Copiar URL"}
                 title={copied === item.url ? "URL copiada" : "Copiar URL"}
               >
-                <ClipboardDocumentIcon className="size-5" aria-hidden />
+                {copied === item.url ? <CheckIcon aria-hidden /> : <ClipboardDocumentIcon aria-hidden />}
               </button>
               <DeleteActionMenu
                 title="Excluir esta imagem?"
@@ -116,17 +129,15 @@ export function MediaLibrary({ initialMedia }: Props) {
                 onDelete={() => remove(item)}
                 disabled={deletingUrl === item.url}
                 triggerAriaLabel={`Opções da imagem ${item.pathname}`}
-                triggerClassName="grid size-9 place-items-center rounded-full bg-white/90 text-neutral-700 outline-none transition-colors hover:bg-white focus-visible:ring-2 focus-visible:ring-white disabled:cursor-wait disabled:opacity-60"
+                triggerClassName="admin-icon-button"
               />
-            </div>
-            {copied === item.url && (
-              <span className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-black/70 px-2 py-1 text-xs text-white">
-                copiado
               </span>
-            )}
-          </div>
+            </figcaption>
+          </figure>
         ))}
-      </div>
+        {media.length === 0 && <p className="admin-empty admin-media-empty">Nenhuma imagem enviada. Use a área acima para começar.</p>}
+        </div>
+      </section>
     </div>
   )
 }

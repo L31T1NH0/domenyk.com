@@ -42,13 +42,13 @@ export function AdminPushDevices({ devices }: { devices: AdminPushDevice[] }) {
   }
 
   return (
-    <div>
+    <div className="admin-push-devices">
       {devices.map((device) => (
-        <div key={device.id} className="flex items-center gap-3 border-b border-neutral-200 px-4 py-3 last:border-b-0 dark:border-neutral-800">
-          <ComputerDesktopIcon className="size-5 shrink-0 text-neutral-500" aria-hidden />
-          <div className="min-w-0 flex-1">
-            <strong className="block truncate text-xs text-neutral-900 dark:text-neutral-100">{device.label}</strong>
-            <span className="mt-0.5 block text-[11px] text-neutral-500">
+        <div key={device.id} className="admin-push-device">
+          <span className="admin-push-device-icon"><ComputerDesktopIcon aria-hidden /></span>
+          <div>
+            <strong>{device.label}</strong>
+            <span>
               Atualizado em {new Date(device.updatedAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
               {device.lastSuccessAt ? ` · último envio ${new Date(device.lastSuccessAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}` : ""}
             </span>
@@ -59,20 +59,20 @@ export function AdminPushDevices({ devices }: { devices: AdminPushDevice[] }) {
             disabled={busy !== null}
             aria-label={`Revogar alertas privados em ${device.label}`}
             title="Revogar alertas privados"
-            className="grid size-8 shrink-0 place-items-center rounded-md text-neutral-500 outline-none transition-colors hover:bg-red-50 hover:text-red-700 focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:opacity-50 dark:hover:bg-red-950/40 dark:hover:text-red-300"
+            className="admin-icon-button admin-push-revoke"
           >
             <XMarkIcon className="size-4" aria-hidden />
           </button>
         </div>
       ))}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-        <p className="text-[11px] text-neutral-500" role="status">{message}</p>
+      <div className="admin-push-device-footer">
+        <p role="status">{message}</p>
         {devices.length > 1 && (
           <button
             type="button"
             onClick={() => void revoke({ all: true }, "all")}
             disabled={busy !== null}
-            className="rounded-md px-2.5 py-1.5 text-xs font-medium text-red-700 outline-none hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:opacity-50 dark:text-red-300 dark:hover:bg-red-950/40"
+            className="admin-danger-text"
           >
             Revogar todos
           </button>

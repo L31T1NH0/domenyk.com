@@ -19,6 +19,7 @@ import {
   EnvelopeIcon,
   MoonIcon,
   PencilSquareIcon,
+  Squares2X2Icon,
   SunIcon,
   UserCircleIcon,
 } from "@heroicons/react/24/outline"
@@ -344,6 +345,12 @@ export function PublicMenu() {
                   </div>
                 )}
                 <div className={isPostPage ? "mt-1 border-t border-zinc-200 pt-1.5 dark:border-white/10" : ""}>
+                  {admin && (
+                    <Link href="/admin" role="menuitem" onClick={() => closeMenu()} className={ITEM_CLASS_NAME}>
+                      <Squares2X2Icon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
+                      Administração
+                    </Link>
+                  )}
                   <button type="button" role="menuitem" onClick={toggleTheme} className={ITEM_CLASS_NAME}>
                     {darkMode
                       ? <SunIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />

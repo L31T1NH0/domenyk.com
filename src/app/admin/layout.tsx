@@ -3,8 +3,9 @@ export const dynamic = "force-dynamic"
 import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { HomeIcon } from "@heroicons/react/24/outline"
 import { AdminNav } from "./AdminNav"
-import { ClerkButton } from "@/components/ClerkButton"
+import { AdminMenu } from "./AdminMenu"
 import { isAdmin } from "@/lib/auth"
 
 export const metadata: Metadata = {
@@ -24,7 +25,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               <span className="admin-brand-mark">D</span>
               <span><strong>Domenyk Admin</strong><small>Painel editorial</small></span>
             </Link>
-            <ClerkButton />
+            <AdminMenu />
           </div>
 
           <AdminNav />
@@ -34,10 +35,19 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               href="/"
               className="admin-nav-link"
             >
-              Ver site
+              <HomeIcon aria-hidden className="size-[18px]" />
+              Voltar para o site
             </Link>
           </div>
         </aside>
+
+        <header className="admin-mobile-header">
+          <Link href="/admin" className="admin-mobile-brand">
+            <span className="admin-brand-mark">D</span>
+            <span><strong>Domenyk Admin</strong><small>Painel editorial</small></span>
+          </Link>
+          <AdminMenu />
+        </header>
 
         <div className="admin-content-wrap">
           <main className="admin-content">

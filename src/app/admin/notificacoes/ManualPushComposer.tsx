@@ -73,53 +73,53 @@ export function ManualPushComposer({ content }: { content: PushContentOption[] }
   const notes = content.filter((item) => item.type === "note")
 
   return (
-    <section className="admin-list">
-      <header className="admin-list-header"><div><strong>Disparo editorial</strong><small>Destaque um conteúdo já publicado</small></div></header>
-      <div className="grid gap-6 p-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,.75fr)] lg:p-5">
-        <div className="space-y-4">
-          <label className="block text-[11px] font-semibold text-neutral-700 dark:text-neutral-200">
-            Conteúdo
-            <select value={selectedValue} onChange={(event) => select(event.target.value)} className="mt-1.5 h-10 w-full rounded-md border border-neutral-300 bg-white px-3 text-xs font-normal text-neutral-900 outline-none focus:border-neutral-500 focus:ring-2 focus:ring-neutral-300 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100 dark:focus:border-neutral-500 dark:focus:ring-neutral-800">
+    <section className="admin-list admin-push-composer">
+      <header className="admin-block-header"><div><strong>Disparo editorial</strong><small>Destaque um conteúdo já publicado</small></div></header>
+      <div className="admin-push-grid">
+        <div className="admin-push-fields">
+          <label className="admin-field">
+            <span>Conteúdo</span>
+            <select value={selectedValue} onChange={(event) => select(event.target.value)}>
               {posts.length > 0 && <optgroup label="Posts">{posts.map((item) => <option key={`post:${item.id}`} value={`post:${item.id}`}>{item.title}</option>)}</optgroup>}
               {notes.length > 0 && <optgroup label="Notas">{notes.map((item) => <option key={`note:${item.id}`} value={`note:${item.id}`}>{item.title}</option>)}</optgroup>}
             </select>
           </label>
-          <label className="block text-[11px] font-semibold text-neutral-700 dark:text-neutral-200">
-            Título da notificação
-            <input value={title} maxLength={120} onChange={(event) => { setTitle(event.target.value); setConfirming(false) }} className="mt-1.5 h-10 w-full rounded-md border border-neutral-300 bg-white px-3 text-xs font-normal text-neutral-900 outline-none focus:border-neutral-500 focus:ring-2 focus:ring-neutral-300 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100 dark:focus:border-neutral-500 dark:focus:ring-neutral-800" />
+          <label className="admin-field">
+            <span>Título da notificação</span>
+            <input value={title} maxLength={120} onChange={(event) => { setTitle(event.target.value); setConfirming(false) }} />
           </label>
-          <label className="block text-[11px] font-semibold text-neutral-700 dark:text-neutral-200">
-            Mensagem
-            <textarea value={message} maxLength={240} rows={4} onChange={(event) => { setMessage(event.target.value); setConfirming(false) }} className="mt-1.5 w-full resize-y rounded-md border border-neutral-300 bg-white px-3 py-2.5 text-xs font-normal leading-5 text-neutral-900 outline-none focus:border-neutral-500 focus:ring-2 focus:ring-neutral-300 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100 dark:focus:border-neutral-500 dark:focus:ring-neutral-800" />
-            <span className="mt-1 block text-right text-[10px] font-normal text-neutral-500">{message.length}/240</span>
+          <label className="admin-field">
+            <span>Mensagem</span>
+            <textarea value={message} maxLength={240} rows={4} onChange={(event) => { setMessage(event.target.value); setConfirming(false) }} />
+            <small>{message.length}/240</small>
           </label>
         </div>
 
-        <div>
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[.08em] text-neutral-500">Prévia</p>
-          <div className="rounded-xl bg-neutral-950 p-3.5 text-white dark:bg-white dark:text-neutral-950">
-            <div className="flex items-start gap-3">
-              <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-white/10 dark:bg-black/10"><BellAlertIcon className="size-4" aria-hidden /></span>
-              <div className="min-w-0"><strong className="block text-xs leading-5">{title.trim() || "Título da notificação"}</strong><p className="mt-0.5 text-[11px] leading-4 text-neutral-300 dark:text-neutral-600">{message.trim() || "A mensagem aparecerá aqui."}</p><span className="mt-2 block truncate text-[10px] text-neutral-400 dark:text-neutral-500">domenyk.com{selected?.href}</span></div>
+        <div className="admin-push-preview">
+          <p>Prévia no dispositivo</p>
+          <div className="admin-push-notification">
+            <div>
+              <span><BellAlertIcon aria-hidden /></span>
+              <div><strong>{title.trim() || "Título da notificação"}</strong><p>{message.trim() || "A mensagem aparecerá aqui."}</p><small>domenyk.com{selected?.href}</small></div>
             </div>
           </div>
-          <p className="mt-3 text-[11px] leading-5 text-neutral-500">O disparo vai apenas para quem escolheu receber {selected?.type === "note" ? "notas" : "posts"}. Abrir a notificação leva diretamente ao conteúdo.</p>
+          <p>O disparo vai apenas para quem escolheu receber {selected?.type === "note" ? "notas" : "posts"}. Abrir a notificação leva diretamente ao conteúdo.</p>
         </div>
 
-        <div className="lg:col-span-2">
+        <div className="admin-push-submit">
           {confirming ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-amber-50 p-3 dark:bg-amber-500/10">
-              <p className="text-xs font-medium text-amber-900 dark:text-amber-200">Confirmar este disparo para os leitores inscritos?</p>
-              <div className="flex gap-2">
+            <div className="admin-push-confirm">
+              <p>Confirmar este disparo para os leitores inscritos?</p>
+              <div>
                 <button type="button" onClick={() => setConfirming(false)} disabled={sending} className="admin-button-secondary">Cancelar</button>
-                <button type="button" onClick={() => void send()} disabled={sending} className="admin-button-primary inline-flex items-center justify-center gap-2"><PaperAirplaneIcon className="size-4" aria-hidden /> {sending ? "Enviando…" : "Confirmar envio"}</button>
+                <button type="button" onClick={() => void send()} disabled={sending} className="admin-button-primary"><PaperAirplaneIcon aria-hidden /> {sending ? "Enviando…" : "Confirmar envio"}</button>
               </div>
             </div>
           ) : (
-            <button type="button" onClick={review} disabled={!selected || !title.trim() || !message.trim()} className="admin-button-primary inline-flex items-center justify-center gap-2"><PaperAirplaneIcon className="size-4" aria-hidden /> Revisar disparo</button>
+            <button type="button" onClick={review} disabled={!selected || !title.trim() || !message.trim()} className="admin-button-primary admin-push-review"><PaperAirplaneIcon aria-hidden /> Revisar disparo</button>
           )}
-          {result && <p role="status" className="mt-3 text-xs text-emerald-700 dark:text-emerald-300">{result}</p>}
-          {error && <p role="alert" className="mt-3 text-xs text-red-700 dark:text-red-300">{error}</p>}
+          {result && <p role="status" className="admin-form-success">{result}</p>}
+          {error && <p role="alert" className="admin-form-error">{error}</p>}
         </div>
       </div>
     </section>

@@ -19,6 +19,10 @@ function formatJoinDate(value: number | Date | null | undefined) {
 
 type UserMetadata = Record<string, unknown>
 
+function roleClass(role: string) {
+  return `admin-role ${role === "admin" ? "is-admin" : role === "moderator" ? "is-moderator" : "is-member"}`
+}
+
 export default async function AdminUsersPage() {
   if (!(await isAdmin())) notFound()
 
@@ -31,13 +35,12 @@ export default async function AdminUsersPage() {
     <>
       <header className="admin-page-header"><div><h1>Pessoas</h1><p>Contas do Clerk, papéis e atividade de comentários.</p></div></header>
 
-      <section className="overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#080808]">
-        <div className="border-b border-neutral-200 px-4 py-3 dark:border-white/10">
-          <p className="text-sm font-semibold">Todos os usuários</p>
-          <p className="mt-0.5 text-xs text-neutral-500">{users.length} registros encontrados</p>
+      <section className="admin-list admin-users-list">
+        <div className="admin-list-toolbar">
+          <div><strong>Todos os usuários</strong><small>{users.length} registros encontrados</small></div>
         </div>
 
-        <div className="divide-y divide-neutral-100 dark:divide-white/10 md:hidden">
+        <div className="admin-user-mobile-list">
           {users.map((user) => {
             const email = user.emailAddresses.find((item) => item.id === user.primaryEmailAddressId)?.emailAddress
               ?? user.emailAddresses[0]?.emailAddress
@@ -47,41 +50,32 @@ export default async function AdminUsersPage() {
             const commentCount = commentCounts.get(user.id) ?? 0
 
             return (
-              <article key={user.id} className="px-4 py-4">
-                <div className="flex items-start gap-3">
+              <article key={user.id} className="admin-user-card">
+                <div className="admin-user-card-main">
                   {user.imageUrl ? (
-                    <span className="block size-10 shrink-0 overflow-hidden rounded-full bg-neutral-100 dark:bg-white/10">
-                      <img src={user.imageUrl} alt="" className="h-full w-full rounded-full object-cover" />
+                    <span className="admin-person-avatar">
+                      <img src={user.imageUrl} alt="" />
                     </span>
                   ) : (
-                    <div className="grid size-10 shrink-0 place-items-center rounded-full bg-neutral-100 text-xs font-semibold text-neutral-500 dark:bg-white/10">
+                    <span className="admin-person-avatar admin-person-initial">
                       {name.slice(0, 1).toUpperCase()}
-                    </div>
+                    </span>
                   )}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="min-w-0 break-words text-sm font-medium text-neutral-950 dark:text-neutral-100">{name}</h2>
-                      <span className={[
-                        "inline-flex rounded-full px-2 py-0.5 text-xs font-medium",
-                        role === "admin"
-                          ? "bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300"
-                          : role === "moderator"
-                            ? "bg-sky-100 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300"
-                            : "bg-neutral-100 text-neutral-600 dark:bg-white/10 dark:text-neutral-300",
-                      ].join(" ")}>
-                        {role}
-                      </span>
+                  <div className="admin-user-card-copy">
+                    <div className="admin-person-name">
+                      <h2>{name}</h2>
+                      <span className={roleClass(role)}>{role}</span>
                     </div>
-                    <p className="mt-1 break-all text-xs text-neutral-500">{email}</p>
-                    <p className="mt-1 break-all text-xs text-neutral-400">{user.id}</p>
-                    <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                    <p className="admin-person-email">{email}</p>
+                    <p className="admin-person-id">{user.id}</p>
+                    <dl className="admin-user-facts">
                       <div>
-                        <dt className="text-neutral-400">Comentários</dt>
-                        <dd className="mt-0.5 tabular-nums text-neutral-600 dark:text-neutral-300">{commentCount}</dd>
+                        <dt>Comentários</dt>
+                        <dd>{commentCount}</dd>
                       </div>
-                      <div className="text-right">
-                        <dt className="text-neutral-400">Criado em</dt>
-                        <dd className="mt-0.5 text-neutral-600 dark:text-neutral-300">{formatJoinDate(user.createdAt)}</dd>
+                      <div>
+                        <dt>Criado em</dt>
+                        <dd>{formatJoinDate(user.createdAt)}</dd>
                       </div>
                     </dl>
                   </div>
@@ -90,22 +84,22 @@ export default async function AdminUsersPage() {
             )
           })}
           {users.length === 0 && (
-            <div className="px-4 py-10 text-center text-sm text-neutral-500">Nenhum usuário encontrado.</div>
+            <div className="admin-empty">Nenhum usuário encontrado.</div>
           )}
         </div>
 
-        <div className="hidden overflow-x-auto md:block">
-          <table className="w-full min-w-[760px] text-left text-sm">
-            <thead className="border-b border-neutral-200 bg-neutral-50 text-xs font-medium uppercase tracking-wide text-neutral-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-neutral-400">
+        <div className="admin-user-table-wrap">
+          <table className="admin-user-table">
+            <thead>
               <tr>
-                <th scope="col" className="px-4 py-3 font-medium">Usuário</th>
-                <th scope="col" className="px-4 py-3 font-medium">Email</th>
-                <th scope="col" className="px-4 py-3 font-medium">Papel</th>
-                <th scope="col" className="px-4 py-3 font-medium text-right">Comentários</th>
-                <th scope="col" className="px-4 py-3 font-medium">Criado em</th>
+                <th scope="col">Usuário</th>
+                <th scope="col">Email</th>
+                <th scope="col">Papel</th>
+                <th scope="col">Comentários</th>
+                <th scope="col">Criado em</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-100 dark:divide-white/10">
+            <tbody>
               {users.map((user) => {
                 const email = user.emailAddresses.find((item) => item.id === user.primaryEmailAddressId)?.emailAddress
                   ?? user.emailAddresses[0]?.emailAddress
@@ -115,45 +109,34 @@ export default async function AdminUsersPage() {
                 const commentCount = commentCounts.get(user.id) ?? 0
 
                 return (
-                  <tr key={user.id} className="transition-colors hover:bg-neutral-50 dark:hover:bg-white/[0.03]">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
+                  <tr key={user.id}>
+                    <td>
+                      <div className="admin-person-cell">
                         {user.imageUrl ? (
-                          <span className="block size-9 shrink-0 overflow-hidden rounded-full bg-neutral-100 dark:bg-white/10">
-                            <img src={user.imageUrl} alt="" className="h-full w-full rounded-full object-cover" />
+                          <span className="admin-person-avatar">
+                            <img src={user.imageUrl} alt="" />
                           </span>
                         ) : (
-                          <div className="grid size-9 shrink-0 place-items-center rounded-full bg-neutral-100 text-xs font-semibold text-neutral-500 dark:bg-white/10">
+                          <span className="admin-person-avatar admin-person-initial">
                             {name.slice(0, 1).toUpperCase()}
-                          </div>
+                          </span>
                         )}
-                        <div className="min-w-0">
-                          <p className="truncate font-medium text-neutral-950 dark:text-neutral-100">{name}</p>
-                          <p className="mt-0.5 truncate text-xs text-neutral-500">{user.id}</p>
+                        <div>
+                          <strong>{name}</strong>
+                          <small>{user.id}</small>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-neutral-500">{email}</td>
-                    <td className="px-4 py-3">
-                      <span className={[
-                        "inline-flex rounded-full px-2 py-0.5 text-xs font-medium",
-                        role === "admin"
-                          ? "bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300"
-                          : role === "moderator"
-                            ? "bg-sky-100 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300"
-                            : "bg-neutral-100 text-neutral-600 dark:bg-white/10 dark:text-neutral-300",
-                      ].join(" ")}>
-                        {role}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right tabular-nums text-neutral-500">{commentCount}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-neutral-500">{formatJoinDate(user.createdAt)}</td>
+                    <td>{email}</td>
+                    <td><span className={roleClass(role)}>{role}</span></td>
+                    <td className="admin-user-number">{commentCount}</td>
+                    <td><time>{formatJoinDate(user.createdAt)}</time></td>
                   </tr>
                 )
               })}
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-sm text-neutral-500">Nenhum usuário encontrado.</td>
+                  <td colSpan={5} className="admin-empty">Nenhum usuário encontrado.</td>
                 </tr>
               )}
             </tbody>

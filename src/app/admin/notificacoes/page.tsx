@@ -69,24 +69,24 @@ export default async function AdminPushPage() {
         ].map(([label, value]) => <div key={label} className="admin-metric"><span>{label}</span><strong>{value}</strong></div>)}
       </section>
 
-      <div className="mt-5"><ManualPushComposer content={content} /></div>
+      <ManualPushComposer content={content} />
 
-      <section className="admin-list mt-5">
-        <header className="admin-list-header"><div><strong>Este dispositivo</strong><small>Alertas administrativos e publicações</small></div></header>
-        <div className="p-4 lg:p-5"><PushSubscriptionManager showAdminEvents /></div>
+      <section className="admin-list">
+        <header className="admin-block-header"><div><strong>Este dispositivo</strong><small>Alertas administrativos e publicações</small></div></header>
+        <div className="admin-block-body"><PushSubscriptionManager showAdminEvents /></div>
       </section>
 
-      <section className="admin-list mt-5">
-        <header className="admin-list-header"><div><strong>Dispositivos administrativos</strong><small>Revogue o acesso privado de aparelhos que você não usa mais</small></div></header>
+      <section className="admin-list">
+        <header className="admin-block-header"><div><strong>Dispositivos administrativos</strong><small>Revogue o acesso privado de aparelhos que você não usa mais</small></div></header>
         <AdminPushDevices devices={devices} />
       </section>
 
-      <section className="admin-list mt-5">
-        <header className="admin-list-header"><div><strong>Disparos recentes</strong><small>{campaigns.length} registros</small></div></header>
+      <section className="admin-list">
+        <header className="admin-block-header"><div><strong>Disparos recentes</strong><small>{campaigns.length} registros</small></div></header>
         {campaigns.length === 0 ? <p className="admin-empty">Nenhuma notificação enviada ainda.</p> : campaigns.map((campaign) => (
-          <div key={campaign._id.toString()} className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 px-4 py-3 text-[11px] last:border-b-0 dark:border-neutral-800">
-            <div className="min-w-0"><strong className="block truncate text-neutral-900 dark:text-neutral-100">{campaign.title}</strong><span className="mt-1 block text-neutral-500">{campaign.source === "manual" ? "Manual" : "Automático"} · {campaign.topic === "posts" ? "Posts" : "Notas"}</span></div>
-            <div className="flex items-center gap-4 text-neutral-500"><span>{campaign.sentCount} enviados · {campaign.failedCount} falhas</span><time>{campaign.createdAt.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Fortaleza" })}</time></div>
+          <div key={campaign._id.toString()} className="admin-push-campaign">
+            <div><strong>{campaign.title}</strong><span>{campaign.source === "manual" ? "Manual" : "Automático"} · {campaign.topic === "posts" ? "Posts" : "Notas"}</span></div>
+            <div><span>{campaign.sentCount} enviados · {campaign.failedCount} falhas</span><time>{campaign.createdAt.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Fortaleza" })}</time></div>
           </div>
         ))}
       </section>

@@ -36,27 +36,29 @@ export default async function EditPostPage({ params }: Props) {
   )
 
   return (
-    <PostEditor
-      post={{
-        id: post._id.toString(),
-        title: post.title,
-        content: post.content,
-        slug: post.slug,
-        excerpt: post.excerpt,
-        subtitle: post.subtitle,
-        tags: post.tags,
-        style: post.style,
-        hiddenFromTimeline: post.hiddenFromTimeline,
-        cover: post.cover,
-        showCoverInTimeline: post.showCoverInTimeline,
-        friendImage: post.friendImage,
-        coAuthorUserId: post.coAuthorUserId,
-        audioUrl: post.audioUrl,
-        published: post.published,
-        publishedAt: post.publishedAt?.toISOString(),
-        originalContentUpdatedAt: getOriginalContentUpdatedAt(post).toISOString(),
-        translations,
-      }}
-    />
+    <div className="admin-edit-post-surface">
+      <PostEditor
+        post={{
+          id: post._id.toString(),
+          title: post.title,
+          content: post.content,
+          slug: post.slug,
+          excerpt: post.excerpt,
+          subtitle: post.subtitle,
+          tags: post.tags,
+          style: post.style,
+          hiddenFromTimeline: post.hiddenFromTimeline,
+          cover: post.cover,
+          showCoverInTimeline: post.showCoverInTimeline,
+          friendImage: post.friendImage,
+          coAuthorUserId: post.coAuthorUserId,
+          audioUrl: post.audioUrl,
+          published: post.published,
+          publishedAt: post.publishedAt?.toISOString(),
+          originalContentUpdatedAt: getOriginalContentUpdatedAt(post).toISOString(),
+          translations,
+        }}
+      />
+    </div>
   )
 }

@@ -265,8 +265,8 @@ export function PostsTable({ posts: initial }: Props) {
   const actionIds = selectedIds.length > 0 ? selectedIds : filteredPosts.map((post) => post._id)
 
   return (
-    <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#080808]">
-      <div className="border-b border-neutral-200 px-4 py-3 dark:border-white/10">
+    <section className="admin-posts-table">
+      <div className="admin-posts-toolbar">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-sm font-semibold">Todos os posts</p>
@@ -283,14 +283,14 @@ export function PostsTable({ posts: initial }: Props) {
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Buscar posts"
-                className="h-9 w-full rounded-md border border-neutral-200 bg-transparent pl-8 pr-3 text-sm outline-none transition focus:border-neutral-400 dark:border-white/10 dark:focus:border-white/30 sm:w-56"
+                className="admin-posts-control admin-posts-search"
               />
             </label>
 
             <select
               value={status}
               onChange={(event) => setStatus(event.target.value as StatusFilter)}
-              className="h-9 w-full rounded-md border border-neutral-200 bg-white px-2 text-sm outline-none dark:border-white/10 dark:bg-[#080808] sm:w-auto"
+              className="admin-posts-control"
             >
               <option value="all">Todos</option>
               <option value="published">Publicados</option>
@@ -300,7 +300,7 @@ export function PostsTable({ posts: initial }: Props) {
             <select
               value={visibility}
               onChange={(event) => setVisibility(event.target.value as VisibilityFilter)}
-              className="h-9 w-full rounded-md border border-neutral-200 bg-white px-2 text-sm outline-none dark:border-white/10 dark:bg-[#080808] sm:w-auto"
+              className="admin-posts-control"
             >
               <option value="all">Toda timeline</option>
               <option value="timeline">Visíveis</option>
@@ -328,7 +328,7 @@ export function PostsTable({ posts: initial }: Props) {
               </button>
 
               {showConfig && (
-                <div className="absolute left-0 top-11 z-20 w-52 rounded-lg border border-neutral-200 bg-white p-2 shadow-lg dark:border-white/10 dark:bg-neutral-950 sm:left-auto sm:right-0">
+                <div className="admin-posts-columns-panel">
                   <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">Colunas</p>
                   {columns.map((column) => (
                     <label key={column.key} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-neutral-50 dark:hover:bg-white/5">
@@ -354,7 +354,7 @@ export function PostsTable({ posts: initial }: Props) {
         )}
 
         {selectedIds.length > 0 && (
-          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 dark:border-white/10 dark:bg-white/5">
+          <div className="admin-posts-selection">
             <span className="text-xs font-medium text-neutral-500">{selectedIds.length} selecionados</span>
             <button
               type="button"
@@ -391,7 +391,7 @@ export function PostsTable({ posts: initial }: Props) {
         <div className="px-4 py-10 text-center text-sm text-neutral-500">Nenhum post encontrado.</div>
       ) : (
         <>
-        <div className="divide-y divide-neutral-100 dark:divide-white/10 md:hidden">
+        <div className="admin-posts-mobile">
           {filteredPosts.map((post) => (
             <article key={post._id} className="px-4 py-4">
               <div className="flex items-start gap-3">
@@ -429,8 +429,8 @@ export function PostsTable({ posts: initial }: Props) {
           ))}
         </div>
 
-        <div className="hidden overflow-x-auto md:block">
-          <table className="w-full min-w-[980px] text-left text-sm">
+        <div className="admin-posts-desktop">
+          <table className="admin-posts-data-table">
             <thead className="border-b border-neutral-200 bg-neutral-50 text-xs font-medium uppercase tracking-wide text-neutral-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-neutral-400">
               <tr>
                 <th scope="col" className="w-10 px-4 py-3">
@@ -498,6 +498,6 @@ export function PostsTable({ posts: initial }: Props) {
         </div>
         </>
       )}
-    </div>
+    </section>
   )
 }
