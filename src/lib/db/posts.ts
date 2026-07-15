@@ -4,7 +4,6 @@ import { getDb } from "./client"
 import { calcReadingTime } from "../reading-time"
 import { toObjectId } from "../validation"
 import {
-  isTranslationRevisionStale,
   slugifyPostTitle,
   TRANSLATION_LOCALES,
   type TranslationLocale,
@@ -29,7 +28,7 @@ export type PostTranslation = {
   updatedAt: Date
 }
 
-export type PostTranslations = Partial<Record<TranslationLocale, PostTranslation>>
+type PostTranslations = Partial<Record<TranslationLocale, PostTranslation>>
 
 export type Post = {
   _id: ObjectId
@@ -61,7 +60,7 @@ export type Post = {
   updatedAt: Date
 }
 
-export type PostTranslationSummary = Omit<PostTranslation, "content">
+type PostTranslationSummary = Omit<PostTranslation, "content">
 export type PostSummary = Omit<Post, "content" | "translations"> & {
   translations?: Partial<Record<TranslationLocale, PostTranslationSummary>>
 }
@@ -73,7 +72,7 @@ export type SitemapPost = Pick<
   translations?: Partial<Record<TranslationLocale, Pick<PostTranslation, "slug" | "title" | "content" | "published" | "updatedAt">>>
 }
 
-export type SerializedPostTranslationSummary = Omit<
+type SerializedPostTranslationSummary = Omit<
   PostTranslationSummary,
   "publishedAt" | "sourceUpdatedAt" | "createdAt" | "updatedAt"
 > & {
@@ -144,14 +143,7 @@ export function getOriginalContentUpdatedAt(post: Pick<Post, "originalContentUpd
   return post.originalContentUpdatedAt ?? post.updatedAt
 }
 
-export function isPostTranslationStale(
-  post: Pick<Post, "originalContentUpdatedAt" | "updatedAt">,
-  translation: Pick<PostTranslation, "sourceUpdatedAt">
-): boolean {
-  return isTranslationRevisionStale(translation.sourceUpdatedAt, getOriginalContentUpdatedAt(post))
-}
-
-export function serializePostTranslationSummary(
+function serializePostTranslationSummary(
   translation: PostTranslationSummary
 ): SerializedPostTranslationSummary {
   return {
@@ -427,37 +419,6 @@ export async function getLatestPublishedPostUpdate(): Promise<Date | undefined> 
   return post?.updatedAt
 }
 
-export async function getPublishedPostTags(): Promise<string[]> {
-  const tags = await (await collection()).distinct("tags", {
-    published: true,
-    deleting: { $ne: true },
-  })
-  return tags.filter((tag): tag is string => typeof tag === "string" && tag.trim().length > 0).sort((a, b) => a.localeCompare(b, "pt-BR"))
-}
-
-export async function getPublishedTagUpdates(): Promise<Array<{ tag: string; updatedAt: Date }>> {
-  const rows = await (await collection()).aggregate<{ _id: string; updatedAt: Date }>([
-    { $match: { published: true, deleting: { $ne: true }, tags: { $type: "array", $ne: [] } } },
-    { $unwind: "$tags" },
-    { $match: { tags: { $type: "string", $ne: "" } } },
-    { $group: { _id: "$tags", updatedAt: { $max: "$updatedAt" } } },
-    { $sort: { _id: 1 } },
-  ]).toArray()
-  return rows.map((row) => ({ tag: row._id, updatedAt: row.updatedAt }))
-}
-
-export async function getPostsByTag(tag: string, limit = 50): Promise<PostSummary[]> {
-  const posts = await (await collection())
-    .find(
-      { published: true, deleting: { $ne: true }, tags: tag },
-      { projection: { content: 0, "translations.en.content": 0, "translations.de.content": 0, "translations.id.content": 0 } }
-    )
-    .sort({ publishedAt: -1, _id: -1 })
-    .limit(Math.max(1, Math.min(limit, 100)))
-    .toArray()
-  return ensurePostPublicIds(posts as PostSummary[])
-}
-
 export async function getPublishedPostsByIds(ids: ObjectId[]): Promise<PostSummary[]> {
   if (ids.length === 0) return []
   const posts = await (await collection())
@@ -536,7 +497,7 @@ export async function getPostByLocalizedSlug(
   return fullPost ? ensurePostPublicId(fullPost) : null
 }
 
-export async function incrementPostViews(publicId: string): Promise<number> {
+async function incrementPostViews(publicId: string): Promise<number> {
   const col = await collection()
   const result = await col.findOneAndUpdate(
     { publicId },
@@ -702,26 +663,6 @@ export async function updatePostTranslation(
   return translation
 }
 
-export async function publishPost(id: string, publish: boolean): Promise<void> {
-  const objectId = toObjectId(id)
-  if (!objectId) throw new Error("Invalid post id")
-
-  const col = await collection()
-  const $set: Record<string, unknown> = {
-    published: publish,
-    updatedAt: new Date(),
-  }
-  const update: { $set: Record<string, unknown>; $unset?: Record<string, ""> } = { $set }
-
-  if (publish) {
-    $set.publishedAt = new Date()
-  } else {
-    update.$unset = { publishedAt: "" }
-  }
-
-  await col.updateOne({ _id: objectId }, update)
-}
-
 export async function deletePost(id: string): Promise<boolean> {
   const objectId = toObjectId(id)
   if (!objectId) throw new Error("Invalid post id")
@@ -739,9 +680,4 @@ export async function markPostDeleting(id: string): Promise<boolean> {
     { $set: { deleting: true, updatedAt: new Date() } }
   )
   return result.matchedCount === 1
-}
-
-export async function ensureIndexes(): Promise<void> {
-  const col = await collectionRaw()
-  await ensurePostIndexes(col)
 }

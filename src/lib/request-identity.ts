@@ -21,7 +21,7 @@ function clientIpFromHeaders(headers: HeaderReader): string {
   )
 }
 
-export function clientIp(req: NextRequest): string {
+function clientIp(req: NextRequest): string {
   return clientIpFromHeaders(req.headers)
 }
 

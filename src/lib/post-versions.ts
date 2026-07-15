@@ -1,7 +1,6 @@
 import type { Post } from "@/lib/db/posts"
 import {
   POST_LOCALES,
-  isTranslationRevisionStale,
   type PostLocale,
 } from "@/lib/post-locales"
 
@@ -29,19 +28,6 @@ export type LocalizedPost = Omit<
   readingTimeMinutes: number
   createdAt: Date
   updatedAt: Date
-}
-
-export function originalContentUpdatedAt(
-  post: Pick<Post, "originalContentUpdatedAt" | "updatedAt">
-): Date {
-  return post.originalContentUpdatedAt ?? post.updatedAt
-}
-
-export function translationNeedsReview(
-  post: Pick<Post, "originalContentUpdatedAt" | "updatedAt">,
-  translation: { sourceUpdatedAt: Date }
-): boolean {
-  return isTranslationRevisionStale(translation.sourceUpdatedAt, originalContentUpdatedAt(post))
 }
 
 export function getPostVersion(post: Post, locale: PostLocale): LocalizedPost | null {

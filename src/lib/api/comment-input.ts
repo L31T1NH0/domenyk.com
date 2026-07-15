@@ -1,7 +1,7 @@
 import { normalizeNoteContent } from "@/lib/db/notes"
 import { asString } from "@/lib/validation"
 
-export const MAX_COMMENT_CONTENT_LENGTH = 5_000
+const MAX_COMMENT_CONTENT_LENGTH = 5_000
 export const MAX_COMMENT_IMAGES = 4
 
 const COMMENT_IMAGE_PATTERN = /!\[[^\]]*\]\(\s*([^\s)]+)[^)]*\)|<img\b[^>]*\bsrc\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi

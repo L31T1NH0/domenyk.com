@@ -28,7 +28,7 @@ export function initializeVisitorContext() {
   } catch {}
 }
 
-export function viewReferrer() {
+function viewReferrer() {
   try {
     const stored = JSON.parse(sessionStorage.getItem(INTERNAL_REFERRER_KEY) ?? "null") as StoredReferrer | null
     if (stored && Date.now() - stored.at < 60_000) {

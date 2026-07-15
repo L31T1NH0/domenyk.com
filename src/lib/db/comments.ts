@@ -140,13 +140,6 @@ async function collection() {
   return col
 }
 
-export async function getComments(
-  postId: string,
-  paragraphId?: string
-): Promise<Comment[]> {
-  return (await getCommentsPage(postId, { paragraphId })).comments
-}
-
 export async function getCommentsPage(
   postId: string,
   opts: { paragraphId?: string; limit?: number; cursor?: string } = {}
@@ -337,9 +330,4 @@ export async function getParagraphCommentCounts(
     .toArray()
 
   return new Map(counts.map((item) => [item._id, item.count]))
-}
-
-export async function ensureIndexes(): Promise<void> {
-  const col = await collectionRaw()
-  await col.createIndex({ postId: 1, paragraphId: 1, _id: -1 })
 }

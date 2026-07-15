@@ -60,7 +60,7 @@ export function $createImageNode(src: string, alt?: string): ImageNode {
   return new ImageNode(src, alt)
 }
 
-export function $isImageNode(node: LexicalNode | null | undefined): node is ImageNode {
+function $isImageNode(node: LexicalNode | null | undefined): node is ImageNode {
   return node instanceof ImageNode
 }
 

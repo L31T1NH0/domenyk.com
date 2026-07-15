@@ -3,7 +3,7 @@ import "server-only"
 import { ObjectId } from "mongodb"
 import { getDb } from "./client"
 
-export type ActivityEventType = "post_view" | "comment_created"
+type ActivityEventType = "post_view" | "comment_created"
 
 export type ActivityEvent = {
   _id: ObjectId

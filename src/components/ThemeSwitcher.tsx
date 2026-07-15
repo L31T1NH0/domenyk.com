@@ -1,7 +1,6 @@
 "use client"
 
 import { useSyncExternalStore } from "react"
-import { SunIcon, MoonIcon } from "@heroicons/react/20/solid"
 
 const THEME_CHANGE_EVENT = "themechange"
 let volatileDarkMode: boolean | null = null
@@ -61,20 +60,4 @@ export function useThemeSwitcher() {
   }
 
   return { darkMode, toggleTheme }
-}
-
-export function ThemeSwitcher() {
-  const { darkMode, toggleTheme } = useThemeSwitcher()
-
-  return (
-    <button
-      type="button"
-      onClick={toggleTheme}
-      aria-label={darkMode ? "Ativar tema claro" : "Ativar tema escuro"}
-      title={darkMode ? "Ativar tema claro" : "Ativar tema escuro"}
-      className="grid size-10 place-items-center rounded-full text-zinc-700 transition-colors hover:bg-zinc-200/70 hover:text-zinc-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f4f4f4] dark:text-zinc-300 dark:hover:bg-white/10 dark:hover:text-white dark:focus-visible:ring-zinc-300 dark:focus-visible:ring-offset-[#040404]"
-    >
-      {darkMode ? <SunIcon width={22} height={22} aria-hidden /> : <MoonIcon width={22} height={22} aria-hidden />}
-    </button>
-  )
 }

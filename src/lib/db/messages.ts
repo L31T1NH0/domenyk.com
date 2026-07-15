@@ -27,9 +27,9 @@ export type MessageThread = {
   archivedAt?: Date
 }
 
-export const MAX_THREAD_ENTRIES = 100
+const MAX_THREAD_ENTRIES = 100
 export const MAX_OPEN_THREADS_PER_USER = 20
-export const MESSAGE_PAGE_SIZE = 20
+const MESSAGE_PAGE_SIZE = 20
 
 let indexesPromise: Promise<unknown> | undefined
 async function collection() {

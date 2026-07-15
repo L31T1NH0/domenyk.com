@@ -24,7 +24,7 @@ export type SerializedTheme = Omit<Theme, "_id" | "postIds" | "createdAt" | "upd
   updatedAt: string
 }
 
-export const DEFAULT_THEMES = [
+const DEFAULT_THEMES = [
   { name: "Liberalismo", slug: "liberalismo", description: "Textos sobre liberdade individual, mercados e limites do poder político." },
   { name: "Liberdade de expressão", slug: "liberdade-de-expressao", description: "Textos sobre censura, debate público e o direito de discordar." },
   { name: "Propriedade e regulação", slug: "propriedade-e-regulacao", description: "Textos sobre propriedade privada, regras econômicas e intervenção estatal." },

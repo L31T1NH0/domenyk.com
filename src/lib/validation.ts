@@ -1,6 +1,6 @@
 import { ObjectId } from "mongodb"
 
-export function isValidObjectId(value: string): boolean {
+function isValidObjectId(value: string): boolean {
   return ObjectId.isValid(value)
 }
 
@@ -39,7 +39,7 @@ export function asStringArray(value: unknown, maxItems: number, maxLength: numbe
     .map((item) => item.slice(0, maxLength))
 }
 
-export function asHttpUrl(value: unknown, maxLength = 2048): string | undefined {
+function asHttpUrl(value: unknown, maxLength = 2048): string | undefined {
   if (typeof value !== "string") return undefined
   const trimmed = value.trim()
   if (!trimmed || trimmed.length > maxLength) return undefined
@@ -75,14 +75,6 @@ export function asTrustedImageUrlArray(value: unknown, maxItems: number, maxLeng
   if (!Array.isArray(value)) return []
   return value
     .map((item) => asTrustedImageUrl(item, maxLength))
-    .filter((item): item is string => Boolean(item))
-    .slice(0, maxItems)
-}
-
-export function asHttpUrlArray(value: unknown, maxItems: number, maxLength = 2048): string[] {
-  if (!Array.isArray(value)) return []
-  return value
-    .map((item) => asHttpUrl(item, maxLength))
     .filter((item): item is string => Boolean(item))
     .slice(0, maxItems)
 }

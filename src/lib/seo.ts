@@ -10,7 +10,7 @@ export const siteConfig = {
   image: "/opengraph-image",
 }
 
-export const authorTopics = [
+const authorTopics = [
   "política",
   "economia",
   "liberalismo",
@@ -20,7 +20,7 @@ export const authorTopics = [
   "debate público",
 ]
 
-export const authorProfiles = [
+const authorProfiles = [
   "https://www.instagram.com/dome.nyk_/",
 ]
 

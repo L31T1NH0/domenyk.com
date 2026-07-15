@@ -87,7 +87,7 @@ export async function uploadImageFromRequest(
   return uploadImageFromFormData(formData, folder, onUploaded)
 }
 
-export async function uploadImageFromFormData(
+async function uploadImageFromFormData(
   formData: FormData,
   folder: ImageUploadFolder,
   onUploaded?: (url: string) => Promise<void>

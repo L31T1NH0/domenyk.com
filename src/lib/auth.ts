@@ -25,11 +25,6 @@ export async function getAuthUserId(): Promise<string | null> {
   return userId
 }
 
-export async function requireAdmin(): Promise<void> {
-  const admin = await isAdmin()
-  if (!admin) throw new Error("Unauthorized")
-}
-
 export async function adminOnly(): Promise<NextResponse<{ error: string }> | null> {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

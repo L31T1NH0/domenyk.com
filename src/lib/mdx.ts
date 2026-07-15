@@ -14,7 +14,7 @@ import { SKIP, visit } from "unist-util-visit"
 import type { Element, Root } from "hast"
 import { createHash } from "crypto"
 
-export type MarkdownImagePolicy =
+type MarkdownImagePolicy =
   | { mode: "none" }
   | {
       mode: "allowlist"

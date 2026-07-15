@@ -12,9 +12,7 @@ const IMAGE_WEBP_QUALITY = 80
 const IMAGE_WEBP_FALLBACK_QUALITY = 64
 
 export const MAX_IMAGE_UPLOAD_BYTES = 4 * 1024 * 1024
-export const MAX_SANITIZED_IMAGE_BYTES = 4 * 1024 * 1024
-
-export const ACCEPTED_IMAGE_MIME_TYPES = Array.from(ALLOWED_IMAGE_TYPES).join(",")
+const MAX_SANITIZED_IMAGE_BYTES = 4 * 1024 * 1024
 
 export function isAllowedImageType(type: string): boolean {
   return ALLOWED_IMAGE_TYPES.has(type.toLowerCase())

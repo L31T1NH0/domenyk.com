@@ -6,7 +6,7 @@ import { getDb } from "./client"
 import { toObjectId } from "../validation"
 import { sendAdminPush } from "../push"
 
-export type NotificationKind = "comment" | "message" | "reply" | "view"
+type NotificationKind = "comment" | "message" | "reply" | "view"
 
 export type NotificationOccurrenceDetails = {
   id?: string
@@ -31,7 +31,7 @@ export type NotificationOccurrenceDetails = {
   }>
 }
 
-export type NotificationOccurrence = NotificationOccurrenceDetails & {
+type NotificationOccurrence = NotificationOccurrenceDetails & {
   occurredAt: Date
 }
 
