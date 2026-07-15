@@ -90,8 +90,31 @@ export async function getThemePosts(theme: Pick<Theme, "postIds">): Promise<Post
   return getPublishedPostsByIds(theme.postIds)
 }
 
-export async function getThemesForPost(postId: ObjectId): Promise<Theme[]> {
-  return (await collection()).find({ postIds: postId }).sort({ name: 1 }).toArray()
+export async function getThemesForPost(
+  postId: ObjectId,
+  { activeOnly = false }: { activeOnly?: boolean } = {}
+): Promise<Theme[]> {
+  return (await collection())
+    .find(activeOnly ? { postIds: postId, active: true } : { postIds: postId })
+    .sort({ name: 1 })
+    .toArray()
+}
+
+export async function setThemesForPost(postId: ObjectId, themeIds: ObjectId[]): Promise<void> {
+  const selectedIds = new Set(themeIds.map((id) => id.toString()))
+  const themes = await (await collection()).find({}, { projection: { _id: 1 } }).toArray()
+  const knownIds = new Set(themes.map((theme) => theme._id.toString()))
+  if ([...selectedIds].some((id) => !knownIds.has(id))) throw new Error("Tema inválido.")
+  if (themes.length === 0) return
+
+  await (await collection()).bulkWrite(themes.map((theme) => ({
+    updateOne: {
+      filter: { _id: theme._id },
+      update: selectedIds.has(theme._id.toString())
+        ? { $addToSet: { postIds: postId }, $set: { updatedAt: new Date() } }
+        : { $pull: { postIds: postId }, $set: { updatedAt: new Date() } },
+    },
+  })))
 }
 
 export async function getActiveThemeUpdates(): Promise<Array<{ slug: string; updatedAt: Date }>> {

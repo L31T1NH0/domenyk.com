@@ -18,7 +18,8 @@ export default async function AdminPostPage({ params }: { params: Promise<{ id: 
   if (!post) notFound()
   const themes = await getThemesForPost(post._id)
   const summary = post.excerpt || post.subtitle || descriptionFromMarkdown(post.content)
-  const seoReady = Boolean(post.title.trim() && summary.trim())
+  const seoReady = Boolean(post.seoTitle?.trim() && post.seoDescription?.trim())
+  const indexable = post.published && post.hiddenFromTimeline !== true
 
   return <>
     <AdminCommandHeader
@@ -48,7 +49,7 @@ export default async function AdminPostPage({ params }: { params: Promise<{ id: 
 
         <aside className="admin-detail-secondary">
           <section><header><h2>Publicação</h2></header><dl><div><dt>Fixado</dt><dd>{post.pinned ? "Sim" : "Não"}</dd></div><div><dt>Timeline</dt><dd>{post.hiddenFromTimeline ? "Oculto" : "Visível"}</dd></div><div><dt>Comentários por parágrafo</dt><dd>{post.paragraphCommentsEnabled ? "Ativos" : "Inativos"}</dd></div></dl></section>
-          <section><header><h2>SEO</h2><span className={`admin-record-status ${seoReady ? "is-live" : "is-review"}`}>{seoReady ? "Pronto" : "Revisar"}</span></header><p>{seoReady ? "Título e descrição estão disponíveis para os buscadores." : "Adicione um resumo ou subtítulo para uma descrição mais precisa."}</p><Link className="admin-inline-action" href={`/admin/posts/${id}/edit`}>Editar conteúdo</Link></section>
+          <section><header><h2>SEO</h2><span className={`admin-record-status ${seoReady && indexable ? "is-live" : "is-review"}`}>{indexable ? (seoReady ? "Pronto" : "Revisar") : "Noindex"}</span></header><p>{!indexable ? "Este post não será indexado porque está em rascunho ou oculto da timeline." : seoReady ? "Título e descrição SEO independentes estão disponíveis para os buscadores." : "Preencha o título SEO e a descrição SEO; os campos editoriais continuam preservados como fallback."}</p><Link className="admin-inline-action" href={`/admin/posts/${id}/edit`}>Editar conteúdo</Link></section>
           <section><header><h2>Temas relacionados</h2></header><div className="admin-detail-topics">{themes.map((theme) => <Link key={theme._id.toString()} href={`/admin/temas/${theme._id.toString()}`}>{theme.name}</Link>)}{themes.length === 0 && <p>Este post ainda não pertence a um tema curado.</p>}</div><Link className="admin-inline-action" href="/admin/temas">Gerenciar temas</Link></section>
         </aside>
       </div>

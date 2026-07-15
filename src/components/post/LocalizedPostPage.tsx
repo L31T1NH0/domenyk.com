@@ -15,6 +15,8 @@ import {
   type PostLocale,
 } from "@/lib/post-locales"
 import { getPostVersion, getPublishedPostLocales } from "@/lib/post-versions"
+import { isPostVersionIndexable, postSeoDescription, postSeoTitle } from "@/lib/post-seo"
+import { getThemesForPost } from "@/lib/db/themes"
 import { BackHome } from "@/components/BackHome"
 import { ParagraphCommentsLayer } from "@/components/post/ParagraphCommentsLayer"
 import { PostContentShell } from "@/components/post/PostContentShell"
@@ -34,8 +36,12 @@ const pageCopy: Record<PostLocale, {
   back: string
   draft: string
   edit: string
-  showDescription: string
-  hideDescription: string
+  showDetails: string
+  hideDetails: string
+  detailLabels: {
+    subtitle: string; excerpt: string; seoTitle: string; seoDescription: string
+    themes: string; tags: string; sources: string; dates: string; published: string; updated: string
+  }
   minute: (minutes: number) => string
   styleLabels: Record<PostStyle, string>
   editorial: { structure: string; thesis: string; reading: string; topics: string }
@@ -44,8 +50,9 @@ const pageCopy: Record<PostLocale, {
     back: "Voltar para a página inicial",
     draft: "rascunho",
     edit: "Editar post",
-    showDescription: "ver descrição",
-    hideDescription: "ocultar descrição",
+    showDetails: "ver detalhes",
+    hideDetails: "ocultar detalhes",
+    detailLabels: { subtitle: "Descrição", excerpt: "Resumo", seoTitle: "Título SEO", seoDescription: "Descrição SEO", themes: "Temas", tags: "Tags", sources: "Fontes", dates: "Datas", published: "Publicado em", updated: "Atualizado em" },
     minute: (minutes) => `${minutes} min`,
     styleLabels: { standard: "", editorial: "Editorial", opinion: "Opinião" },
     editorial: { structure: "Estrutura", thesis: "Tese central", reading: "Leitura", topics: "Assuntos" },
@@ -54,8 +61,9 @@ const pageCopy: Record<PostLocale, {
     back: "Back to the home page",
     draft: "draft",
     edit: "Edit post",
-    showDescription: "show description",
-    hideDescription: "hide description",
+    showDetails: "show details",
+    hideDetails: "hide details",
+    detailLabels: { subtitle: "Description", excerpt: "Summary", seoTitle: "SEO title", seoDescription: "SEO description", themes: "Themes", tags: "Tags", sources: "Sources", dates: "Dates", published: "Published on", updated: "Updated on" },
     minute: (minutes) => `${minutes} min read`,
     styleLabels: { standard: "", editorial: "Editorial", opinion: "Opinion" },
     editorial: { structure: "Structure", thesis: "Central thesis", reading: "Reading", topics: "Topics" },
@@ -64,8 +72,9 @@ const pageCopy: Record<PostLocale, {
     back: "Zur Startseite",
     draft: "Entwurf",
     edit: "Beitrag bearbeiten",
-    showDescription: "Beschreibung anzeigen",
-    hideDescription: "Beschreibung ausblenden",
+    showDetails: "Details anzeigen",
+    hideDetails: "Details ausblenden",
+    detailLabels: { subtitle: "Beschreibung", excerpt: "Zusammenfassung", seoTitle: "SEO-Titel", seoDescription: "SEO-Beschreibung", themes: "Themen", tags: "Tags", sources: "Quellen", dates: "Daten", published: "Veröffentlicht am", updated: "Aktualisiert am" },
     minute: (minutes) => `${minutes} Min. Lesezeit`,
     styleLabels: { standard: "", editorial: "Editorial", opinion: "Meinung" },
     editorial: { structure: "Struktur", thesis: "Zentrale These", reading: "Lesezeit", topics: "Themen" },
@@ -74,8 +83,9 @@ const pageCopy: Record<PostLocale, {
     back: "Kembali ke beranda",
     draft: "draf",
     edit: "Edit tulisan",
-    showDescription: "lihat deskripsi",
-    hideDescription: "sembunyikan deskripsi",
+    showDetails: "lihat detail",
+    hideDetails: "sembunyikan detail",
+    detailLabels: { subtitle: "Deskripsi", excerpt: "Ringkasan", seoTitle: "Judul SEO", seoDescription: "Deskripsi SEO", themes: "Tema", tags: "Tag", sources: "Sumber", dates: "Tanggal", published: "Diterbitkan pada", updated: "Diperbarui pada" },
     minute: (minutes) => `${minutes} menit baca`,
     styleLabels: { standard: "", editorial: "Editorial", opinion: "Opini" },
     editorial: { structure: "Struktur", thesis: "Tesis utama", reading: "Waktu baca", topics: "Topik" },
@@ -135,12 +145,12 @@ export async function getLocalizedPostMetadata(slug: string, locale: PostLocale)
 
   const details = POST_LOCALE_DETAILS[locale]
   const canonicalPath = localizedPostPath(post, locale)
-  const description = (version.excerpt ?? version.subtitle ?? descriptionFromMarkdown(version.content)) || siteConfig.description
+  const description = postSeoDescription(version, descriptionFromMarkdown(version.content)) || siteConfig.description
   const [preferredImage] = preferredContentImages({ cover: version.cover?.url, markdown: version.content })
   const publishedLocales = getPublishedPostLocales(post)
 
   return buildPageMetadata({
-    title: version.title,
+    title: postSeoTitle(version),
     description,
     path: canonicalPath,
     image: preferredImage ?? `/og/posts/${encodeURIComponent(post.slug)}?locale=${locale}`,
@@ -148,7 +158,7 @@ export async function getLocalizedPostMetadata(slug: string, locale: PostLocale)
     publishedTime: version.publishedAt?.toISOString(),
     modifiedTime: version.updatedAt.toISOString(),
     tags: version.tags,
-    noIndex: !version.published,
+    noIndex: !isPostVersionIndexable(version),
     languages: languageUrls(post),
     openGraphLocale: details.openGraphLocale,
     openGraphAlternateLocales: publishedLocales
@@ -183,8 +193,8 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
   const dateLabel = version.publishedAt
     ? new Intl.DateTimeFormat(details.htmlLang, { dateStyle: "long" }).format(version.publishedAt)
     : undefined
-  const visibleDescription = version.subtitle ?? version.excerpt
-  const description = (version.excerpt ?? version.subtitle ?? descriptionFromMarkdown(version.content)) || siteConfig.description
+  const updatedLabel = new Intl.DateTimeFormat(details.htmlLang, { dateStyle: "long" }).format(version.updatedAt)
+  const description = postSeoDescription(version, descriptionFromMarkdown(version.content)) || siteConfig.description
   const style = version.style ?? "standard"
   const styleClasses = getPostStyleClasses(style)
   const styleLabel = copy.styleLabels[style]
@@ -195,7 +205,10 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
   const selectorLocales = version.published
     ? publishedLocales
     : [locale, ...publishedLocales.filter((availableLocale) => availableLocale !== locale)]
-  const relatedPosts = version.published ? await getRelatedPosts(post) : []
+  const [relatedPosts, themes] = await Promise.all([
+    isPostVersionIndexable(version) ? getRelatedPosts(post) : [],
+    getThemesForPost(post._id, { activeOnly: true }),
+  ])
   const localizedRelatedPosts = relatedPosts
     .filter((relatedPost) => locale === "pt" ? relatedPost.published : relatedPost.translations?.[locale]?.published === true)
     .map((relatedPost) => ({
@@ -235,6 +248,9 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
                 publisher: { "@id": `${siteConfig.url}/#person` },
                 inLanguage: details.htmlLang,
                 keywords: version.tags,
+                articleSection: themes.map((theme) => theme.name),
+                about: themes.map((theme) => ({ "@type": "Thing", name: theme.name, url: absoluteUrl(`/temas/${theme.slug}`) })),
+                citation: version.sources?.map((source) => source.url),
                 timeRequired: `PT${version.readingTimeMinutes}M`,
                 isAccessibleForFree: true,
               },
@@ -286,12 +302,6 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
                   <dt>{copy.editorial.reading}</dt>
                   <dd>{copy.minute(version.readingTimeMinutes)}</dd>
                 </div>
-                {version.tags.length > 0 && (
-                  <div>
-                    <dt>{copy.editorial.topics}</dt>
-                    <dd>{version.tags.join(" · ")}</dd>
-                  </div>
-                )}
               </dl>
             </aside>
           </div>
@@ -306,26 +316,20 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
       </article>
 
       <div id="post-content-boundary" className={["mt-8 border-t border-zinc-200/80 pt-5 dark:border-zinc-700/80", style === "editorial" ? "editorial-post-footer" : ""].join(" ")}>
-        {visibleDescription && (
-          <PostDescriptionDisclosure
-            description={visibleDescription}
-            showLabel={copy.showDescription}
-            hideLabel={copy.hideDescription}
-          />
-        )}
-        {version.tags.length > 0 && (
-          <div className="mb-5 flex flex-wrap items-center gap-2">
-            {version.tags.map((tag) => (
-              locale === "pt" ? (
-                <Link key={tag} href={`/temas/${encodeURIComponent(tag)}`} className="inline-flex items-center rounded-full border border-zinc-300/80 px-3 py-1 text-xs font-medium text-zinc-700 transition-colors hover:border-zinc-500 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:border-zinc-600 dark:text-zinc-200 dark:hover:border-zinc-400 dark:hover:text-white dark:focus-visible:ring-neutral-300">
-                  #{tag}
-                </Link>
-              ) : (
-                <span key={tag} className="inline-flex items-center rounded-full border border-zinc-300/80 px-3 py-1 text-xs font-medium text-zinc-700 dark:border-zinc-600 dark:text-zinc-200">#{tag}</span>
-              )
-            ))}
-          </div>
-        )}
+        <PostDescriptionDisclosure
+          subtitle={version.subtitle}
+          excerpt={version.excerpt}
+          seoTitle={version.seoTitle}
+          seoDescription={version.seoDescription}
+          tags={version.tags}
+          themes={themes.map((theme) => ({ name: theme.name, slug: theme.slug }))}
+          sources={version.sources ?? []}
+          publishedLabel={dateLabel}
+          updatedLabel={updatedLabel}
+          labels={copy.detailLabels}
+          showLabel={copy.showDetails}
+          hideLabel={copy.hideDetails}
+        />
       </div>
 
       {localizedRelatedPosts.length > 0 && (

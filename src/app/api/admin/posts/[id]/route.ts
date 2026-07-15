@@ -3,6 +3,8 @@ import {
   deletePost,
   getOriginalContentUpdatedAt,
   getPostById,
+  getPostByLocalizedSlug,
+  getPostBySlug,
   markPostDeleting,
   serializePostTranslation,
   updatePost,
@@ -13,9 +15,12 @@ import { toObjectId } from "@/lib/validation"
 import { parsePostPatch, parsePostTranslation } from "@/lib/api/post-input"
 import { deleteCommentsForParent, getCommentsForParent } from "@/lib/db/comments"
 import { deleteCommentImagesFromContents, queueCommentImagesForCleanup } from "@/lib/db/comment-uploads"
-import { isTranslationLocale } from "@/lib/post-locales"
+import { getPublishedPostLocales } from "@/lib/post-versions"
+import { isTranslationLocale, localizedPostPath, postPath } from "@/lib/post-locales"
 import { sendReaderPush } from "@/lib/push"
 import { descriptionFromMarkdown } from "@/lib/seo"
+import { notifyIndexNow } from "@/lib/indexnow"
+import { preservedSlugAliases } from "@/lib/post-seo"
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -39,6 +44,12 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
       const parsed = parsePostTranslation(body)
       const existingTranslation = existingPost.translations?.[body.locale]
+      if (parsed.slug && parsed.slug !== existingTranslation?.slug) {
+        const conflict = await getPostByLocalizedSlug(body.locale, parsed.slug)
+        if (conflict && !conflict._id.equals(existingPost._id)) {
+          return NextResponse.json({ error: "Slug ou alias traduzido já existe." }, { status: 409 })
+        }
+      }
       const translation = await updatePostTranslation(
         id,
         body.locale,
@@ -50,6 +61,16 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         existingTranslation
       )
 
+      if (translation.published || existingTranslation?.published) {
+        const paths = [
+          postPath(translation.slug!, body.locale),
+          ...(existingTranslation?.slug && existingTranslation.slug !== translation.slug
+            ? [postPath(existingTranslation.slug, body.locale)]
+            : []),
+        ]
+        after(() => notifyIndexNow(paths))
+      }
+
       return NextResponse.json({
         ok: true,
         locale: body.locale,
@@ -60,7 +81,15 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const data = parsePostPatch(body)
     if (body.cover === null) data.showCoverInTimeline = false
 
-    const originalChanged = (["title", "content", "excerpt", "subtitle"] as const).some((field) => (
+    if (data.slug && data.slug !== existingPost.slug) {
+      const conflictingPost = await getPostBySlug(data.slug)
+      if (conflictingPost && !conflictingPost._id.equals(existingPost._id)) {
+        return NextResponse.json({ error: "Slug ou alias já existe." }, { status: 409 })
+      }
+      data.slugAliases = preservedSlugAliases(existingPost.slug, existingPost.slugAliases, data.slug)
+    }
+
+    const originalChanged = (["title", "seoTitle", "seoDescription", "content", "excerpt", "subtitle", "sources"] as const).some((field) => (
       field in data && data[field] !== existingPost[field]
     )) || (
       "cover" in data && data.cover?.alt !== existingPost.cover?.alt
@@ -78,6 +107,14 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
     if (Object.keys(data).length > 0) {
       await updatePost(id, data)
+    }
+
+    if (existingPost.published || data.published === true) {
+      const paths = [
+        `/posts/${data.slug ?? existingPost.slug}`,
+        ...(data.slug && data.slug !== existingPost.slug ? [`/posts/${existingPost.slug}`] : []),
+      ]
+      after(() => notifyIndexNow(paths))
     }
 
     if (data.published === true && !existingPost.published) {
@@ -126,6 +163,10 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   const { id } = await params
   if (!toObjectId(id)) return NextResponse.json({ error: "ID inválido" }, { status: 400 })
 
+  const existingPost = await getPostById(id)
+  if (!existingPost) return NextResponse.json({ error: "Post não encontrado" }, { status: 404 })
+  const indexedPaths = getPublishedPostLocales(existingPost).map((locale) => localizedPostPath(existingPost, locale))
+
   const marked = await markPostDeleting(id)
   if (!marked) return NextResponse.json({ error: "Post não encontrado" }, { status: 404 })
   const comments = await getCommentsForParent(id)
@@ -134,5 +175,6 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   await deleteCommentsForParent(id)
   await deletePost(id)
   await deleteCommentImagesFromContents(contents)
+  if (indexedPaths.length > 0) after(() => notifyIndexNow(indexedPaths))
   return NextResponse.json({ ok: true })
 }

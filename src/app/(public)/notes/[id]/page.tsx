@@ -9,6 +9,7 @@ import { getNote, serializeNote } from "@/lib/db/notes"
 import { absoluteUrl, authorJsonLd, buildPageMetadata, descriptionFromMarkdown, isNoteIndexable, jsonLd, noteDisplayTitle, preferredContentImages, siteConfig } from "@/lib/seo"
 import { headers } from "next/headers"
 import { NoteViewTracker } from "@/components/notes/NoteViewTracker"
+import { PostDescriptionDisclosure } from "@/components/post/PostDescriptionDisclosure"
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -20,7 +21,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!note) return {}
 
   const indexable = isNoteIndexable(note)
-  const title = note.seoTitle?.trim() || noteDisplayTitle(note)
+  const visibleTitle = noteDisplayTitle(note)
+  const title = note.seoTitle?.trim() || visibleTitle
   const description = note.seoDescription?.trim() || descriptionFromMarkdown(note.content) || siteConfig.description
   const [image] = preferredContentImages({
     images: note.images,
@@ -48,7 +50,7 @@ export default async function NotePage({ params }: Props) {
   if (!note) notFound()
 
   const serializedNote = serializeNote(note)
-  const title = note.seoTitle?.trim() || noteDisplayTitle(note)
+  const visibleTitle = noteDisplayTitle(note)
   const noteUrl = absoluteUrl(`/notes/${serializedNote._id}`)
   const description = note.seoDescription?.trim() || descriptionFromMarkdown(serializedNote.content) || siteConfig.description
   const noteImages = preferredContentImages({
@@ -72,7 +74,7 @@ export default async function NotePage({ params }: Props) {
                 "@type": "BlogPosting",
                 "@id": `${noteUrl}#article`,
                 mainEntityOfPage: noteUrl,
-                headline: title,
+                headline: visibleTitle,
                 description,
                 image: structuredImages,
                 datePublished: serializedNote.publishedAt,
@@ -87,7 +89,7 @@ export default async function NotePage({ params }: Props) {
                 itemListElement: [
                   { "@type": "ListItem", position: 1, name: "Início", item: absoluteUrl("/") },
                   { "@type": "ListItem", position: 2, name: "Notas", item: absoluteUrl("/notes") },
-                  { "@type": "ListItem", position: 3, name: title, item: noteUrl },
+                  { "@type": "ListItem", position: 3, name: visibleTitle, item: noteUrl },
                 ],
               },
             ],
@@ -96,11 +98,8 @@ export default async function NotePage({ params }: Props) {
       />
       <article className="flex flex-col gap-4 border-y border-neutral-200 py-6 dark:border-white/10">
         <h1 className={note.title || note.seoTitle ? "text-balance text-lg font-semibold leading-snug text-neutral-950 dark:text-[#f1f1f1]" : "sr-only"}>
-          {title}
+          {visibleTitle}
         </h1>
-        {note.seoDescription?.trim() && (
-          <p className="text-sm leading-relaxed text-neutral-600 dark:text-[#c2bbb1]">{note.seoDescription.trim()}</p>
-        )}
         <time className="text-xs text-neutral-500 dark:text-[#A8A095]/75" dateTime={serializedNote.publishedAt}>
           {format(new Date(serializedNote.publishedAt), "d 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR })}
         </time>
@@ -114,11 +113,25 @@ export default async function NotePage({ params }: Props) {
               <img
                 key={url}
                 src={url}
-                alt={`Imagem ${index + 1}: ${title}`}
+                alt={`Imagem ${index + 1}: ${visibleTitle}`}
                 className="aspect-square w-full rounded-xl border border-neutral-200 object-cover dark:border-white/10"
               />
             ))}
           </div>
+        )}
+        {(note.seoTitle?.trim() || note.seoDescription?.trim()) && (
+          <PostDescriptionDisclosure
+            seoTitle={note.seoTitle}
+            seoDescription={note.seoDescription}
+            tags={[]}
+            themes={[]}
+            sources={[]}
+            publishedLabel={format(new Date(serializedNote.publishedAt), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}
+            updatedLabel={format(new Date(serializedNote.updatedAt), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}
+            labels={{ subtitle: "Descrição", excerpt: "Resumo", seoTitle: "Título SEO", seoDescription: "Descrição SEO", themes: "Temas", tags: "Tags", sources: "Fontes", dates: "Datas", published: "Publicado em", updated: "Atualizado em" }}
+            showLabel="ver detalhes"
+            hideLabel="ocultar detalhes"
+          />
         )}
       </article>
       <BackHome />

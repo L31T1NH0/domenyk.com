@@ -1,7 +1,19 @@
-import type { Post, PostStyle } from "@/lib/db/posts"
+import type { Post, PostSource, PostStyle } from "@/lib/db/posts"
 import { asHttpsUrl, asOptionalString, asSlug, asString, asStringArray, asTrustedImageUrl } from "@/lib/validation"
 
 const POST_STYLES: PostStyle[] = ["standard", "editorial", "opinion"]
+
+export function parsePostSources(value: unknown): PostSource[] {
+  if (!Array.isArray(value)) return []
+
+  return value.slice(0, 40).flatMap((item) => {
+    if (!item || typeof item !== "object") return []
+    const source = item as { label?: unknown; url?: unknown }
+    const url = asHttpsUrl(source.url)
+    if (!url) return []
+    return [{ url, label: asOptionalString(source.label, 180) }]
+  })
+}
 
 export function parsePostStyle(value: unknown, fallback: PostStyle): PostStyle {
   return POST_STYLES.includes(value as PostStyle) ? value as PostStyle : fallback
@@ -31,6 +43,8 @@ export function parsePostPatch(body: Record<string, unknown>) {
     if (!title) throw new Error("Título inválido.")
     data.title = title
   }
+  if ("seoTitle" in body) data.seoTitle = asOptionalString(body.seoTitle, 180)
+  if ("seoDescription" in body) data.seoDescription = asOptionalString(body.seoDescription, 500)
   if ("content" in body) {
     const content = asString(body.content, 300_000)
     if (!content) throw new Error("Conteúdo inválido.")
@@ -44,6 +58,7 @@ export function parsePostPatch(body: Record<string, unknown>) {
   if ("excerpt" in body) data.excerpt = asOptionalString(body.excerpt, 500)
   if ("subtitle" in body) data.subtitle = asOptionalString(body.subtitle, 500)
   if ("tags" in body) data.tags = asStringArray(body.tags, 20, 40)
+  if ("sources" in body) data.sources = parsePostSources(body.sources)
   if ("style" in body) data.style = parsePostStyle(body.style, "standard")
   if ("hiddenFromTimeline" in body) data.hiddenFromTimeline = body.hiddenFromTimeline === true
   if ("pinned" in body) data.pinned = body.pinned === true
@@ -63,12 +78,19 @@ export function parsePostTranslation(body: Record<string, unknown>) {
   if (!title) throw new Error("Título inválido.")
   if (!content) throw new Error("Conteúdo inválido.")
 
+  const slug = "slug" in body ? asSlug(body.slug) : undefined
+  if ("slug" in body && !slug) throw new Error("Slug inválido.")
+
   return {
     title,
+    slug,
+    seoTitle: asOptionalString(body.seoTitle, 180),
+    seoDescription: asOptionalString(body.seoDescription, 500),
     content,
     excerpt: asOptionalString(body.excerpt, 500),
     subtitle: asOptionalString(body.subtitle, 500),
     coverAlt: asOptionalString(body.coverAlt, 180),
     ...("tags" in body ? { tags: asStringArray(body.tags, 20, 40) } : {}),
+    ...("sources" in body ? { sources: parsePostSources(body.sources) } : {}),
   }
 }

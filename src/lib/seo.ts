@@ -140,7 +140,7 @@ export function buildPageMetadata({
 } = {}): Metadata {
   const url = absoluteUrl(path)
   const imageUrl = absoluteUrl(image)
-  const images = [{ url: imageUrl, width: 1200, height: 630, alt: title ?? siteConfig.title }]
+  const images = [{ url: imageUrl, alt: title ?? siteConfig.title }]
 
   return {
     ...(title ? { title } : {}),

@@ -79,13 +79,13 @@ export function slugifyPostTitle(title: string): string {
 
 type LocalizedSlugPost = {
   slug: string
-  translations?: Partial<Record<TranslationLocale, { title: string; slug?: string }>>
+  translations?: Partial<Record<TranslationLocale, { title: string; seoTitle?: string; slug?: string }>>
 }
 
 export function localizedPostSlug(post: LocalizedSlugPost, locale: PostLocale): string {
   if (locale === "pt") return post.slug
   const translation = post.translations?.[locale]
-  return translation?.slug || (translation ? slugifyPostTitle(translation.title) : post.slug) || post.slug
+  return translation?.slug || (translation ? slugifyPostTitle(translation.seoTitle || translation.title) : post.slug) || post.slug
 }
 
 export function localizedPostPath(post: LocalizedSlugPost, locale: PostLocale = "pt"): string {

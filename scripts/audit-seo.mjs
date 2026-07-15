@@ -54,16 +54,16 @@ try {
     db.collection("posts").find({ deleting: { $ne: true } }).toArray(),
     db.collection("notes").find({ deleting: { $ne: true } }).toArray(),
   ])
-  const publishedPosts = posts.filter((post) => post.published)
+  const publishedPosts = posts.filter((post) => post.published && post.hiddenFromTimeline !== true)
   const publishedTranslations = posts.flatMap((post) =>
     Object.entries(post.translations ?? {})
-      .filter(([, translation]) => translation?.published)
+      .filter(([, translation]) => translation?.published && post.hiddenFromTimeline !== true)
       .map(([locale, translation]) => ({ post, locale, translation })))
   const knownPaths = new Set([
     "/", "/notes", "/sobre", "/fale-comigo",
     ...publishedPosts.map((post) => `/posts/${post.slug}`),
     ...notes.map((note) => `/notes/${note._id.toString()}`),
-    ...publishedTranslations.map(({ post, locale }) => `/${locale}/posts/${post.slug}`),
+    ...publishedTranslations.map(({ post, locale, translation }) => `/${locale}/posts/${translation.slug ?? post.slug}`),
   ])
 
   const slugCounts = new Map()
@@ -72,10 +72,13 @@ try {
     if (count > 1) report("error", `post:${slug}`, `slug duplicado em ${count} documentos`)
   }
 
-  function auditArticle({ scope, title, content, excerpt, subtitle, cover, tags, publishedAt, updatedAt }) {
-    const fallbackDescription = excerpt?.trim() || subtitle?.trim() || description(content)
-    if (!title?.trim()) report("error", scope, "título ausente")
-    else if (title.trim().length > 70) report("warning", scope, `título longo (${title.trim().length} caracteres)`)
+  function auditArticle({ scope, title, seoTitle, seoDescription, content, excerpt, subtitle, cover, tags, sources, publishedAt, updatedAt }) {
+    const searchTitle = seoTitle?.trim() || title?.trim()
+    const fallbackDescription = seoDescription?.trim() || excerpt?.trim() || subtitle?.trim() || description(content)
+    if (!title?.trim()) report("error", scope, "título editorial ausente")
+    if (!searchTitle) report("error", scope, "título SEO vazio")
+    else if (searchTitle.length < 30) report("warning", scope, `título SEO curto (${searchTitle.length} caracteres)`)
+    else if (searchTitle.length > 60) report("warning", scope, `título SEO longo (${searchTitle.length} caracteres)`)
     if (!content?.trim()) report("error", scope, "conteúdo vazio")
     if (!fallbackDescription) report("error", scope, "descrição SEO vazia")
     else if (fallbackDescription.length < 50) report("warning", scope, `descrição curta (${fallbackDescription.length} caracteres)`)
@@ -86,7 +89,14 @@ try {
     if (cover?.url && cover.alt?.trim() === title?.trim()) {
       report("warning", scope, "texto alternativo da capa repete o título; descreva o que aparece na imagem")
     }
-    if (!Array.isArray(tags) || tags.length === 0) report("warning", scope, "sem temas/tags para interligação interna")
+    if (!Array.isArray(tags) || tags.length === 0) report("warning", scope, "sem tags para descoberta e conteúdos relacionados")
+    for (const source of sources ?? []) {
+      try {
+        if (new URL(source.url).protocol !== "https:") throw new Error()
+      } catch {
+        report("error", scope, `fonte inválida: ${source?.url ?? "sem URL"}`)
+      }
+    }
     for (const image of markdownImages(content)) {
       if (!image.alt) report("warning", scope, `imagem no corpo depende do fallback contextual de texto alternativo: ${image.url}`)
     }
@@ -114,11 +124,10 @@ try {
     }
   }
 
-  for (const note of notes) {
+  for (const note of notes.filter((item) => item.seoTitle?.trim() && item.seoDescription?.trim())) {
     const scope = `note:${note._id}`
-    const derivedTitle = note.title?.trim() || plainText(note.content).slice(0, 68).trim()
-    if (!derivedTitle) report("error", scope, "não produz título indexável")
-    if (!description(note.content)) report("error", scope, "não produz descrição indexável")
+    if (note.seoTitle.trim().length > 60) report("warning", scope, `título SEO longo (${note.seoTitle.trim().length} caracteres)`)
+    if (note.seoDescription.trim().length > 170) report("warning", scope, `descrição SEO longa (${note.seoDescription.trim().length} caracteres)`)
     for (const image of markdownImages(note.content)) {
       if (!image.alt) report("warning", scope, `imagem no corpo depende do fallback contextual de texto alternativo: ${image.url}`)
     }

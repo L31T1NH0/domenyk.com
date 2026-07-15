@@ -8,18 +8,27 @@ import {
   TRANSLATION_LOCALES,
   type TranslationLocale,
 } from "../post-locales"
+import { preservedSlugAliases } from "../post-seo"
 
 export type PostStyle = "standard" | "editorial" | "opinion"
+
+export type PostSource = {
+  label?: string
+  url: string
+}
 
 export type PostTranslation = {
   slug?: string
   slugAliases?: string[]
   title: string
+  seoTitle?: string
+  seoDescription?: string
   content: string
   excerpt?: string
   subtitle?: string
   coverAlt?: string
   tags?: string[]
+  sources?: PostSource[]
   published: boolean
   publishedAt?: Date
   readingTimeMinutes: number
@@ -34,7 +43,10 @@ export type Post = {
   _id: ObjectId
   publicId: string
   slug: string
+  slugAliases?: string[]
   title: string
+  seoTitle?: string
+  seoDescription?: string
   content: string
   excerpt?: string
   subtitle?: string
@@ -45,6 +57,7 @@ export type Post = {
   audioUrl?: string
   background?: { color?: string; imageUrl?: string }
   tags: string[]
+  sources?: PostSource[]
   pinned: boolean
   published: boolean
   hiddenFromTimeline?: boolean
@@ -67,7 +80,7 @@ export type PostSummary = Omit<Post, "content" | "translations"> & {
 
 export type SitemapPost = Pick<
   Post,
-  "slug" | "content" | "cover" | "published" | "pinned" | "updatedAt"
+  "slug" | "content" | "cover" | "published" | "pinned" | "hiddenFromTimeline" | "updatedAt"
 > & {
   translations?: Partial<Record<TranslationLocale, Pick<PostTranslation, "slug" | "title" | "content" | "published" | "updatedAt">>>
 }
@@ -148,11 +161,15 @@ function serializePostTranslationSummary(
 ): SerializedPostTranslationSummary {
   return {
     slug: translation.slug,
+    slugAliases: translation.slugAliases,
     title: translation.title,
+    seoTitle: translation.seoTitle,
+    seoDescription: translation.seoDescription,
     excerpt: translation.excerpt,
     subtitle: translation.subtitle,
     coverAlt: translation.coverAlt,
     tags: translation.tags,
+    sources: translation.sources,
     published: translation.published,
     publishedAt: translation.publishedAt?.toISOString(),
     readingTimeMinutes: translation.readingTimeMinutes,
@@ -190,7 +207,10 @@ export function serializePostSummary(
     _id: post._id.toString(),
     publicId: post.publicId,
     slug: post.slug,
+    slugAliases: post.slugAliases,
     title: post.title,
+    seoTitle: post.seoTitle,
+    seoDescription: post.seoDescription,
     excerpt: post.excerpt,
     subtitle: post.subtitle,
     cover: post.cover,
@@ -199,6 +219,7 @@ export function serializePostSummary(
     audioUrl: post.audioUrl,
     background: post.background,
     tags: post.tags,
+    sources: post.sources,
     pinned: post.pinned,
     published: post.published,
     hiddenFromTimeline: post.hiddenFromTimeline,
@@ -358,6 +379,7 @@ export async function countPosts(opts: {
 
 const publishedVersionFilter = {
   deleting: { $ne: true },
+  hiddenFromTimeline: { $ne: true },
   $or: [
     { published: true },
     { "translations.en.published": true },
@@ -423,7 +445,7 @@ export async function getPublishedPostsByIds(ids: ObjectId[]): Promise<PostSumma
   if (ids.length === 0) return []
   const posts = await (await collection())
     .find(
-      { _id: { $in: ids }, published: true, deleting: { $ne: true } },
+      { _id: { $in: ids }, published: true, deleting: { $ne: true }, hiddenFromTimeline: { $ne: true } },
       { projection: { content: 0, "translations.en.content": 0, "translations.de.content": 0, "translations.id.content": 0 } }
     )
     .toArray()
@@ -439,7 +461,7 @@ export async function getRelatedPosts(post: Pick<Post, "_id" | "tags">, limit = 
   if (post.tags.length === 0) return []
   const posts = await (await collection())
     .find(
-      { _id: { $ne: post._id }, published: true, deleting: { $ne: true }, tags: { $in: post.tags } },
+      { _id: { $ne: post._id }, published: true, deleting: { $ne: true }, hiddenFromTimeline: { $ne: true }, tags: { $in: post.tags } },
       { projection: { content: 0, "translations.en.content": 0, "translations.de.content": 0, "translations.id.content": 0 } }
     )
     .sort({ publishedAt: -1, _id: -1 })
@@ -463,7 +485,10 @@ export async function getPostById(id: string): Promise<Post | null> {
 
 export async function getPostBySlug(slug: string): Promise<Post | null> {
   const col = await collection()
-  const post = await col.findOne({ slug, deleting: { $ne: true } })
+  const post = await col.findOne({
+    deleting: { $ne: true },
+    $or: [{ slug }, { slugAliases: slug }],
+  })
   return post ? ensurePostPublicId(post) : null
 }
 
@@ -535,8 +560,11 @@ export async function createPost(data: {
   title: string
   content: string
   slug: string
+  slugAliases?: string[]
   excerpt?: string
   subtitle?: string
+  seoTitle?: string
+  seoDescription?: string
   cover?: Post["cover"]
   showCoverInTimeline?: boolean
   friendImage?: string
@@ -544,6 +572,7 @@ export async function createPost(data: {
   audioUrl?: string
   background?: Post["background"]
   tags?: string[]
+  sources?: PostSource[]
   style?: PostStyle
   hiddenFromTimeline?: boolean
   published?: boolean
@@ -553,7 +582,10 @@ export async function createPost(data: {
   const post: Omit<Post, "_id"> = {
     publicId: randomUUID(),
     slug: data.slug,
+    slugAliases: data.slugAliases,
     title: data.title,
+    seoTitle: data.seoTitle,
+    seoDescription: data.seoDescription,
     content: data.content,
     excerpt: data.excerpt,
     subtitle: data.subtitle,
@@ -564,6 +596,7 @@ export async function createPost(data: {
     audioUrl: data.audioUrl,
     background: data.background,
     tags: data.tags ?? [],
+    sources: data.sources,
     pinned: false,
     published: data.published ?? false,
     hiddenFromTimeline: data.hiddenFromTimeline ?? false,
@@ -610,11 +643,15 @@ export async function updatePostTranslation(
   locale: TranslationLocale,
   data: {
     title: string
+    slug?: string
+    seoTitle?: string
+    seoDescription?: string
     content: string
     excerpt?: string
     subtitle?: string
     coverAlt?: string
     tags?: string[]
+    sources?: PostSource[]
     published?: boolean
   },
   sourceUpdatedAt: Date,
@@ -624,22 +661,22 @@ export async function updatePostTranslation(
   if (!objectId) throw new Error("Invalid post id")
 
   const now = new Date()
-  const slug = slugifyPostTitle(data.title)
+  const slug = data.slug ?? existing?.slug ?? slugifyPostTitle(data.seoTitle || data.title)
   if (!slug) throw new Error("Título traduzido inválido para gerar a URL.")
   const published = data.published ?? existing?.published ?? false
-  const slugAliases = Array.from(new Set([
-    ...(existing?.slugAliases ?? []),
-    ...(existing?.slug && existing.slug !== slug ? [existing.slug] : []),
-  ])).filter((alias) => alias !== slug)
+  const slugAliases = preservedSlugAliases(existing?.slug, existing?.slugAliases, slug)
   const translation: PostTranslation = {
     slug,
     ...(slugAliases.length > 0 ? { slugAliases } : {}),
     title: data.title,
+    seoTitle: data.seoTitle,
+    seoDescription: data.seoDescription,
     content: data.content,
     excerpt: data.excerpt,
     subtitle: data.subtitle,
     coverAlt: data.coverAlt,
     tags: data.tags ?? existing?.tags ?? [],
+    sources: data.sources ?? existing?.sources,
     published,
     publishedAt: published ? existing?.publishedAt ?? now : undefined,
     readingTimeMinutes: calcReadingTime(data.content),

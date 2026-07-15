@@ -10,6 +10,39 @@ import {
   preferredContentImages,
   titleFromMarkdown,
 } from "../src/lib/seo.ts"
+import {
+  isPostVersionIndexable,
+  postSeoDescription,
+  postSeoTitle,
+  preservedSlugAliases,
+} from "../src/lib/post-seo.ts"
+
+test("keeps editorial and SEO fields independent with legacy fallbacks", () => {
+  const legacy = { title: "Título editorial", excerpt: "Resumo antigo", subtitle: "Descrição antiga" }
+  assert.equal(postSeoTitle(legacy), "Título editorial")
+  assert.equal(postSeoDescription(legacy, "Corpo"), "Resumo antigo")
+
+  const explicit = { ...legacy, seoTitle: "Título para busca", seoDescription: "Descrição para busca" }
+  assert.equal(postSeoTitle(explicit), "Título para busca")
+  assert.equal(postSeoDescription(explicit, "Corpo"), "Descrição para busca")
+})
+
+test("never indexes drafts or posts hidden from the timeline", () => {
+  assert.equal(isPostVersionIndexable({ published: false }), false)
+  assert.equal(isPostVersionIndexable({ published: true, hiddenFromTimeline: true }), false)
+  assert.equal(isPostVersionIndexable({ published: true, hiddenFromTimeline: false }), true)
+})
+
+test("preserves old URLs as aliases without duplicating the canonical slug", () => {
+  assert.deepEqual(
+    preservedSlugAliases("url-antiga", ["url-inicial", "url-antiga"], "url-nova"),
+    ["url-inicial", "url-antiga"]
+  )
+  assert.deepEqual(
+    preservedSlugAliases("url-atual", ["url-inicial", "url-nova"], "url-nova"),
+    ["url-inicial", "url-atual"]
+  )
+})
 
 test("only makes a note indexable when both explicit SEO fields are filled", () => {
   assert.equal(isNoteIndexable({}), false)

@@ -2,9 +2,10 @@ import { after, NextRequest, NextResponse } from "next/server"
 import { createPost, serializePost } from "@/lib/db/posts"
 import { adminOnly } from "@/lib/auth"
 import { asHttpsUrl, asOptionalString, asSlug, asString, asStringArray, asTrustedImageUrl } from "@/lib/validation"
-import { parsePostBackground, parsePostCover, parsePostStyle } from "@/lib/api/post-input"
+import { parsePostBackground, parsePostCover, parsePostSources, parsePostStyle } from "@/lib/api/post-input"
 import { sendReaderPush } from "@/lib/push"
 import { descriptionFromMarkdown } from "@/lib/seo"
+import { notifyIndexNow } from "@/lib/indexnow"
 
 export async function POST(req: NextRequest) {
   const unauthorized = await adminOnly()
@@ -28,6 +29,8 @@ export async function POST(req: NextRequest) {
     const cover = parsePostCover(body.cover)
     const post = await createPost({
       title,
+      seoTitle: asOptionalString(body.seoTitle, 180),
+      seoDescription: asOptionalString(body.seoDescription, 500),
       content,
       slug,
       excerpt: asOptionalString(body.excerpt, 500),
@@ -39,12 +42,14 @@ export async function POST(req: NextRequest) {
       audioUrl: asHttpsUrl(body.audioUrl),
       background: parsePostBackground(body.background),
       tags: asStringArray(body.tags, 20, 40),
+      sources: parsePostSources(body.sources),
       style: parsePostStyle(body.style, "standard"),
       hiddenFromTimeline: body.hiddenFromTimeline === true,
       published: body.published === true,
     })
 
     if (post.published) {
+      if (!post.hiddenFromTimeline) after(() => notifyIndexNow([`/posts/${post.slug}`]))
       after(() => sendReaderPush({
         dedupeKey: `post:published:${post._id.toString()}:pt`,
         source: "automatic",

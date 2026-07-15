@@ -3,6 +3,7 @@ import { getPostByPublicId, getPostBySlug } from "@/lib/db/posts"
 import { descriptionFromMarkdown, siteConfig } from "@/lib/seo"
 import { isPostLocale } from "@/lib/post-locales"
 import { getPostVersion } from "@/lib/post-versions"
+import { isPostVersionIndexable, postSeoDescription, postSeoTitle } from "@/lib/post-seo"
 
 export const runtime = "nodejs"
 
@@ -23,11 +24,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
   const localeParam = new URL(req.url).searchParams.get("locale") ?? "pt"
   const locale = isPostLocale(localeParam) ? localeParam : "pt"
   const version = post ? getPostVersion(post, locale) : null
-  const title = version?.published ? version.title : siteConfig.title
-  const description = version?.published
-    ? (version.excerpt ?? version.subtitle ?? descriptionFromMarkdown(version.content, 120)) || siteConfig.description
+  const indexable = version ? isPostVersionIndexable(version) : false
+  const title = indexable ? postSeoTitle(version!) : siteConfig.title
+  const description = indexable
+    ? postSeoDescription(version!, descriptionFromMarkdown(version!.content, 120)) || siteConfig.description
     : siteConfig.description
-  const tags = version?.published ? version.tags.slice(0, 3) : []
+  const tags = indexable ? version!.tags.slice(0, 3) : []
 
   return new ImageResponse(
     (

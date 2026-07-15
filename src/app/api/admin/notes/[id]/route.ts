@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from "next/server"
+import { after, NextRequest, NextResponse } from "next/server"
 import { deleteNote, markNoteDeleting, normalizeNoteContent, serializeNote, updateNote } from "@/lib/db/notes"
 import { adminOnly } from "@/lib/auth"
 import { asString, asTrustedImageUrlArray, toObjectId } from "@/lib/validation"
 import { deleteCommentsForParent, getCommentsForParent } from "@/lib/db/comments"
 import { deleteCommentImagesFromContents, queueCommentImagesForCleanup } from "@/lib/db/comment-uploads"
+import { notifyIndexNow } from "@/lib/indexnow"
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const unauthorized = await adminOnly()
@@ -28,6 +29,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   if (!note) return NextResponse.json({ error: "Nota não encontrada" }, { status: 404 })
 
+  after(() => notifyIndexNow([`/notes/${id}`]))
+
   return NextResponse.json(serializeNote(note))
 }
 
@@ -46,5 +49,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   await deleteCommentsForParent(id)
   await deleteNote(id)
   await deleteCommentImagesFromContents(contents)
+  after(() => notifyIndexNow([`/notes/${id}`]))
   return NextResponse.json({ ok: true })
 }

@@ -7,9 +7,12 @@ import {
 export type LocalizedPost = Omit<
   Post,
   | "title"
+  | "seoTitle"
+  | "seoDescription"
   | "content"
   | "excerpt"
   | "subtitle"
+  | "sources"
   | "cover"
   | "published"
   | "publishedAt"
@@ -19,9 +22,12 @@ export type LocalizedPost = Omit<
 > & {
   locale: PostLocale
   title: string
+  seoTitle?: string
+  seoDescription?: string
   content: string
   excerpt?: string
   subtitle?: string
+  sources?: Post["sources"]
   cover?: Post["cover"]
   published: boolean
   publishedAt?: Date
@@ -45,6 +51,8 @@ export function getPostVersion(post: Post, locale: PostLocale): LocalizedPost | 
     ...post,
     locale,
     title: translation.title,
+    seoTitle: translation.seoTitle,
+    seoDescription: translation.seoDescription,
     content: translation.content,
     excerpt: translation.excerpt,
     subtitle: translation.subtitle,
@@ -53,6 +61,7 @@ export function getPostVersion(post: Post, locale: PostLocale): LocalizedPost | 
       alt: translation.coverAlt ?? post.cover.alt,
     } : undefined,
     tags: translation.tags ?? post.tags,
+    sources: translation.sources ?? post.sources,
     published: translation.published,
     publishedAt: translation.publishedAt,
     readingTimeMinutes: translation.readingTimeMinutes,

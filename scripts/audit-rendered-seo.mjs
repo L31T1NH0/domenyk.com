@@ -1,10 +1,4 @@
 const baseUrl = new URL(process.argv[2] ?? "http://localhost:3000")
-const sitemapPaths = [
-  "/sitemap/index.xml",
-  "/sitemap/topics.xml",
-  "/sitemap/posts-0.xml",
-  "/sitemap/notes-0.xml",
-]
 
 function allMatches(value, pattern) {
   return [...value.matchAll(pattern)].map((match) => match[1])
@@ -20,6 +14,13 @@ function decoded(value = "") {
 }
 
 const issues = []
+const robotsResponse = await fetch(new URL("/robots.txt", baseUrl))
+const robotsText = await robotsResponse.text()
+const sitemapPaths = robotsText.split("\n")
+  .map((line) => line.match(/^Sitemap:\s*(\S+)/i)?.[1])
+  .filter(Boolean)
+  .map((value) => new URL(value).pathname)
+
 const sitemapUrls = new Set()
 for (const path of sitemapPaths) {
   const response = await fetch(new URL(path, baseUrl))
@@ -73,8 +74,6 @@ for (const publicUrl of sitemapUrls) {
   }
 }
 
-const robotsResponse = await fetch(new URL("/robots.txt", baseUrl))
-const robotsText = await robotsResponse.text()
 for (const path of sitemapPaths) {
   const publicSitemap = new URL(path, "https://domenyk.com").toString()
   if (!robotsText.includes(`Sitemap: ${publicSitemap}`)) {

@@ -19,19 +19,31 @@ type CoAuthorOption = {
   imageUrl: string | null
 }
 
+type ThemeOption = {
+  _id: string
+  name: string
+  active: boolean
+}
+
 type LocalizedDraft = {
   title: string
+  seoTitle: string
+  seoDescription: string
+  localizedSlug: string
   subtitle: string
   excerpt: string
   coverAlt: string
   tags: string
+  sources: string
   content: string
 }
 
 type StoredTranslation = Partial<Omit<LocalizedDraft, "tags">> & {
+  slug?: string
   title: string
   content: string
   tags?: string[]
+  sources?: Array<{ label?: string; url: string }>
   published: boolean
   publishedAt?: string
   sourceUpdatedAt: string
@@ -43,9 +55,12 @@ type PostData = {
   title: string
   content: string
   slug: string
+  seoTitle?: string
+  seoDescription?: string
   excerpt?: string
   subtitle?: string
   tags: string[]
+  sources?: Array<{ label?: string; url: string }>
   style: "standard" | "editorial" | "opinion"
   cover?: { url: string; alt?: string }
   showCoverInTimeline?: boolean
@@ -57,6 +72,7 @@ type PostData = {
   publishedAt?: string
   originalContentUpdatedAt?: string
   translations?: Partial<Record<TranslationLocale, StoredTranslation>>
+  themeIds?: string[]
 }
 
 type Props = {
@@ -74,17 +90,37 @@ type VersionState = {
 type VersionStates = Record<PostLocale, VersionState>
 
 function emptyDraft(): LocalizedDraft {
-  return { title: "", subtitle: "", excerpt: "", coverAlt: "", tags: "", content: "" }
+  return { title: "", seoTitle: "", seoDescription: "", localizedSlug: "", subtitle: "", excerpt: "", coverAlt: "", tags: "", sources: "", content: "" }
+}
+
+function sourcesToText(sources?: Array<{ label?: string; url: string }>): string {
+  return sources?.map((source) => source.label ? `${source.label} | ${source.url}` : source.url).join("\n") ?? ""
+}
+
+function sourcesFromText(value: string): Array<{ label?: string; url: string }> {
+  return value.split("\n").flatMap((line) => {
+    const trimmed = line.trim()
+    if (!trimmed) return []
+    const separator = trimmed.lastIndexOf("|")
+    if (separator === -1) return [{ url: trimmed }]
+    const label = trimmed.slice(0, separator).trim()
+    const url = trimmed.slice(separator + 1).trim()
+    return [{ url, ...(label ? { label } : {}) }]
+  })
 }
 
 function initialDrafts(post?: PostData): Record<PostLocale, LocalizedDraft> {
   const drafts: Record<PostLocale, LocalizedDraft> = {
     pt: {
       title: post?.title ?? "",
+      seoTitle: post?.seoTitle ?? "",
+      seoDescription: post?.seoDescription ?? "",
+      localizedSlug: post?.slug ?? "",
       subtitle: post?.subtitle ?? "",
       excerpt: post?.excerpt ?? "",
       coverAlt: post?.cover?.alt ?? "",
       tags: post?.tags.join(", ") ?? "",
+      sources: sourcesToText(post?.sources),
       content: post?.content ?? "",
     },
     en: emptyDraft(),
@@ -97,10 +133,14 @@ function initialDrafts(post?: PostData): Record<PostLocale, LocalizedDraft> {
     if (!translation) continue
     drafts[locale] = {
       title: translation.title,
+      seoTitle: translation.seoTitle ?? "",
+      seoDescription: translation.seoDescription ?? "",
+      localizedSlug: translation.slug ?? "",
       subtitle: translation.subtitle ?? "",
       excerpt: translation.excerpt ?? "",
       coverAlt: translation.coverAlt ?? "",
       tags: translation.tags?.join(", ") ?? "",
+      sources: sourcesToText(translation.sources),
       content: translation.content,
     }
   }
@@ -138,10 +178,14 @@ function initialVersionStates(post?: PostData): VersionStates {
 
 function draftsMatch(left: LocalizedDraft, right: LocalizedDraft): boolean {
   return left.title === right.title &&
+    left.seoTitle === right.seoTitle &&
+    left.seoDescription === right.seoDescription &&
+    left.localizedSlug === right.localizedSlug &&
     left.subtitle === right.subtitle &&
     left.excerpt === right.excerpt &&
     left.coverAlt === right.coverAlt &&
     left.tags === right.tags &&
+    left.sources === right.sources &&
     left.content === right.content
 }
 
@@ -159,6 +203,11 @@ export function PostEditor({ post }: Props) {
 
   const [slug, setSlug] = useState(post?.slug ?? "")
   const [slugEdited, setSlugEdited] = useState(Boolean(post?.id))
+  const [localizedSlugEdited, setLocalizedSlugEdited] = useState<Record<TranslationLocale, boolean>>({
+    en: Boolean(post?.translations?.en?.slug),
+    de: Boolean(post?.translations?.de?.slug),
+    id: Boolean(post?.translations?.id?.slug),
+  })
   const [style, setStyle] = useState<PostData["style"]>(post?.style ?? "standard")
   const [visibleInTimeline, setVisibleInTimeline] = useState(post?.hiddenFromTimeline !== true)
   const [coverUrl, setCoverUrl] = useState(post?.cover?.url ?? "")
@@ -168,6 +217,8 @@ export function PostEditor({ post }: Props) {
   const [coAuthors, setCoAuthors] = useState<CoAuthorOption[]>([])
   const [loadingCoAuthors, setLoadingCoAuthors] = useState(true)
   const [coAuthorsError, setCoAuthorsError] = useState("")
+  const [themes, setThemes] = useState<ThemeOption[]>([])
+  const [selectedThemeIds, setSelectedThemeIds] = useState<string[]>(post?.themeIds ?? [])
   const [audioUrl, setAudioUrl] = useState(post?.audioUrl ?? "")
   const [saving, setSaving] = useState(false)
   const [uploadingCover, setUploadingCover] = useState(false)
@@ -183,6 +234,7 @@ export function PostEditor({ post }: Props) {
     friendImage: post?.friendImage ?? "",
     coAuthorUserId: post?.coAuthorUserId ?? "",
     audioUrl: post?.audioUrl ?? "",
+    themeIds: [...(post?.themeIds ?? [])].sort(),
   }), [post])
   const [savedSharedSignature, setSavedSharedSignature] = useState(initialSharedSignature)
 
@@ -202,6 +254,7 @@ export function PostEditor({ post }: Props) {
     friendImage,
     coAuthorUserId,
     audioUrl,
+    themeIds: [...selectedThemeIds].sort(),
   })
 
   const dirtyLocales = useMemo(() => new Set(POST_LOCALES.filter((locale) => (
@@ -224,7 +277,20 @@ export function PostEditor({ post }: Props) {
 
   function handleTitleChange(value: string) {
     updateActiveDraft({ title: value })
+    if (activeDraft.seoTitle.trim()) return
     if (activeLocale === "pt" && !slugEdited) setSlug(slugifyPostTitle(value))
+    if (activeLocale !== "pt" && !localizedSlugEdited[activeLocale]) {
+      updateActiveDraft({ title: value, localizedSlug: slugifyPostTitle(value) })
+    }
+  }
+
+  function handleSeoTitleChange(value: string) {
+    const patch: Partial<LocalizedDraft> = { seoTitle: value }
+    if (activeLocale === "pt" && !slugEdited) setSlug(slugifyPostTitle(value || activeDraft.title))
+    if (activeLocale !== "pt" && !localizedSlugEdited[activeLocale]) {
+      patch.localizedSlug = slugifyPostTitle(value || activeDraft.title)
+    }
+    updateActiveDraft(patch)
   }
 
   const handleContentChange = useCallback((markdown: string) => {
@@ -285,6 +351,18 @@ export function PostEditor({ post }: Props) {
     }
 
     void loadCoAuthors()
+    return () => controller.abort()
+  }, [])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    fetch("/api/admin/themes", { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error()
+        return response.json() as Promise<ThemeOption[]>
+      })
+      .then((items) => { if (!controller.signal.aborted) setThemes(items) })
+      .catch(() => { if (!controller.signal.aborted) setThemes([]) })
     return () => controller.abort()
   }, [])
 
@@ -353,10 +431,13 @@ export function PostEditor({ post }: Props) {
     const localizedBody = {
       locale,
       title: draft.title,
+      seoTitle: draft.seoTitle.trim() || null,
+      seoDescription: draft.seoDescription.trim() || null,
       subtitle: draft.subtitle.trim() || null,
       excerpt: draft.excerpt.trim() || null,
       coverAlt: draft.coverAlt.trim() || null,
       tags: draft.tags.split(",").map((tag) => tag.trim()).filter(Boolean),
+      sources: sourcesFromText(draft.sources),
       content: draft.content,
     }
     const body = locale === "pt" ? {
@@ -369,7 +450,10 @@ export function PostEditor({ post }: Props) {
       friendImage: friendImage.trim() || undefined,
       coAuthorUserId: coAuthorUserId.trim() || null,
       audioUrl: audioUrl.trim() || undefined,
-    } : localizedBody
+    } : {
+      ...localizedBody,
+      ...(draft.localizedSlug.trim() ? { slug: draft.localizedSlug.trim() } : {}),
+    }
 
     try {
       const creating = !postId
@@ -380,6 +464,17 @@ export function PostEditor({ post }: Props) {
       })
       const data = await res.json().catch(() => null)
       if (!res.ok) throw new Error(data?.error ?? "Erro ao salvar.")
+
+      const resolvedPostId = postId ?? data?._id
+      if (locale === "pt" && resolvedPostId) {
+        const themesResponse = await fetch(`/api/admin/posts/${resolvedPostId}/themes`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ themeIds: selectedThemeIds }),
+        })
+        const themesData = await themesResponse.json().catch(() => null)
+        if (!themesResponse.ok) throw new Error(themesData?.error ?? "O post foi salvo, mas os temas não foram atualizados.")
+      }
 
       if (locale === "pt") {
         const nextId = postId ?? data?._id
@@ -541,6 +636,10 @@ export function PostEditor({ post }: Props) {
 
       <div id={`${fieldId}-localized-editor`} role="tabpanel" className="flex flex-col gap-5">
         <div>
+          <h2 className="text-sm font-semibold">Conteúdo editorial</h2>
+          <p className="mt-0.5 text-xs text-neutral-500">O título abaixo é o que os leitores veem no post.</p>
+        </div>
+        <div>
           <label htmlFor={`${fieldId}-${activeLocale}-title`} className="sr-only">Título em {POST_LOCALE_DETAILS[activeLocale].adminLabel}</label>
           <input
             ref={titleRef}
@@ -562,7 +661,7 @@ export function PostEditor({ post }: Props) {
               value={activeDraft.subtitle}
               onChange={(event) => updateActiveDraft({ subtitle: event.target.value })}
               rows={3}
-              placeholder="Exibida abaixo do título"
+              placeholder="Descrição editorial exibida dentro de Detalhes"
               className={`${FIELD_CLASS_NAME} resize-y`}
             />
           </div>
@@ -573,11 +672,82 @@ export function PostEditor({ post }: Props) {
               value={activeDraft.excerpt}
               onChange={(event) => updateActiveDraft({ excerpt: event.target.value })}
               rows={3}
-              placeholder="Usado em listagens e metadados"
+              placeholder="Resumo usado em cards, listagens e páginas de temas"
               className={`${FIELD_CLASS_NAME} resize-y`}
             />
           </div>
         </div>
+
+        <section className="flex flex-col gap-4 border-y border-neutral-200 py-5 dark:border-neutral-800" aria-labelledby={`${fieldId}-seo-heading`}>
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+            <div>
+              <h2 id={`${fieldId}-seo-heading`} className="text-sm font-semibold">Busca e compartilhamento</h2>
+              <p className="mt-0.5 text-xs text-neutral-500">Campos independentes para mecanismos de busca, redes sociais e serviços com IA.</p>
+            </div>
+            <span className={`text-xs ${activeVersion.published && visibleInTimeline ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}>
+              {activeVersion.published && visibleInTimeline ? "Indexável" : "Não indexável"}
+            </span>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1">
+              <label htmlFor={`${fieldId}-${activeLocale}-seo-title-field`} className={LABEL_CLASS_NAME}>Título SEO</label>
+              <input
+                id={`${fieldId}-${activeLocale}-seo-title-field`}
+                value={activeDraft.seoTitle}
+                maxLength={180}
+                onChange={(event) => handleSeoTitleChange(event.target.value)}
+                placeholder={activeDraft.title || "Título exibido nos resultados de busca"}
+                className={FIELD_CLASS_NAME}
+              />
+              <span className={`text-xs ${activeDraft.seoTitle.length > 0 && (activeDraft.seoTitle.length < 30 || activeDraft.seoTitle.length > 60) ? "text-amber-700 dark:text-amber-300" : "text-neutral-500"}`}>
+                {activeDraft.seoTitle.length}/180 · recomendado: 30–60
+              </span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor={`${fieldId}-${activeLocale}-slug`} className={LABEL_CLASS_NAME}>URL</label>
+              <input
+                id={`${fieldId}-${activeLocale}-slug`}
+                value={activeLocale === "pt" ? slug : activeDraft.localizedSlug}
+                onChange={(event) => {
+                  if (activeLocale === "pt") {
+                    setSlug(event.target.value)
+                    setSlugEdited(true)
+                  } else {
+                    updateActiveDraft({ localizedSlug: event.target.value })
+                    setLocalizedSlugEdited((current) => ({ ...current, [activeLocale]: true }))
+                  }
+                  setNotice("")
+                }}
+                required
+                className={FIELD_CLASS_NAME}
+              />
+              <span className="text-xs text-neutral-500">O endereço anterior vira um redirecionamento permanente quando esta URL muda.</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label htmlFor={`${fieldId}-${activeLocale}-seo-description`} className={LABEL_CLASS_NAME}>Descrição SEO</label>
+            <textarea
+              id={`${fieldId}-${activeLocale}-seo-description`}
+              value={activeDraft.seoDescription}
+              maxLength={500}
+              rows={3}
+              onChange={(event) => updateActiveDraft({ seoDescription: event.target.value })}
+              placeholder="Descrição curta e específica para o resultado de busca"
+              className={`${FIELD_CLASS_NAME} resize-y`}
+            />
+            <span className={`text-xs ${activeDraft.seoDescription.length > 0 && (activeDraft.seoDescription.length < 50 || activeDraft.seoDescription.length > 170) ? "text-amber-700 dark:text-amber-300" : "text-neutral-500"}`}>
+              {activeDraft.seoDescription.length}/500 · recomendado: 50–170
+            </span>
+          </div>
+
+          <div className="rounded border border-neutral-200 px-3 py-3 dark:border-neutral-800" aria-label="Prévia de busca">
+            <span className="block truncate text-xs text-emerald-700 dark:text-emerald-400">domenyk.com › {activeLocale === "pt" ? "posts" : `${activeLocale} › posts`} › {(activeLocale === "pt" ? slug : activeDraft.localizedSlug) || "url-do-post"}</span>
+            <strong className="mt-1 block text-base font-medium text-blue-800 dark:text-blue-300">{activeDraft.seoTitle.trim() || activeDraft.title || "Título do resultado"}</strong>
+            <p className="mt-1 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">{activeDraft.seoDescription.trim() || activeDraft.excerpt.trim() || activeDraft.subtitle.trim() || "A descrição do resultado aparecerá aqui."}</p>
+          </div>
+        </section>
 
         <div className="flex flex-col gap-1">
           <label htmlFor={`${fieldId}-${activeLocale}-tags`} className={LABEL_CLASS_NAME}>Tags (separadas por vírgula)</label>
@@ -588,6 +758,19 @@ export function PostEditor({ post }: Props) {
             placeholder={`Tags em ${POST_LOCALE_DETAILS[activeLocale].adminLabel.toLowerCase()}`}
             className={FIELD_CLASS_NAME}
           />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label htmlFor={`${fieldId}-${activeLocale}-sources`} className={LABEL_CLASS_NAME}>Fontes</label>
+          <textarea
+            id={`${fieldId}-${activeLocale}-sources`}
+            value={activeDraft.sources}
+            onChange={(event) => updateActiveDraft({ sources: event.target.value })}
+            rows={3}
+            placeholder="Uma por linha: Nome da fonte | https://exemplo.com/pagina"
+            className={`${FIELD_CLASS_NAME} resize-y font-mono text-xs`}
+          />
+          <span className="text-xs text-neutral-500">Fontes verificáveis ajudam leitores e sistemas de busca a conferir o texto.</span>
         </div>
 
         {coverUrl.trim() && (
@@ -612,17 +795,6 @@ export function PostEditor({ post }: Props) {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1">
-                <label htmlFor={`${fieldId}-slug`} className={LABEL_CLASS_NAME}>Slug</label>
-                <input
-                  id={`${fieldId}-slug`}
-                  value={slug}
-                  onChange={(event) => { setSlug(event.target.value); setSlugEdited(true); setNotice("") }}
-                  required
-                  aria-invalid={Boolean(error && !slug.trim())}
-                  className={FIELD_CLASS_NAME}
-                />
-              </div>
-              <div className="flex flex-col gap-1">
                 <label htmlFor={`${fieldId}-style`} className={LABEL_CLASS_NAME}>Estilo</label>
                 <select id={`${fieldId}-style`} value={style} onChange={(event) => { setStyle(event.target.value as PostData["style"]); setNotice("") }} className={FIELD_CLASS_NAME}>
                   <option value="standard">Standard</option>
@@ -630,16 +802,43 @@ export function PostEditor({ post }: Props) {
                   <option value="opinion">Opinion</option>
                 </select>
               </div>
-              <label className="flex items-center gap-2 rounded border border-neutral-200 px-2 py-1 text-sm text-neutral-700 dark:border-neutral-700 dark:text-neutral-300">
+              <label className="flex items-start gap-2 rounded border border-neutral-200 px-3 py-2 text-sm text-neutral-700 dark:border-neutral-700 dark:text-neutral-300">
                 <input
                   type="checkbox"
                   checked={visibleInTimeline}
                   onChange={(event) => { setVisibleInTimeline(event.target.checked); setNotice("") }}
-                  className="size-5 rounded border-neutral-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:focus-visible:ring-neutral-300"
+                  className="mt-0.5 size-5 rounded border-neutral-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:focus-visible:ring-neutral-300"
                 />
-                Aparecer na timeline
+                <span className="flex flex-col gap-0.5">
+                  <span>Aparecer na timeline</span>
+                  <span className="text-xs text-neutral-500">Ao desmarcar, o post recebe noindex e sai do sitemap, temas e relacionados.</span>
+                </span>
               </label>
             </div>
+
+            <fieldset className="border-t border-neutral-200 pt-4 dark:border-neutral-800">
+              <legend className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Temas curados</legend>
+              <p className="mt-1 text-xs text-neutral-500">Temas são coleções editoriais; tags continuam sendo palavras-chave internas.</p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {themes.map((theme) => (
+                  <label key={theme._id} className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300">
+                    <input
+                      type="checkbox"
+                      checked={selectedThemeIds.includes(theme._id)}
+                      onChange={(event) => {
+                        setSelectedThemeIds((current) => event.target.checked
+                          ? [...current, theme._id]
+                          : current.filter((id) => id !== theme._id))
+                        setNotice("")
+                      }}
+                      className="size-4 rounded border-neutral-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:focus-visible:ring-neutral-300"
+                    />
+                    <span>{theme.name}{!theme.active && <span className="ml-1 text-xs text-neutral-500">(inativo)</span>}</span>
+                  </label>
+                ))}
+                {themes.length === 0 && <p className="text-xs text-neutral-500">Nenhum tema cadastrado.</p>}
+              </div>
+            </fieldset>
 
             <div className="grid gap-3 rounded-xl border border-neutral-200 p-3 dark:border-neutral-800">
               <div className="flex flex-col gap-1">

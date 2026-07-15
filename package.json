@@ -12,6 +12,8 @@
     "lint": "eslint",
     "seo:audit": "node --env-file-if-exists=.env.local scripts/audit-seo.mjs",
     "seo:audit:rendered": "node scripts/audit-rendered-seo.mjs http://localhost:3000",
+    "seo:migrate:dry": "node --env-file-if-exists=.env.local scripts/migrate-post-seo.mjs",
+    "seo:migrate:verify": "node --env-file-if-exists=.env.local scripts/verify-post-seo-migration.mjs",
     "push:keys": "web-push generate-vapid-keys",
     "test": "node --conditions=react-server --test tests/*.test.mjs"
   },

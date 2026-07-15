@@ -45,7 +45,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ not
   if (source === "direct" && result.counted) {
     const [viewer, adminId] = await Promise.all([getAuthUser(), Promise.resolve(getAdminUserId())])
     if (adminId) {
-      const title = note.seoTitle?.trim() || note.title?.trim() || noteDisplayTitle(note)
+      const title = note.title?.trim() || noteDisplayTitle(note)
       const details = viewRequestDetails(req, body ?? {})
       if (viewer) {
         await createNotification({

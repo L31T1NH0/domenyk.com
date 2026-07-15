@@ -490,8 +490,7 @@ export function NoteCard({ note, showMetadata = false, viewContext, isAdmin, onD
   const commentActionLabel = commentsLoaded && comments.length > 0 ? "ver comentários" : "comentar"
   const notePath = `/notes/${note._id}`
   const displayTitle = noteDisplayTitle(note)
-  const visibleTitle = note.seoTitle?.trim() || note.title?.trim()
-  const visibleDescription = note.seoDescription?.trim()
+  const visibleTitle = note.title?.trim()
 
   return (
     <article ref={articleRef} className="group relative flex w-full min-w-0 flex-col gap-2.5 border-y border-neutral-200 pb-5 pt-1 dark:border-white/10">
@@ -539,10 +538,6 @@ export function NoteCard({ note, showMetadata = false, viewContext, isAdmin, onD
         </h2>
       ) : (
         <h2 className="sr-only"><Link href={notePath}>{displayTitle}</Link></h2>
-      )}
-
-      {showMetadata && visibleDescription && !editing && (
-        <p className="text-sm leading-relaxed text-neutral-600 dark:text-[#c2bbb1]">{visibleDescription}</p>
       )}
 
       {editing ? (

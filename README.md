@@ -15,6 +15,7 @@ Use Node.js 22 (see `.nvmrc`) and configure these environment variables in `.env
 - `VAPID_PUBLIC_KEY` (public Web Push key)
 - `VAPID_PRIVATE_KEY` (private Web Push key; never expose it to the browser)
 - `VAPID_SUBJECT` (a contact URI such as `mailto:you@example.com`)
+- `INDEXNOW_KEY` (8–128 hexadecimal characters; enables best-effort URL notifications to IndexNow)
 
 Generate the Web Push key pair once with:
 
@@ -23,6 +24,23 @@ npm run push:keys
 ```
 
 Copy the generated values to `.env.local` and to the corresponding Vercel environment variables. Keep the same pair across deployments; replacing it invalidates existing browser subscriptions.
+
+When `INDEXNOW_KEY` is configured, the site exposes it at `/indexnow-key.txt` and notifies IndexNow after publishing, updating, hiding, unpublishing, changing a URL, or deleting indexable content. Failed notifications never block an editorial save.
+
+## SEO data migration
+
+Preview the additive post migration without writing to the database:
+
+```bash
+npm run seo:migrate:dry
+```
+
+Applying it requires a new, empty backup directory. Every collection is exported as canonical EJSON with collection options, indexes, document counts, and SHA-256 hashes before any post is changed:
+
+```bash
+node --env-file-if-exists=.env.local scripts/migrate-post-seo.mjs --apply --backup-dir=/safe/path/new-backup
+npm run seo:migrate:verify -- --backup-dir=/safe/path/new-backup
+```
 
 First, run the development server:
 
