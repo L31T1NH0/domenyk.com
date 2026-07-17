@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { adminOnly } from "@/lib/auth"
 import { themeInputFromBody } from "@/lib/api/theme-input"
-import { createTheme, ensureDefaultThemes, getThemes, serializeTheme } from "@/lib/db/themes"
+import { createTheme, getThemes, serializeTheme } from "@/lib/db/themes"
 
 export async function GET() {
   const unauthorized = await adminOnly()
   if (unauthorized) return unauthorized
-  await ensureDefaultThemes()
   return NextResponse.json((await getThemes()).map(serializeTheme))
 }
 

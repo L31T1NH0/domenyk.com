@@ -19,7 +19,7 @@ export function AdminMessages() {
 
   async function selectThread(id: string) {
     setSelected(id)
-    const response = await fetch(`/api/messages/${id}`, { cache: "no-store" })
+    const response = await fetch(`/api/messages/${id}/read`, { method: "POST" })
     if (!response.ok) return
     const detail = await response.json()
     setThreads((current) => current?.map((item) => item._id === id ? detail : item) ?? [])

@@ -27,6 +27,7 @@ export type MarkdownRenderOptions = {
   coAuthorImageUrl?: string | null
   defaultImageAlt?: string
   imagePolicy?: MarkdownImagePolicy
+  externalLinkRel?: readonly string[]
 }
 
 type MdastNode = {
@@ -52,7 +53,7 @@ const markdownSanitizeSchema: SanitizeSchema = {
     ...defaultSchema.attributes,
     a: [
       ...(defaultSchema.attributes?.a ?? []),
-      ["rel", "nofollow"],
+      ["rel", "ugc", "nofollow", "noopener", "noreferrer"],
       ["target", "_blank"],
     ],
     img: [
@@ -351,6 +352,23 @@ function rehypePrefixFragmentLinks() {
   }
 }
 
+function rehypeHardenExternalLinks(rel?: readonly string[]) {
+  const allowedRel = new Set(["ugc", "nofollow", "noopener", "noreferrer"])
+  const tokens = Array.from(new Set(rel?.filter((token) => allowedRel.has(token)) ?? []))
+  if (tokens.length === 0) return () => undefined
+
+  return (tree: Root) => {
+    visit(tree, "element", (node: Element) => {
+      if (node.tagName !== "a") return
+      const href = node.properties?.href
+      if (typeof href !== "string" || !/^https?:\/\//i.test(href)) return
+      node.properties = node.properties ?? {}
+      node.properties.rel = tokens
+      node.properties.target = "_blank"
+    })
+  }
+}
+
 function createProcessor(
   options: MarkdownRenderOptions = {},
   onParagraphId?: (paragraphId: string) => void
@@ -368,6 +386,7 @@ function createProcessor(
     .use(rehypeSlug)
     .use(rehypeAutolinkHeadings, { behavior: "wrap" })
     .use(rehypePrefixFragmentLinks)
+    .use(rehypeHardenExternalLinks, options.externalLinkRel)
     .use(rehypeSanitize, markdownSanitizeSchema)
     .use(rehypeStringify)
 }
@@ -399,6 +418,7 @@ export function hasParagraphId(
     coAuthorImageUrl: options.coAuthorImageUrl ?? null,
     defaultImageAlt: options.defaultImageAlt ?? null,
     imagePolicy: options.imagePolicy ?? null,
+    externalLinkRel: options.externalLinkRel ?? null,
   })
   const cacheKey = createHash("sha256")
     .update(optionsKey)

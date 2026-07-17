@@ -5,6 +5,20 @@ self.addEventListener("push", (event) => {
   } catch {
     data = null
   }
+  if (data?.kind === "verification" && typeof data.challengeToken === "string") {
+    event.waitUntil((async () => {
+      const subscription = await self.registration.pushManager.getSubscription()
+      if (!subscription) return
+      await fetch("/api/push/subscriptions/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...subscription.toJSON(), challengeToken: data.challengeToken }),
+        credentials: "same-origin",
+      })
+    })())
+    return
+  }
+
   if (!data || typeof data.title !== "string" || typeof data.body !== "string") return
 
   const target = typeof data.url === "string" && data.url.startsWith("/") && !data.url.startsWith("//")

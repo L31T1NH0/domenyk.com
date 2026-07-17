@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto"
 import type { Filter, ObjectId } from "mongodb"
 import { deleteImage } from "@/lib/blob"
 import { getDb } from "@/lib/db/client"
+import { BLOB_PUBLIC_HOSTNAME } from "@/lib/blob-host"
 
 type CommentUploadState = "pending" | "reserved" | "deleting"
 
@@ -58,8 +59,10 @@ const DELETION_OUTBOX_DELAY_MS = 5 * 60 * 1000
 const DEFAULT_CLEANUP_BUDGET_MS = 1_500
 const MAX_CLEANUP_BUDGET_MS = 30_000
 const MAX_CLEANUP_CONCURRENCY = 4
-const COMMENT_BLOB_URL_PATTERN =
-  /https:\/\/[a-z0-9-]+\.public\.blob\.vercel-storage\.com\/comments\/[a-z0-9._~!$&*+,;=:@%/-]+/gi
+const COMMENT_BLOB_URL_PATTERN = new RegExp(
+  `https:\\/\\/${BLOB_PUBLIC_HOSTNAME.replace(/\./g, "\\.")}\\/comments\\/[a-z0-9._~!$&*+,;=:@%/-]+`,
+  "gi"
+)
 
 let indexesPromise: Promise<void> | undefined
 

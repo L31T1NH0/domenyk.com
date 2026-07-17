@@ -21,10 +21,11 @@ test("requires HTTPS where secure media is expected", () => {
 })
 
 test("allows only configured remote image origins", () => {
-  const blob = "https://store.public.blob.vercel-storage.com/posts/cover.webp"
+  const blob = "https://x4ceaxoe9soax6vc.public.blob.vercel-storage.com/posts/cover.webp"
   assert.equal(asTrustedImageUrl(blob), blob)
   assert.equal(asTrustedImageUrl("https://img.clerk.com/user.jpg"), "https://img.clerk.com/user.jpg")
   assert.equal(asTrustedImageUrl("https://store.public.blob.vercel-storage.com.evil.test/x.webp"), undefined)
+  assert.equal(asTrustedImageUrl("https://another-store.public.blob.vercel-storage.com/x.webp"), undefined)
   assert.equal(asTrustedImageUrl("https://tracker.example/pixel.gif"), undefined)
   assert.deepEqual(
     asTrustedImageUrlArray([blob, "https://tracker.example/pixel.gif"], 6),

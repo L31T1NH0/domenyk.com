@@ -1,5 +1,7 @@
 import { clerkMiddleware } from "@clerk/nextjs/server"
 import { NextResponse } from "next/server"
+import { shouldBlockApiMutation } from "@/lib/csrf"
+import { BLOB_PUBLIC_HOSTNAME } from "@/lib/blob-host"
 
 function isAdminRoute(pathname: string): boolean {
   return pathname === "/admin" || pathname.startsWith("/admin/") ||
@@ -47,6 +49,10 @@ export default clerkMiddleware(async (auth, req) => {
   requestHeaders.set("x-site-language", documentLanguage(req.nextUrl.pathname))
   const continueRequest = () => NextResponse.next({ request: { headers: requestHeaders } })
 
+  if (req.nextUrl.pathname.startsWith("/api/") && shouldBlockApiMutation(req)) {
+    return NextResponse.json({ error: "Origem não permitida." }, { status: 403 })
+  }
+
   if (!isAdminRoute(req.nextUrl.pathname)) return continueRequest()
 
   const adminUserId = process.env.ADMIN_USER_ID
@@ -76,14 +82,14 @@ export default clerkMiddleware(async (auth, req) => {
       "connect-src": [
         "https://*.clarity.ms",
         "https://*.vercel-insights.com",
-        "https://*.public.blob.vercel-storage.com",
+        `https://${BLOB_PUBLIC_HOSTNAME}`,
       ],
       "font-src": ["self"],
       "frame-ancestors": ["none"],
       "img-src": [
         "data:",
         "blob:",
-        "https://*.public.blob.vercel-storage.com",
+        `https://${BLOB_PUBLIC_HOSTNAME}`,
         "https://res.cloudinary.com",
         "https://images.clerk.dev",
       ],

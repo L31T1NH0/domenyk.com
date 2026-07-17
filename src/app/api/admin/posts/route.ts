@@ -6,6 +6,7 @@ import { parsePostBackground, parsePostCover, parsePostSources, parsePostStyle }
 import { sendReaderPush } from "@/lib/push"
 import { descriptionFromMarkdown } from "@/lib/seo"
 import { notifyIndexNow } from "@/lib/indexnow"
+import { invalidatePublicContentCache } from "@/lib/public-content-cache"
 
 export async function POST(req: NextRequest) {
   const unauthorized = await adminOnly()
@@ -47,6 +48,7 @@ export async function POST(req: NextRequest) {
       hiddenFromTimeline: body.hiddenFromTimeline === true,
       published: body.published === true,
     })
+    invalidatePublicContentCache()
 
     if (post.published) {
       if (!post.hiddenFromTimeline) after(() => notifyIndexNow([`/posts/${post.slug}`]))

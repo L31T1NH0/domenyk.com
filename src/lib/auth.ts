@@ -40,5 +40,7 @@ export async function getAuthUser() {
     id: user.id,
     name: user.fullName ?? user.username ?? "Anônimo",
     imageUrl: user.imageUrl,
+    emailVerified: user.primaryEmailAddress?.verification?.status === "verified",
+    createdAt: new Date(user.createdAt),
   }
 }

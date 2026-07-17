@@ -64,7 +64,7 @@ export function Correspondence() {
     setSelected(id)
     if (threads?.find((thread) => thread._id === id)?.entries) return
     setLoadingThread(id)
-    const response = await fetch(`/api/messages/${id}`, { cache: "no-store" })
+    const response = await fetch(`/api/messages/${id}/read`, { method: "POST" })
     if (!response.ok) {
       setError("Não foi possível abrir este assunto.")
       setLoadingThread(null)
@@ -95,7 +95,7 @@ export function Correspondence() {
     const fromHash = window.location.hash.slice(1)
     if (!fromHash || !threads.some((thread) => thread._id === fromHash)) return
     let cancelled = false
-    fetch(`/api/messages/${fromHash}`, { cache: "no-store" })
+    fetch(`/api/messages/${fromHash}/read`, { method: "POST" })
       .then((response) => response.ok ? response.json() : null)
       .then((detail) => {
         if (!cancelled && detail) {

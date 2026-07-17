@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { BLOB_PUBLIC_HOSTNAME } from "./src/lib/blob-host";
 
 const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -6,6 +7,10 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+];
+
+const privateCacheHeaders = [
+  { key: "Cache-Control", value: "private, no-store, max-age=0, must-revalidate" },
 ];
 
 const nextConfig: NextConfig = {
@@ -16,7 +21,7 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "res.cloudinary.com" },
-      { protocol: "https", hostname: "*.public.blob.vercel-storage.com" },
+      { protocol: "https", hostname: BLOB_PUBLIC_HOSTNAME },
       { protocol: "https", hostname: "images.clerk.dev" },
       { protocol: "https", hostname: "img.clerk.com" },
     ],
@@ -24,6 +29,14 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },
+      { source: "/admin/:path*", headers: privateCacheHeaders },
+      { source: "/fale-comigo/:path*", headers: privateCacheHeaders },
+      { source: "/notificacoes/:path*", headers: privateCacheHeaders },
+      { source: "/api/admin/:path*", headers: privateCacheHeaders },
+      { source: "/api/account/:path*", headers: privateCacheHeaders },
+      { source: "/api/comments/:path*", headers: privateCacheHeaders },
+      { source: "/api/messages/:path*", headers: privateCacheHeaders },
+      { source: "/api/notifications/:path*", headers: privateCacheHeaders },
       {
         source: "/push-service-worker.js",
         headers: [

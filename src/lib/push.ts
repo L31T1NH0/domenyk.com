@@ -49,6 +49,23 @@ function asWebPushSubscription(subscription: StoredPushSubscription): webPush.Pu
   }
 }
 
+export async function sendPushSubscriptionChallenge(
+  subscription: StoredPushSubscription,
+  challengeToken: string
+): Promise<boolean> {
+  if (!configureWebPush()) return false
+  try {
+    await webPush.sendNotification(
+      asWebPushSubscription(subscription),
+      JSON.stringify({ kind: "verification", challengeToken }),
+      { TTL: 5 * 60 }
+    )
+    return true
+  } catch {
+    return false
+  }
+}
+
 async function deliver(subscriptions: StoredPushSubscription[], payload: PushPayload) {
   if (!configureWebPush()) return { configured: false, sentCount: 0, failedCount: 0 }
   let sentCount = 0

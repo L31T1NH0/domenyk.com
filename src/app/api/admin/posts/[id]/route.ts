@@ -21,6 +21,7 @@ import { sendReaderPush } from "@/lib/push"
 import { descriptionFromMarkdown } from "@/lib/seo"
 import { notifyIndexNow } from "@/lib/indexnow"
 import { preservedSlugAliases } from "@/lib/post-seo"
+import { invalidatePublicContentCache } from "@/lib/public-content-cache"
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -60,6 +61,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         getOriginalContentUpdatedAt(existingPost),
         existingTranslation
       )
+      invalidatePublicContentCache()
 
       if (translation.published || existingTranslation?.published) {
         const paths = [
@@ -107,6 +109,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
     if (Object.keys(data).length > 0) {
       await updatePost(id, data)
+      invalidatePublicContentCache()
     }
 
     if (existingPost.published || data.published === true) {
@@ -175,6 +178,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   await deleteCommentsForParent(id)
   await deletePost(id)
   await deleteCommentImagesFromContents(contents)
+  invalidatePublicContentCache()
   if (indexedPaths.length > 0) after(() => notifyIndexNow(indexedPaths))
   return NextResponse.json({ ok: true })
 }

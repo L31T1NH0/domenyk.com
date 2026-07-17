@@ -3,6 +3,7 @@ import { adminOnly } from "@/lib/auth"
 import { createSerializedNoteFromBody } from "@/lib/api/note-input"
 import { sendReaderPush } from "@/lib/push"
 import { descriptionFromMarkdown, noteDisplayTitle } from "@/lib/seo"
+import { invalidatePublicContentCache } from "@/lib/public-content-cache"
 
 export async function POST(req: NextRequest) {
   const unauthorized = await adminOnly()
@@ -11,6 +12,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null) as { title?: unknown; content?: unknown; images?: unknown } | null
   try {
     const note = await createSerializedNoteFromBody(body)
+    invalidatePublicContentCache()
     after(() => sendReaderPush({
       dedupeKey: `note:published:${note._id}`,
       source: "automatic",

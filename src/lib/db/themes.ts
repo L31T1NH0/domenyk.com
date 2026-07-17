@@ -59,14 +59,15 @@ export function serializeTheme(theme: Theme): SerializedTheme {
   }
 }
 
-export async function ensureDefaultThemes(): Promise<void> {
+export async function ensureDefaultThemes(): Promise<number> {
   const col = await collection()
   const now = new Date()
-  await Promise.all(DEFAULT_THEMES.map((theme) => col.updateOne(
+  const results = await Promise.all(DEFAULT_THEMES.map((theme) => col.updateOne(
     { slug: theme.slug },
     { $setOnInsert: { ...theme, active: false, postIds: [], createdAt: now, updatedAt: now } },
     { upsert: true }
   )))
+  return results.reduce((total, result) => total + result.upsertedCount, 0)
 }
 
 export async function getThemes({ activeOnly = false }: { activeOnly?: boolean } = {}): Promise<Theme[]> {

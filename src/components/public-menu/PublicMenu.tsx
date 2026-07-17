@@ -25,6 +25,7 @@ import {
 import { POST_LOCALE_DETAILS } from "@/lib/post-locales"
 import { useThemeSwitcher } from "@/components/ThemeSwitcher"
 import { PushSubscriptionManager } from "@/components/notifications/PushSubscriptionManager"
+import { revokePrivatePushForCurrentDevice } from "@/lib/client-push"
 import { usePublicMenu } from "./PublicMenuContext"
 
 const ITEM_CLASS_NAME = "group flex min-h-9 w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-[13px] text-zinc-700 outline-none transition-colors hover:bg-zinc-100 focus-visible:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-white/[0.07] dark:focus-visible:bg-white/[0.07]"
@@ -56,10 +57,18 @@ export function PublicMenu() {
   const notificationsBackRef = useRef<HTMLButtonElement>(null)
   const notificationsTriggerRef = useRef<HTMLButtonElement>(null)
   const focusFirstOnOpenRef = useRef(false)
+  const userCreatedAt = user?.createdAt?.getTime()
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn || !user?.id) return
     let cancelled = false
+    const accountAge = userCreatedAt ? Date.now() - userCreatedAt : Number.POSITIVE_INFINITY
+    if (accountAge >= 0 && accountAge <= 30 * 60 * 1000) {
+      fetch("/api/account/registration", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      }).catch(() => undefined)
+    }
     fetch("/api/account/admin", { cache: "no-store" })
       .then((response) => response.ok ? response.json() : { admin: false })
       .then((data) => { if (!cancelled) setVerifiedAdminUserId(data.admin === true ? user.id : null) })
@@ -67,7 +76,7 @@ export function PublicMenu() {
       .then((response) => response.ok ? response.json() : { unread: 0 })
       .then((data) => { if (!cancelled) setUnreadMessages(Math.max(0, Number(data.unread) || 0)) })
     return () => { cancelled = true }
-  }, [isLoaded, isSignedIn, user?.id])
+  }, [isLoaded, isSignedIn, user?.id, userCreatedAt])
 
   const admin = Boolean(isLoaded && isSignedIn && user?.id && verifiedAdminUserId === user.id)
 
@@ -194,24 +203,7 @@ export function PublicMenu() {
 
   async function signOut() {
     closeMenu()
-    if (isSignedIn && "serviceWorker" in navigator) {
-      let subscription: PushSubscription | null = null
-      try {
-        const registration = await navigator.serviceWorker.getRegistration("/")
-        subscription = await registration?.pushManager.getSubscription() ?? null
-        if (subscription) {
-          const response = await fetch("/api/push/subscriptions", {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ endpoint: subscription.endpoint }),
-            keepalive: true,
-          })
-          if (!response.ok) throw new Error("Não foi possível revogar os alertas privados.")
-        }
-      } catch {
-        await subscription?.unsubscribe().catch(() => false)
-      }
-    }
+    if (isSignedIn) await revokePrivatePushForCurrentDevice().catch(() => undefined)
     setVerifiedAdminUserId(null)
     await clerk.signOut({ redirectUrl: "/" })
   }

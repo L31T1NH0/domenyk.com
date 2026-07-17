@@ -1,15 +1,19 @@
 import { isDeepStrictEqual } from "node:util"
-import { readFile } from "node:fs/promises"
 import { resolve } from "node:path"
 import { EJSON } from "bson"
 import { MongoClient } from "mongodb"
+import { backupPassphrase, readEncryptedBackup } from "./secure-mongo-backup.mjs"
 
 const backupDirectory = process.argv.find((argument) => argument.startsWith("--backup-dir="))?.slice("--backup-dir=".length)
 const uri = process.env.MONGODB_URI
 if (!backupDirectory) throw new Error("Use --backup-dir=/caminho/do/backup.")
 if (!uri) throw new Error("MONGODB_URI is not set")
+const passphrase = backupPassphrase()
 
-const originalPosts = EJSON.parse(await readFile(resolve(backupDirectory, "posts.ejson"), "utf8"), { relaxed: false })
+const originalPosts = EJSON.parse(
+  await readEncryptedBackup(resolve(backupDirectory, "posts.ejson.enc"), passphrase),
+  { relaxed: false }
+)
 const client = new MongoClient(uri)
 try {
   await client.connect()

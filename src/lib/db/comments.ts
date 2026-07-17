@@ -4,6 +4,7 @@ import { renderMarkdownSync, type MarkdownRenderOptions } from "../mdx"
 import { toObjectId } from "../validation"
 import { MAX_COMMENT_IMAGES } from "@/lib/api/comment-input"
 import { noteDisplayTitle } from "../seo"
+import { isProjectBlobHostname } from "../blob-host"
 
 export type Comment = {
   _id: ObjectId
@@ -109,7 +110,7 @@ function commentMarkdownOptions(content: string): MarkdownRenderOptions {
       const url = new URL(candidate)
       if (
         url.protocol === "https:" &&
-        url.hostname.endsWith(".public.blob.vercel-storage.com") &&
+        isProjectBlobHostname(url.hostname) &&
         url.pathname.startsWith("/comments/")
       ) {
         allowedUrlPrefixes.add(`${url.origin}/comments/`)
@@ -120,6 +121,7 @@ function commentMarkdownOptions(content: string): MarkdownRenderOptions {
   }
 
   return {
+    externalLinkRel: ["ugc", "nofollow", "noopener", "noreferrer"],
     imagePolicy: {
       mode: "allowlist",
       allowedUrlPrefixes: [...allowedUrlPrefixes],

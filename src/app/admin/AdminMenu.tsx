@@ -23,6 +23,7 @@ import {
   UsersIcon,
 } from "@heroicons/react/24/outline"
 import { useThemeSwitcher } from "@/components/ThemeSwitcher"
+import { revokePrivatePushForCurrentDevice } from "@/lib/client-push"
 
 const navItems = [
   { href: "/admin", label: "Visão geral", icon: ChartBarSquareIcon },
@@ -91,6 +92,7 @@ export function AdminMenu() {
 
   async function signOut() {
     closeMenu()
+    if (isSignedIn) await revokePrivatePushForCurrentDevice().catch(() => undefined)
     await clerk.signOut({ redirectUrl: "/" })
   }
 

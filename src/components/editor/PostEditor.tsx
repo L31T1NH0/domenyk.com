@@ -356,7 +356,8 @@ export function PostEditor({ post }: Props) {
 
   useEffect(() => {
     const controller = new AbortController()
-    fetch("/api/admin/themes", { signal: controller.signal })
+    fetch("/api/admin/themes/defaults", { method: "POST", signal: controller.signal })
+      .then(() => fetch("/api/admin/themes", { signal: controller.signal }))
       .then(async (response) => {
         if (!response.ok) throw new Error()
         return response.json() as Promise<ThemeOption[]>

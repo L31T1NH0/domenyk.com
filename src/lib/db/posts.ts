@@ -475,6 +475,14 @@ export async function getPostByPublicId(publicId: string): Promise<Post | null> 
   return col.findOne({ publicId, deleting: { $ne: true } })
 }
 
+export async function getPostByPublicIdentifier(value: string): Promise<Post | null> {
+  const post = await (await collection()).findOne({
+    deleting: { $ne: true },
+    $or: [{ publicId: value }, { slug: value }, { slugAliases: value }],
+  })
+  return post ? ensurePostPublicId(post) : null
+}
+
 export async function getPostById(id: string): Promise<Post | null> {
   const objectId = toObjectId(id)
   if (!objectId) return null
@@ -505,21 +513,7 @@ export async function getPostByLocalizedSlug(
       { [`${translationPath}.slugAliases`]: slug },
     ],
   })
-  if (post) return ensurePostPublicId(post)
-
-  // Resolve translations created before localized slugs were stored.
-  const legacyCandidates = await col.find(
-    { [`${translationPath}.title`]: { $type: "string" }, deleting: { $ne: true } },
-    { projection: { [`${translationPath}.title`]: 1 } }
-  ).toArray()
-  const legacy = legacyCandidates.find((candidate) => {
-    const translation = candidate.translations?.[locale]
-    return translation && slugifyPostTitle(translation.title) === slug
-  })
-  if (!legacy) return null
-
-  const fullPost = await col.findOne({ _id: legacy._id, deleting: { $ne: true } })
-  return fullPost ? ensurePostPublicId(fullPost) : null
+  return post ? ensurePostPublicId(post) : null
 }
 
 async function incrementPostViews(publicId: string): Promise<number> {

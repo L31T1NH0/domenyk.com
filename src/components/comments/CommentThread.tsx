@@ -68,6 +68,7 @@ export function CommentThread({ postId, locale = "pt", isAdmin = false }: Props)
               submitting={submitting}
               submitLabel="Comentar"
               submittingLabel="enviando..."
+              allowImageUpload={isAdmin}
               onDraftChange={setDraft}
               onSubmit={submit}
             />

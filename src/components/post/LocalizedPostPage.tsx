@@ -171,12 +171,12 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
   const nonce = (await headers()).get("x-nonce") ?? undefined
   const post = await findPost(slug, locale)
   if (!post) notFound()
-  if (localizedPostSlug(post, locale) !== slug) permanentRedirect(localizedPostPath(post, locale))
 
   const version = getPostVersion(post, locale)
   if (!version) notFound()
   const admin = await isAdmin()
   if (!version.published && !admin) notFound()
+  if (localizedPostSlug(post, locale) !== slug) permanentRedirect(localizedPostPath(post, locale))
 
   let coAuthorImageUrl = version.friendImage ?? null
   if (version.coAuthorUserId) {

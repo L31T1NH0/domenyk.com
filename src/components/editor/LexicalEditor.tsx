@@ -93,6 +93,7 @@ type Props = {
   imageUploadEndpoint?: string
   imageAssetsEndpoint?: string
   allowImageAssetLibrary?: boolean
+  allowImages?: boolean
   onChangeDelayMs?: number
   editorRef?: MutableRefObject<LexicalEditorInstance | null>
 }
@@ -340,6 +341,7 @@ export function LexicalEditor({
   imageUploadEndpoint,
   imageAssetsEndpoint,
   allowImageAssetLibrary,
+  allowImages = true,
   onChangeDelayMs = 0,
   editorRef,
 }: Props) {
@@ -394,6 +396,7 @@ export function LexicalEditor({
           imageUploadEndpoint={imageUploadEndpoint}
           imageAssetsEndpoint={imageAssetsEndpoint}
           allowImageAssetLibrary={allowImageAssetLibrary}
+          allowImages={allowImages}
         />
       )}
       <div className={`relative ${shellClassName}`}>
@@ -421,6 +424,7 @@ export function LexicalEditor({
           imageUploadEndpoint={imageUploadEndpoint}
           imageAssetsEndpoint={imageAssetsEndpoint}
           allowImageAssetLibrary={allowImageAssetLibrary}
+          allowImages={allowImages}
         />
       )}
     </LexicalComposer>

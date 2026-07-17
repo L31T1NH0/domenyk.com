@@ -1,8 +1,15 @@
 import { MongoClient } from "mongodb"
 import { randomUUID } from "crypto"
+import { backupDatabase, backupPassphrase } from "./secure-mongo-backup.mjs"
 
 const URI = process.env.MONGODB_URI
 if (!URI) throw new Error("MONGODB_URI não definida")
+const apply = process.argv.includes("--apply")
+const confirmed = process.argv.includes("--confirm=APLICAR-MIGRACAO-LEGADA")
+const backupArg = process.argv.find((argument) => argument.startsWith("--backup-dir="))?.slice("--backup-dir=".length)
+if (apply && !confirmed) throw new Error("Use --confirm=APLICAR-MIGRACAO-LEGADA junto com --apply.")
+if (apply && !backupArg) throw new Error("Use --backup-dir=/caminho/fora/do/repositorio junto com --apply.")
+const passphrase = apply ? backupPassphrase() : null
 
 const client = new MongoClient(URI)
 
@@ -26,16 +33,18 @@ async function main() {
   const oldPosts = await col.find({}).toArray()
   console.log(`Encontrados ${oldPosts.length} posts`)
 
-  let migrated = 0
-  let skipped = 0
+  const candidates = oldPosts.filter((post) => !(post.slug && !post.postId))
+  const skipped = oldPosts.length - candidates.length
+  if (!apply) {
+    console.log(JSON.stringify({ mode: "dry-run", found: oldPosts.length, candidates: candidates.length, skipped }, null, 2))
+    await client.close()
+    return
+  }
 
-  for (const post of oldPosts) {
-    // Já tem o novo schema se tiver `slug` e não tiver `postId`
-    if (post.slug && !post.postId) {
-      console.log(`  [skip] ${post.title} — já migrado`)
-      skipped++
-      continue
-    }
+  await backupDatabase(db, backupArg, passphrase)
+  let migrated = 0
+
+  for (const post of candidates) {
 
     const slug = post.postId ?? post._id.toString()
     const content = post.contentMarkdown ?? post.htmlContent ?? post.content ?? ""
@@ -60,7 +69,11 @@ async function main() {
       updatedAt: publishedAt,
     }
 
-    await col.replaceOne({ _id: post._id }, newDoc)
+    const concurrencyFilter = Object.hasOwn(post, "postId")
+      ? { _id: post._id, postId: post.postId }
+      : { _id: post._id, postId: { $exists: false } }
+    const result = await col.replaceOne(concurrencyFilter, newDoc)
+    if (result.matchedCount !== 1) throw new Error(`O post ${post._id} mudou durante a migração.`)
     console.log(`  [ok] ${post.title}`)
     migrated++
   }
@@ -69,4 +82,4 @@ async function main() {
   await client.close()
 }
 
-main().catch((e) => { console.error(e); process.exit(1) })
+main().catch(async (e) => { console.error(e); await client.close().catch(() => undefined); process.exit(1) })

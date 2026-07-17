@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og"
-import { getPostByPublicId, getPostBySlug } from "@/lib/db/posts"
+import { getPostByPublicIdentifier } from "@/lib/db/posts"
 import { descriptionFromMarkdown, siteConfig } from "@/lib/seo"
 import { isPostLocale } from "@/lib/post-locales"
 import { getPostVersion } from "@/lib/post-versions"
@@ -12,6 +12,10 @@ const size = {
   height: 630,
 }
 
+const NOT_FOUND_HEADERS = {
+  "Cache-Control": "public, max-age=300, s-maxage=300, stale-while-revalidate=3600",
+}
+
 function trimText(text: string, maxLength: number) {
   if (text.length <= maxLength) return text
   const truncated = text.slice(0, maxLength + 1)
@@ -20,16 +24,26 @@ function trimText(text: string, maxLength: number) {
 
 export async function GET(req: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const post = (await getPostByPublicId(slug)) ?? (await getPostBySlug(slug))
   const localeParam = new URL(req.url).searchParams.get("locale") ?? "pt"
-  const locale = isPostLocale(localeParam) ? localeParam : "pt"
+  if (
+    slug.length > 180 ||
+    !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) ||
+    !isPostLocale(localeParam)
+  ) {
+    return new Response(null, { status: 404, headers: NOT_FOUND_HEADERS })
+  }
+
+  const locale = localeParam
+  const post = await getPostByPublicIdentifier(slug)
   const version = post ? getPostVersion(post, locale) : null
   const indexable = version ? isPostVersionIndexable(version) : false
-  const title = indexable ? postSeoTitle(version!) : siteConfig.title
-  const description = indexable
-    ? postSeoDescription(version!, descriptionFromMarkdown(version!.content, 120)) || siteConfig.description
-    : siteConfig.description
-  const tags = indexable ? version!.tags.slice(0, 3) : []
+  if (!post || !version || !indexable) {
+    return new Response(null, { status: 404, headers: NOT_FOUND_HEADERS })
+  }
+
+  const title = postSeoTitle(version)
+  const description = postSeoDescription(version, descriptionFromMarkdown(version.content, 120)) || siteConfig.description
+  const tags = version.tags.slice(0, 3)
 
   return new ImageResponse(
     (
@@ -89,6 +103,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
         </div>
       </div>
     ),
-    size
+    {
+      ...size,
+      headers: {
+        "Cache-Control": "public, max-age=300, s-maxage=86400, stale-while-revalidate=604800",
+      },
+    }
   )
 }

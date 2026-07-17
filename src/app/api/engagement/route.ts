@@ -14,7 +14,7 @@ function validToken(value: unknown): value is string {
 }
 
 export async function PATCH(req: NextRequest) {
-  if (!(await rateLimit(`engagement:${requestIdentity(req)}`, { limit: 60, windowMs: 60_000 }))) {
+  if (!(await rateLimit(`engagement:${requestIdentity(req)}`, { limit: 20, windowMs: 60_000 }))) {
     return NextResponse.json({ error: "Muitas requisições." }, { status: 429 })
   }
 
@@ -34,12 +34,14 @@ export async function PATCH(req: NextRequest) {
     if (!Number.isFinite(activeSeconds) || !Number.isFinite(progress)) {
       return NextResponse.json({ error: "Métricas inválidas." }, { status: 400 })
     }
-    await completeNotificationReading(body.token, activeSeconds, progress)
+    const updated = await completeNotificationReading(body.token, activeSeconds, progress)
+    if (!updated) return NextResponse.json({ error: "Token expirado ou evento já registrado." }, { status: 410 })
     return NextResponse.json({ ok: true })
   }
 
   if (body.event === "action" && typeof body.action === "string" && ACTIONS.has(body.action as NotificationActionType)) {
-    await appendNotificationAction(body.token, body.action as NotificationActionType)
+    const updated = await appendNotificationAction(body.token, body.action as NotificationActionType)
+    if (!updated) return NextResponse.json({ error: "Token expirado ou ação já registrada." }, { status: 410 })
     return NextResponse.json({ ok: true })
   }
 

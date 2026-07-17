@@ -10,6 +10,7 @@ import { requestIdentityFromHeaders } from "@/lib/request-identity"
 import { Header } from "@/components/Header"
 import { HomeTimeline } from "./HomeTimeline"
 import { buildPageMetadata } from "@/lib/seo"
+import { getCachedHomeFeed, getCachedPublicContentCounts } from "@/lib/public-content-cache"
 
 const HOME_TIMELINE_PAGE_SIZE = 10
 const MAX_TIMELINE_PAGE = 10_000
@@ -67,19 +68,29 @@ export default async function HomePage({
   const requestedPage = parsePage(params.page)
   const feedMode = parseFeedMode(params.mode)
   const searchQuery = parseSearchQuery(params.q)
-  const requestHeaders = await headers()
   const searchAllowed = !searchQuery || await rateLimit(
-    `home-search:${requestIdentityFromHeaders(requestHeaders)}`,
+    `home-search:${requestIdentityFromHeaders(await headers())}`,
     { limit: 30, windowMs: 60_000 }
   )
   const effectiveSearch = searchAllowed ? searchQuery : ""
   const searchError = searchAllowed ? "" : "Muitas buscas. Aguarde um instante e tente novamente."
 
   const adminPromise = isAdmin()
-  const [totalPosts, totalNotes] = await Promise.all([
-    countPosts({ excludeHiddenFromTimeline: true, search: effectiveSearch || undefined }),
-    countNotes(effectiveSearch || undefined),
-  ])
+  let totalPosts: number
+  let totalNotes: number
+  let serializedPosts
+  let serializedNotes
+
+  if (!effectiveSearch) {
+    const counts = await getCachedPublicContentCounts()
+    totalPosts = counts.totalPosts
+    totalNotes = counts.totalNotes
+  } else {
+    [totalPosts, totalNotes] = await Promise.all([
+      countPosts({ excludeHiddenFromTimeline: true, search: effectiveSearch }),
+      countNotes(effectiveSearch),
+    ])
+  }
   const activeTotal = feedMode === "posts"
     ? totalPosts
     : feedMode === "notes"
@@ -92,7 +103,11 @@ export default async function HomePage({
   let posts = [] as Awaited<ReturnType<typeof getPosts>>["posts"]
   let notes = [] as Awaited<ReturnType<typeof getNotes>>["notes"]
 
-  if (feedMode === "all") {
+  if (!effectiveSearch) {
+    const cached = await getCachedHomeFeed(currentPage, feedMode, HOME_TIMELINE_PAGE_SIZE)
+    serializedPosts = cached.posts
+    serializedNotes = cached.notes
+  } else if (feedMode === "all") {
     const entries = await getTimelinePage({
       page: currentPage,
       limit: HOME_TIMELINE_PAGE_SIZE,
@@ -125,10 +140,10 @@ export default async function HomePage({
 
       <HomeTimeline
         key={`${feedMode}:${currentPage}:${searchQuery}`}
-        posts={posts.map((post) => serializePostSummary(post))}
+        posts={serializedPosts ?? posts.map((post) => serializePostSummary(post))}
         totalPosts={totalPosts}
         totalNotes={totalNotes}
-        initialNotes={notes.map(serializeNote)}
+        initialNotes={serializedNotes ?? notes.map(serializeNote)}
         feedMode={feedMode}
         searchQuery={searchQuery}
         searchError={searchError}

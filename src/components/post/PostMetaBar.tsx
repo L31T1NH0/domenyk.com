@@ -42,8 +42,12 @@ export function PostMetaBar({ publicId, dateLabel, readingTime, initialViews = 0
     let cancelled = false
     pendingViewPublicIds.add(publicId)
 
-    const query = new URLSearchParams({ view: "1", locale, ...viewClientContext() })
-    fetch(`/api/posts/${encodeURIComponent(publicId)}?${query}`, { cache: "no-store" })
+    fetch(`/api/posts/${encodeURIComponent(publicId)}/view`, {
+      method: "POST",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ locale, ...viewClientContext() }),
+    })
       .then((res) => (res.ok ? res.json() : null))
       .then((post) => {
         if (!cancelled && typeof post?.views === "number") {

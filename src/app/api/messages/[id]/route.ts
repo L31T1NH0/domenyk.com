@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { addMessageReply, deleteMessageThread, getMessageThread, getMessageThreadForOwner, markMessageThreadRead, serializeMessageThread, setMessageThreadArchived, setMessageThreadStatus, type MessageThread } from "@/lib/db/messages"
+import { addMessageReply, deleteMessageThread, getMessageThread, getMessageThreadForOwner, serializeMessageThread, setMessageThreadArchived, setMessageThreadStatus, type MessageThread } from "@/lib/db/messages"
 import { createNotification, deleteNotificationsForMessageThread } from "@/lib/db/notifications"
 import { getAdminUserId, getAuthUser, isAdmin } from "@/lib/auth"
 import { rateLimit } from "@/lib/rate-limit"
@@ -13,8 +13,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const admin = await isAdmin()
   const thread = admin ? await getMessageThread(id) : await getMessageThreadForOwner(id, user.id)
   if (!thread) return NextResponse.json({ error: "Not found" }, { status: 404 })
-  const readThread = await markMessageThreadRead(id, user.id, admin ? undefined : user.id)
-  return NextResponse.json(serializeMessageThread(readThread ?? thread, user.id))
+  return NextResponse.json(serializeMessageThread(thread, user.id))
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

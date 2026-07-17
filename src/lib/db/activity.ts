@@ -18,7 +18,10 @@ export type ActivityEvent = {
   postSlug?: string
   postTitle?: string
   locale?: string
+  retentionUntil: Date
 }
+
+const ACTIVITY_RETENTION_MS = 90 * 24 * 60 * 60_000
 
 let indexesPromise: Promise<void> | undefined
 
@@ -30,13 +33,26 @@ async function collection() {
     col.createIndex({ type: 1, occurredAt: -1 }),
     col.createIndex({ postPublicId: 1, occurredAt: -1 }),
     col.createIndex({ visitorKey: 1, occurredAt: -1 }),
+    col.createIndex(
+      { retentionUntil: 1 },
+      { expireAfterSeconds: 0, name: "activity_events_retention" }
+    ),
+    col.updateMany(
+      { retentionUntil: { $exists: false } },
+      { $set: { retentionUntil: new Date(Date.now() + ACTIVITY_RETENTION_MS) } }
+    ),
   ]).then(() => undefined)
   await indexesPromise
   return col
 }
 
-export async function recordActivityEvent(event: Omit<ActivityEvent, "_id" | "occurredAt">) {
-  await (await collection()).insertOne({ ...event, occurredAt: new Date() } as ActivityEvent)
+export async function recordActivityEvent(event: Omit<ActivityEvent, "_id" | "occurredAt" | "retentionUntil">) {
+  const now = new Date()
+  await (await collection()).insertOne({
+    ...event,
+    occurredAt: now,
+    retentionUntil: new Date(now.getTime() + ACTIVITY_RETENTION_MS),
+  } as ActivityEvent)
 }
 
 export type ActivityDashboard = {

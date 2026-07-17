@@ -1,28 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createHash, randomUUID } from "crypto"
-import { getPostByPublicId, incrementPostViewsOnce, serializePost } from "@/lib/db/posts"
-import { getAdminUserId, getAuthUser, isAdmin } from "@/lib/auth"
-import { rateLimit } from "@/lib/rate-limit"
-import { requestIdentity } from "@/lib/request-identity"
+import { getPostByPublicId, serializePost } from "@/lib/db/posts"
+import { isAdmin } from "@/lib/auth"
 import { isPostLocale } from "@/lib/post-locales"
 import { getPostVersion } from "@/lib/post-versions"
-import { aggregateNotification, createNotification } from "@/lib/db/notifications"
-import { recordActivityEvent } from "@/lib/db/activity"
-import { viewRequestDetails } from "@/lib/view-request-details"
-
-const VIEW_COOKIE_MAX_AGE = 60 * 60 * 24
-
-function viewCookieName(publicId: string) {
-  const hash = createHash("sha256").update(publicId).digest("hex").slice(0, 16)
-  return `post_viewed_${hash}`
-}
-
-function viewVisitorKey(req: NextRequest, publicId: string): string {
-  const day = new Date().toISOString().slice(0, 10)
-  return createHash("sha256")
-    .update(`${day}\n${publicId}\n${requestIdentity(req)}`)
-    .digest("hex")
-}
 
 export async function GET(
   req: NextRequest,
@@ -48,61 +28,6 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 })
   }
 
-  const shouldTrackView = req.nextUrl.searchParams.get("view") === "1"
-  const cookieName = viewCookieName(publicId)
-  const hasViewCookie = req.cookies.has(cookieName)
-  let counted = false
-  let readingToken: string | undefined
-
-  let withinViewLimit = true
-  if (shouldTrackView && version.published && !admin && !hasViewCookie) {
-    withinViewLimit = await rateLimit(
-      `post-view:${requestIdentity(req)}`,
-      { limit: 120, windowMs: 24 * 60 * 60_000 }
-    )
-  }
-
-  if (shouldTrackView && version.published && !admin && !hasViewCookie && withinViewLimit) {
-    const result = await incrementPostViewsOnce(publicId, viewVisitorKey(req, publicId))
-    post.views = result.views
-    counted = result.counted
-    const viewer = result.counted ? await getAuthUser() : null
-    if (result.counted) {
-      await recordActivityEvent({
-        type: "post_view", visitorKey: requestIdentity(req), isAuthenticated: Boolean(viewer),
-        ...(viewer ? { userId: viewer.id, userName: viewer.name } : {}), postId: post._id, postPublicId: post.publicId,
-        postSlug: post.slug, postTitle: version.title, locale: localeParam,
-      }).catch(() => undefined)
-    }
-    const adminId = getAdminUserId()
-    if (result.counted && adminId) {
-      readingToken = randomUUID()
-      const details = { ...viewRequestDetails(req, {
-        referrer: req.nextUrl.searchParams.get("referrer"),
-        landingPage: req.nextUrl.searchParams.get("landingPage"),
-        language: req.nextUrl.searchParams.get("language"),
-        visitorType: req.nextUrl.searchParams.get("visitorType"),
-        utmSource: req.nextUrl.searchParams.get("utmSource"),
-        utmMedium: req.nextUrl.searchParams.get("utmMedium"),
-        utmCampaign: req.nextUrl.searchParams.get("utmCampaign"),
-      }), id: readingToken }
-      if (viewer) {
-        await createNotification({
-          recipientId: adminId, actorId: viewer.id, actorImageUrl: viewer.imageUrl, kind: "view",
-          title: `${viewer.name} visitou ${version.title}`,
-          description: `Visita de usuário autenticado · ${result.views} visualizações no total.`,
-          href: `/posts/${post.slug}`,
-        }, details).catch(() => undefined)
-      } else {
-        await aggregateNotification({
-          recipientId: adminId, kind: "view", aggregateKey: `view:${publicId}`,
-          title: `Novas visualizações em ${version.title}`,
-          description: `O post chegou a ${result.views} visualizações.`, href: `/posts/${post.slug}`,
-        }, details).catch(() => undefined)
-      }
-    }
-  }
-
   const publicPost = {
     ...serializePost(post),
     title: version.title,
@@ -116,21 +41,12 @@ export async function GET(
     updatedAt: version.updatedAt.toISOString(),
     locale: localeParam,
   }
-  const response = NextResponse.json(
-    shouldTrackView
-      ? { views: publicPost.views ?? 0, viewCounted: counted, readingToken }
-      : { ...publicPost, viewCounted: counted }
+  return NextResponse.json(
+    { ...publicPost, viewCounted: false },
+    {
+      headers: admin
+        ? { "Cache-Control": "private, no-store, max-age=0", Vary: "Cookie" }
+        : { "Cache-Control": "public, max-age=0, s-maxage=60, stale-while-revalidate=300" },
+    }
   )
-
-  if (shouldTrackView && version.published && !admin && !hasViewCookie && withinViewLimit) {
-    response.cookies.set(cookieName, "1", {
-      httpOnly: true,
-      maxAge: VIEW_COOKIE_MAX_AGE,
-      path: "/",
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-    })
-  }
-
-  return response
 }

@@ -13,6 +13,7 @@ type Props = {
   submittingLabel?: string
   size?: "default" | "compact"
   autoFocus?: boolean
+  allowImageUpload?: boolean
   onDraftChange: (draft: string) => void
   onSubmit: (content?: string) => Promise<boolean | void> | boolean | void
 }
@@ -25,6 +26,7 @@ export function RichCommentComposer({
   submittingLabel = "Enviando...",
   size = "default",
   autoFocus = false,
+  allowImageUpload = false,
   onDraftChange,
   onSubmit,
 }: Props) {
@@ -78,6 +80,7 @@ export function RichCommentComposer({
         toolbarPlacement="bottom"
         imageUploadEndpoint="/api/comments/media"
         allowImageAssetLibrary={false}
+        allowImages={allowImageUpload}
         onChangeDelayMs={120}
         editorRef={editorRef}
       />

@@ -1,12 +1,13 @@
 import "server-only"
 
-import { randomUUID } from "crypto"
+import { createHash } from "crypto"
 import { ObjectId } from "mongodb"
 import { getDb } from "./client"
 import { toObjectId } from "../validation"
 import { sendAdminPush } from "../push"
+import { rateLimit } from "../rate-limit"
 
-type NotificationKind = "comment" | "message" | "reply" | "view"
+type NotificationKind = "account" | "comment" | "message" | "reply" | "view"
 
 export type NotificationOccurrenceDetails = {
   id?: string
@@ -34,6 +35,10 @@ export type NotificationOccurrenceDetails = {
 type NotificationOccurrence = NotificationOccurrenceDetails & {
   occurredAt: Date
 }
+
+const MAX_NOTIFICATION_OCCURRENCES = 200
+const ENGAGEMENT_TOKEN_TTL_MS = 4 * 60 * 60_000
+const AGGREGATE_PUSH_WINDOW_MS = 10 * 60_000
 
 export type Notification = {
   _id: ObjectId
@@ -87,6 +92,42 @@ export async function createNotification(
   return result.insertedId
 }
 
+export async function createNotificationOnce(
+  data: Omit<Notification, "_id" | "count" | "occurrences" | "createdAt" | "updatedAt"> & { aggregateKey: string },
+  occurrenceDetails: NotificationOccurrenceDetails = {}
+) {
+  if (data.actorId && data.actorId === data.recipientId) return null
+  const now = new Date()
+  let result
+  try {
+    result = await (await collection()).updateOne(
+      { recipientId: data.recipientId, aggregateKey: data.aggregateKey },
+      {
+        $setOnInsert: {
+          ...data,
+          count: 1,
+          occurrences: [{ occurredAt: now, ...occurrenceDetails }],
+          createdAt: now,
+          updatedAt: now,
+        },
+      },
+      { upsert: true }
+    )
+  } catch (error) {
+    if (typeof error === "object" && error && "code" in error && error.code === 11000) return null
+    throw error
+  }
+  if (!result.upsertedId) return null
+
+  await sendAdminPush({
+    title: data.title,
+    body: data.description,
+    url: data.href,
+    tag: `admin-${data.kind}-${result.upsertedId.toString()}`,
+  }).catch(() => undefined)
+  return result.upsertedId
+}
+
 export async function aggregateNotification(
   data: Omit<Notification, "_id" | "count" | "occurrences" | "readAt" | "createdAt" | "updatedAt"> & { aggregateKey: string },
   occurrenceDetails: NotificationOccurrenceDetails = {}
@@ -108,14 +149,19 @@ export async function aggregateNotification(
           updatedAt: now,
           count: { $add: [{ $ifNull: ["$count", 0] }, 1] },
           occurrences: {
-            $concatArrays: [
+            $slice: [
               {
-                $ifNull: [
-                  "$occurrences",
-                  { $cond: [{ $ne: [{ $type: "$createdAt" }, "missing"] }, ["$createdAt"], []] },
+                $concatArrays: [
+                  {
+                    $ifNull: [
+                      "$occurrences",
+                      { $cond: [{ $ne: [{ $type: "$createdAt" }, "missing"] }, ["$createdAt"], []] },
+                    ],
+                  },
+                  [occurrence],
                 ],
               },
-              [occurrence],
+              -MAX_NOTIFICATION_OCCURRENCES,
             ],
           },
           readAt: "$$REMOVE",
@@ -124,12 +170,15 @@ export async function aggregateNotification(
     ],
     { upsert: true }
   )
-  await sendAdminPush({
-    title: data.title,
-    body: data.description,
-    url: data.href,
-    tag: `admin-${data.kind}-${randomUUID()}`,
-  }).catch(() => undefined)
+  const aggregateHash = createHash("sha256").update(data.aggregateKey).digest("hex").slice(0, 20)
+  if (await rateLimit(`notification-push:${aggregateHash}`, { limit: 1, windowMs: AGGREGATE_PUSH_WINDOW_MS })) {
+    await sendAdminPush({
+      title: data.title,
+      body: data.description,
+      url: data.href,
+      tag: `admin-${data.kind}-${aggregateHash}`,
+    }).catch(() => undefined)
+  }
 }
 
 export async function listNotifications(recipientId: string, limit = 50) {
@@ -165,8 +214,17 @@ export async function deleteNotificationsForMessageThread(threadId: string) {
 }
 
 export async function completeNotificationReading(id: string, activeSeconds: number, progress: number) {
+  const validSince = new Date(Date.now() - ENGAGEMENT_TOKEN_TTL_MS)
   const result = await (await getDb()).collection("notifications").updateOne(
-    { "occurrences.id": id },
+    {
+      occurrences: {
+        $elemMatch: {
+          id,
+          occurredAt: { $gte: validSince },
+          reading: { $exists: false },
+        },
+      },
+    },
     { $set: {
       "occurrences.$.reading": {
         completedAt: new Date(),
@@ -181,9 +239,18 @@ export async function completeNotificationReading(id: string, activeSeconds: num
 export type NotificationActionType = "copied_link" | "commented" | "sent_message"
 
 export async function appendNotificationAction(id: string, type: NotificationActionType) {
+  const validSince = new Date(Date.now() - ENGAGEMENT_TOKEN_TTL_MS)
   const action = { type, occurredAt: new Date() }
   const result = await (await getDb()).collection("notifications").updateOne(
-    { "occurrences.id": id },
+    {
+      occurrences: {
+        $elemMatch: {
+          id,
+          occurredAt: { $gte: validSince },
+          "actions.type": { $ne: type },
+        },
+      },
+    },
     [{
       $set: {
         occurrences: {

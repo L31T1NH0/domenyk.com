@@ -68,6 +68,15 @@ test("fills empty image alt text with a contextual fallback without replacing au
   assert.match(html, /alt="Imagem relacionada ao texto \(3\)"/)
 })
 
+test("marks external links from user content as untrusted", () => {
+  const html = renderMarkdownSync("[site externo](https://example.com/path)", {
+    externalLinkRel: ["ugc", "nofollow", "noopener", "noreferrer"],
+  })
+
+  assert.match(html, /target="_blank"/)
+  assert.match(html, /rel="ugc nofollow noopener noreferrer"/)
+})
+
 test("paragraph IDs preserve the first legacy ID and disambiguate duplicates and collisions", () => {
   const sharedPrefix = "x".repeat(80)
   const markdown = [

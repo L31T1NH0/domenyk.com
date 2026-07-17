@@ -2,6 +2,8 @@ type PushStatus = {
   topics: Array<"posts" | "notes">
   adminEvents: boolean
   messageEvents: boolean
+  subscribed: boolean
+  pending: boolean
 }
 
 export function applicationServerKey(value: string) {
@@ -15,19 +17,48 @@ function supported() {
   return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window
 }
 
-async function statusFor(subscription: PushSubscription): Promise<PushStatus> {
+export async function pushStatusFor(subscription: PushSubscription): Promise<PushStatus> {
   const response = await fetch("/api/push/subscriptions", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ endpoint: subscription.endpoint }),
+    body: JSON.stringify(subscription.toJSON()),
   })
-  if (!response.ok) return { topics: [], adminEvents: false, messageEvents: false }
+  if (!response.ok) return { topics: [], adminEvents: false, messageEvents: false, subscribed: false, pending: false }
   const status = await response.json() as Partial<PushStatus>
   return {
     topics: Array.isArray(status.topics) ? status.topics : [],
     adminEvents: status.adminEvents === true,
     messageEvents: status.messageEvents === true,
+    subscribed: status.subscribed === true,
+    pending: status.pending === true,
   }
+}
+
+export async function waitForPushVerification(subscription: PushSubscription): Promise<void> {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const status = await pushStatusFor(subscription)
+    if (status.subscribed) return
+    if (!status.pending) break
+    await new Promise((resolve) => window.setTimeout(resolve, 400))
+  }
+  throw new Error("Não foi possível confirmar o recebimento neste dispositivo.")
+}
+
+export async function revokePrivatePushForCurrentDevice(): Promise<void> {
+  if (!("serviceWorker" in navigator)) return
+  const registration = await navigator.serviceWorker.getRegistration("/")
+  const subscription = await registration?.pushManager.getSubscription()
+  if (!subscription) return
+
+  const response = await fetch("/api/push/subscriptions", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(subscription.toJSON()),
+    keepalive: true,
+  })
+  if (response.ok) return
+  await subscription.unsubscribe().catch(() => false)
+  throw new Error("Não foi possível revogar os alertas privados.")
 }
 
 export async function messagePushPreference() {
@@ -35,7 +66,7 @@ export async function messagePushPreference() {
   const registration = await navigator.serviceWorker.getRegistration("/")
   const subscription = await registration?.pushManager.getSubscription()
   if (!subscription) return false
-  return (await statusFor(subscription)).messageEvents
+  return (await pushStatusFor(subscription)).messageEvents
 }
 
 export async function setMessagePushPreference(enabled: boolean) {
@@ -67,7 +98,7 @@ export async function setMessagePushPreference(enabled: boolean) {
     })
   }
 
-  const status = await statusFor(subscription)
+  const status = await pushStatusFor(subscription)
   const response = await fetch("/api/push/subscriptions", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -82,5 +113,7 @@ export async function setMessagePushPreference(enabled: boolean) {
     const data = await response.json().catch(() => null) as { error?: string } | null
     throw new Error(data?.error || "Não foi possível salvar a preferência de mensagens.")
   }
+  const result = await response.json().catch(() => null) as { pending?: boolean } | null
+  if (result?.pending) await waitForPushVerification(subscription)
   window.dispatchEvent(new Event("push:preferences-changed"))
 }

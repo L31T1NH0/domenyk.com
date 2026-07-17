@@ -36,6 +36,7 @@ type Props = {
   imageUploadEndpoint?: string
   imageAssetsEndpoint?: string
   allowImageAssetLibrary?: boolean
+  allowImages?: boolean
 }
 
 export function ToolbarPlugin({
@@ -44,6 +45,7 @@ export function ToolbarPlugin({
   imageUploadEndpoint,
   imageAssetsEndpoint,
   allowImageAssetLibrary,
+  allowImages = true,
 }: Props) {
   const [editor] = useLexicalComposerContext()
   const compact = variant === "compact"
@@ -88,13 +90,15 @@ export function ToolbarPlugin({
       <ToolbarButton compact={compact} onClick={() => formatHeading("h2")} title="Título 2">H2</ToolbarButton>
       <ToolbarButton compact={compact} onClick={() => formatHeading("h3")} title="Título 3">H3</ToolbarButton>
       <ToolbarButton compact={compact} onClick={formatQuote} title="Citação">&quot;</ToolbarButton>
-      <ImagePlugin
-        compact={compact}
-        menuPlacement={placement === "bottom" ? "above" : "below"}
-        uploadEndpoint={imageUploadEndpoint}
-        assetsEndpoint={imageAssetsEndpoint}
-        allowAssetLibrary={allowImageAssetLibrary}
-      />
+      {allowImages && (
+        <ImagePlugin
+          compact={compact}
+          menuPlacement={placement === "bottom" ? "above" : "below"}
+          uploadEndpoint={imageUploadEndpoint}
+          assetsEndpoint={imageAssetsEndpoint}
+          allowAssetLibrary={allowImageAssetLibrary}
+        />
+      )}
     </div>
   )
 }

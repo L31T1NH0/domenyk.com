@@ -1,4 +1,5 @@
 import { ObjectId } from "mongodb"
+import { isProjectBlobHostname } from "./blob-host.js"
 
 function isValidObjectId(value: string): boolean {
   return ObjectId.isValid(value)
@@ -67,7 +68,7 @@ export function asTrustedImageUrl(value: unknown, maxLength = 2048): string | un
     hostname === "res.cloudinary.com" ||
     hostname === "images.clerk.dev" ||
     hostname === "img.clerk.com" ||
-    hostname.endsWith(".public.blob.vercel-storage.com")
+    isProjectBlobHostname(hostname)
   return allowed ? valueUrl : undefined
 }
 

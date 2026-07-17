@@ -1,13 +1,14 @@
 import Link from "next/link"
-import { ensureDefaultThemes, getThemes } from "@/lib/db/themes"
+import { getThemes } from "@/lib/db/themes"
 import { AdminCommandHeader } from "../AdminCommandHeader"
+import { DefaultThemeInitializer } from "./DefaultThemeInitializer"
 
 export default async function AdminThemesPage() {
-  await ensureDefaultThemes()
   const themes = await getThemes()
 
   return (
     <>
+      <DefaultThemeInitializer />
       <AdminCommandHeader
         title="Temas"
         description="Coleções editoriais controladas. Só temas ativos podem aparecer no Google."

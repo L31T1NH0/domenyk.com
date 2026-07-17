@@ -166,6 +166,7 @@ function NoteCommentsPanel({ comments, loading = false, hasMore = false, loading
             size="compact"
             autoFocus
             submittingLabel="..."
+            allowImageUpload={isAdmin}
             onDraftChange={onDraftChange}
             onSubmit={onSubmit}
           />

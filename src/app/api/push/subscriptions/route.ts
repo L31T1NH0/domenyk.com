@@ -4,6 +4,7 @@ import {
   deletePushSubscription,
   getPushSubscription,
   PUSH_TOPICS,
+  pushCapabilityMatches,
   revokePrivatePushSubscription,
   upsertPushSubscription,
   verifyAdminPushSubscription,
@@ -12,6 +13,8 @@ import {
 } from "@/lib/db/push-subscriptions"
 import { rateLimit } from "@/lib/rate-limit"
 import { requestIdentity } from "@/lib/request-identity"
+import { isSameOriginRequest } from "@/lib/csrf"
+import { sendPushSubscriptionChallenge } from "@/lib/push"
 
 const ALLOWED_PUSH_HOSTS = [
   "fcm.googleapis.com",
@@ -21,21 +24,6 @@ const ALLOWED_PUSH_HOSTS = [
   "web.push.apple.com",
   "push.apple.com",
 ]
-
-function sameSite(req: NextRequest) {
-  if (process.env.NODE_ENV !== "production") return true
-  const requestOrigin = new URL(req.url).origin
-  const origin = req.headers.get("origin")
-  if (origin) {
-    try {
-      if (new URL(origin).origin !== requestOrigin) return false
-    } catch {
-      return false
-    }
-  }
-  const site = req.headers.get("sec-fetch-site")
-  return site === "same-origin"
-}
 
 function validEndpoint(value: unknown): value is string {
   if (typeof value !== "string" || value.length > 2048) return false
@@ -62,14 +50,22 @@ function topicsFrom(value: unknown): PushTopic[] {
   ))))
 }
 
+function authFromBody(body: { keys?: { auth?: unknown } } | null): string | null {
+  return validKey(body?.keys?.auth, 16) ? body.keys.auth : null
+}
+
 export async function PUT(req: NextRequest) {
-  if (!sameSite(req)) return NextResponse.json({ error: "Origem não permitida." }, { status: 403 })
+  if (!isSameOriginRequest(req)) return NextResponse.json({ error: "Origem não permitida." }, { status: 403 })
   if (!(await rateLimit(`push-status:${requestIdentity(req)}`, { limit: 60, windowMs: 60 * 60_000 }))) {
     return NextResponse.json({ error: "Muitas tentativas. Tente novamente mais tarde." }, { status: 429 })
   }
-  const body = await req.json().catch(() => null) as { endpoint?: unknown } | null
-  if (!validEndpoint(body?.endpoint)) return NextResponse.json({ error: "Inscrição inválida." }, { status: 400 })
+  const body = await req.json().catch(() => null) as { endpoint?: unknown; keys?: { auth?: unknown } } | null
+  const auth = authFromBody(body)
+  if (!validEndpoint(body?.endpoint) || !auth) return NextResponse.json({ error: "Inscrição inválida." }, { status: 400 })
   const subscription = await getPushSubscription(body.endpoint)
+  if (!subscription || !pushCapabilityMatches(subscription, auth)) {
+    return NextResponse.json({ error: "Inscrição não encontrada." }, { status: 404 })
+  }
   const admin = await isAdmin()
   const userId = await getAuthUserId()
   if (subscription?.adminEvents && userId && subscription.adminUserId === userId) {
@@ -79,15 +75,16 @@ export async function PUT(req: NextRequest) {
     await verifyMessagePushSubscription(body.endpoint, userId)
   }
   return NextResponse.json({
-    subscribed: Boolean(subscription),
-    topics: subscription?.topics ?? [],
-    adminEvents: admin ? subscription?.adminEvents === true : false,
-    messageEvents: Boolean(userId && subscription?.messageEvents && subscription.messageUserId === userId),
+    subscribed: subscription.status === "active",
+    pending: subscription.status === "pending",
+    topics: subscription.status === "active" ? subscription.topics : [],
+    adminEvents: subscription.status === "active" && admin ? subscription.adminEvents === true : false,
+    messageEvents: Boolean(subscription.status === "active" && userId && subscription.messageEvents && subscription.messageUserId === userId),
   })
 }
 
 export async function POST(req: NextRequest) {
-  if (!sameSite(req)) return NextResponse.json({ error: "Origem não permitida." }, { status: 403 })
+  if (!isSameOriginRequest(req)) return NextResponse.json({ error: "Origem não permitida." }, { status: 403 })
   if (!(await rateLimit(`push-subscribe:${requestIdentity(req)}`, { limit: 20, windowMs: 60 * 60_000 }))) {
     return NextResponse.json({ error: "Muitas tentativas. Tente novamente mais tarde." }, { status: 429 })
   }
@@ -110,7 +107,22 @@ export async function POST(req: NextRequest) {
 
   const userId = await getAuthUserId()
   const admin = userId ? await isAdmin() : false
-  await upsertPushSubscription({
+  const existing = await getPushSubscription(body.endpoint)
+  if (existing && !pushCapabilityMatches(existing, body.keys.auth)) {
+    return NextResponse.json({ error: "A inscrição não pertence a este dispositivo." }, { status: 403 })
+  }
+  if (!existing) {
+    const identity = requestIdentity(req)
+    const [withinIpLimit, withinGlobalLimit] = await Promise.all([
+      rateLimit(`push-subscribe-new:${identity}`, { limit: 5, windowMs: 24 * 60 * 60_000 }),
+      rateLimit("push-subscribe-new:global", { limit: 200, windowMs: 24 * 60 * 60_000 }),
+    ])
+    if (!withinIpLimit || !withinGlobalLimit) {
+      return NextResponse.json({ error: "Limite de novos dispositivos atingido." }, { status: 429 })
+    }
+  }
+
+  const saved = await upsertPushSubscription({
     endpoint: body.endpoint,
     expirationTime: typeof body.expirationTime === "number" ? body.expirationTime : null,
     keys: { p256dh: body.keys.p256dh, auth: body.keys.auth },
@@ -119,29 +131,49 @@ export async function POST(req: NextRequest) {
     ...(admin && userId ? { admin: { enabled: body.adminEvents === true, userId } } : {}),
     ...(userId ? { messages: { enabled: body.messageEvents === true, userId } } : {}),
   })
-  return NextResponse.json({ ok: true })
+
+  if (saved.challengeToken) {
+    const delivered = await sendPushSubscriptionChallenge(saved.subscription, saved.challengeToken)
+    if (!delivered) {
+      await deletePushSubscription(body.endpoint)
+      return NextResponse.json({ error: "Não foi possível confirmar este dispositivo." }, { status: 502 })
+    }
+    return NextResponse.json({ ok: true, pending: true }, { status: 202 })
+  }
+
+  return NextResponse.json({ ok: true, pending: false })
 }
 
 export async function PATCH(req: NextRequest) {
-  if (!sameSite(req)) return NextResponse.json({ error: "Origem não permitida." }, { status: 403 })
+  if (!isSameOriginRequest(req)) return NextResponse.json({ error: "Origem não permitida." }, { status: 403 })
   if (!(await rateLimit(`push-private-revoke:${requestIdentity(req)}`, { limit: 10, windowMs: 60 * 60_000 }))) {
     return NextResponse.json({ error: "Muitas tentativas. Tente novamente mais tarde." }, { status: 429 })
   }
   const userId = await getAuthUserId()
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  const body = await req.json().catch(() => null) as { endpoint?: unknown } | null
-  if (!validEndpoint(body?.endpoint)) return NextResponse.json({ error: "Inscrição inválida." }, { status: 400 })
+  const body = await req.json().catch(() => null) as { endpoint?: unknown; keys?: { auth?: unknown } } | null
+  const auth = authFromBody(body)
+  if (!validEndpoint(body?.endpoint) || !auth) return NextResponse.json({ error: "Inscrição inválida." }, { status: 400 })
+  const subscription = await getPushSubscription(body.endpoint)
+  if (!subscription || !pushCapabilityMatches(subscription, auth)) {
+    return NextResponse.json({ error: "Inscrição não encontrada." }, { status: 404 })
+  }
   await revokePrivatePushSubscription(body.endpoint, userId)
   return NextResponse.json({ ok: true })
 }
 
 export async function DELETE(req: NextRequest) {
-  if (!sameSite(req)) return NextResponse.json({ error: "Origem não permitida." }, { status: 403 })
+  if (!isSameOriginRequest(req)) return NextResponse.json({ error: "Origem não permitida." }, { status: 403 })
   if (!(await rateLimit(`push-delete:${requestIdentity(req)}`, { limit: 20, windowMs: 60 * 60_000 }))) {
     return NextResponse.json({ error: "Muitas tentativas. Tente novamente mais tarde." }, { status: 429 })
   }
-  const body = await req.json().catch(() => null) as { endpoint?: unknown } | null
-  if (!validEndpoint(body?.endpoint)) return NextResponse.json({ error: "Inscrição inválida." }, { status: 400 })
+  const body = await req.json().catch(() => null) as { endpoint?: unknown; keys?: { auth?: unknown } } | null
+  const auth = authFromBody(body)
+  if (!validEndpoint(body?.endpoint) || !auth) return NextResponse.json({ error: "Inscrição inválida." }, { status: 400 })
+  const subscription = await getPushSubscription(body.endpoint)
+  if (!subscription || !pushCapabilityMatches(subscription, auth)) {
+    return NextResponse.json({ error: "Inscrição não encontrada." }, { status: 404 })
+  }
   await deletePushSubscription(body.endpoint)
   return NextResponse.json({ ok: true })
 }

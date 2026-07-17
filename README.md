@@ -25,6 +25,8 @@ npm run push:keys
 
 Copy the generated values to `.env.local` and to the corresponding Vercel environment variables. Keep the same pair across deployments; replacing it invalidates existing browser subscriptions.
 
+When someone creates an account through the site, the first authenticated page load stores a notification in the admin notification center and also delivers it by Web Push when admin push subscriptions are configured. Repeated page loads are deduplicated automatically.
+
 When `INDEXNOW_KEY` is configured, the site exposes it at `/indexnow-key.txt` and notifies IndexNow after publishing, updating, hiding, unpublishing, changing a URL, or deleting indexable content. Failed notifications never block an editorial save.
 
 ## SEO data migration
@@ -35,12 +37,14 @@ Preview the additive post migration without writing to the database:
 npm run seo:migrate:dry
 ```
 
-Applying it requires a new, empty backup directory. Every collection is exported as canonical EJSON with collection options, indexes, document counts, and SHA-256 hashes before any post is changed:
+Applying it requires a new, empty backup directory outside the repository and `MIGRATION_BACKUP_PASSPHRASE` with at least 16 characters. Every collection is exported as encrypted canonical EJSON with restricted permissions, collection options, indexes, document counts, and SHA-256 hashes before any post is changed:
 
 ```bash
 node --env-file-if-exists=.env.local scripts/migrate-post-seo.mjs --apply --backup-dir=/safe/path/new-backup
 npm run seo:migrate:verify -- --backup-dir=/safe/path/new-backup
 ```
+
+Mongo validators can be reviewed with `npm run db:validators:dry`. Applying them requires a separate database-administration credential in `MONGODB_ADMIN_URI` and the explicit `--apply --confirm=APLICAR-VALIDADORES` flags; the application credential remains restricted to `readWrite` on `blog`.
 
 First, run the development server:
 

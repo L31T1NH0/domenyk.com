@@ -17,6 +17,7 @@ import {
 import { isPostLocale } from "@/lib/post-locales"
 import { getPostVersion } from "@/lib/post-versions"
 import { recordActivityEvent } from "@/lib/db/activity"
+import { enforceCommentPolicy } from "@/lib/api/comment-abuse"
 
 type Params = { params: Promise<{ postId: string }> }
 
@@ -69,11 +70,14 @@ export async function POST(req: NextRequest, { params }: Params) {
   if (!version || (!version.published && !admin)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
   const body = await req.json().catch(() => null) as { content?: unknown } | null
-  const content = parseCommentContent(body?.content)
+  const content = parseCommentContent(body?.content, { allowImages: admin })
 
   if (!content) {
     return NextResponse.json({ error: "Invalid content" }, { status: 400 })
   }
+
+  const policyError = await enforceCommentPolicy(req, user, admin)
+  if (policyError) return policyError
 
   const expectedImageUrls = extractCommentBlobUrls([content]).slice(0, MAX_COMMENT_IMAGES)
   const uploadClaim = await claimCommentUploads(content, user.id)

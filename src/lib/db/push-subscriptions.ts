@@ -1,5 +1,6 @@
 import "server-only"
 
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto"
 import { ObjectId } from "mongodb"
 import { getDb } from "./client"
 
@@ -11,7 +12,12 @@ export type StoredPushSubscription = {
   endpoint: string
   expirationTime: number | null
   keys: { p256dh: string; auth: string }
+  authHash?: string
   topics: PushTopic[]
+  status?: "pending" | "active"
+  challengeTokenHash?: string
+  challengeExpiresAt?: Date
+  verifiedAt?: Date
   adminEvents: boolean
   adminUserId?: string
   adminVerifiedAt?: Date
@@ -45,6 +51,8 @@ export type PushCampaign = {
 }
 
 const SUBSCRIPTION_RETENTION_MS = 365 * 24 * 60 * 60_000
+const PENDING_SUBSCRIPTION_RETENTION_MS = 24 * 60 * 60_000
+const PUSH_CHALLENGE_TTL_MS = 10 * 60_000
 const CAMPAIGN_RETENTION_MS = 180 * 24 * 60 * 60_000
 
 function retentionDate(duration: number) {
@@ -62,6 +70,11 @@ async function subscriptions() {
     col.createIndex({ adminEvents: 1, adminUserId: 1 }),
     col.createIndex({ messageEvents: 1, messageUserId: 1 }),
     col.createIndex({ retentionUntil: 1 }, { expireAfterSeconds: 0 }),
+    col.createIndex({ status: 1, challengeExpiresAt: 1 }),
+    col.updateMany(
+      { status: { $exists: false } },
+      { $set: { status: "active", verifiedAt: new Date() } }
+    ),
     col.updateMany(
       { retentionUntil: { $exists: false } },
       { $set: { retentionUntil: retentionDate(SUBSCRIPTION_RETENTION_MS) } }
@@ -94,22 +107,36 @@ export async function upsertPushSubscription(data: {
   userAgent?: string
   admin?: { enabled: boolean; userId: string }
   messages?: { enabled: boolean; userId: string }
-}) {
+}): Promise<{ subscription: StoredPushSubscription; challengeToken: string | null }> {
+  const col = await subscriptions()
+  const existing = await col.findOne({ endpoint: data.endpoint })
   const now = new Date()
+  const needsChallenge = existing?.status !== "active"
+  const challengeToken = needsChallenge ? randomBytes(32).toString("base64url") : null
   const $set: Record<string, unknown> = {
     expirationTime: data.expirationTime,
     keys: data.keys,
+    authHash: pushAuthHash(data.keys.auth),
     topics: data.topics,
+    status: needsChallenge ? "pending" : "active",
     userAgent: data.userAgent,
     failureCount: 0,
     updatedAt: now,
-    retentionUntil: retentionDate(SUBSCRIPTION_RETENTION_MS),
+    retentionUntil: retentionDate(
+      needsChallenge ? PENDING_SUBSCRIPTION_RETENTION_MS : SUBSCRIPTION_RETENTION_MS
+    ),
   }
   const $unset: Record<string, ""> = {}
   const $setOnInsert: Record<string, unknown> = {
     _id: new ObjectId(),
     endpoint: data.endpoint,
     createdAt: now,
+  }
+
+  if (challengeToken) {
+    $set.challengeTokenHash = pushChallengeHash(challengeToken)
+    $set.challengeExpiresAt = new Date(now.getTime() + PUSH_CHALLENGE_TTL_MS)
+    $unset.verifiedAt = ""
   }
 
   if (data.admin) {
@@ -142,15 +169,72 @@ export async function upsertPushSubscription(data: {
     $unset.messageVerifiedAt = ""
   }
 
-  await (await subscriptions()).updateOne(
+  const subscription = await col.findOneAndUpdate(
     { endpoint: data.endpoint },
     {
       $set,
       $setOnInsert,
       ...(Object.keys($unset).length ? { $unset } : {}),
     },
-    { upsert: true }
+    { upsert: true, returnDocument: "after" }
   )
+  if (!subscription) throw new Error("Não foi possível salvar a inscrição Push.")
+  return { subscription, challengeToken }
+}
+
+function pushAuthHash(auth: string): string {
+  return createHash("sha256").update("domenyk:push-auth:v1\0").update(auth).digest("hex")
+}
+
+function pushChallengeHash(token: string): string {
+  return createHash("sha256").update("domenyk:push-challenge:v1\0").update(token).digest("hex")
+}
+
+function equalHex(left: string, right: string): boolean {
+  if (!/^[a-f0-9]{64}$/i.test(left) || !/^[a-f0-9]{64}$/i.test(right)) return false
+  return timingSafeEqual(Buffer.from(left, "hex"), Buffer.from(right, "hex"))
+}
+
+export function pushCapabilityMatches(subscription: StoredPushSubscription, auth: string): boolean {
+  const expected = subscription.authHash ?? pushAuthHash(subscription.keys.auth)
+  return equalHex(expected, pushAuthHash(auth))
+}
+
+export async function verifyPushSubscriptionChallenge(
+  endpoint: string,
+  auth: string,
+  challengeToken: string
+): Promise<boolean> {
+  const col = await subscriptions()
+  const subscription = await col.findOne({ endpoint, status: "pending" })
+  if (
+    !subscription ||
+    !pushCapabilityMatches(subscription, auth) ||
+    !subscription.challengeTokenHash ||
+    !equalHex(subscription.challengeTokenHash, pushChallengeHash(challengeToken))
+  ) return false
+
+  const now = new Date()
+  if (!subscription.challengeExpiresAt || subscription.challengeExpiresAt <= now) return false
+
+  const result = await col.updateOne(
+    {
+      _id: subscription._id,
+      status: "pending",
+      challengeTokenHash: subscription.challengeTokenHash,
+      challengeExpiresAt: { $gt: now },
+    },
+    {
+      $set: {
+        status: "active",
+        verifiedAt: now,
+        updatedAt: now,
+        retentionUntil: retentionDate(SUBSCRIPTION_RETENTION_MS),
+      },
+      $unset: { challengeTokenHash: "", challengeExpiresAt: "" },
+    }
+  )
+  return result.modifiedCount === 1
 }
 
 export async function getPushSubscription(endpoint: string) {
@@ -212,16 +296,17 @@ export async function deletePushSubscriptions(endpoints: string[]) {
 }
 
 export async function listPushSubscriptionsForTopic(topic: PushTopic) {
-  return (await subscriptions()).find({ topics: topic }).toArray()
+  return (await subscriptions()).find({ status: "active", topics: topic }).toArray()
 }
 
 export async function listAdminPushSubscriptions(adminUserId: string) {
-  return (await subscriptions()).find({ adminEvents: true, adminUserId, adminVerifiedAt: { $type: "date" } }).toArray()
+  return (await subscriptions()).find({ status: "active", adminEvents: true, adminUserId, adminVerifiedAt: { $type: "date" } }).toArray()
 }
 
 export async function listMessagePushSubscriptions(userId: string) {
   return (await subscriptions()).find({
     messageEvents: true,
+    status: "active",
     messageUserId: userId,
     messageVerifiedAt: { $type: "date" },
   }).toArray()
@@ -249,10 +334,10 @@ export async function recordPushFailure(endpoint: string) {
 export async function pushSubscriptionCounts() {
   const col = await subscriptions()
   const [devices, posts, notes, adminDevices] = await Promise.all([
-    col.countDocuments(),
-    col.countDocuments({ topics: "posts" }),
-    col.countDocuments({ topics: "notes" }),
-    col.countDocuments({ adminEvents: true, adminVerifiedAt: { $type: "date" } }),
+    col.countDocuments({ status: "active" }),
+    col.countDocuments({ status: "active", topics: "posts" }),
+    col.countDocuments({ status: "active", topics: "notes" }),
+    col.countDocuments({ status: "active", adminEvents: true, adminVerifiedAt: { $type: "date" } }),
   ])
   return { devices, posts, notes, adminDevices }
 }

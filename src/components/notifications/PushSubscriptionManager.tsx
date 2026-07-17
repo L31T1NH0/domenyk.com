@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { useUser } from "@clerk/nextjs"
 import { BellAlertIcon, BellSlashIcon } from "@heroicons/react/24/outline"
-import { applicationServerKey } from "@/lib/client-push"
+import { applicationServerKey, pushStatusFor, waitForPushVerification } from "@/lib/client-push"
 
 type Topic = "posts" | "notes"
 type State = "loading" | "ready" | "saving" | "enabled" | "denied" | "unsupported" | "unconfigured" | "error"
@@ -48,14 +48,7 @@ export function PushSubscriptionManager({
         setState("ready")
         return
       }
-      const statusResponse = await fetch("/api/push/subscriptions", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ endpoint: current.endpoint }),
-      })
-      const status = statusResponse.ok
-        ? await statusResponse.json() as { topics?: Topic[]; adminEvents?: boolean; messageEvents?: boolean }
-        : { topics: [] as Topic[], adminEvents: false, messageEvents: false }
+      const status = await pushStatusFor(current)
       setTopics(status.topics ?? [])
       setAdminEvents(status.adminEvents === true)
       setMessageEvents(status.messageEvents === true)
@@ -87,6 +80,8 @@ export function PushSubscriptionManager({
       const data = await response.json().catch(() => null) as { error?: string } | null
       throw new Error(data?.error || "Não foi possível salvar suas preferências.")
     }
+    const result = await response.json().catch(() => null) as { pending?: boolean } | null
+    if (result?.pending) await waitForPushVerification(current)
   }
 
   async function enable() {
@@ -149,7 +144,7 @@ export function PushSubscriptionManager({
       await fetch("/api/push/subscriptions", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ endpoint: subscription.endpoint }),
+        body: JSON.stringify(subscription.toJSON()),
       })
       await subscription.unsubscribe()
       setSubscription(null)

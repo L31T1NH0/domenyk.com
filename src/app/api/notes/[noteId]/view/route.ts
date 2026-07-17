@@ -10,6 +10,7 @@ import { rateLimit } from "@/lib/rate-limit"
 import { requestIdentity } from "@/lib/request-identity"
 import { viewRequestDetails } from "@/lib/view-request-details"
 import type { ViewClientContext } from "@/lib/view-request-details"
+import { isSameOriginRequest } from "@/lib/csrf"
 
 function visitorKey(req: NextRequest, noteId: string, source: string) {
   const day = new Date().toISOString().slice(0, 10)
@@ -21,8 +22,7 @@ function directCookieName(noteId: string) {
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ noteId: string }> }) {
-  const fetchSite = req.headers.get("sec-fetch-site")
-  if (process.env.NODE_ENV === "production" && fetchSite !== "same-origin" && fetchSite !== "same-site") {
+  if (!isSameOriginRequest(req)) {
     return NextResponse.json({ counted: false }, { status: 403 })
   }
   const { noteId } = await params

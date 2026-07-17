@@ -2,9 +2,12 @@ import { ScrollProgressEffect } from "@/components/ScrollProgressEffect"
 import { PublicMenu } from "@/components/public-menu/PublicMenu"
 import { PublicMenuProvider } from "@/components/public-menu/PublicMenuContext"
 import { ViewReferrerTracker } from "@/components/ViewReferrerTracker"
+import { headers } from "next/headers"
+import { PublicAnalytics } from "@/components/analytics/PublicAnalytics"
 
-export default function PublicLayout({ children }: { children: React.ReactNode }) {
+export default async function PublicLayout({ children }: { children: React.ReactNode }) {
   const currentYear = new Date().getFullYear()
+  const nonce = (await headers()).get("x-nonce") ?? undefined
 
   return (
     <PublicMenuProvider>
@@ -23,6 +26,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           <p className="mt-1 break-all">bc1qfv788krszr8xz3uxvvzy33pp8jph0hw53557d4</p>
         </footer>
       </div>
+      <PublicAnalytics nonce={nonce} />
     </PublicMenuProvider>
   )
 }

@@ -13,7 +13,7 @@ type Item = {
   href: string
   actorImageUrl?: string
   count: number
-  kind: "comment" | "message" | "reply" | "view"
+  kind: "account" | "comment" | "message" | "reply" | "view"
   occurrences?: Array<{
     occurredAt: string
     source?: string

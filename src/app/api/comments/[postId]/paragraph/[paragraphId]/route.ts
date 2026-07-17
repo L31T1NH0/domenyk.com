@@ -18,6 +18,7 @@ import { requestIdentity } from "@/lib/request-identity"
 import { isPostLocale } from "@/lib/post-locales"
 import { getPostVersion } from "@/lib/post-versions"
 import { recordActivityEvent } from "@/lib/db/activity"
+import { enforceCommentPolicy } from "@/lib/api/comment-abuse"
 
 type Params = { params: Promise<{ postId: string; paragraphId: string }> }
 
@@ -82,11 +83,14 @@ export async function POST(req: NextRequest, { params }: Params) {
   }
 
   const body = await req.json().catch(() => null) as { content?: unknown } | null
-  const content = parseCommentContent(body?.content)
+  const content = parseCommentContent(body?.content, { allowImages: admin })
 
   if (!content) {
     return NextResponse.json({ error: "Invalid content" }, { status: 400 })
   }
+
+  const policyError = await enforceCommentPolicy(req, user, admin)
+  if (policyError) return policyError
 
   const expectedImageUrls = extractCommentBlobUrls([content]).slice(0, MAX_COMMENT_IMAGES)
   const uploadClaim = await claimCommentUploads(content, user.id)
@@ -111,7 +115,11 @@ export async function POST(req: NextRequest, { params }: Params) {
   }
   const currentPost = await getPostById(postId)
   const currentVersion = currentPost ? getPostVersion(currentPost, locale) : null
-  if (!currentVersion || !hasParagraphId(currentVersion.content, paragraphId)) {
+  if (
+    !currentVersion ||
+    (!currentVersion.published && !admin) ||
+    !hasParagraphId(currentVersion.content, paragraphId)
+  ) {
     await deleteComment(comment._id.toString()).catch(() => undefined)
     await releaseCommentUploadClaim(uploadClaim).catch(() => undefined)
     return NextResponse.json({ error: "O parágrafo foi removido durante o envio." }, { status: 409 })

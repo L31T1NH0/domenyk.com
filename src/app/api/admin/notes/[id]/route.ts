@@ -5,6 +5,7 @@ import { asString, asTrustedImageUrlArray, toObjectId } from "@/lib/validation"
 import { deleteCommentsForParent, getCommentsForParent } from "@/lib/db/comments"
 import { deleteCommentImagesFromContents, queueCommentImagesForCleanup } from "@/lib/db/comment-uploads"
 import { notifyIndexNow } from "@/lib/indexnow"
+import { invalidatePublicContentCache } from "@/lib/public-content-cache"
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const unauthorized = await adminOnly()
@@ -29,6 +30,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   if (!note) return NextResponse.json({ error: "Nota não encontrada" }, { status: 404 })
 
+  invalidatePublicContentCache()
   after(() => notifyIndexNow([`/notes/${id}`]))
 
   return NextResponse.json(serializeNote(note))
@@ -49,6 +51,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   await deleteCommentsForParent(id)
   await deleteNote(id)
   await deleteCommentImagesFromContents(contents)
+  invalidatePublicContentCache()
   after(() => notifyIndexNow([`/notes/${id}`]))
   return NextResponse.json({ ok: true })
 }

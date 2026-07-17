@@ -14,6 +14,7 @@ import {
   extractCommentBlobUrls,
   releaseCommentUploadClaim,
 } from "@/lib/db/comment-uploads"
+import { enforceCommentPolicy } from "@/lib/api/comment-abuse"
 
 type Params = { params: Promise<{ noteId: string }> }
 
@@ -54,15 +55,18 @@ export async function POST(req: NextRequest, { params }: Params) {
   const { noteId } = await params
   if (!toObjectId(noteId)) return NextResponse.json({ error: "ID inválido" }, { status: 400 })
 
-  const note = await getNote(noteId)
+  const [note, admin] = await Promise.all([getNote(noteId), isAdmin()])
   if (!note) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
   const body = await req.json().catch(() => null) as { content?: unknown } | null
-  const content = parseCommentContent(body?.content)
+  const content = parseCommentContent(body?.content, { allowImages: admin })
 
   if (!content) {
     return NextResponse.json({ error: "Invalid content" }, { status: 400 })
   }
+
+  const policyError = await enforceCommentPolicy(req, user, admin)
+  if (policyError) return policyError
 
   const expectedImageUrls = extractCommentBlobUrls([content]).slice(0, MAX_COMMENT_IMAGES)
   const uploadClaim = await claimCommentUploads(content, user.id)

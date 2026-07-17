@@ -91,6 +91,7 @@ export function ParagraphThread({ postId, paragraphId, locale = "pt", isAdmin = 
             submitting={submitting}
             size="compact"
             autoFocus={autoFocus}
+            allowImageUpload={isAdmin}
             onDraftChange={setDraft}
             onSubmit={submit}
           />
