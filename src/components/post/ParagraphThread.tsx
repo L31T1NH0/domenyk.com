@@ -28,13 +28,10 @@ export function ParagraphThread({ postId, paragraphId, locale = "pt", isAdmin = 
 
   return (
     <div className="relative z-50 flex w-full max-w-[calc(100vw-2rem)] flex-col gap-3 rounded-lg border border-neutral-950/10 bg-[#f4f4f4] p-3 text-neutral-800 shadow-[0_2px_8px_rgb(0_0_0_/_0.14)] dark:border-white/10 dark:bg-[#040404] dark:text-[#f1f1f1] dark:shadow-none xl:h-full xl:rounded-t-none xl:border-t-0">
-      <div className="flex items-start justify-between gap-3 border-b border-neutral-950/10 pb-2 dark:border-white/10">
-        <div>
-          <span className="block text-xs font-semibold text-neutral-950 dark:text-[#f1f1f1]">Comentários do parágrafo</span>
-          <span className="mt-0.5 block text-[11px] text-neutral-500 dark:text-[#A8A095]">
-            {totalCount === 1 ? "1 comentário" : `${totalCount} comentários`}
-          </span>
-        </div>
+      <div className="flex items-center justify-between gap-3 border-b border-neutral-950/10 pb-2 dark:border-white/10">
+        <span className="text-xs font-semibold text-neutral-950 dark:text-[#f1f1f1]">
+          Comentários do parágrafo <span className="font-normal text-neutral-500 dark:text-[#A8A095]">· {totalCount}</span>
+        </span>
         <button
           type="button"
           onClick={onClose}
@@ -44,6 +41,24 @@ export function ParagraphThread({ postId, paragraphId, locale = "pt", isAdmin = 
           <span aria-hidden>✕</span>
         </button>
       </div>
+
+      {user ? (
+        <div className="border-b border-neutral-950/10 pb-3 dark:border-white/10">
+          <RichCommentComposer
+            draft={draft}
+            submitting={submitting}
+            size="compact"
+            autoFocus={autoFocus}
+            allowImageUpload={isAdmin}
+            onDraftChange={setDraft}
+            onSubmit={submit}
+          />
+        </div>
+      ) : (
+        <p className="border-b border-neutral-950/10 pb-3 text-xs text-neutral-500 dark:border-white/10 dark:text-[#A8A095]">
+          Faça login para comentar.
+        </p>
+      )}
 
       <div className="flex max-h-56 min-h-0 flex-col gap-3 overflow-y-auto pr-1 xl:max-h-none xl:flex-1">
         {error && <p role="alert" className="text-xs text-red-700 dark:text-red-300">{error}</p>}
@@ -58,8 +73,8 @@ export function ParagraphThread({ postId, paragraphId, locale = "pt", isAdmin = 
           </button>
         )}
         {comments.length === 0 && (
-          <p className="rounded-md border border-dashed border-neutral-950/15 px-3 py-2 text-xs leading-relaxed text-neutral-500 dark:border-white/15 dark:text-[#A8A095]">
-            Nenhum comentário ainda. Use este espaço para responder diretamente a este trecho.
+          <p className="py-1 text-xs leading-relaxed text-neutral-500 dark:text-[#A8A095]">
+            Nenhum comentário ainda.
           </p>
         )}
         {comments.map((c) => (
@@ -83,24 +98,6 @@ export function ParagraphThread({ postId, paragraphId, locale = "pt", isAdmin = 
           </div>
         ))}
       </div>
-
-      {user ? (
-        <div className="flex flex-col gap-2 border-t border-neutral-950/10 pt-3 dark:border-white/10">
-          <RichCommentComposer
-            draft={draft}
-            submitting={submitting}
-            size="compact"
-            autoFocus={autoFocus}
-            allowImageUpload={isAdmin}
-            onDraftChange={setDraft}
-            onSubmit={submit}
-          />
-        </div>
-      ) : (
-        <p className="border-t border-neutral-950/10 pt-3 text-xs text-neutral-500 dark:border-white/10 dark:text-[#A8A095]">
-          Faça login para comentar.
-        </p>
-      )}
     </div>
   )
 }

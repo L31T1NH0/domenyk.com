@@ -26,9 +26,22 @@ import { POST_LOCALE_DETAILS } from "@/lib/post-locales"
 import { useThemeSwitcher } from "@/components/ThemeSwitcher"
 import { PushSubscriptionManager } from "@/components/notifications/PushSubscriptionManager"
 import { revokePrivatePushForCurrentDevice } from "@/lib/client-push"
+import { POST_READING_POSITION_SKIP_RESTORE_KEY } from "@/lib/post-reading-position"
 import { usePublicMenu } from "./PublicMenuContext"
 
 const ITEM_CLASS_NAME = "group flex min-h-9 w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-[13px] text-zinc-700 outline-none transition-colors hover:bg-zinc-100 focus-visible:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-white/[0.07] dark:focus-visible:bg-white/[0.07]"
+
+function skipReadingPositionRestore(href: string) {
+  try {
+    const destination = new URL(href, window.location.href)
+    window.sessionStorage.setItem(POST_READING_POSITION_SKIP_RESTORE_KEY, JSON.stringify({
+      destination: `${destination.pathname}${destination.search}`,
+      markedAt: Date.now(),
+    }))
+  } catch {
+    // A failed marker must never prevent language navigation.
+  }
+}
 
 function CrownIcon(props: SVGProps<SVGSVGElement>) {
   return (
@@ -49,11 +62,13 @@ export function PublicMenu() {
   const [verifiedAdminUserId, setVerifiedAdminUserId] = useState<string | null>(null)
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [unreadNotifications, setUnreadNotifications] = useState(0)
-  const [view, setView] = useState<"main" | "account" | "notifications">("main")
+  const [view, setView] = useState<"main" | "account" | "language" | "notifications">("main")
   const menuId = useId()
   const rootRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const accountBackRef = useRef<HTMLButtonElement>(null)
+  const languageBackRef = useRef<HTMLButtonElement>(null)
+  const languageTriggerRef = useRef<HTMLButtonElement>(null)
   const notificationsBackRef = useRef<HTMLButtonElement>(null)
   const notificationsTriggerRef = useRef<HTMLButtonElement>(null)
   const focusFirstOnOpenRef = useRef(false)
@@ -134,6 +149,16 @@ export function PublicMenu() {
     })
   }
 
+  function openLanguageView() {
+    setView("language")
+    requestAnimationFrame(() => languageBackRef.current?.focus())
+  }
+
+  function closeLanguageView() {
+    setView("main")
+    requestAnimationFrame(() => languageTriggerRef.current?.focus())
+  }
+
   function openNotificationsView() {
     setView("notifications")
     requestAnimationFrame(() => notificationsBackRef.current?.focus())
@@ -159,6 +184,8 @@ export function PublicMenu() {
       event.preventDefault()
       if (view === "account") {
         closeAccountView()
+      } else if (view === "language") {
+        closeLanguageView()
       } else if (view === "notifications") {
         closeNotificationsView()
       } else {
@@ -210,6 +237,13 @@ export function PublicMenu() {
 
   const isPostPage = /(?:^|\/)posts\/[^/]+$/.test(pathname)
   const hasUnreadItems = unreadMessages > 0 || unreadNotifications > 0
+  const currentLanguageOption = options.find(({ locale }) => locale === currentLocale)
+  const currentLanguageDetails = currentLanguageOption
+    ? POST_LOCALE_DETAILS[currentLanguageOption.locale]
+    : null
+  const orderedLanguageOptions = currentLanguageOption
+    ? [currentLanguageOption, ...options.filter(({ locale }) => locale !== currentLocale)]
+    : options
 
   return (
     <div ref={rootRef} className="relative z-40">
@@ -245,7 +279,7 @@ export function PublicMenu() {
         <div
           id={menuId}
           role={view === "notifications" ? "dialog" : "menu"}
-          aria-label={view === "account" ? "Menu da conta" : view === "notifications" ? "Configurar notificações" : "Menu do site"}
+          aria-label={view === "account" ? "Menu da conta" : view === "language" ? "Menu de idiomas" : view === "notifications" ? "Configurar notificações" : "Menu do site"}
           onKeyDown={handleMenuKeyDown}
           className={`${view === "notifications" ? "w-[min(19rem,calc(100vw-2rem))]" : "w-[min(17rem,calc(100vw-2rem))]"} public-menu-panel absolute right-0 top-11 origin-top-right rounded-[10px] border border-zinc-200 bg-white p-1.5 text-zinc-950 shadow-[0_6px_8px_rgba(0,0,0,0.12)] sm:left-0 sm:right-auto sm:origin-top-left dark:border-white/10 dark:bg-[#151515] dark:text-zinc-100 dark:shadow-[0_6px_8px_rgba(0,0,0,0.38)]`}
         >
@@ -265,6 +299,70 @@ export function PublicMenu() {
                 <PushSubscriptionManager compact showAdminEvents={Boolean(isLoaded && isSignedIn && admin)} />
               </div>
             </div>
+          ) : view === "language" ? (
+            <>
+              <button
+                ref={languageBackRef}
+                type="button"
+                role="menuitem"
+                onClick={closeLanguageView}
+                className={ITEM_CLASS_NAME}
+              >
+                <ArrowLeftIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
+                <span className="font-medium">Idioma</span>
+              </button>
+
+              <div className="mt-1 border-t border-zinc-200 pt-1.5 dark:border-white/10">
+                {orderedLanguageOptions.map(({ locale, href }) => {
+                  const details = POST_LOCALE_DETAILS[locale]
+                  const current = locale === currentLocale
+                  const content = (
+                    <>
+                      {current
+                        ? <CheckIcon className="size-3.5 shrink-0 text-zinc-700 dark:text-zinc-200" aria-hidden />
+                        : <span className="size-3.5 shrink-0" aria-hidden />}
+                      <span lang={details.htmlLang} className="flex-1">{details.nativeLabel}</span>
+                      <span className="text-[10px] font-medium text-zinc-400">{details.shortLabel}</span>
+                    </>
+                  )
+
+                  if (current || !href) {
+                    return (
+                      <button
+                        key={locale}
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={current}
+                        aria-disabled={!current && !href}
+                        disabled={!current && !href}
+                        className={`${ITEM_CLASS_NAME} ${!current && !href ? "cursor-not-allowed opacity-50" : ""}`}
+                      >
+                        {content}
+                      </button>
+                    )
+                  }
+
+                  return (
+                    <a
+                      key={locale}
+                      href={href}
+                      hrefLang={details.htmlLang}
+                      role="menuitemradio"
+                      aria-checked="false"
+                      onClick={(event) => {
+                        if (!event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+                          skipReadingPositionRestore(href)
+                        }
+                        closeMenu()
+                      }}
+                      className={ITEM_CLASS_NAME}
+                    >
+                      {content}
+                    </a>
+                  )
+                })}
+              </div>
+            </>
           ) : view === "account" && isLoaded && isSignedIn && user ? (
             <>
               <button
@@ -401,47 +499,23 @@ export function PublicMenu() {
               </div>
 
               {options.length > 1 && (
-                <div className="mt-1 border-t border-zinc-200 px-1 pt-1.5 dark:border-white/10">
-                  <div className="flex items-center gap-2 px-1.5 pb-1 pt-0.5 text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
-                    <LanguageIcon className="size-3.5" aria-hidden />
-                    Idioma
-                  </div>
-                  {options.map(({ locale, href }) => {
-                    const details = POST_LOCALE_DETAILS[locale]
-                    const current = locale === currentLocale
-                    const content = (
-                      <>
-                        <span lang={details.htmlLang} className="flex-1">{details.nativeLabel}</span>
-                        <span className="text-[10px] font-medium text-zinc-400">{details.shortLabel}</span>
-                        {current && <CheckIcon className="size-3.5 text-zinc-700 dark:text-zinc-200" aria-hidden />}
-                      </>
-                    )
-
-                    return current || !href ? (
-                      <button
-                        key={locale}
-                        type="button"
-                        role="menuitemradio"
-                        aria-checked={current}
-                        onClick={() => current ? undefined : closeMenu()}
-                        className={ITEM_CLASS_NAME}
-                      >
-                        {content}
-                      </button>
-                    ) : (
-                      <a
-                        key={locale}
-                        href={href}
-                        hrefLang={details.htmlLang}
-                        role="menuitemradio"
-                        aria-checked="false"
-                        onClick={() => closeMenu()}
-                        className={ITEM_CLASS_NAME}
-                      >
-                        {content}
-                      </a>
-                    )
-                  })}
+                <div className="mt-1 border-t border-zinc-200 pt-1.5 dark:border-white/10">
+                  <button
+                    ref={languageTriggerRef}
+                    type="button"
+                    role="menuitem"
+                    onClick={openLanguageView}
+                    className={ITEM_CLASS_NAME}
+                  >
+                    <LanguageIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
+                    <span className="flex-1">Idioma</span>
+                    {currentLanguageDetails && (
+                      <span lang={currentLanguageDetails.htmlLang} className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                        {currentLanguageDetails.nativeLabel}
+                      </span>
+                    )}
+                    <ChevronRightIcon className="size-3.5 text-zinc-400" aria-hidden />
+                  </button>
                 </div>
               )}
             </>

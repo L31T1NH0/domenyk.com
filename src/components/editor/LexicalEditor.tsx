@@ -88,8 +88,10 @@ type Props = {
   placeholder?: string
   editorClassName?: string
   shellClassName?: string
-  toolbarVariant?: "default" | "compact"
+  placeholderClassName?: string
+  toolbarVariant?: "default" | "compact" | "comment"
   toolbarPlacement?: "top" | "bottom"
+  toolbarTrailingContent?: React.ReactNode
   imageUploadEndpoint?: string
   imageAssetsEndpoint?: string
   allowImageAssetLibrary?: boolean
@@ -336,8 +338,10 @@ export function LexicalEditor({
   placeholder = "Escreva o post aqui...",
   editorClassName = "min-h-64",
   shellClassName = "min-h-64 p-4",
+  placeholderClassName = "top-4 left-4 text-sm",
   toolbarVariant = "default",
   toolbarPlacement = "top",
+  toolbarTrailingContent,
   imageUploadEndpoint,
   imageAssetsEndpoint,
   allowImageAssetLibrary,
@@ -397,6 +401,7 @@ export function LexicalEditor({
           imageAssetsEndpoint={imageAssetsEndpoint}
           allowImageAssetLibrary={allowImageAssetLibrary}
           allowImages={allowImages}
+          trailingContent={toolbarTrailingContent}
         />
       )}
       <div className={`relative ${shellClassName}`}>
@@ -405,7 +410,7 @@ export function LexicalEditor({
             <ContentEditable className={`outline-none text-sm leading-relaxed focus:outline-none ${editorClassName}`} />
           }
           placeholder={
-            <div className="absolute top-4 left-4 text-neutral-400 text-sm pointer-events-none select-none">
+            <div className={`pointer-events-none absolute select-none text-neutral-500 dark:text-neutral-400 ${placeholderClassName}`}>
               {placeholder}
             </div>
           }
@@ -425,6 +430,7 @@ export function LexicalEditor({
           imageAssetsEndpoint={imageAssetsEndpoint}
           allowImageAssetLibrary={allowImageAssetLibrary}
           allowImages={allowImages}
+          trailingContent={toolbarTrailingContent}
         />
       )}
     </LexicalComposer>

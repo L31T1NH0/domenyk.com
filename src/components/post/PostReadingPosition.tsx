@@ -2,6 +2,13 @@
 
 import { ArrowUpIcon, XMarkIcon } from "@heroicons/react/24/solid"
 import { useCallback, useEffect, useRef, useState } from "react"
+import {
+  getMinimumRestorableOffset,
+  isRestorableReadingPosition,
+  POST_READING_POSITION_SKIP_RESTORE_KEY,
+  POST_READING_POSITION_STORAGE_PREFIX,
+  READING_COMPLETION_THRESHOLD,
+} from "@/lib/post-reading-position"
 
 type Props = {
   postId: string
@@ -15,13 +22,11 @@ type SavedPosition = {
   savedAt: number
 }
 
-const storagePrefix = "domenyk:post-reading-position:"
 const maxAgeMs = 1000 * 60 * 60 * 24 * 90
-const minRestorableOffset = 180
-const completionThreshold = 0.96
+const skipRestoreMaxAgeMs = 15_000
 
 function getStorageKey(postId: string) {
-  return `${storagePrefix}${postId}`
+  return `${POST_READING_POSITION_STORAGE_PREFIX}${postId}`
 }
 
 function getContentMetrics(content: HTMLElement) {
@@ -57,10 +62,34 @@ function readSavedPosition(key: string, updatedAt: string): SavedPosition | null
   }
 }
 
+function consumeSkipRestoreMarker() {
+  try {
+    const raw = window.sessionStorage.getItem(POST_READING_POSITION_SKIP_RESTORE_KEY)
+    if (!raw) return false
+
+    window.sessionStorage.removeItem(POST_READING_POSITION_SKIP_RESTORE_KEY)
+    const marker = JSON.parse(raw) as { destination?: unknown; markedAt?: unknown }
+    const destination = `${window.location.pathname}${window.location.search}`
+
+    return marker.destination === destination
+      && typeof marker.markedAt === "number"
+      && Date.now() - marker.markedAt <= skipRestoreMaxAgeMs
+  } catch {
+    try {
+      window.sessionStorage.removeItem(POST_READING_POSITION_SKIP_RESTORE_KEY)
+    } catch {
+      // Session storage is unavailable; there is no marker to consume.
+    }
+    return false
+  }
+}
+
 export function PostReadingPosition({ postId, updatedAt }: Props) {
   const [restored, setRestored] = useState(false)
   const noticeTimerRef = useRef<number | null>(null)
   const lastPositionRef = useRef<SavedPosition | null>(null)
+  const suppressSavesRef = useRef(false)
+  const suppressSavesTimerRef = useRef<number | null>(null)
 
   const clearNoticeTimer = useCallback(() => {
     if (!noticeTimerRef.current) return
@@ -81,7 +110,18 @@ export function PostReadingPosition({ postId, updatedAt }: Props) {
     if (!content) return
 
     const key = getStorageKey(postId)
-    const saved = window.location.hash ? null : readSavedPosition(key, updatedAt)
+    const clearSavedPosition = () => {
+      lastPositionRef.current = null
+      try {
+        window.localStorage.removeItem(key)
+      } catch {
+        // Storage can be unavailable in private contexts; reading should continue normally.
+      }
+    }
+
+    const skipRestore = consumeSkipRestoreMarker()
+    if (skipRestore) clearSavedPosition()
+    const saved = window.location.hash || skipRestore ? null : readSavedPosition(key, updatedAt)
     lastPositionRef.current = saved
     let saveFrame = 0
     let restoreFrame = 0
@@ -89,7 +129,10 @@ export function PostReadingPosition({ postId, updatedAt }: Props) {
 
     const restore = () => {
       if (!saved) return
-      if (saved.contentOffset < minRestorableOffset || saved.progress >= completionThreshold) return
+      if (!isRestorableReadingPosition(saved, window.innerHeight)) {
+        clearSavedPosition()
+        return
+      }
 
       const { contentTop, totalScrollable } = getContentMetrics(content)
       const offset = Math.min(saved.contentOffset, totalScrollable)
@@ -117,9 +160,17 @@ export function PostReadingPosition({ postId, updatedAt }: Props) {
 
     const save = () => {
       saveFrame = 0
-      const { contentOffset, progress } = getContentMetrics(content)
+      if (suppressSavesRef.current) return
 
-      if (contentOffset >= minRestorableOffset && progress < completionThreshold) {
+      const { contentOffset, progress } = getContentMetrics(content)
+      const minimumOffset = getMinimumRestorableOffset(window.innerHeight)
+
+      if (contentOffset < minimumOffset || progress >= READING_COMPLETION_THRESHOLD) {
+        clearSavedPosition()
+        return
+      }
+
+      if (isRestorableReadingPosition({ contentOffset, progress }, window.innerHeight)) {
         const value: SavedPosition = {
           contentOffset,
           progress,
@@ -129,17 +180,7 @@ export function PostReadingPosition({ postId, updatedAt }: Props) {
 
         lastPositionRef.current = value
         writePosition(value)
-        return
       }
-
-      if (progress >= completionThreshold) {
-        lastPositionRef.current = null
-        window.localStorage.removeItem(key)
-      }
-    }
-
-    const saveLastKnownPosition = () => {
-      if (lastPositionRef.current) writePosition({ ...lastPositionRef.current, savedAt: Date.now() })
     }
 
     const requestSave = () => {
@@ -156,23 +197,32 @@ export function PostReadingPosition({ postId, updatedAt }: Props) {
     restoreTimer = window.setTimeout(restore, 700)
     window.addEventListener("scroll", requestSave, { passive: true })
     window.addEventListener("resize", requestSave)
-    window.addEventListener("pagehide", saveLastKnownPosition)
+    window.addEventListener("pagehide", save)
     document.addEventListener("click", saveBeforeNavigation, { capture: true })
 
     return () => {
       window.removeEventListener("scroll", requestSave)
       window.removeEventListener("resize", requestSave)
-      window.removeEventListener("pagehide", saveLastKnownPosition)
+      window.removeEventListener("pagehide", save)
       document.removeEventListener("click", saveBeforeNavigation, { capture: true })
       if (saveFrame) window.cancelAnimationFrame(saveFrame)
       if (restoreFrame) window.cancelAnimationFrame(restoreFrame)
       if (restoreTimer) window.clearTimeout(restoreTimer)
+      if (suppressSavesTimerRef.current) window.clearTimeout(suppressSavesTimerRef.current)
       clearNoticeTimer()
-      saveLastKnownPosition()
+      save()
     }
   }, [clearNoticeTimer, postId, startNoticeTimer, updatedAt])
 
   const returnToStart = () => {
+    suppressSavesRef.current = true
+    lastPositionRef.current = null
+    if (suppressSavesTimerRef.current) window.clearTimeout(suppressSavesTimerRef.current)
+    suppressSavesTimerRef.current = window.setTimeout(() => {
+      suppressSavesRef.current = false
+      suppressSavesTimerRef.current = null
+    }, 1000)
+
     try {
       window.localStorage.removeItem(getStorageKey(postId))
     } catch {

@@ -15,6 +15,7 @@ type MediaAsset = {
 
 type Props = {
   compact?: boolean
+  comfortableOnMobile?: boolean
   menuPlacement?: "above" | "below"
   uploadEndpoint?: string
   assetsEndpoint?: string
@@ -23,6 +24,7 @@ type Props = {
 
 export function ImagePlugin({
   compact = false,
+  comfortableOnMobile = false,
   menuPlacement = "above",
   uploadEndpoint = "/api/admin/media",
   assetsEndpoint = "/api/admin/media",
@@ -89,7 +91,7 @@ export function ImagePlugin({
 
   const buttonClassName = compact
     ? "grid size-8 place-items-center rounded-full text-[#A8A095] transition-colors hover:bg-white/10 hover:text-[#f1f1f1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A8A095]/35 disabled:opacity-40"
-    : "grid size-8 place-items-center rounded-md text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400/35 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100 disabled:opacity-40"
+    : `${comfortableOnMobile ? "size-11 sm:size-8" : "size-8"} grid place-items-center rounded-md text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400/35 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100 disabled:opacity-40`
   const panelClassName = [
     "absolute right-0 w-[min(23rem,calc(100vw-2rem))] rounded-xl border border-neutral-200/80 bg-white/95 p-3 shadow-xl shadow-black/10 backdrop-blur dark:border-white/10 dark:bg-neutral-950/95 dark:shadow-black/40",
     menuPlacement === "above" ? "bottom-10" : "top-10",

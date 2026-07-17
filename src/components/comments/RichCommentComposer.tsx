@@ -53,13 +53,23 @@ export function RichCommentComposer({
     }
   }
 
+  const submitButton = (
+    <button
+      type="button"
+      onClick={() => void submit()}
+      disabled={submitting || !draft.trim()}
+      className="inline-flex min-h-11 items-center gap-1.5 rounded-md bg-neutral-950 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#c00060] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E00070]/60 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-[#f1f1f1] dark:text-[#080808] dark:hover:bg-[#E00070] dark:hover:text-white sm:min-h-8"
+    >
+      <PaperAirplaneIcon className="size-3.5" aria-hidden />
+      {submitting ? submittingLabel : submitLabel}
+    </button>
+  )
+
   return (
     <div
       className={[
-        "overflow-hidden rounded-lg border transition-colors focus-within:ring-1",
-        compact
-          ? "border-neutral-950/15 bg-white/70 focus-within:border-[#E00070]/60 focus-within:ring-[#E00070]/20 dark:border-white/15 dark:bg-white/[0.04]"
-          : "border-neutral-200 bg-transparent focus-within:border-neutral-300 focus-within:ring-neutral-300 dark:border-white/10 dark:focus-within:ring-[#A8A095]/40",
+        "rounded-lg border bg-transparent transition-colors focus-within:border-[#E00070]/50 focus-within:ring-1 focus-within:ring-[#E00070]/15",
+        compact ? "border-neutral-950/15 dark:border-white/15" : "border-neutral-950/10 dark:border-white/10",
       ].join(" ")}
       onKeyDown={(event) => {
         if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
@@ -74,32 +84,18 @@ export function RichCommentComposer({
         initialMarkdown=""
         onChange={handleChange}
         placeholder={placeholder}
-        shellClassName={compact ? "min-h-16 px-2 py-2" : "min-h-20 px-3 py-2"}
-        editorClassName={compact ? "min-h-16 text-xs" : "min-h-20 text-xs"}
-        toolbarVariant="compact"
+        shellClassName={compact ? "min-h-14 px-3 py-2.5" : "min-h-18 px-3 py-3"}
+        editorClassName={compact ? "min-h-14 text-sm" : "min-h-18 text-sm"}
+        placeholderClassName={compact ? "left-3 top-2.5 text-sm" : "left-3 top-3 text-sm"}
+        toolbarVariant="comment"
         toolbarPlacement="bottom"
+        toolbarTrailingContent={submitButton}
         imageUploadEndpoint="/api/comments/media"
         allowImageAssetLibrary={false}
         allowImages={allowImageUpload}
         onChangeDelayMs={120}
         editorRef={editorRef}
       />
-      <div className={compact ? "flex justify-end px-2 pb-2" : "flex justify-end px-2 pb-2"}>
-        <button
-          type="button"
-          onClick={() => void submit()}
-          disabled={submitting || !draft.trim()}
-          className={[
-            "inline-flex items-center gap-1.5 rounded-full font-medium transition disabled:cursor-not-allowed disabled:opacity-40",
-            compact
-              ? "bg-neutral-950 px-3 py-1.5 text-xs text-white hover:bg-[#E00070] dark:bg-[#f1f1f1] dark:text-[#040404] dark:hover:bg-[#E00070] dark:hover:text-white"
-              : "bg-neutral-950 px-3 py-1.5 text-xs text-white dark:bg-[#f1f1f1] dark:text-[#080808]",
-          ].join(" ")}
-        >
-          <PaperAirplaneIcon className="size-3.5" aria-hidden />
-          {submitting ? submittingLabel : submitLabel}
-        </button>
-      </div>
     </div>
   )
 }

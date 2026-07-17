@@ -1,9 +1,8 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Bars3Icon } from "@heroicons/react/24/outline"
 import { AutoFitText } from "@/components/text/AutoFitText"
-import styles from "./PostTopics.module.css"
 
 type HeadingEntry = {
   id: string
@@ -62,7 +61,6 @@ type Props = {
 }
 
 export function PostTopics({ containerSelector = "[data-post-content]" }: Props) {
-  const navRef = useRef<HTMLElement>(null)
   const [headings, setHeadings] = useState<HeadingEntry[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
@@ -154,32 +152,6 @@ export function PostTopics({ containerSelector = "[data-post-content]" }: Props)
     : visibleHeadings
 
   useEffect(() => {
-    if (!activeId || paragraphCommentsOpen) return
-
-    const nav = navRef.current
-    const activeTopic = nav?.querySelector<HTMLElement>(`[data-topic-id="${CSS.escape(activeId)}"]`)
-    if (!nav || !activeTopic) return
-
-    const viewportInset = 8
-    const topicTop = activeTopic.offsetTop
-    const topicBottom = topicTop + activeTopic.offsetHeight
-    const viewportTop = nav.scrollTop + viewportInset
-    const viewportBottom = nav.scrollTop + nav.clientHeight - viewportInset
-
-    if (topicTop < viewportTop) {
-      nav.scrollTo({
-        top: Math.max(0, topicTop - viewportInset),
-        behavior: prefersReducedMotion ? "auto" : "smooth",
-      })
-    } else if (topicBottom > viewportBottom) {
-      nav.scrollTo({
-        top: topicBottom - nav.clientHeight + viewportInset,
-        behavior: prefersReducedMotion ? "auto" : "smooth",
-      })
-    }
-  }, [activeId, paragraphCommentsOpen, prefersReducedMotion])
-
-  useEffect(() => {
     window.dispatchEvent(new CustomEvent("paragraph-topics-compact-change", {
       detail: { expanded: paragraphCommentsOpen && compactExpanded },
     }))
@@ -196,12 +168,12 @@ export function PostTopics({ containerSelector = "[data-post-content]" }: Props)
   return (
     <aside
       className={[
-        "fixed top-24 left-[calc(50%+20rem)] z-20 hidden w-64 flex-col overflow-hidden border border-neutral-950/10 bg-[#f4f4f4]/95 text-sm text-neutral-600 transition-[height,border-radius] duration-200 ease-out dark:border-white/10 dark:bg-[#040404]/95 dark:text-[#A8A095] xl:flex",
+        "fixed top-24 left-[calc(50%+20rem)] z-20 hidden w-64 flex-col overflow-hidden border border-neutral-950/10 bg-[#f4f4f4]/95 text-sm text-neutral-600 transition-[max-height,border-radius] duration-200 ease-out dark:border-white/10 dark:bg-[#040404]/95 dark:text-[#A8A095] xl:flex",
         paragraphCommentsOpen
           ? compactExpanded
             ? "h-44 rounded-t-lg border-b-0"
             : "h-32 rounded-t-lg border-b-0"
-          : "h-[min(28.5rem,calc(100dvh-7rem))] rounded-lg",
+          : "max-h-[calc(100vh-7rem)] rounded-lg",
       ].join(" ")}
     >
       <div className={["border-b border-neutral-950/10 px-4 dark:border-white/10", paragraphCommentsOpen ? "py-2.5" : "py-3"].join(" ")}>
@@ -224,33 +196,28 @@ export function PostTopics({ containerSelector = "[data-post-content]" }: Props)
       </div>
 
       <nav
-        ref={navRef}
         className={[
-          "relative flex flex-col px-2",
-          paragraphCommentsOpen
-            ? "h-[4.35rem] overflow-hidden py-1.5"
-            : `min-h-0 flex-1 overflow-y-auto py-2 ${styles.scrollViewport}`,
+          "relative flex flex-col px-2 pr-4",
+          paragraphCommentsOpen ? "h-[4.35rem] overflow-hidden py-1.5" : "overflow-y-auto py-2",
           paragraphCommentsOpen && compactExpanded ? "h-[7.25rem]" : "",
         ].join(" ")}
         aria-label="Tópicos do artigo"
       >
+        {!paragraphCommentsOpen && (
+          <span
+            aria-hidden
+            className="absolute left-[1.18rem] top-4 bottom-4 w-px bg-neutral-950/10 dark:bg-white/10"
+          />
+        )}
         {displayedHeadings.map((heading) => {
           const active = heading.id === activeId
-          const visualLevel = Math.min(3, Math.max(1, heading.level))
-          const levelMarker = "#".repeat(visualLevel)
-          const levelClasses = {
-            1: "pl-2 font-semibold",
-            2: "pl-5 font-medium",
-            3: "pl-8 font-normal",
-          }[visualLevel]
+          const nested = heading.level > 2
 
           return (
             <button
               key={heading.id}
-              data-topic-id={heading.id}
               type="button"
               title={heading.text}
-              aria-label={`Tópico nível ${visualLevel}: ${heading.text}`}
               aria-current={active ? "location" : undefined}
               onClick={() => {
                 heading.element.scrollIntoView({
@@ -260,9 +227,8 @@ export function PostTopics({ containerSelector = "[data-post-content]" }: Props)
                 window.history.replaceState(null, "", `#${encodeURIComponent(heading.id)}`)
               }}
               className={[
-                "group relative grid w-full grid-cols-[1.5rem_minmax(0,1fr)] items-start gap-1.5 rounded-md pr-2 text-left transition-[background-color,color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E00070]/70",
-                levelClasses,
-                paragraphCommentsOpen ? "h-8 py-1.5" : "h-12 shrink-0 py-2",
+                "group relative grid w-full grid-cols-[1.15rem_minmax(0,1fr)] items-start gap-2 rounded-md px-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E00070]/70",
+                paragraphCommentsOpen ? "h-8 py-1.5" : "py-2",
                 paragraphCommentsOpen
                   ? active
                     ? "text-neutral-950 dark:text-[#f1f1f1]"
@@ -277,25 +243,29 @@ export function PostTopics({ containerSelector = "[data-post-content]" }: Props)
               <span
                 aria-hidden
                 className={[
-                  "mt-[0.2rem] block font-[family-name:var(--font-mono)] text-[0.55rem] font-semibold leading-none tracking-[-0.12em] transition-colors",
+                  "relative z-10 h-2 w-2 rounded-full border transition-all",
+                  paragraphCommentsOpen ? "mt-[0.28rem]" : "mt-[0.38rem]",
                   active
-                    ? "text-[#E00070]"
-                    : "text-neutral-400 group-hover:text-neutral-600 dark:text-[#A8A095]/55 dark:group-hover:text-[#A8A095]/85",
+                    ? "border-[#E00070] bg-[#E00070]"
+                    : paragraphCommentsOpen
+                      ? "border-neutral-400 bg-[#f4f4f4] dark:border-[#A8A095]/60 dark:bg-[#040404]"
+                      : "border-neutral-400 bg-[#f4f4f4] group-hover:border-neutral-700 dark:border-[#A8A095]/60 dark:bg-[#040404] dark:group-hover:border-[#f1f1f1]",
                 ].join(" ")}
-              >
-                {levelMarker}
-              </span>
+              />
               <AutoFitText
                 text={heading.text}
                 minSize={11}
-                maxSize={visualLevel === 1 ? 13 : visualLevel === 2 ? 12 : 11}
+                maxSize={nested ? 12 : 13}
                 maxLines={paragraphCommentsOpen ? 1 : 2}
                 className={[
-                  "block min-w-0 overflow-hidden leading-snug",
-                  visualLevel > 1 && !active ? "text-neutral-500 dark:text-[#A8A095]/85" : "",
-                  visualLevel > 1 && !paragraphCommentsOpen
-                    ? "group-hover:text-neutral-700 dark:group-hover:text-[#f1f1f1]"
+                  "block min-w-0 leading-snug",
+                  nested
+                    ? [
+                        "pl-3 text-neutral-500 dark:text-[#A8A095]/85",
+                        paragraphCommentsOpen ? "" : "group-hover:text-neutral-700 dark:group-hover:text-[#f1f1f1]",
+                      ].join(" ")
                     : "",
+                  active && nested ? "text-neutral-950 dark:text-[#f1f1f1]" : "",
                 ]
                   .filter(Boolean)
                   .join(" ")}
