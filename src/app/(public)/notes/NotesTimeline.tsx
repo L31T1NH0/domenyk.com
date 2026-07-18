@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useRef, useState } from "react"
+import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { NoteCard } from "@/components/notes/NoteCard"
 import { NoteComposer } from "@/components/notes/NoteComposer"
@@ -24,7 +24,6 @@ export function NotesTimeline({
   showAdminHint = false,
 }: Props) {
   const router = useRouter()
-  const composerRef = useRef<HTMLDivElement>(null)
   const [notes, setNotes] = useState(initialNotes)
   const [cursor, setCursor] = useState(initialCursor)
   const [loading, setLoading] = useState(false)
@@ -50,9 +49,6 @@ export function NotesTimeline({
   function handleContinueThread(note: SerializedNote) {
     setError("")
     setThreadParent(note)
-    requestAnimationFrame(() => {
-      composerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
-    })
   }
 
   async function handleLinkToThread(note: SerializedNote) {
@@ -144,7 +140,7 @@ export function NotesTimeline({
   return (
     <div className="flex flex-col gap-4">
       {(isAdmin || showComposer) && (
-        <div ref={composerRef}>
+        <div>
           <NoteComposer
             onPosted={handlePosted}
             threadParent={threadParent}

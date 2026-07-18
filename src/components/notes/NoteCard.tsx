@@ -23,6 +23,7 @@ import { usePretextContentFontSize } from "@/components/text/usePretextTextMetri
 import { CommentContent } from "@/components/comments/CommentContent"
 import { RichCommentComposer } from "@/components/comments/RichCommentComposer"
 import { useComments, type Comment } from "@/components/comments/useComments"
+import { ContentActionMenu, type ContentMenuAction } from "@/components/actions/ContentActionMenu"
 import { DeleteActionMenu } from "@/components/actions/DeleteActionMenu"
 import type { SerializedNote } from "@/lib/db/notes"
 import { noteDisplayTitle } from "@/lib/seo"
@@ -511,6 +512,26 @@ export function NoteCard({ note, showMetadata = false, viewContext, isAdmin, onD
   const noteBelongsToAnotherThread = Boolean(
     threadLinkSource && note.thread && note.thread.rootId !== selectedThreadRootId
   )
+  const noteMenuActions: ContentMenuAction[] = threadLinkSource
+    ? [{
+        label: note._id === threadLinkSource._id
+          ? "Cancelar seleção da thread"
+          : noteBelongsToSelectedThread
+            ? "Já está nesta thread"
+            : noteBelongsToAnotherThread
+              ? "Pertence a outra thread"
+              : "Linkar à thread selecionada",
+        icon: note._id === threadLinkSource._id ? XMarkIcon : LinkIcon,
+        onSelect: note._id === threadLinkSource._id
+          ? onCancelThreadLink
+          : () => onLinkToThread?.(note),
+        disabled: note._id !== threadLinkSource._id && (noteBelongsToSelectedThread || noteBelongsToAnotherThread || linkingToThread),
+        pendingLabel: "Linkando…",
+      }]
+    : [
+        ...(onUpdate ? [{ label: "Editar nota", icon: PencilIcon, onSelect: startEditing }] : []),
+        ...(onContinueThread ? [{ label: "Continuar ou linkar thread", icon: LinkIcon, onSelect: () => onContinueThread(note) }] : []),
+      ]
   const borderClass = timelineThreadPlacement === "first"
     ? "border-t border-neutral-200 dark:border-white/10"
     : timelineThreadPlacement === "middle"
@@ -518,9 +539,12 @@ export function NoteCard({ note, showMetadata = false, viewContext, isAdmin, onD
       : timelineThreadPlacement === "last"
         ? "border-b border-neutral-200 dark:border-white/10"
         : "border-y border-neutral-200 dark:border-white/10"
+  const isThreadContinuation = timelineThreadPlacement === "middle" || timelineThreadPlacement === "last"
+  const spacingClass = isThreadContinuation ? "pb-5 pt-0" : "pb-5 pt-3"
+  const actionPositionClass = isThreadContinuation ? "-top-1" : "top-2"
 
   return (
-    <article ref={articleRef} className={`group relative flex w-full min-w-0 flex-col gap-2.5 pb-5 pt-1 ${borderClass}`}>
+    <article ref={articleRef} className={`group relative flex w-full min-w-0 flex-col gap-2.5 ${spacingClass} ${borderClass}`}>
       <div className="flex items-center">
         <Link
           href={notePath}
@@ -536,81 +560,21 @@ export function NoteCard({ note, showMetadata = false, viewContext, isAdmin, onD
             aria-label={`Abrir thread, parte ${note.thread.position}`}
           >
             <LinkIcon className="size-3" aria-hidden />
-            <span>thread · {note.thread.position}{timelineThreadSize > 1 ? `/${timelineThreadSize}` : ""}</span>
+            <span>{note.thread.position}{timelineThreadSize > 1 ? `/${timelineThreadSize}` : ""}</span>
           </Link>
         )}
-        {isAdmin && (
-          <div className="absolute right-0 top-0 z-20 flex items-center gap-1">
-            {threadLinkSource ? (
-              <button
-                type="button"
-                onClick={note._id === threadLinkSource._id ? onCancelThreadLink : () => onLinkToThread?.(note)}
-                disabled={note._id !== threadLinkSource._id && (noteBelongsToSelectedThread || noteBelongsToAnotherThread || linkingToThread)}
-                aria-label={note._id === threadLinkSource._id
-                  ? "Cancelar seleção da thread"
-                  : noteBelongsToSelectedThread
-                    ? "Esta nota já pertence à thread selecionada"
-                    : noteBelongsToAnotherThread
-                      ? "Esta nota pertence a outra thread"
-                      : "Linkar esta nota à thread selecionada"}
-                title={note._id === threadLinkSource._id
-                  ? "Cancelar seleção da thread"
-                  : noteBelongsToSelectedThread
-                    ? "Já está nesta thread"
-                    : noteBelongsToAnotherThread
-                      ? "Está em outra thread"
-                      : "Linkar à thread"}
-                className={[
-                  "grid size-8 place-items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:focus-visible:ring-neutral-300",
-                  note._id === threadLinkSource._id
-                    ? "bg-[#E00070]/10 text-[#E00070] hover:bg-[#E00070]/15"
-                    : noteBelongsToSelectedThread || noteBelongsToAnotherThread
-                      ? "cursor-not-allowed text-neutral-400 opacity-35 dark:text-[#77716a]"
-                      : "text-[#E00070] hover:bg-[#E00070]/10",
-                  linkingToThread ? "animate-pulse" : "",
-                ].filter(Boolean).join(" ")}
-              >
-                <LinkIcon className="size-3.5" aria-hidden />
-              </button>
-            ) : (
-              <>
-                <div className="flex items-center gap-1 opacity-100 transition-opacity sm:pointer-events-none sm:opacity-0 sm:group-hover:pointer-events-auto sm:group-hover:opacity-100 sm:group-focus-within:pointer-events-auto sm:group-focus-within:opacity-100">
-                  {onUpdate && !editing && (
-                    <button
-                      type="button"
-                      onClick={startEditing}
-                      aria-label="Editar nota"
-                      title="Editar nota"
-                      className="grid size-8 place-items-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#A8A095] dark:hover:bg-white/10 dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
-                    >
-                      <PencilIcon className="size-3.5" aria-hidden />
-                    </button>
-                  )}
-                  {onDelete && !editing && (
-                    <DeleteActionMenu
-                      title="Excluir esta nota?"
-                      description="A nota, seus comentários e suas métricas internas serão apagados. Se ela estiver em uma thread, as demais notas serão reconectadas."
-                      onDelete={() => onDelete(note._id)}
-                      disabled={deleting}
-                      triggerLabel="Excluir"
-                      triggerVariant="text"
-                      triggerClassName="inline-flex min-h-8 items-center gap-1 rounded px-2 text-xs leading-none text-neutral-500 outline-none transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:cursor-wait disabled:opacity-50 dark:text-[#A8A095] dark:hover:bg-white/10 dark:hover:text-white"
-                    />
-                  )}
-                </div>
-                {onContinueThread && !editing && (
-                  <button
-                    type="button"
-                    onClick={() => onContinueThread(note)}
-                    aria-label="Continuar ou linkar uma thread a partir desta nota"
-                    title="Continuar ou linkar thread"
-                    className="grid size-8 place-items-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#A8A095] dark:hover:bg-white/10 dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
-                  >
-                    <LinkIcon className="size-3.5" aria-hidden />
-                  </button>
-                )}
-              </>
-            )}
+        {isAdmin && !editing && (
+          <div className={`absolute right-0 z-20 flex items-center gap-1 ${actionPositionClass}`}>
+            <ContentActionMenu
+              label={`Ações da nota: ${displayTitle}`}
+              actions={noteMenuActions}
+              deleteAction={onDelete ? {
+                title: "Excluir esta nota?",
+                description: "A nota, seus comentários e suas métricas internas serão apagados. Se ela estiver em uma thread, as demais notas serão reconectadas.",
+                onDelete: () => onDelete(note._id),
+                disabled: deleting,
+              } : undefined}
+            />
           </div>
         )}
       </div>
@@ -710,15 +674,15 @@ export function NoteCard({ note, showMetadata = false, viewContext, isAdmin, onD
         </div>
       )}
 
-      <div className="pointer-events-none absolute bottom-0 left-0">
+      <div className="pointer-events-none absolute -bottom-1 left-0">
         <button
           ref={commentsButtonRef}
           type="button"
           onClick={openComments}
           aria-expanded={commentsOpen}
-          className="pointer-events-auto inline-flex min-h-8 items-center gap-1.5 rounded text-xs text-neutral-600 opacity-100 transition-colors hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#c2bbb1] dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+          className="pointer-events-auto inline-flex min-h-8 items-center gap-1.5 rounded text-xs leading-none text-neutral-600 opacity-100 transition-colors hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#c2bbb1] dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
         >
-          <ChatBubbleLeftEllipsisIcon className="size-4" aria-hidden />
+          <ChatBubbleLeftEllipsisIcon className="size-4 translate-y-px" aria-hidden />
           <span>{commentActionLabel}</span>
           {commentsLoaded && commentCount > 0 && <span className="tabular-nums">({commentCount})</span>}
         </button>

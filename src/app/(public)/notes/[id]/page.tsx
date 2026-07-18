@@ -134,7 +134,14 @@ export default async function NotePage({ params }: Props) {
             return (
               <li key={threadNote._id}>
                 <article className={[
-                  "flex flex-col gap-4 border-neutral-200 py-6 dark:border-white/10",
+                  "flex flex-col gap-4 border-neutral-200 dark:border-white/10",
+                  !isThread
+                    ? "py-6"
+                    : index === 0
+                      ? "pb-3 pt-6"
+                      : index === serializedThread.length - 1
+                        ? "pb-6 pt-3"
+                        : "py-3",
                   index === 0 ? "border-t" : "",
                   !isThread || index === serializedThread.length - 1 ? "border-b" : "",
                 ].filter(Boolean).join(" ")}>

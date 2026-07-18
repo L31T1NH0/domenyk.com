@@ -1,7 +1,7 @@
 "use client"
 
 import { LinkIcon, PaperAirplaneIcon, XMarkIcon } from "@heroicons/react/24/outline"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useRef, useState } from "react"
 import type { LexicalEditor as LexicalEditorInstance } from "lexical"
 import { LexicalEditor, readMarkdownFromEditor } from "@/components/editor/LexicalEditor"
 import {
@@ -31,10 +31,6 @@ export function NoteComposer({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
   const lexicalEditorRef = useRef<LexicalEditorInstance | null>(null)
-
-  useEffect(() => {
-    if (threadParent) lexicalEditorRef.current?.focus()
-  }, [threadParent])
 
   const handleContentChange = useCallback((markdown: string) => {
     setContent(markdown)

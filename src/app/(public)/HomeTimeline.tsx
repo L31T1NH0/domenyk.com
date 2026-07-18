@@ -9,8 +9,9 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   DocumentTextIcon,
-  EyeIcon,
+  EyeSlashIcon,
   MagnifyingGlassIcon,
+  PencilSquareIcon,
   Squares2X2Icon,
   XMarkIcon,
 } from "@heroicons/react/24/outline"
@@ -19,6 +20,7 @@ import { ptBR } from "date-fns/locale"
 import { NoteCard } from "@/components/notes/NoteCard"
 import { NoteComposer } from "@/components/notes/NoteComposer"
 import { NoteTimelineGroup } from "@/components/notes/NoteTimelineGroup"
+import { ContentActionMenu } from "@/components/actions/ContentActionMenu"
 import { AutoFitText } from "@/components/text/AutoFitText"
 import type { SerializedNote } from "@/lib/db/notes"
 import type { SerializedPostSummary } from "@/lib/db/posts"
@@ -77,16 +79,18 @@ function PostTimelineItem({
   showBottomSeparator,
   isAdmin,
   onHide,
+  onDelete,
   hiding,
-  pendingHide,
+  deleting,
 }: {
   post: SerializedPostSummary
   showTopSeparator: boolean
   showBottomSeparator: boolean
   isAdmin: boolean
-  onHide: (post: SerializedPostSummary) => void
+  onHide: (post: SerializedPostSummary) => Promise<void>
+  onDelete: (post: SerializedPostSummary) => Promise<void>
   hiding: boolean
-  pendingHide: boolean
+  deleting: boolean
 }) {
   const showCover = postShowsTimelineCover(post)
   const isEditorial = post.style === "editorial"
@@ -196,31 +200,35 @@ function PostTimelineItem({
         )}
       </Link>
       {isAdmin && (
-        <button
-          type="button"
-          onClick={() => onHide(post)}
-          disabled={hiding}
-          aria-label={`Esconder ${post.title} da timeline`}
-          title={`Esconder ${post.title} da timeline`}
-          className={[
-            "absolute right-0 z-10 inline-flex min-h-8 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium opacity-100 shadow-sm backdrop-blur transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:opacity-40 sm:opacity-0 sm:group-hover:opacity-100",
-            pendingHide
-              ? "border-red-500/40 bg-red-500/15 text-red-200 hover:bg-red-500/25 focus-visible:ring-red-500/40"
-              : "border-neutral-300 bg-white/80 text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950 focus-visible:ring-[#A8A095]/40 dark:border-white/10 dark:bg-black/45 dark:text-[#A8A095] dark:hover:bg-white/10 dark:hover:text-[#f1f1f1]",
-            showCover ? "top-7" : "top-4",
-          ].join(" ")}
-        >
-          {hiding ? (
-            "Ocultando..."
-          ) : pendingHide ? (
-            "Confirmar ocultar?"
-          ) : (
-            <>
-              <EyeIcon className="size-4" aria-hidden />
-              <span>Ocultar</span>
-            </>
-          )}
-        </button>
+        <div className={`absolute right-0 z-20 ${showCover ? "top-7" : "top-4"}`}>
+          <ContentActionMenu
+            label={`Ações do post: ${post.title}`}
+            actions={[
+              {
+                label: "Editar post",
+                icon: PencilSquareIcon,
+                href: `/admin/posts/${post._id}/edit`,
+                disabled: deleting,
+              },
+              {
+                label: "Ocultar da timeline",
+                icon: EyeSlashIcon,
+                onSelect: () => onHide(post),
+                disabled: hiding || deleting,
+                pendingLabel: "Ocultando…",
+              },
+            ]}
+            deleteAction={{
+              title: `Excluir “${post.title}”?`,
+              description: "O post e seus comentários serão apagados permanentemente.",
+              onDelete: () => onDelete(post),
+              disabled: hiding || deleting,
+            }}
+            triggerClassName={showCover
+              ? "relative grid size-8 place-items-center rounded-md bg-black/55 text-white outline-none transition-colors before:absolute before:-inset-1.5 before:content-[''] hover:bg-black/75 focus-visible:ring-2 focus-visible:ring-white/80"
+              : "relative grid size-8 place-items-center rounded-md text-neutral-500 outline-none transition-colors before:absolute before:-inset-1.5 before:content-[''] hover:bg-neutral-100 hover:text-neutral-950 focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#A8A095] dark:hover:bg-white/10 dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"}
+          />
+        </div>
       )}
     </li>
   )
@@ -603,7 +611,6 @@ function TimelineModeDock({
 export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feedMode, searchQuery, searchError = "", currentPage, pageSize, isAdmin }: Props) {
   const router = useRouter()
   const sectionRef = useRef<HTMLElement>(null)
-  const noteComposerRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastRequestedSearchRef = useRef(searchQuery)
@@ -617,14 +624,13 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
   const [searchInput, setSearchInput] = useState(searchQuery)
   const hasSearchInput = searchInput.length > 0
   const [hidingPostId, setHidingPostId] = useState<string | null>(null)
+  const [deletingPostId, setDeletingPostId] = useState<string | null>(null)
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null)
-  const [pendingHidePostId, setPendingHidePostId] = useState<string | null>(null)
   const [hideError, setHideError] = useState("")
   const [noteError, setNoteError] = useState("")
   const [threadParent, setThreadParent] = useState<SerializedNote | null>(null)
   const [linkingNoteId, setLinkingNoteId] = useState<string | null>(null)
   const [isPagePending, startPageTransition] = useTransition()
-  const pendingHideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const { timelineCount, totalPages: optimisticTotalPages, activePage, visibleItems } = useTimelineFeed({
     notes,
     posts: timelinePosts,
@@ -635,25 +641,8 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
     pageSize,
   })
 
-  const resetPendingHide = useCallback(() => {
-    if (pendingHideTimeoutRef.current) {
-      clearTimeout(pendingHideTimeoutRef.current)
-      pendingHideTimeoutRef.current = null
-    }
-    setPendingHidePostId(null)
-  }, [])
-
-  const schedulePendingHideTimeout = useCallback((postId: string) => {
-    if (pendingHideTimeoutRef.current) clearTimeout(pendingHideTimeoutRef.current)
-    pendingHideTimeoutRef.current = setTimeout(() => {
-      setPendingHidePostId((current) => (current === postId ? null : current))
-      pendingHideTimeoutRef.current = null
-    }, 4000)
-  }, [])
-
   useEffect(() => {
     return () => {
-      if (pendingHideTimeoutRef.current) clearTimeout(pendingHideTimeoutRef.current)
       if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current)
     }
   }, [])
@@ -714,9 +703,6 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
   function handleContinueThread(note: SerializedNote) {
     setNoteError("")
     setThreadParent(note)
-    requestAnimationFrame(() => {
-      noteComposerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
-    })
   }
 
   async function handleLinkToThread(note: SerializedNote) {
@@ -782,13 +768,6 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
 
   async function handleHidePost(postToHide: SerializedPostSummary) {
     if (!isAdmin || hidingPostId) return
-    if (pendingHidePostId !== postToHide._id) {
-      setPendingHidePostId(postToHide._id)
-      schedulePendingHideTimeout(postToHide._id)
-      return
-    }
-
-    resetPendingHide()
     setHidingPostId(postToHide._id)
     setHideError("")
 
@@ -806,10 +785,36 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
       setTimelinePosts((prev) => prev.filter((post) => post._id !== postToHide._id))
       setPostCount((prev) => Math.max(0, prev - 1))
       router.refresh()
-    } catch (err) {
-      setHideError(err instanceof Error ? err.message : "Não foi possível esconder o post.")
+    } catch (caughtError) {
+      const message = caughtError instanceof Error ? caughtError.message : "Não foi possível esconder o post."
+      setHideError(message)
+      throw new Error(message)
     } finally {
       setHidingPostId(null)
+    }
+  }
+
+  async function handleDeletePost(postToDelete: SerializedPostSummary) {
+    if (!isAdmin || deletingPostId) return
+    setDeletingPostId(postToDelete._id)
+    setHideError("")
+
+    try {
+      const response = await fetch(`/api/admin/posts/${postToDelete._id}`, { method: "DELETE" })
+      if (!response.ok) {
+        const data = await response.json().catch(() => null)
+        throw new Error(data?.error ?? "Não foi possível excluir o post.")
+      }
+
+      setTimelinePosts((current) => current.filter((post) => post._id !== postToDelete._id))
+      setPostCount((current) => Math.max(0, current - 1))
+      router.refresh()
+    } catch (caughtError) {
+      const message = caughtError instanceof Error ? caughtError.message : "Não foi possível excluir o post."
+      setHideError(message)
+      throw new Error(message)
+    } finally {
+      setDeletingPostId(null)
     }
   }
 
@@ -933,7 +938,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
         </div>
 
         {isAdmin && (
-          <div ref={noteComposerRef}>
+          <div>
             <NoteComposer
               onPosted={handlePosted}
               threadParent={threadParent}
@@ -991,8 +996,9 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
                     post={item.post}
                     isAdmin={isAdmin}
                     onHide={handleHidePost}
+                    onDelete={handleDeletePost}
                     hiding={hidingPostId === item.post._id}
-                    pendingHide={pendingHidePostId === item.post._id}
+                    deleting={deletingPostId === item.post._id}
                     showTopSeparator={itemShouldHaveTopSeparator(item, visibleItems[index - 1])}
                     showBottomSeparator={itemNeedsTextSeparator(item)}
                   />

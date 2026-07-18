@@ -98,7 +98,7 @@ export function PostHeader({
           style={{ filter: "none" }}
           priority
         />
-        <div className="pointer-events-none absolute inset-0 rounded-xl">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl">
           <div className="absolute left-0 top-0 h-[42%] w-full bg-gradient-to-b from-[#040404]/85 via-[#040404]/55 to-transparent" />
           <div className="absolute bottom-0 left-0 h-[58%] w-full bg-gradient-to-t from-[#040404]/90 via-[#040404]/58 to-transparent" />
         </div>
