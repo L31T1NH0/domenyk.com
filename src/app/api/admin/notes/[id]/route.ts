@@ -49,9 +49,9 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const contents = comments.map((comment) => comment.content)
   await queueCommentImagesForCleanup(contents)
   await deleteCommentsForParent(id)
-  await deleteNote(id)
+  const result = await deleteNote(id)
   await deleteCommentImagesFromContents(contents)
   invalidatePublicContentCache()
   after(() => notifyIndexNow([`/notes/${id}`]))
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: result.deleted, thread: result.thread.map(serializeNote) })
 }

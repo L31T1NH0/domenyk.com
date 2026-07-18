@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { DeleteActionMenu } from "@/components/actions/DeleteActionMenu"
 import type { SerializedNote } from "@/lib/db/notes"
 import type { NoteMetrics } from "@/lib/db/note-metrics"
@@ -48,7 +49,7 @@ export function AdminNoteEditor({ note, metrics }: { note: SerializedNote; metri
     <aside className="admin-note-settings">
       <section>
         <header><div><h2>Audiência interna</h2><p>Métricas privadas desta nota</p></div><span className="admin-record-status is-muted">Privado</span></header>
-        <dl className="admin-note-metrics"><div><dt>Views reais</dt><dd>{metrics.directViews}</dd></div><div><dt>Exposições na home</dt><dd>{metrics.homeImpressions}</dd></div><div><dt>Exposições em /notes</dt><dd>{metrics.notesImpressions}</dd></div><div><dt>Leitura estimada</dt><dd>{note.readingEstimate.estimatedReadingSeconds}s</dd></div><div><dt>Complexidade</dt><dd>{note.readingEstimate.complexity}</dd></div><div><dt>Margem na timeline</dt><dd>{note.readingEstimate.impressionThresholdMs / 1000}s · {Math.round(note.readingEstimate.impressionVisibleRatio * 100)}%</dd></div></dl>
+        <dl className="admin-note-metrics">{note.thread && <div><dt>Thread</dt><dd><Link href={`/notes/${note.thread.rootId}`} target="_blank">Parte {note.thread.position}</Link></dd></div>}<div><dt>Views reais</dt><dd>{metrics.directViews}</dd></div><div><dt>Exposições na home</dt><dd>{metrics.homeImpressions}</dd></div><div><dt>Exposições em /notes</dt><dd>{metrics.notesImpressions}</dd></div><div><dt>Leitura estimada</dt><dd>{note.readingEstimate.estimatedReadingSeconds}s</dd></div><div><dt>Complexidade</dt><dd>{note.readingEstimate.complexity}</dd></div><div><dt>Margem na timeline</dt><dd>{note.readingEstimate.impressionThresholdMs / 1000}s · {Math.round(note.readingEstimate.impressionVisibleRatio * 100)}%</dd></div></dl>
         <p className="admin-note-help">Abrir a página individual registra uma view real imediatamente. Nas timelines, tempo em aba oculta não conta.</p>
       </section>
 

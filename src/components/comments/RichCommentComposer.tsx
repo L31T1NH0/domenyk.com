@@ -4,6 +4,11 @@ import { PaperAirplaneIcon } from "@heroicons/react/24/outline"
 import { useCallback, useEffect, useRef, useState } from "react"
 import type { LexicalEditor as LexicalEditorInstance } from "lexical"
 import { LexicalEditor, readMarkdownFromEditor } from "@/components/editor/LexicalEditor"
+import {
+  RICH_COMPOSER_DEFAULT_BORDER_CLASS_NAME,
+  RICH_COMPOSER_FRAME_CLASS_NAME,
+  RICH_COMPOSER_SUBMIT_CLASS_NAME,
+} from "@/components/editor/composerStyles"
 
 type Props = {
   draft: string
@@ -58,7 +63,7 @@ export function RichCommentComposer({
       type="button"
       onClick={() => void submit()}
       disabled={submitting || !draft.trim()}
-      className="inline-flex min-h-11 items-center gap-1.5 rounded-md bg-neutral-950 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#c00060] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E00070]/60 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-[#f1f1f1] dark:text-[#080808] dark:hover:bg-[#E00070] dark:hover:text-white sm:min-h-8"
+      className={RICH_COMPOSER_SUBMIT_CLASS_NAME}
     >
       <PaperAirplaneIcon className="size-3.5" aria-hidden />
       {submitting ? submittingLabel : submitLabel}
@@ -68,8 +73,8 @@ export function RichCommentComposer({
   return (
     <div
       className={[
-        "rounded-lg border bg-transparent transition-colors focus-within:border-[#E00070]/50 focus-within:ring-1 focus-within:ring-[#E00070]/15",
-        compact ? "border-neutral-950/15 dark:border-white/15" : "border-neutral-950/10 dark:border-white/10",
+        RICH_COMPOSER_FRAME_CLASS_NAME,
+        compact ? "border-neutral-950/15 dark:border-white/15" : RICH_COMPOSER_DEFAULT_BORDER_CLASS_NAME,
       ].join(" ")}
       onKeyDown={(event) => {
         if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {

@@ -18,9 +18,11 @@ import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { NoteCard } from "@/components/notes/NoteCard"
 import { NoteComposer } from "@/components/notes/NoteComposer"
+import { NoteTimelineGroup } from "@/components/notes/NoteTimelineGroup"
 import { AutoFitText } from "@/components/text/AutoFitText"
 import type { SerializedNote } from "@/lib/db/notes"
 import type { SerializedPostSummary } from "@/lib/db/posts"
+import { groupNotesByThread, mergeNotesById } from "@/lib/note-thread"
 
 type Props = {
   posts: SerializedPostSummary[]
@@ -40,7 +42,8 @@ type TimelineItem =
   | { type: "post"; id: string; date: string; post: SerializedPostSummary }
 
 type TimelineDisplayItem =
-  TimelineItem
+  | Extract<TimelineItem, { type: "post" }>
+  | { type: "note-group"; id: string; date: string; notes: SerializedNote[] }
 
 type FeedMode = "all" | "posts" | "notes"
 
@@ -61,11 +64,11 @@ function itemHasCoverPost(item: TimelineDisplayItem | undefined) {
 }
 
 function itemNeedsTextSeparator(item: TimelineDisplayItem | undefined) {
-  return item?.type === "note" || (item?.type === "post" && !postShowsTimelineCover(item.post))
+  return item?.type === "note-group" || (item?.type === "post" && !postShowsTimelineCover(item.post))
 }
 
 function itemShouldHaveTopSeparator(item: TimelineDisplayItem | undefined, previousItem: TimelineDisplayItem | undefined) {
-  return itemNeedsTextSeparator(item) && Boolean(previousItem) && (previousItem?.type === "note" || itemHasCoverPost(previousItem))
+  return itemNeedsTextSeparator(item) && Boolean(previousItem) && (previousItem?.type === "note-group" || itemHasCoverPost(previousItem))
 }
 
 function PostTimelineItem({
@@ -284,15 +287,30 @@ function useTimelineFeed({
   }, [notes, posts])
 
   const visibleItems = useMemo<TimelineDisplayItem[]>(() => {
-    if (mode === "posts") {
-      return allItems.filter((item) => item.type === "post")
+    const filteredItems = mode === "posts"
+      ? allItems.filter((item) => item.type === "post")
+      : mode === "notes"
+        ? allItems.filter((item) => item.type === "note")
+        : allItems
+    const noteGroups = groupNotesByThread(
+      filteredItems
+        .filter((item): item is Extract<TimelineItem, { type: "note" }> => item.type === "note")
+        .map((item) => item.note)
+    )
+    const groupByNoteId = new Map<string, SerializedNote[]>()
+    for (const group of noteGroups) {
+      for (const note of group) groupByNoteId.set(note._id, group)
     }
+    const emittedGroups = new Set<string>()
 
-    if (mode === "notes") {
-      return allItems.filter((item) => item.type === "note")
-    }
-
-    return allItems
+    return filteredItems.flatMap((item): TimelineDisplayItem[] => {
+      if (item.type === "post") return [item]
+      const group = groupByNoteId.get(item.note._id) ?? [item.note]
+      const groupId = group[0].thread?.rootId ?? group[0]._id
+      if (emittedGroups.has(groupId)) return []
+      emittedGroups.add(groupId)
+      return [{ type: "note-group", id: `note-group:${groupId}`, date: item.date, notes: group }]
+    })
   }, [allItems, mode])
 
   return { timelineCount, totalPages, activePage, visibleItems }
@@ -585,6 +603,7 @@ function TimelineModeDock({
 export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feedMode, searchQuery, searchError = "", currentPage, pageSize, isAdmin }: Props) {
   const router = useRouter()
   const sectionRef = useRef<HTMLElement>(null)
+  const noteComposerRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastRequestedSearchRef = useRef(searchQuery)
@@ -602,6 +621,8 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
   const [pendingHidePostId, setPendingHidePostId] = useState<string | null>(null)
   const [hideError, setHideError] = useState("")
   const [noteError, setNoteError] = useState("")
+  const [threadParent, setThreadParent] = useState<SerializedNote | null>(null)
+  const [linkingNoteId, setLinkingNoteId] = useState<string | null>(null)
   const [isPagePending, startPageTransition] = useTransition()
   const pendingHideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const { timelineCount, totalPages: optimisticTotalPages, activePage, visibleItems } = useTimelineFeed({
@@ -678,8 +699,48 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
   }, [])
 
   function handlePosted(note: SerializedNote) {
-    setNotes((prev) => [note, ...prev])
+    setNotes((prev) => [
+      note,
+      ...prev.map((existing) => (
+        threadParent && existing._id === threadParent._id && !existing.thread && note.thread
+          ? { ...existing, thread: { rootId: existing._id, position: 1 } }
+          : existing
+      )),
+    ])
     setNoteCount((prev) => prev + 1)
+    setThreadParent(null)
+  }
+
+  function handleContinueThread(note: SerializedNote) {
+    setNoteError("")
+    setThreadParent(note)
+    requestAnimationFrame(() => {
+      noteComposerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
+    })
+  }
+
+  async function handleLinkToThread(note: SerializedNote) {
+    if (!threadParent || linkingNoteId) return
+    setLinkingNoteId(note._id)
+    setNoteError("")
+
+    try {
+      const response = await fetch(`/api/admin/notes/${note._id}/thread`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceNoteId: threadParent._id }),
+      })
+      const data = await response.json().catch(() => null) as { error?: string; thread?: SerializedNote[] } | null
+      if (!response.ok || !Array.isArray(data?.thread)) {
+        throw new Error(data?.error ?? "Não foi possível linkar a nota à thread.")
+      }
+      setNotes((current) => mergeNotesById(current, data.thread!))
+      setThreadParent(null)
+    } catch (caughtError) {
+      setNoteError(caughtError instanceof Error ? caughtError.message : "Não foi possível linkar a nota à thread.")
+    } finally {
+      setLinkingNoteId(null)
+    }
   }
 
   async function handleDelete(id: string) {
@@ -693,8 +754,17 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
         const data = await response.json().catch(() => null)
         throw new Error(data?.error ?? "Não foi possível deletar a nota.")
       }
-
-      setNotes((prev) => prev.filter((note) => note._id !== id))
+      const data = await response.json().catch(() => null) as { thread?: SerializedNote[] } | null
+      setNotes((prev) => {
+        const removed = prev.find((note) => note._id === id)
+        const replacements = new Map((data?.thread ?? []).map((note) => [note._id, note]))
+        return prev
+          .filter((note) => note._id !== id)
+          .map((note) => removed?.thread?.rootId === note.thread?.rootId
+            ? replacements.get(note._id) ?? note
+            : note)
+      })
+      if (threadParent?._id === id) setThreadParent(null)
       setNoteCount((prev) => Math.max(0, prev - 1))
       router.refresh()
     } catch (caughtError) {
@@ -862,7 +932,15 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
 
         </div>
 
-        {isAdmin && <NoteComposer onPosted={handlePosted} />}
+        {isAdmin && (
+          <div ref={noteComposerRef}>
+            <NoteComposer
+              onPosted={handlePosted}
+              threadParent={threadParent}
+              onCancelThread={() => setThreadParent(null)}
+            />
+          </div>
+        )}
         {hideError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{hideError}</p>}
         {noteError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{noteError}</p>}
         {searchError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{searchError}</p>}
@@ -883,17 +961,29 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
           ) : (
             <ul className="ml-0 min-w-0">
               {visibleItems.map((item, index) => (
-                item.type === "note" ? (
+                item.type === "note-group" ? (
                   <li key={item.id} className="min-w-0">
-                    <NoteCard
-                      note={item.note}
-                      viewContext="home"
-                      isAdmin={isAdmin}
-                      onDelete={handleDelete}
-                      onUpdate={handleUpdate}
-                      deleting={deletingNoteId === item.note._id}
-                      cropTallImages
-                    />
+                    <NoteTimelineGroup notes={item.notes}>
+                      {(note, placement, threadSize) => (
+                        <NoteCard
+                          note={note}
+                          viewContext="home"
+                          isAdmin={isAdmin}
+                          onDelete={handleDelete}
+                          onUpdate={handleUpdate}
+                          onContinueThread={handleContinueThread}
+                          deleting={deletingNoteId === note._id}
+                          cropTallImages
+                          timelineThreadPlacement={placement}
+                          timelineThreadSize={threadSize}
+                          showThreadLabel={item.notes.length === 1}
+                          threadLinkSource={threadParent}
+                          onLinkToThread={handleLinkToThread}
+                          onCancelThreadLink={() => setThreadParent(null)}
+                          linkingToThread={linkingNoteId === note._id}
+                        />
+                      )}
+                    </NoteTimelineGroup>
                   </li>
                 ) : (
                   <PostTimelineItem

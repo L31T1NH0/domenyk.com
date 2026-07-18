@@ -8,7 +8,10 @@ let volatileDarkMode: boolean | null = null
 function getDarkModeSnapshot() {
   if (volatileDarkMode !== null) return volatileDarkMode
   try {
-    return localStorage.getItem("theme") !== "light"
+    const storedTheme = localStorage.getItem("theme")
+    if (storedTheme === "light") return false
+    if (storedTheme === "dark") return true
+    return !document.documentElement.classList.contains("light-mode")
   } catch {
     return !document.documentElement.classList.contains("light-mode")
   }
@@ -36,8 +39,6 @@ function subscribeToThemeChange(callback: () => void) {
 function applyTheme(darkMode: boolean) {
   document.documentElement.classList.toggle("dark-mode", darkMode)
   document.documentElement.classList.toggle("light-mode", !darkMode)
-  document.body.classList.toggle("dark-mode", darkMode)
-  document.body.classList.toggle("light-mode", !darkMode)
 }
 
 export function useThemeSwitcher() {
@@ -55,6 +56,11 @@ export function useThemeSwitcher() {
       localStorage.setItem("theme", next ? "dark" : "light")
     } catch {
       // The theme still applies for this page when storage is unavailable.
+    }
+    try {
+      document.cookie = `theme=${next ? "dark" : "light"}; Path=/; Max-Age=31536000; SameSite=Lax${location.protocol === "https:" ? "; Secure" : ""}`
+    } catch {
+      // The server will fall back to dark mode when cookies are unavailable.
     }
     window.dispatchEvent(new Event(THEME_CHANGE_EVENT))
   }

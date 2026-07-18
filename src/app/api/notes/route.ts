@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { getNotes, serializeNote } from "@/lib/db/notes"
 import { adminOnly } from "@/lib/auth"
 import { toObjectId } from "@/lib/validation"
-import { createSerializedNoteFromBody } from "@/lib/api/note-input"
+import { createSerializedNoteFromBody, NoteInputError, type NoteInputBody } from "@/lib/api/note-input"
+import { NoteThreadError } from "@/lib/db/notes"
 import { rateLimit } from "@/lib/rate-limit"
 import { requestIdentity } from "@/lib/request-identity"
 import { getCachedInitialNotes, invalidatePublicContentCache } from "@/lib/public-content-cache"
@@ -30,13 +31,18 @@ export async function POST(req: NextRequest) {
   const unauthorized = await adminOnly()
   if (unauthorized) return unauthorized
 
-  const body = await req.json().catch(() => null) as { title?: unknown; content?: unknown; images?: unknown } | null
+  const body = await req.json().catch(() => null) as NoteInputBody | null
   try {
     const note = await createSerializedNoteFromBody(body)
     invalidatePublicContentCache()
     return NextResponse.json(note, { status: 201 })
   } catch (err) {
-    if (!(err instanceof Error) || err.message !== "content é obrigatório") throw err
-    return NextResponse.json({ error: "content é obrigatório" }, { status: 400 })
+    if (err instanceof NoteInputError) {
+      return NextResponse.json({ error: err.message }, { status: err.status })
+    }
+    if (err instanceof NoteThreadError) {
+      return NextResponse.json({ error: err.message }, { status: 409 })
+    }
+    throw err
   }
 }

@@ -73,7 +73,10 @@ const validators = {
   ),
   notes: schema(
     ["_id", "content", "publishedAt", "createdAt"],
-    { content: string, publishedAt: date, createdAt: date, updatedAt: date }
+    {
+      content: string, publishedAt: date, createdAt: date, updatedAt: date,
+      threadRootId: objectId, previousNoteId: objectId, threadPosition: number,
+    }
   ),
   notifications: schema(
     ["_id", "recipientId", "kind", "title", "description", "href", "count", "createdAt", "updatedAt"],

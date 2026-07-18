@@ -5,6 +5,7 @@ import { isNoteIndexable, noteDisplayTitle } from "../seo"
 import { toObjectId } from "../validation"
 import { deleteNoteMetrics } from "./note-metrics"
 import { estimateNoteReading, type NoteReadingEstimate } from "../note-reading"
+import { serializeNoteThread, type SerializedNoteThread } from "../note-thread"
 
 export type Note = {
   _id: ObjectId
@@ -17,8 +18,11 @@ export type Note = {
   createdAt: Date
   updatedAt?: Date
   deleting?: boolean
+  threadRootId?: ObjectId
+  previousNoteId?: ObjectId
+  threadPosition?: number
 }
-export type SerializedNote = Omit<Note, "_id" | "deleting" | "publishedAt" | "createdAt" | "updatedAt"> & {
+export type SerializedNote = Omit<Note, "_id" | "deleting" | "publishedAt" | "createdAt" | "updatedAt" | "threadRootId" | "previousNoteId" | "threadPosition"> & {
   _id: string
   publishedAt: string
   createdAt: string
@@ -26,7 +30,10 @@ export type SerializedNote = Omit<Note, "_id" | "deleting" | "publishedAt" | "cr
   contentHtml: string
   indexable: boolean
   readingEstimate: NoteReadingEstimate
+  thread?: SerializedNoteThread
 }
+
+export class NoteThreadError extends Error {}
 
 const indexableNoteFilter = {
   deleting: { $ne: true },
@@ -84,6 +91,7 @@ export function normalizeNoteContent(content: string): string {
 
 export function serializeNote(note: Note): SerializedNote {
   const content = normalizeNoteContent(note.content)
+  const thread = serializeNoteThread(note)
   return {
     _id: note._id.toString(),
     title: note.title,
@@ -99,6 +107,7 @@ export function serializeNote(note: Note): SerializedNote {
     }),
     indexable: isNoteIndexable(note),
     readingEstimate: estimateNoteReading(content, note.images?.length ?? 0),
+    ...(thread ? { thread } : {}),
   }
 }
 
@@ -106,7 +115,14 @@ let indexesPromise: Promise<void> | undefined
 
 async function collection() {
   const col = (await getDb()).collection<Note>("notes")
-  indexesPromise ??= col.createIndex({ content: "text" }).then(() => undefined)
+  indexesPromise ??= Promise.all([
+    col.createIndex({ content: "text" }),
+    col.createIndex(
+      { threadRootId: 1, threadPosition: 1 },
+      { unique: true, sparse: true }
+    ),
+    col.createIndex({ previousNoteId: 1 }, { unique: true, sparse: true }),
+  ]).then(() => undefined)
   await indexesPromise
   return col
 }
@@ -161,17 +177,160 @@ export async function getNote(id: string): Promise<Note | null> {
   return (await collection()).findOne({ _id: objectId, deleting: { $ne: true } })
 }
 
-export async function createNote(data: { title?: string; seoTitle?: string; seoDescription?: string; content: string; images?: string[] }): Promise<Note> {
+export async function getNoteThread(note: Note): Promise<Note[]> {
+  if (!note.threadRootId) return [note]
+  return (await collection())
+    .find({ threadRootId: note.threadRootId, deleting: { $ne: true } })
+    .sort({ threadPosition: 1, _id: 1 })
+    .toArray()
+}
+
+export async function createNote(data: { title?: string; seoTitle?: string; seoDescription?: string; content: string; images?: string[]; continueFromNoteId?: string }): Promise<Note> {
   const col = await collection()
   const now = new Date()
+  let threadFields: Pick<Note, "threadRootId" | "previousNoteId" | "threadPosition"> = {}
+  let initializedRoot: ObjectId | null = null
+
+  if (data.continueFromNoteId) {
+    const sourceId = toObjectId(data.continueFromNoteId)
+    if (!sourceId) throw new NoteThreadError("Nota de origem inválida.")
+
+    const source = await col.findOne({ _id: sourceId, deleting: { $ne: true } })
+    if (!source) throw new NoteThreadError("A nota usada para continuar a thread não existe.")
+
+    if (source.threadRootId) {
+      const lastNote = await col.find({
+        threadRootId: source.threadRootId,
+        deleting: { $ne: true },
+      }).sort({ threadPosition: -1, _id: -1 }).limit(1).next()
+      if (!lastNote?.threadPosition) throw new NoteThreadError("A thread está inconsistente.")
+      threadFields = {
+        threadRootId: source.threadRootId,
+        previousNoteId: lastNote._id,
+        threadPosition: lastNote.threadPosition + 1,
+      }
+    } else {
+      const initialized = await col.updateOne(
+        { _id: source._id, deleting: { $ne: true }, threadRootId: { $exists: false } },
+        { $set: { threadRootId: source._id, threadPosition: 1, updatedAt: now } }
+      )
+      if (initialized.matchedCount !== 1) {
+        throw new NoteThreadError("A thread mudou enquanto a nota era criada. Tente novamente.")
+      }
+      initializedRoot = source._id
+      threadFields = {
+        threadRootId: source._id,
+        previousNoteId: source._id,
+        threadPosition: 2,
+      }
+    }
+  }
+
   const note: Omit<Note, "_id"> = {
     ...(data.title ? { title: data.title } : {}),
     ...(data.seoTitle ? { seoTitle: data.seoTitle } : {}),
     ...(data.seoDescription ? { seoDescription: data.seoDescription } : {}),
     content: normalizeNoteContent(data.content), images: data.images, publishedAt: now, createdAt: now, updatedAt: now,
+    ...threadFields,
   }
-  const result = await col.insertOne(note as Note)
-  return { ...note, _id: result.insertedId }
+  try {
+    const result = await col.insertOne(note as Note)
+    return { ...note, _id: result.insertedId }
+  } catch (error) {
+    if (initializedRoot) {
+      const members = await col.countDocuments({ threadRootId: initializedRoot })
+      if (members === 1) {
+        await col.updateOne(
+          { _id: initializedRoot },
+          { $unset: { threadRootId: "", threadPosition: "" } }
+        )
+      }
+    }
+    throw error
+  }
+}
+
+export async function linkNoteToThread(sourceNoteId: string, targetNoteId: string): Promise<Note[]> {
+  const sourceId = toObjectId(sourceNoteId)
+  const targetId = toObjectId(targetNoteId)
+  if (!sourceId || !targetId) throw new NoteThreadError("Nota inválida.")
+  if (sourceId.equals(targetId)) throw new NoteThreadError("Escolha outra nota para completar a thread.")
+
+  const col = await collection()
+  const [source, target] = await Promise.all([
+    col.findOne({ _id: sourceId, deleting: { $ne: true } }),
+    col.findOne({ _id: targetId, deleting: { $ne: true } }),
+  ])
+  if (!source) throw new NoteThreadError("A thread selecionada não existe mais.")
+  if (!target) throw new NoteThreadError("A nota que seria vinculada não existe mais.")
+
+  const selectedRootId = source.threadRootId ?? source._id
+  if (target.threadRootId) {
+    if (source.threadRootId && target.threadRootId.equals(source.threadRootId)) {
+      return col.find({
+        threadRootId: source.threadRootId,
+        deleting: { $ne: true },
+      }).sort({ threadPosition: 1, _id: 1 }).toArray()
+    }
+    throw new NoteThreadError("Essa nota já pertence a outra thread.")
+  }
+
+  const now = new Date()
+  let initializedRoot = false
+  let previousNoteId = source._id
+  let threadPosition = 2
+
+  if (source.threadRootId) {
+    const lastNote = await col.find({
+      threadRootId: source.threadRootId,
+      deleting: { $ne: true },
+    }).sort({ threadPosition: -1, _id: -1 }).limit(1).next()
+    if (!lastNote?.threadPosition) throw new NoteThreadError("A thread está inconsistente.")
+    previousNoteId = lastNote._id
+    threadPosition = lastNote.threadPosition + 1
+  } else {
+    const initialized = await col.updateOne(
+      { _id: source._id, deleting: { $ne: true }, threadRootId: { $exists: false } },
+      { $set: { threadRootId: source._id, threadPosition: 1, updatedAt: now } }
+    )
+    if (initialized.matchedCount !== 1) {
+      throw new NoteThreadError("A thread mudou enquanto as notas eram vinculadas. Tente novamente.")
+    }
+    initializedRoot = true
+  }
+
+  try {
+    const linked = await col.updateOne(
+      { _id: target._id, deleting: { $ne: true }, threadRootId: { $exists: false } },
+      {
+        $set: {
+          threadRootId: selectedRootId,
+          previousNoteId,
+          threadPosition,
+          updatedAt: now,
+        },
+      }
+    )
+    if (linked.matchedCount !== 1) {
+      throw new NoteThreadError("A nota mudou enquanto era vinculada. Tente novamente.")
+    }
+  } catch (error) {
+    if (initializedRoot) {
+      const members = await col.countDocuments({ threadRootId: selectedRootId })
+      if (members === 1) {
+        await col.updateOne(
+          { _id: selectedRootId },
+          { $unset: { threadRootId: "", threadPosition: "" } }
+        )
+      }
+    }
+    throw error
+  }
+
+  return col.find({
+    threadRootId: selectedRootId,
+    deleting: { $ne: true },
+  }).sort({ threadPosition: 1, _id: 1 }).toArray()
 }
 
 export async function updateNote(id: string, data: { title?: string | null; seoTitle?: string | null; seoDescription?: string | null; content: string; images?: string[] }): Promise<Note | null> {
@@ -196,12 +355,54 @@ export async function updateNote(id: string, data: { title?: string | null; seoT
   )
 }
 
-export async function deleteNote(id: string): Promise<boolean> {
+export async function deleteNote(id: string): Promise<{ deleted: boolean; thread: Note[] }> {
   const objectId = toObjectId(id)
-  if (!objectId) return false
-  const result = await (await collection()).deleteOne({ _id: objectId })
+  if (!objectId) return { deleted: false, thread: [] }
+  const col = await collection()
+  const note = await col.findOne({ _id: objectId })
+  if (!note) return { deleted: false, thread: [] }
+  const result = await col.deleteOne({ _id: objectId })
+  let repairedThread: Note[] = []
+  if (result.deletedCount === 1 && note.threadRootId) {
+    const remaining = await col.find({
+      threadRootId: note.threadRootId,
+      deleting: { $ne: true },
+    }).sort({ threadPosition: 1, _id: 1 }).toArray()
+
+    if (remaining.length === 1) {
+      await col.updateOne(
+        { _id: remaining[0]._id },
+        { $unset: { threadRootId: "", previousNoteId: "", threadPosition: "" } }
+      )
+      const standalone = await col.findOne({ _id: remaining[0]._id })
+      if (standalone) repairedThread = [standalone]
+    } else if (remaining.length > 1) {
+      const nextRootId = remaining[0]._id
+      await col.bulkWrite(remaining.map((member, index) => ({
+        updateOne: {
+          filter: { _id: member._id },
+          update: index === 0
+            ? {
+                $set: { threadRootId: nextRootId, threadPosition: 1 },
+                $unset: { previousNoteId: "" },
+              }
+            : {
+                $set: {
+                  threadRootId: nextRootId,
+                  previousNoteId: remaining[index - 1]._id,
+                  threadPosition: index + 1,
+                },
+              },
+        },
+      })))
+      repairedThread = await col.find({
+        threadRootId: nextRootId,
+        deleting: { $ne: true },
+      }).sort({ threadPosition: 1, _id: 1 }).toArray()
+    }
+  }
   if (result.deletedCount === 1) await deleteNoteMetrics(id)
-  return result.deletedCount === 1
+  return { deleted: result.deletedCount === 1, thread: repairedThread }
 }
 
 export async function markNoteDeleting(id: string): Promise<boolean> {
