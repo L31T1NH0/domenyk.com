@@ -6,6 +6,7 @@ import { toObjectId } from "../validation"
 import { deleteNoteMetrics } from "./note-metrics"
 import { estimateNoteReading, type NoteReadingEstimate } from "../note-reading"
 import { serializeNoteThread, type SerializedNoteThread } from "../note-thread"
+import { resetOnRejection } from "../retryable-promise"
 
 export type Note = {
   _id: ObjectId
@@ -115,14 +116,21 @@ let indexesPromise: Promise<void> | undefined
 
 async function collection() {
   const col = (await getDb()).collection<Note>("notes")
-  indexesPromise ??= Promise.all([
-    col.createIndex({ content: "text" }),
-    col.createIndex(
-      { threadRootId: 1, threadPosition: 1 },
-      { unique: true, sparse: true }
-    ),
-    col.createIndex({ previousNoteId: 1 }, { unique: true, sparse: true }),
-  ]).then(() => undefined)
+  if (!indexesPromise) {
+    const createIndexes = Promise.all([
+      col.createIndex({ content: "text" }),
+      col.createIndex(
+        { threadRootId: 1, threadPosition: 1 },
+        { unique: true, sparse: true }
+      ),
+      col.createIndex({ previousNoteId: 1 }, { unique: true, sparse: true }),
+    ]).then(() => undefined)
+
+    const retryableIndexes = resetOnRejection(createIndexes, () => {
+      if (indexesPromise === retryableIndexes) indexesPromise = undefined
+    })
+    indexesPromise = retryableIndexes
+  }
   await indexesPromise
   return col
 }

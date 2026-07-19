@@ -1,6 +1,7 @@
 import "server-only"
 
 import { MongoClient } from "mongodb"
+import { resetOnRejection } from "../retryable-promise"
 
 declare global {
   var _mongoClient: MongoClient | undefined
@@ -12,8 +13,17 @@ function getClientPromise(): Promise<MongoClient> {
   if (!uri) throw new Error("MONGODB_URI is not set")
 
   if (!global._mongoClientPromise) {
-    global._mongoClient = new MongoClient(uri)
-    global._mongoClientPromise = global._mongoClient.connect()
+    const client = new MongoClient(uri)
+    const retryableConnection = resetOnRejection(client.connect(), async () => {
+      if (global._mongoClientPromise === retryableConnection) {
+        global._mongoClient = undefined
+        global._mongoClientPromise = undefined
+      }
+      await client.close()
+    })
+
+    global._mongoClient = client
+    global._mongoClientPromise = retryableConnection
   }
 
   return global._mongoClientPromise

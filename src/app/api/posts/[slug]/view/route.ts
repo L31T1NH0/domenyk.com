@@ -6,6 +6,7 @@ import { aggregateNotification, createNotification } from "@/lib/db/notification
 import { getPostByPublicId, incrementPostViewsOnce } from "@/lib/db/posts"
 import { isPostLocale } from "@/lib/post-locales"
 import { getPostVersion } from "@/lib/post-versions"
+import { qualifiesPostView } from "@/lib/post-view-qualification"
 import { rateLimit } from "@/lib/rate-limit"
 import { requestIdentity } from "@/lib/request-identity"
 import { viewRequestDetails, type ViewClientContext } from "@/lib/view-request-details"
@@ -33,10 +34,23 @@ export async function POST(
     return NextResponse.json({ error: "Not found" }, { status: 404 })
   }
 
-  const body = await req.json().catch(() => null) as ({ locale?: unknown } & ViewClientContext) | null
+  const body = await req.json().catch(() => null) as ({
+    locale?: unknown
+    activeSeconds?: unknown
+    progress?: unknown
+    interacted?: unknown
+  } & ViewClientContext) | null
   const locale = typeof body?.locale === "string" ? body.locale : "pt"
   if (!isPostLocale(locale)) {
     return NextResponse.json({ error: "Invalid locale" }, { status: 400 })
+  }
+  const qualification = {
+    activeSeconds: Number(body?.activeSeconds),
+    progress: Number(body?.progress),
+    interacted: body?.interacted === true,
+  }
+  if (!qualifiesPostView(qualification)) {
+    return NextResponse.json({ error: "Visualização ainda não qualificada." }, { status: 400 })
   }
 
   const post = await getPostByPublicId(publicId)

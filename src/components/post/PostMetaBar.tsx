@@ -5,6 +5,7 @@ import { ClockIcon, EyeIcon, ShareIcon } from "@heroicons/react/24/solid"
 import type { PostLocale } from "@/lib/post-locales"
 import { viewClientContext } from "@/lib/view-referrer"
 import { recordCurrentPostAction, setPostEngagement } from "@/lib/post-engagement"
+import { qualifiesPostView } from "@/lib/post-view-qualification"
 
 type Props = {
   publicId: string
@@ -32,36 +33,95 @@ export function PostMetaBar({ publicId, dateLabel, readingTime, initialViews = 0
 
   useEffect(() => {
     const storageKey = `post-viewed:${publicId}`
-    const now = Date.now()
     const previousView = Number(localStorage.getItem(storageKey) ?? 0)
 
-    if (pendingViewPublicIds.has(publicId) || (previousView && now - previousView < VIEW_TTL_MS)) {
+    if (pendingViewPublicIds.has(publicId) || (previousView && Date.now() - previousView < VIEW_TTL_MS)) {
       return
     }
 
     let cancelled = false
-    pendingViewPublicIds.add(publicId)
+    let activeSeconds = 0
+    let baselineProgress: number | null = null
+    let progress = 0
+    let interacted = false
+    let requestStarted = false
 
-    fetch(`/api/posts/${encodeURIComponent(publicId)}/view`, {
-      method: "POST",
-      cache: "no-store",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ locale, ...viewClientContext() }),
-    })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((post) => {
-        if (!cancelled && typeof post?.views === "number") {
-          setViews(post.views)
-          localStorage.setItem(storageKey, String(now))
-          if (typeof post.readingToken === "string") setPostEngagement(publicId, post.readingToken)
-        }
+    function currentProgress() {
+      const content = document.querySelector<HTMLElement>("[data-post-content]")
+      if (!content) return null
+      const contentTop = content.getBoundingClientRect().top + window.scrollY
+      const totalScrollable = Math.max(content.scrollHeight - window.innerHeight, 1)
+      return Math.min(1, Math.max(0, (window.scrollY - contentTop) / totalScrollable))
+    }
+
+    function measureProgress() {
+      const current = currentProgress()
+      if (current === null) return
+      baselineProgress ??= current
+      progress = Math.max(progress, Math.abs(current - baselineProgress))
+    }
+
+    function countQualifiedView() {
+      if (requestStarted) return
+      measureProgress()
+      if (!qualifiesPostView({ activeSeconds, progress, interacted })) return
+      requestStarted = true
+
+      if (pendingViewPublicIds.has(publicId)) return
+      pendingViewPublicIds.add(publicId)
+
+      fetch(`/api/posts/${encodeURIComponent(publicId)}/view`, {
+        method: "POST",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          locale,
+          ...viewClientContext(),
+          activeSeconds,
+          progress,
+          interacted,
+        }),
       })
-      .finally(() => {
-        pendingViewPublicIds.delete(publicId)
-      })
-      .catch(() => {})
+        .then((res) => (res.ok ? res.json() : null))
+        .then((post) => {
+          if (!cancelled && typeof post?.views === "number") {
+            setViews(post.views)
+            localStorage.setItem(storageKey, String(Date.now()))
+            if (typeof post.readingToken === "string") setPostEngagement(publicId, post.readingToken)
+          }
+        })
+        .finally(() => {
+          pendingViewPublicIds.delete(publicId)
+        })
+        .catch(() => {})
+    }
+
+    function onProgress() {
+      measureProgress()
+      countQualifiedView()
+    }
+
+    function onInteraction() {
+      interacted = true
+      countQualifiedView()
+    }
+
+    measureProgress()
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible" && document.hasFocus()) activeSeconds += 1
+      countQualifiedView()
+    }, 1000)
+
+    window.addEventListener("scroll", onProgress, { passive: true })
+    window.addEventListener("pointerdown", onInteraction, { passive: true })
+    window.addEventListener("keydown", onInteraction)
+
     return () => {
       cancelled = true
+      window.clearInterval(timer)
+      window.removeEventListener("scroll", onProgress)
+      window.removeEventListener("pointerdown", onInteraction)
+      window.removeEventListener("keydown", onInteraction)
     }
   }, [locale, publicId])
 
