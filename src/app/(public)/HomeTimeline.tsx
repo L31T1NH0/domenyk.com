@@ -15,8 +15,6 @@ import {
   Squares2X2Icon,
   XMarkIcon,
 } from "@heroicons/react/24/outline"
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
 import { NoteCard } from "@/components/notes/NoteCard"
 import { NoteComposer } from "@/components/notes/NoteComposer"
 import { NoteTimelineGroup } from "@/components/notes/NoteTimelineGroup"
@@ -25,6 +23,7 @@ import { AutoFitText } from "@/components/text/AutoFitText"
 import type { SerializedNote } from "@/lib/db/notes"
 import type { SerializedPostSummary } from "@/lib/db/posts"
 import { groupNotesByThread, mergeNotesById } from "@/lib/note-thread"
+import { formatSiteDate } from "@/lib/datetime"
 
 type Props = {
   posts: SerializedPostSummary[]
@@ -54,7 +53,7 @@ function postDate(post: SerializedPostSummary) {
 }
 
 function postDateLabel(post: SerializedPostSummary) {
-  return format(new Date(postDate(post)), "d 'de' MMMM 'de' yyyy", { locale: ptBR })
+  return formatSiteDate(postDate(post), { day: "numeric", month: "long", year: "numeric" })
 }
 
 function postShowsTimelineCover(post: SerializedPostSummary) {

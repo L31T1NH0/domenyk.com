@@ -17,6 +17,7 @@ import {
 import { getPostVersion, getPublishedPostLocales } from "@/lib/post-versions"
 import { isPostVersionIndexable, postSeoDescription, postSeoTitle } from "@/lib/post-seo"
 import { getThemesForPost } from "@/lib/db/themes"
+import { formatSiteDate } from "@/lib/datetime"
 import { BackHome } from "@/components/BackHome"
 import { ParagraphCommentsLayer } from "@/components/post/ParagraphCommentsLayer"
 import { PostContentShell } from "@/components/post/PostContentShell"
@@ -191,9 +192,9 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
     defaultImageAlt: `Imagem relacionada a “${version.title}”`,
   })
   const dateLabel = version.publishedAt
-    ? new Intl.DateTimeFormat(details.htmlLang, { dateStyle: "long" }).format(version.publishedAt)
+    ? formatSiteDate(version.publishedAt, { dateStyle: "long" }, details.htmlLang)
     : undefined
-  const updatedLabel = new Intl.DateTimeFormat(details.htmlLang, { dateStyle: "long" }).format(version.updatedAt)
+  const updatedLabel = formatSiteDate(version.updatedAt, { dateStyle: "long" }, details.htmlLang)
   const description = postSeoDescription(version, descriptionFromMarkdown(version.content)) || siteConfig.description
   const style = version.style ?? "standard"
   const styleClasses = getPostStyleClasses(style)

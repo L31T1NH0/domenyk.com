@@ -1,12 +1,11 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
 import { cache } from "react"
 import { Header } from "@/components/Header"
 import { getThemeBySlug, getThemePosts } from "@/lib/db/themes"
 import { absoluteUrl, buildPageMetadata, jsonLd, siteConfig } from "@/lib/seo"
+import { formatSiteDate } from "@/lib/datetime"
 
 type Props = { params: Promise<{ tag: string }> }
 
@@ -93,7 +92,7 @@ export default async function ThemePage({ params }: Props) {
                   </Link>
                 </h2>
                 <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-neutral-600 dark:text-zinc-400">
-                  {post.publishedAt && <time dateTime={post.publishedAt.toISOString()}>{format(post.publishedAt, "d 'de' MMMM 'de' yyyy", { locale: ptBR })}</time>}
+                  {post.publishedAt && <time dateTime={post.publishedAt.toISOString()}>{formatSiteDate(post.publishedAt, { dateStyle: "long" })}</time>}
                   <span>{post.readingTimeMinutes} min</span>
                 </div>
                 {(post.excerpt || post.subtitle) && <p className="mt-2 text-sm leading-relaxed text-neutral-700 dark:text-zinc-300">{post.excerpt ?? post.subtitle}</p>}

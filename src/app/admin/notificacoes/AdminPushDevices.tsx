@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { ComputerDesktopIcon, XMarkIcon } from "@heroicons/react/24/outline"
+import { formatSiteDate } from "@/lib/datetime"
 
 export type AdminPushDevice = {
   id: string
@@ -49,8 +50,8 @@ export function AdminPushDevices({ devices }: { devices: AdminPushDevice[] }) {
           <div>
             <strong>{device.label}</strong>
             <span>
-              Atualizado em {new Date(device.updatedAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
-              {device.lastSuccessAt ? ` · último envio ${new Date(device.lastSuccessAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}` : ""}
+              Atualizado em {formatSiteDate(device.updatedAt, { dateStyle: "short", timeStyle: "short" })}
+              {device.lastSuccessAt ? ` · último envio ${formatSiteDate(device.lastSuccessAt, { dateStyle: "short", timeStyle: "short" })}` : ""}
             </span>
           </div>
           <button

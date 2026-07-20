@@ -1,7 +1,5 @@
 "use client"
 
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
 import Link from "next/link"
 import { useMemo, useState } from "react"
 import {
@@ -14,6 +12,7 @@ import {
 import { DeleteActionMenu } from "@/components/actions/DeleteActionMenu"
 import type { SerializedPostSummary } from "@/lib/db/posts"
 import { isTranslationRevisionStale, POST_LOCALE_DETAILS, TRANSLATION_LOCALES } from "@/lib/post-locales"
+import { formatSiteDate, siteDateKey } from "@/lib/datetime"
 
 type Props = { posts: SerializedPostSummary[] }
 type StatusFilter = "all" | "published" | "draft"
@@ -30,7 +29,7 @@ const columns: Array<{ key: ColumnKey; label: string }> = [
 
 function formatDate(value?: string) {
   if (!value) return "Sem data"
-  return format(new Date(value), "dd MMM yyyy", { locale: ptBR })
+  return formatSiteDate(value, { day: "2-digit", month: "short", year: "numeric" })
 }
 
 function postMatchesQuery(post: SerializedPostSummary, query: string) {
@@ -243,7 +242,7 @@ export function PostsTable({ posts: initial }: Props) {
       const url = URL.createObjectURL(blob)
       const anchor = document.createElement("a")
       anchor.href = url
-      anchor.download = `posts-${new Date().toISOString().slice(0, 10)}.md`
+      anchor.download = `posts-${siteDateKey()}.md`
       anchor.click()
       URL.revokeObjectURL(url)
     } catch (err) {

@@ -4,9 +4,10 @@ import { PublicMenuProvider } from "@/components/public-menu/PublicMenuContext"
 import { ViewReferrerTracker } from "@/components/ViewReferrerTracker"
 import { headers } from "next/headers"
 import { PublicAnalytics } from "@/components/analytics/PublicAnalytics"
+import { siteCalendarYear } from "@/lib/datetime"
 
 export default async function PublicLayout({ children }: { children: React.ReactNode }) {
-  const currentYear = new Date().getFullYear()
+  const currentYear = siteCalendarYear()
   const nonce = (await headers()).get("x-nonce") ?? undefined
 
   return (

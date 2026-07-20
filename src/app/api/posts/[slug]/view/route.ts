@@ -10,6 +10,7 @@ import { qualifiesPostView } from "@/lib/post-view-qualification"
 import { rateLimit } from "@/lib/rate-limit"
 import { requestIdentity } from "@/lib/request-identity"
 import { viewRequestDetails, type ViewClientContext } from "@/lib/view-request-details"
+import { siteDateKey } from "@/lib/datetime"
 
 const VIEW_COOKIE_MAX_AGE = 60 * 60 * 24
 
@@ -19,7 +20,7 @@ function viewCookieName(publicId: string) {
 }
 
 function viewVisitorKey(req: NextRequest, publicId: string): string {
-  const day = new Date().toISOString().slice(0, 10)
+  const day = siteDateKey()
   return createHash("sha256")
     .update(`${day}\n${publicId}\n${requestIdentity(req)}`)
     .digest("hex")

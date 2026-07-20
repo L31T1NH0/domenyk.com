@@ -4,6 +4,7 @@ import { ObjectId } from "mongodb"
 import { getDb } from "./client"
 import { toObjectId } from "../validation"
 import type { NoteViewSource } from "../note-views"
+import { siteDateKey } from "../datetime"
 
 export type NoteMetrics = {
   directViews: number
@@ -53,7 +54,7 @@ export async function recordNoteView(
   if (!objectId) return { counted: false, metrics: EMPTY_METRICS }
   const { metrics, events } = await collections()
   const now = new Date()
-  const day = now.toISOString().slice(0, 10)
+  const day = siteDateKey(now)
 
   try {
     await events.insertOne({ _id: new ObjectId(), noteId: objectId, visitorKey, source, day, createdAt: now })

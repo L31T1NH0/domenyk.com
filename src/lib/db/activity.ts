@@ -2,6 +2,7 @@ import "server-only"
 
 import { ObjectId } from "mongodb"
 import { getDb } from "./client"
+import { shiftSiteDateKey, siteDateKey, startOfSiteDay } from "../datetime"
 
 type ActivityEventType = "post_view" | "comment_created"
 
@@ -73,9 +74,9 @@ export type ActivityDashboard = {
 
 export async function getActivityDashboard(days = 14): Promise<ActivityDashboard> {
   const col = await collection()
-  const since = new Date()
-  since.setUTCHours(0, 0, 0, 0)
-  since.setUTCDate(since.getUTCDate() - (days - 1))
+  const currentDateKey = siteDateKey()
+  const firstDateKey = shiftSiteDateKey(currentDateKey, -(days - 1))
+  const since = startOfSiteDay(new Date(), -(days - 1))
 
   const [byDay, totalsRow, topPosts, recent] = await Promise.all([
     col.aggregate<{ _id: { date: string; type: ActivityEventType }; count: number }>([
@@ -106,9 +107,7 @@ export async function getActivityDashboard(days = 14): Promise<ActivityDashboard
 
   const dayMap = new Map(byDay.map((row) => [`${row._id.date}:${row._id.type}`, row.count]))
   const dayRows = Array.from({ length: days }, (_, index) => {
-    const date = new Date(since)
-    date.setUTCDate(date.getUTCDate() + index)
-    const key = date.toISOString().slice(0, 10)
+    const key = shiftSiteDateKey(firstDateKey, index)
     return { date: key, views: dayMap.get(`${key}:post_view`) ?? 0, comments: dayMap.get(`${key}:comment_created`) ?? 0 }
   })
 

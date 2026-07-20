@@ -1,9 +1,8 @@
 import { clerkClient } from "@clerk/nextjs/server"
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
 import { notFound } from "next/navigation"
 import { getCommentCountsByAuthor } from "@/lib/db/comments"
 import { isAdmin } from "@/lib/auth"
+import { formatSiteDate } from "@/lib/datetime"
 
 export const runtime = "nodejs"
 
@@ -14,7 +13,7 @@ function roleFromMetadata(metadata: UserMetadata) {
 
 function formatJoinDate(value: number | Date | null | undefined) {
   if (!value) return "Sem data"
-  return format(new Date(value), "dd MMM yyyy", { locale: ptBR })
+  return formatSiteDate(value, { day: "2-digit", month: "short", year: "numeric" })
 }
 
 type UserMetadata = Record<string, unknown>

@@ -1,6 +1,7 @@
 import { MongoClient } from "mongodb"
 import { randomUUID } from "crypto"
 import { backupDatabase, backupPassphrase } from "./secure-mongo-backup.mjs"
+import { siteDateKeyToInstant } from "../src/lib/datetime.ts"
 
 const URI = process.env.MONGODB_URI
 if (!URI) throw new Error("MONGODB_URI não definida")
@@ -23,6 +24,15 @@ function extractExcerpt(html) {
   const match = html.match(/<p[^>]*>([\s\S]*?)<\/p>/i)
   if (!match) return undefined
   return match[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 200)
+}
+
+function legacyPublishedAt(value) {
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return siteDateKeyToInstant(value)
+  }
+  const date = value ? new Date(value) : new Date()
+  if (Number.isNaN(date.getTime())) throw new Error(`Data legada inválida: ${String(value)}`)
+  return date
 }
 
 async function main() {
@@ -48,7 +58,7 @@ async function main() {
 
     const slug = post.postId ?? post._id.toString()
     const content = post.contentMarkdown ?? post.htmlContent ?? post.content ?? ""
-    const publishedAt = post.date ? new Date(post.date) : new Date()
+    const publishedAt = legacyPublishedAt(post.date)
 
     const newDoc = {
       publicId: post.publicId ?? randomUUID(),

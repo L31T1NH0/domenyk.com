@@ -2,11 +2,10 @@
 
 import { useMemo, useState } from "react"
 import Link from "next/link"
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline"
 import type { SerializedNote } from "@/lib/db/notes"
 import type { NoteMetrics } from "@/lib/db/note-metrics"
+import { formatSiteDate } from "@/lib/datetime"
 
 type AdminNote = SerializedNote & { metrics: Omit<NoteMetrics, "updatedAt"> }
 
@@ -22,7 +21,7 @@ export function AdminNotesTable({ notes }: { notes: AdminNote[] }) {
     <div className="admin-note-cards">
       {filtered.map((note) => <Link href={`/admin/notes/${note._id}`} key={note._id} className="admin-note-card">
         <div><strong>{note.title || note.seoTitle || "Nota sem título"}</strong>{note.thread && <small>Thread · parte {note.thread.position}</small>}<p>{note.content}</p></div>
-        <dl><div><dt>SEO</dt><dd><span className={`admin-record-status ${note.indexable ? "is-live" : "is-review"}`}>{note.indexable ? "Indexável" : "Não indexável"}</span></dd></div><div><dt>Views reais</dt><dd>{note.metrics.directViews}</dd></div><div><dt>Publicada</dt><dd>{format(new Date(note.publishedAt), "dd MMM yyyy", { locale: ptBR })}</dd></div></dl>
+        <dl><div><dt>SEO</dt><dd><span className={`admin-record-status ${note.indexable ? "is-live" : "is-review"}`}>{note.indexable ? "Indexável" : "Não indexável"}</span></dd></div><div><dt>Views reais</dt><dd>{note.metrics.directViews}</dd></div><div><dt>Publicada</dt><dd>{formatSiteDate(note.publishedAt, { day: "2-digit", month: "short", year: "numeric" })}</dd></div></dl>
       </Link>)}
     </div>
 
@@ -33,7 +32,7 @@ export function AdminNotesTable({ notes }: { notes: AdminNote[] }) {
           <td><Link href={`/admin/notes/${note._id}`}><strong>{note.title || note.seoTitle || "Nota sem título"}</strong>{note.thread && <small>Thread · parte {note.thread.position}</small>}<small>{note.content}</small></Link></td>
           <td><span className={`admin-record-status ${note.indexable ? "is-live" : "is-review"}`}>{note.indexable ? "Indexável" : "Não indexável"}</span></td>
           <td className="admin-record-number">{note.metrics.directViews}</td>
-          <td><time>{format(new Date(note.publishedAt), "dd MMM yyyy", { locale: ptBR })}</time></td>
+          <td><time dateTime={note.publishedAt}>{formatSiteDate(note.publishedAt, { day: "2-digit", month: "short", year: "numeric" })}</time></td>
           <td><Link href={`/admin/notes/${note._id}`} className="admin-record-open">Abrir</Link></td>
         </tr>)}</tbody>
       </table>

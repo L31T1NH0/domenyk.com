@@ -1,15 +1,14 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
 import { ArrowTopRightOnSquareIcon, PencilSquareIcon } from "@heroicons/react/24/outline"
 import { getPostById } from "@/lib/db/posts"
 import { getThemesForPost } from "@/lib/db/themes"
 import { descriptionFromMarkdown } from "@/lib/seo"
 import { AdminCommandHeader } from "../../AdminCommandHeader"
+import { formatSiteDate } from "@/lib/datetime"
 
 function date(value: Date) {
-  return format(value, "d 'de' MMM. 'de' yyyy, HH:mm", { locale: ptBR })
+  return formatSiteDate(value, { dateStyle: "long", timeStyle: "short", hourCycle: "h23" })
 }
 
 export default async function AdminPostPage({ params }: { params: Promise<{ id: string }> }) {

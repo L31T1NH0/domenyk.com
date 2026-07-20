@@ -6,6 +6,7 @@ import { getDb } from "./client"
 import { toObjectId } from "../validation"
 import { sendAdminPush } from "../push"
 import { rateLimit } from "../rate-limit"
+import { dailyNotificationAggregateKey } from "../notification-aggregation"
 
 type NotificationKind = "account" | "comment" | "message" | "reply" | "view"
 
@@ -133,9 +134,10 @@ export async function aggregateNotification(
   occurrenceDetails: NotificationOccurrenceDetails = {}
 ) {
   const now = new Date()
+  const aggregateKey = dailyNotificationAggregateKey(data.aggregateKey, now)
   const occurrence: NotificationOccurrence = { occurredAt: now, ...occurrenceDetails }
   await (await collection()).updateOne(
-    { recipientId: data.recipientId, aggregateKey: data.aggregateKey },
+    { recipientId: data.recipientId, aggregateKey },
     [
       {
         $set: {
@@ -144,7 +146,7 @@ export async function aggregateNotification(
           description: data.description,
           href: data.href,
           recipientId: data.recipientId,
-          aggregateKey: data.aggregateKey,
+          aggregateKey,
           createdAt: { $ifNull: ["$createdAt", now] },
           updatedAt: now,
           count: { $add: [{ $ifNull: ["$count", 0] }, 1] },
@@ -170,7 +172,7 @@ export async function aggregateNotification(
     ],
     { upsert: true }
   )
-  const aggregateHash = createHash("sha256").update(data.aggregateKey).digest("hex").slice(0, 20)
+  const aggregateHash = createHash("sha256").update(aggregateKey).digest("hex").slice(0, 20)
   if (await rateLimit(`notification-push:${aggregateHash}`, { limit: 1, windowMs: AGGREGATE_PUSH_WINDOW_MS })) {
     await sendAdminPush({
       title: data.title,
@@ -181,7 +183,7 @@ export async function aggregateNotification(
   }
 }
 
-export async function listNotifications(recipientId: string, limit = 50) {
+export async function listNotifications(recipientId: string, limit = 100) {
   return (await collection()).find({ recipientId }).sort({ updatedAt: -1 }).limit(Math.min(limit, 100)).toArray()
 }
 

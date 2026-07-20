@@ -12,6 +12,7 @@ import { DeleteActionMenu } from "@/components/actions/DeleteActionMenu"
 import { MESSAGE_CATEGORIES, messageCategoryLabel } from "@/lib/message-categories"
 import { recordLatestPostMessage } from "@/lib/post-engagement"
 import { messagePushPreference, setMessagePushPreference } from "@/lib/client-push"
+import { formatSiteDate } from "@/lib/datetime"
 
 type Entry = { _id: string; authorName: string; body: string; createdAt: string; readAt?: string; isOwn: boolean }
 type Thread = { _id: string; subject: string; category: string; status: string; archivedAt?: string; entries?: Entry[]; updatedAt: string; lastMessage?: { body: string; createdAt: string } | null }
@@ -28,7 +29,7 @@ const FIELD_CLASS_NAME = "block min-h-11 w-full rounded-lg border border-zinc-30
 const SECONDARY_BUTTON_CLASS_NAME = "inline-flex min-h-11 items-center justify-center rounded-lg border border-zinc-300 px-4 text-sm font-medium text-zinc-800 outline-none transition-colors hover:border-zinc-400 hover:bg-zinc-100 focus-visible:ring-2 focus-visible:ring-zinc-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f4f4f4] active:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-200 dark:hover:border-zinc-600 dark:hover:bg-white/[0.07] dark:focus-visible:ring-zinc-300 dark:focus-visible:ring-offset-[#040404] dark:active:bg-white/10"
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value))
+  return formatSiteDate(value, { day: "2-digit", month: "short", year: "numeric" })
 }
 
 export function Correspondence() {

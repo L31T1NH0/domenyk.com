@@ -14,6 +14,10 @@
     "seo:audit:rendered": "node scripts/audit-rendered-seo.mjs http://localhost:3000",
     "seo:migrate:dry": "node --env-file-if-exists=.env.local scripts/migrate-post-seo.mjs",
     "seo:migrate:verify": "node --env-file-if-exists=.env.local scripts/verify-post-seo-migration.mjs",
+    "notifications:migrate:dry": "node --env-file-if-exists=.env.local scripts/migrate-notification-days.mjs",
+    "notifications:migrate:apply": "node --env-file-if-exists=.env.local scripts/migrate-notification-days.mjs --apply",
+    "dates:migrate:dry": "node --env-file-if-exists=.env.local scripts/migrate-legacy-post-dates.mjs",
+    "dates:migrate:apply": "node --env-file-if-exists=.env.local scripts/migrate-legacy-post-dates.mjs --apply",
     "db:validators:dry": "node --env-file-if-exists=.env.local scripts/apply-mongo-validators.mjs",
     "push:keys": "web-push generate-vapid-keys",
     "test": "node --conditions=react-server --test tests/*.test.mjs"

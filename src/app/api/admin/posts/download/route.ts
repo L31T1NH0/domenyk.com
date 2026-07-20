@@ -3,6 +3,7 @@ import { ObjectId } from "mongodb"
 import { adminOnly } from "@/lib/auth"
 import { getDb } from "@/lib/db/client"
 import type { Post } from "@/lib/db/posts"
+import { siteDateKey } from "@/lib/datetime"
 
 function frontMatterValue(value: string) {
   return JSON.stringify(value)
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest) {
   return new NextResponse(markdown, {
     headers: {
       "Content-Type": "text/markdown; charset=utf-8",
-      "Content-Disposition": `attachment; filename="posts-${new Date().toISOString().slice(0, 10)}.md"`,
+      "Content-Disposition": `attachment; filename="posts-${siteDateKey()}.md"`,
     },
   })
 }

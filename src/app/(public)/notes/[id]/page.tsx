@@ -1,8 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { cache } from "react"
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
 import { notFound } from "next/navigation"
 import { Header } from "@/components/Header"
 import { BackHome } from "@/components/BackHome"
@@ -11,6 +9,7 @@ import { absoluteUrl, authorJsonLd, buildPageMetadata, descriptionFromMarkdown, 
 import { headers } from "next/headers"
 import { NoteViewTracker } from "@/components/notes/NoteViewTracker"
 import { PostDescriptionDisclosure } from "@/components/post/PostDescriptionDisclosure"
+import { formatSiteDate } from "@/lib/datetime"
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -157,7 +156,7 @@ export default async function NotePage({ params }: Props) {
                       className="rounded text-xs text-neutral-500 transition-colors hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#A8A095]/80 dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
                     >
                       <time dateTime={threadNote.publishedAt}>
-                        {format(new Date(threadNote.publishedAt), "d 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR })}
+                        {formatSiteDate(threadNote.publishedAt, { dateStyle: "long", timeStyle: "short", hourCycle: "h23" })}
                       </time>
                     </Link>
                     {isCurrent && isThread && <span className="text-xs text-neutral-500 dark:text-[#A8A095]/80">nota aberta</span>}
@@ -200,8 +199,8 @@ export default async function NotePage({ params }: Props) {
               tags={[]}
               themes={[]}
               sources={[]}
-              publishedLabel={format(new Date(serializedNote.publishedAt), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}
-              updatedLabel={format(new Date(serializedNote.updatedAt), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}
+              publishedLabel={formatSiteDate(serializedNote.publishedAt, { dateStyle: "long" })}
+              updatedLabel={formatSiteDate(serializedNote.updatedAt, { dateStyle: "long" })}
               labels={{ subtitle: "Descrição", excerpt: "Resumo", seoTitle: "Título SEO", seoDescription: "Descrição SEO", themes: "Temas", tags: "Tags", sources: "Fontes", dates: "Datas", published: "Publicado em", updated: "Atualizado em" }}
               showLabel="ver detalhes"
               hideLabel="ocultar detalhes"

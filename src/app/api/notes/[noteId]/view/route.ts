@@ -11,9 +11,10 @@ import { requestIdentity } from "@/lib/request-identity"
 import { viewRequestDetails } from "@/lib/view-request-details"
 import type { ViewClientContext } from "@/lib/view-request-details"
 import { isSameOriginRequest } from "@/lib/csrf"
+import { siteDateKey } from "@/lib/datetime"
 
 function visitorKey(req: NextRequest, noteId: string, source: string) {
-  const day = new Date().toISOString().slice(0, 10)
+  const day = siteDateKey()
   return createHash("sha256").update(`${day}\n${noteId}\n${source}\n${requestIdentity(req)}`).digest("hex")
 }
 

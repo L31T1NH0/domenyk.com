@@ -5,6 +5,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { createPortal } from "react-dom"
 import { ArrowUpRightIcon, ChevronDownIcon } from "@heroicons/react/24/outline"
 import { DeleteActionMenu } from "@/components/actions/DeleteActionMenu"
+import { formatSiteDate } from "@/lib/datetime"
 
 type Item = {
   _id: string
@@ -335,7 +336,7 @@ export function NotificationList() {
                   <span className="mt-1 block text-sm text-zinc-600 dark:text-zinc-400">{item.description}</span>
                 </span>
                 <time dateTime={item.updatedAt} className="hidden shrink-0 text-xs text-zinc-500 sm:block">
-                  {new Date(item.updatedAt).toLocaleDateString("pt-BR")}
+                  {formatSiteDate(item.updatedAt, { dateStyle: "short" })}
                 </time>
               </>
             )
