@@ -8,16 +8,11 @@ const name = "Domenyk"
 
 export function Header() {
   const pathname = usePathname()
-  const isHome = pathname === "/"
   const isAbout = pathname === "/sobre"
 
   return (
     <header className="flex flex-col items-center gap-4 pb-2">
-      {isHome ? (
-        <h1 className="text-2xl font-semibold tracking-tight text-neutral-950 dark:text-[#f1f1f1]">
-          {name}
-        </h1>
-      ) : isAbout ? (
+      {isAbout ? (
         <>
           <Link href="/">
             <Image

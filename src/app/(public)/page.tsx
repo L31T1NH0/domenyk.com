@@ -12,7 +12,6 @@ import {
 import { isAdmin } from "@/lib/auth"
 import { rateLimit } from "@/lib/rate-limit"
 import { requestIdentityFromHeaders } from "@/lib/request-identity"
-import { Header } from "@/components/Header"
 import { HomeTimeline } from "./HomeTimeline"
 import { buildPageMetadata } from "@/lib/seo"
 import {
@@ -184,31 +183,24 @@ export default async function HomePage({
 
   const admin = await adminPromise
   return (
-    <>
-      <Header />
-      <section className="flex flex-col items-center gap-1 pb-4 text-center">
-        <p className="w-full max-w-[22rem] text-[15px] leading-relaxed text-neutral-600 dark:text-zinc-400">Ideias, e somente ideias, podem iluminar a escuridão.</p>
-      </section>
-
-      <HomeTimeline
-        key={`${feedMode}:${currentPage}:${searchQuery}`}
-        posts={serializedPosts ?? posts.map((post) => serializePostSummary(post))}
-        totalPosts={totalPosts}
-        totalNotes={totalNotes}
-        initialNotes={serializedNotes ?? notes.map(serializeNote)}
-        desktopPosts={desktopPosts}
-        desktopNotes={desktopNotes}
-        desktopThreadNotes={desktopThreadNotes}
-        desktopPostCount={desktopPostCount}
-        desktopLooseNoteCount={desktopLooseNoteCount}
-        desktopThreadCount={desktopThreadCount}
-        feedMode={feedMode}
-        searchQuery={searchQuery}
-        searchError={searchError}
-        currentPage={currentPage}
-        pageSize={HOME_TIMELINE_PAGE_SIZE}
-        isAdmin={admin}
-      />
-    </>
+    <HomeTimeline
+      key={`${feedMode}:${currentPage}:${searchQuery}`}
+      posts={serializedPosts ?? posts.map((post) => serializePostSummary(post))}
+      totalPosts={totalPosts}
+      totalNotes={totalNotes}
+      initialNotes={serializedNotes ?? notes.map(serializeNote)}
+      desktopPosts={desktopPosts}
+      desktopNotes={desktopNotes}
+      desktopThreadNotes={desktopThreadNotes}
+      desktopPostCount={desktopPostCount}
+      desktopLooseNoteCount={desktopLooseNoteCount}
+      desktopThreadCount={desktopThreadCount}
+      feedMode={feedMode}
+      searchQuery={searchQuery}
+      searchError={searchError}
+      currentPage={currentPage}
+      pageSize={HOME_TIMELINE_PAGE_SIZE}
+      isAdmin={admin}
+    />
   )
 }
