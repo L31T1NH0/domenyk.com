@@ -246,7 +246,10 @@ export function PublicMenu() {
     : options
 
   return (
-    <div ref={rootRef} className="relative z-40">
+    <div
+      ref={rootRef}
+      className={`relative z-40 ${pathname === "/" ? "min-[84rem]:translate-x-8" : ""}`}
+    >
       <button
         ref={triggerRef}
         type="button"

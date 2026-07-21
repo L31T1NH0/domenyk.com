@@ -19,7 +19,6 @@ import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import type { LexicalEditor as LexicalEditorInstance } from "lexical"
 import { LexicalEditor, readMarkdownFromEditor } from "@/components/editor/LexicalEditor"
-import { usePretextContentFontSize } from "@/components/text/usePretextTextMetrics"
 import { CommentContent } from "@/components/comments/CommentContent"
 import { RichCommentComposer } from "@/components/comments/RichCommentComposer"
 import { useComments, type Comment } from "@/components/comments/useComments"
@@ -205,12 +204,6 @@ export function NoteCard({ note, showMetadata = false, viewContext, isAdmin, onD
   const lightboxCloseButtonRef = useRef<HTMLButtonElement>(null)
   const lightboxOpenerRef = useRef<HTMLElement | null>(null)
   const commentsEndpoint = `/api/notes/${note._id}/comments`
-  const contentFontSize = usePretextContentFontSize(contentRef, {
-    minSize: 13,
-    maxSize: 14,
-    maxLinesPerBlock: 5,
-    blockSelector: "p, li, blockquote",
-  })
   const {
     comments,
     draft,
@@ -475,7 +468,7 @@ export function NoteCard({ note, showMetadata = false, viewContext, isAdmin, onD
       }
       resizeObserver.disconnect()
     }
-  }, [applyTimelineImageCrops, contentFontSize, note.contentHtml, note.images])
+  }, [applyTimelineImageCrops, note.contentHtml, note.images])
 
   useEffect(() => {
     if (activeImage) return
@@ -654,10 +647,9 @@ export function NoteCard({ note, showMetadata = false, viewContext, isAdmin, onD
         <div
           ref={contentRef}
           className={[
-            "note-content text-sm leading-relaxed text-neutral-900 dark:text-[#f1f1f1]",
+            "note-content text-[0.8125rem] leading-relaxed text-neutral-900 dark:text-[#f1f1f1]",
             cropTallImages ? "note-content-timeline" : "",
           ].filter(Boolean).join(" ")}
-          style={{ fontSize: contentFontSize }}
           onClick={handleContentClick}
           onKeyDown={handleContentKeyDown}
           dangerouslySetInnerHTML={{ __html: note.contentHtml }}

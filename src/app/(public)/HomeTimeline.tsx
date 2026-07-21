@@ -1001,7 +1001,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
       className={[
         "flex w-full min-w-0 touch-pan-y flex-col gap-5 self-center",
         hasDesktopThreads
-          ? "min-[84rem]:w-[56.5rem] min-[84rem]:self-start min-[96rem]:w-[59.5rem]"
+          ? "min-[84rem]:w-[calc(50vw+14.25rem)] min-[84rem]:self-start min-[96rem]:w-[calc(50vw+13.25rem)] min-[96.5rem]:w-[61.5rem]"
           : "",
       ].join(" ")}
       onPointerDownCapture={swipeNavigation.handlePointerDown}
@@ -1020,7 +1020,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
       <div className={[
         "flex min-w-0 flex-col gap-5",
         hasDesktopThreads
-          ? "min-[84rem]:grid min-[84rem]:grid-cols-[34.5rem_20rem] min-[84rem]:items-start min-[84rem]:gap-8 min-[96rem]:grid-cols-[34.5rem_22rem] min-[96rem]:gap-12"
+          ? "min-[84rem]:grid min-[84rem]:grid-cols-[34.5rem_minmax(0,1fr)] min-[84rem]:items-start min-[84rem]:gap-8 min-[96rem]:gap-12"
           : "",
       ].join(" ")}>
         <div className="flex min-w-0 flex-col gap-5">
@@ -1148,7 +1148,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
         {hasDesktopThreads && (
           <aside
             aria-label={`Threads da timeline, ${desktopRailThreadCount} no total`}
-            className="relative hidden min-w-0 self-start min-[84rem]:sticky min-[84rem]:top-4 min-[84rem]:block"
+            className="relative hidden min-w-0 self-start min-[84rem]:sticky min-[84rem]:top-4 min-[84rem]:-mt-[16.75rem] min-[84rem]:block"
           >
             <div
               ref={threadRailScrollRef}
@@ -1156,7 +1156,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
               onScroll={updateThreadRailOverflow}
               className="timeline-thread-scroll overflow-y-auto pr-2 outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:focus-visible:ring-neutral-300"
             >
-              <ol className="ml-0 flex min-w-0 flex-col divide-y divide-neutral-200 border-t border-neutral-200 dark:divide-white/10 dark:border-white/10">
+              <ol className="ml-0 flex min-w-0 flex-col divide-y divide-neutral-200 dark:divide-white/10">
                 {desktopThreadItems.map((item) => (
                   item.type === "note-group" && (
                     <li key={`rail:${item.id}`} className="min-w-0">
