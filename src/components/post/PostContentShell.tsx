@@ -22,7 +22,7 @@ export function PostContentShell({ html, className, variant = "default" }: Props
     ref,
     variant === "editorial"
       ? { minSize: 16, maxSize: 18, maxLinesPerParagraph: 9 }
-      : { minSize: 12, maxSize: 16 }
+      : { minSize: 16, maxSize: 17, maxLinesPerParagraph: 8 }
   )
   const [activeImage, setActiveImage] = useState<ActiveImage | null>(null)
   const [visible, setVisible] = useState(false)

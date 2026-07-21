@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { ClerkProvider } from "@clerk/nextjs"
+import { Source_Serif_4 } from "next/font/google"
 import localFont from "next/font/local"
 import Script from "next/script"
 import { cookies, headers } from "next/headers"
@@ -26,6 +27,16 @@ const geistMono = localFont({
   display: "swap",
   preload: false,
   fallback: ["ui-monospace", "SFMono-Regular", "Consolas", "monospace"],
+})
+
+const sourceSerif = Source_Serif_4({
+  weight: "variable",
+  style: ["normal", "italic"],
+  subsets: ["latin", "latin-ext"],
+  axes: ["opsz"],
+  variable: "--font-reading",
+  display: "swap",
+  fallback: ["Times New Roman", "Times", "serif"],
 })
 
 export const metadata: Metadata = {
@@ -80,7 +91,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     ? requestedLanguage
     : "pt-BR"
   return (
-    <html lang={documentLanguage} className={`${polySans.variable} ${geist.variable} ${geistMono.variable} h-full antialiased ${darkMode ? "dark-mode" : "light-mode"}`} suppressHydrationWarning>
+    <html lang={documentLanguage} className={`${polySans.variable} ${geist.variable} ${geistMono.variable} ${sourceSerif.variable} h-full antialiased ${darkMode ? "dark-mode" : "light-mode"}`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <Script
           id="theme-bootstrap"

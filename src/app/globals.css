@@ -858,10 +858,12 @@ img:hover {
 }
 
 .post-content {
-  font-family: var(--font-text), system-ui, sans-serif;
+  font-family: var(--font-reading), "Times New Roman", Times, serif;
+  font-kerning: normal;
+  font-optical-sizing: auto;
   min-width: 0;
   max-width: 100%;
-  line-height: 1.625;
+  line-height: 1.7;
   overflow-wrap: anywhere;
 }
 
@@ -1194,7 +1196,7 @@ html.light-mode [data-public-shell] .post-content h5 {
 .post-content-editorial {
   gap: 1.35rem;
   color: var(--editorial-body);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-reading), "Times New Roman", Times, serif;
   line-height: 1.82;
   letter-spacing: 0;
 }
@@ -1374,9 +1376,14 @@ html.light-mode [data-public-shell] .post-content-opinion strong {
 }
 
 .note-content {
-  font-family: var(--font-text), system-ui, sans-serif;
   @apply flex min-w-0 max-w-full flex-col gap-2 break-words;
   overflow-wrap: anywhere;
+}
+
+.note-content:not(.comment-content) {
+  font-family: var(--font-reading), "Times New Roman", Times, serif;
+  font-kerning: normal;
+  font-optical-sizing: auto;
 }
 
 .note-content p {
@@ -1544,6 +1551,7 @@ html.light-mode [data-public-shell] .note-content a:hover {
 }
 
 .comment-content {
+  font-family: var(--font-text), system-ui, sans-serif;
   @apply gap-1;
 }
 
