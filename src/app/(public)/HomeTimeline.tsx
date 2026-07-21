@@ -1148,7 +1148,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
         {hasDesktopThreads && (
           <aside
             aria-label={`Threads da timeline, ${desktopRailThreadCount} no total`}
-            className="relative hidden min-w-0 self-start min-[84rem]:sticky min-[84rem]:top-4 min-[84rem]:-mt-[16.75rem] min-[84rem]:block"
+            className="relative hidden min-w-0 self-start min-[84rem]:sticky min-[84rem]:top-4 min-[84rem]:-mt-20 min-[84rem]:block"
           >
             <div
               ref={threadRailScrollRef}
