@@ -47,6 +47,8 @@ type Props = {
   onLinkToThread?: (note: SerializedNote) => void
   onCancelThreadLink?: () => void
   linkingToThread?: boolean
+  commentsPanelMode?: "adjacent" | "viewport"
+  showTimelineBoundaries?: boolean
 }
 
 type ActiveImage = {
@@ -73,9 +75,10 @@ type NoteCommentsPanelProps = {
   onLoadOlder: () => Promise<void> | void
   onClose: () => void
   returnFocusRef: RefObject<HTMLButtonElement | null>
+  mode?: "adjacent" | "viewport"
 }
 
-function NoteCommentsPanel({ comments, loading = false, hasMore = false, loadingOlder = false, error = "", draft, submitting, isAdmin, onDraftChange, onSubmit, onRemove, onLoadOlder, onClose, returnFocusRef }: NoteCommentsPanelProps) {
+function NoteCommentsPanel({ comments, loading = false, hasMore = false, loadingOlder = false, error = "", draft, submitting, isAdmin, onDraftChange, onSubmit, onRemove, onLoadOlder, onClose, returnFocusRef, mode = "adjacent" }: NoteCommentsPanelProps) {
   const { user } = useUser()
   const panelRef = useRef<HTMLElement>(null)
   const titleId = useId()
@@ -101,7 +104,12 @@ function NoteCommentsPanel({ comments, loading = false, hasMore = false, loading
       onKeyDown={(event) => {
         if (event.key === "Escape") onClose()
       }}
-      className="fixed inset-x-4 bottom-4 z-50 flex max-h-[70vh] flex-col rounded-lg border border-neutral-200 bg-white p-3 shadow-md shadow-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:border-white/10 dark:bg-[#080808] dark:focus-visible:ring-neutral-300 sm:absolute sm:inset-x-auto sm:inset-y-0 sm:left-[calc(100%+1rem)] sm:bottom-auto sm:w-80 sm:max-h-full"
+      className={[
+        "z-50 flex flex-col rounded-lg border border-neutral-200 bg-white p-3 shadow-md shadow-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:border-white/10 dark:bg-[#080808] dark:focus-visible:ring-neutral-300",
+        mode === "viewport"
+          ? "fixed bottom-4 right-4 max-h-[70vh] w-[min(20rem,calc(100vw-2rem))]"
+          : "fixed inset-x-4 bottom-4 max-h-[70vh] sm:absolute sm:inset-x-auto sm:inset-y-0 sm:left-[calc(100%+1rem)] sm:bottom-auto sm:w-80 sm:max-h-full",
+      ].join(" ")}
     >
       <div className="flex items-center justify-between gap-3 border-b border-neutral-200 pb-2 dark:border-white/10">
         <h2 id={titleId} className="text-xs font-medium text-neutral-700 dark:text-[#c2bbb1]">Comentários</h2>
@@ -188,7 +196,7 @@ function NoteCommentsPanel({ comments, loading = false, hasMore = false, loading
   )
 }
 
-export function NoteCard({ note, showMetadata = false, viewContext, isAdmin, onDelete, onUpdate, onContinueThread, cropTallImages = false, deleting = false, timelineThreadPlacement = "only", timelineThreadSize = 1, showThreadLabel = true, threadLinkSource = null, onLinkToThread, onCancelThreadLink, linkingToThread = false }: Props) {
+export function NoteCard({ note, showMetadata = false, viewContext, isAdmin, onDelete, onUpdate, onContinueThread, cropTallImages = false, deleting = false, timelineThreadPlacement = "only", timelineThreadSize = 1, showThreadLabel = true, threadLinkSource = null, onLinkToThread, onCancelThreadLink, linkingToThread = false, commentsPanelMode = "adjacent", showTimelineBoundaries = true }: Props) {
   const articleRef = useRef<HTMLElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const editEditorRef = useRef<LexicalEditorInstance | null>(null)
@@ -532,13 +540,15 @@ export function NoteCard({ note, showMetadata = false, viewContext, isAdmin, onD
         ...(onUpdate ? [{ label: "Editar nota", icon: PencilIcon, onSelect: startEditing }] : []),
         ...(onContinueThread ? [{ label: "Continuar ou linkar thread", icon: LinkIcon, onSelect: () => onContinueThread(note) }] : []),
       ]
-  const borderClass = timelineThreadPlacement === "first"
-    ? "border-t border-neutral-200 dark:border-white/10"
-    : timelineThreadPlacement === "middle"
-      ? ""
-      : timelineThreadPlacement === "last"
-        ? "border-b border-neutral-200 dark:border-white/10"
-        : "border-y border-neutral-200 dark:border-white/10"
+  const borderClass = !showTimelineBoundaries
+    ? ""
+    : timelineThreadPlacement === "first"
+      ? "border-t border-neutral-200 dark:border-white/10"
+      : timelineThreadPlacement === "middle"
+        ? ""
+        : timelineThreadPlacement === "last"
+          ? "border-b border-neutral-200 dark:border-white/10"
+          : "border-y border-neutral-200 dark:border-white/10"
   const isThreadContinuation = timelineThreadPlacement === "middle" || timelineThreadPlacement === "last"
   const spacingClass = isThreadContinuation ? "pb-5 pt-0" : "pb-5 pt-3"
   const actionPositionClass = isThreadContinuation ? "-top-1" : "top-2"
@@ -704,6 +714,7 @@ export function NoteCard({ note, showMetadata = false, viewContext, isAdmin, onD
             onLoadOlder={loadOlderComments}
             onClose={() => setCommentsOpen(false)}
             returnFocusRef={commentsButtonRef}
+            mode={commentsPanelMode}
           />
       )}
 

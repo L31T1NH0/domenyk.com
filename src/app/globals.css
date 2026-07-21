@@ -725,6 +725,41 @@
   --scroll-progress-visible: 0;
 }
 
+@supports not selector(::-webkit-scrollbar) {
+  .timeline-thread-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(115 115 115 / 55%) transparent;
+  }
+}
+
+.timeline-thread-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.timeline-thread-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.timeline-thread-scroll::-webkit-scrollbar-button,
+.timeline-thread-scroll::-webkit-scrollbar-button:single-button,
+.timeline-thread-scroll::-webkit-scrollbar-button:vertical:decrement,
+.timeline-thread-scroll::-webkit-scrollbar-button:vertical:increment {
+  appearance: none;
+  -webkit-appearance: none;
+  display: none;
+  width: 0;
+  height: 0;
+  border: 0;
+  background: transparent;
+}
+
+.timeline-thread-scroll::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgb(115 115 115 / 55%);
+  background-clip: padding-box;
+}
+
 html {
   /* Keep the content width stable when navigating between short and long pages. */
   overflow-y: scroll;

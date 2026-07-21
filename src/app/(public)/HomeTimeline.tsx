@@ -30,6 +30,12 @@ type Props = {
   totalPosts: number
   totalNotes: number
   initialNotes: SerializedNote[]
+  desktopPosts: SerializedPostSummary[]
+  desktopNotes: SerializedNote[]
+  desktopThreadNotes: SerializedNote[]
+  desktopPostCount: number
+  desktopLooseNoteCount: number
+  desktopThreadCount: number
   feedMode: FeedMode
   searchQuery: string
   searchError?: string
@@ -60,22 +66,8 @@ function postShowsTimelineCover(post: SerializedPostSummary) {
   return Boolean(post.cover?.url) && post.showCoverInTimeline !== false
 }
 
-function itemHasCoverPost(item: TimelineDisplayItem | undefined) {
-  return item?.type === "post" && postShowsTimelineCover(item.post)
-}
-
-function itemNeedsTextSeparator(item: TimelineDisplayItem | undefined) {
-  return item?.type === "note-group" || (item?.type === "post" && !postShowsTimelineCover(item.post))
-}
-
-function itemShouldHaveTopSeparator(item: TimelineDisplayItem | undefined, previousItem: TimelineDisplayItem | undefined) {
-  return itemNeedsTextSeparator(item) && Boolean(previousItem) && (previousItem?.type === "note-group" || itemHasCoverPost(previousItem))
-}
-
 function PostTimelineItem({
   post,
-  showTopSeparator,
-  showBottomSeparator,
   isAdmin,
   onHide,
   onDelete,
@@ -83,8 +75,6 @@ function PostTimelineItem({
   deleting,
 }: {
   post: SerializedPostSummary
-  showTopSeparator: boolean
-  showBottomSeparator: boolean
   isAdmin: boolean
   onHide: (post: SerializedPostSummary) => Promise<void>
   onDelete: (post: SerializedPostSummary) => Promise<void>
@@ -95,15 +85,7 @@ function PostTimelineItem({
   const isEditorial = post.style === "editorial"
 
   return (
-    <li
-      className={[
-        "group relative py-4 first:pt-0",
-        showTopSeparator ? "border-t border-neutral-200 dark:border-white/10" : "",
-        showBottomSeparator ? "border-b border-neutral-200 dark:border-white/10" : "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
-    >
+    <li className="group relative py-4 first:pt-0">
       {post.pinned && (
         <span className="mb-2 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-600 dark:text-[#A8A095]">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="size-3" aria-hidden>
@@ -469,7 +451,7 @@ function Pagination({
 
   return (
     <nav
-      className="mt-8 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-t border-neutral-200 pt-4 dark:border-white/10"
+      className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-t border-neutral-200 pt-4 dark:border-white/10"
       aria-label="Paginação"
     >
       {currentPage > 1 && (
@@ -607,9 +589,10 @@ function TimelineModeDock({
   )
 }
 
-export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feedMode, searchQuery, searchError = "", currentPage, pageSize, isAdmin }: Props) {
+export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desktopPosts, desktopNotes, desktopThreadNotes, desktopPostCount, desktopLooseNoteCount, desktopThreadCount, feedMode, searchQuery, searchError = "", currentPage, pageSize, isAdmin }: Props) {
   const router = useRouter()
   const sectionRef = useRef<HTMLElement>(null)
+  const threadRailScrollRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastRequestedSearchRef = useRef(searchQuery)
@@ -617,6 +600,14 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
   const [postCount, setPostCount] = useState(totalPosts)
   const [noteCount, setNoteCount] = useState(totalNotes)
   const [notes, setNotes] = useState(initialNotes)
+  const [desktopTimelinePosts, setDesktopTimelinePosts] = useState(desktopPosts)
+  const [desktopTimelineNotes, setDesktopTimelineNotes] = useState(desktopNotes)
+  const [desktopRailNotes, setDesktopRailNotes] = useState(desktopThreadNotes)
+  const [desktopTimelinePostCount, setDesktopTimelinePostCount] = useState(desktopPostCount)
+  const [desktopTimelineNoteCount, setDesktopTimelineNoteCount] = useState(desktopLooseNoteCount)
+  const [desktopRailThreadCount, setDesktopRailThreadCount] = useState(desktopThreadCount)
+  const [threadRailOverflow, setThreadRailOverflow] = useState(false)
+  const [threadRailAtEnd, setThreadRailAtEnd] = useState(true)
   const optimisticFeedMode = feedMode
   const optimisticPage = currentPage
   const hasSearch = searchQuery.length > 0
@@ -639,6 +630,62 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
     page: optimisticPage,
     pageSize,
   })
+  const {
+    totalPages: desktopTotalPages,
+    activePage: desktopActivePage,
+    visibleItems: desktopVisibleItems,
+  } = useTimelineFeed({
+    notes: desktopTimelineNotes,
+    posts: desktopTimelinePosts,
+    postCount: desktopTimelinePostCount,
+    noteCount: desktopTimelineNoteCount,
+    mode: optimisticFeedMode,
+    page: optimisticPage,
+    pageSize,
+  })
+  const desktopThreadItems = useMemo<TimelineDisplayItem[]>(() => (
+    groupNotesByThread(desktopRailNotes).flatMap((thread) => {
+      if (thread.length < 2) return []
+      const rootId = thread[0].thread?.rootId ?? thread[0]._id
+      const latestDate = thread.reduce(
+        (latest, note) => new Date(note.publishedAt).getTime() > new Date(latest).getTime() ? note.publishedAt : latest,
+        thread[0].publishedAt
+      )
+      return [{ type: "note-group", id: `note-group:${rootId}`, date: latestDate, notes: thread }]
+    })
+  ), [desktopRailNotes])
+
+  const updateThreadRailOverflow = useCallback(() => {
+    const rail = threadRailScrollRef.current
+    if (!rail) return
+
+    const viewportInset = 16
+    const railTop = Math.max(viewportInset, rail.getBoundingClientRect().top)
+    const availableHeight = Math.max(192, window.innerHeight - railTop - viewportInset)
+    rail.style.maxHeight = `${Math.floor(availableHeight)}px`
+
+    const hasOverflow = rail.scrollHeight > rail.clientHeight + 1
+    const atEnd = rail.scrollTop + rail.clientHeight >= rail.scrollHeight - 2
+    setThreadRailOverflow(hasOverflow)
+    setThreadRailAtEnd(!hasOverflow || atEnd)
+  }, [])
+
+  useEffect(() => {
+    const rail = threadRailScrollRef.current
+    if (!rail) return
+    const frame = window.requestAnimationFrame(updateThreadRailOverflow)
+    const observer = new ResizeObserver(updateThreadRailOverflow)
+    observer.observe(rail)
+    if (rail.firstElementChild) observer.observe(rail.firstElementChild)
+    window.addEventListener("resize", updateThreadRailOverflow)
+    window.addEventListener("scroll", updateThreadRailOverflow, { passive: true })
+    return () => {
+      window.cancelAnimationFrame(frame)
+      observer.disconnect()
+      window.removeEventListener("resize", updateThreadRailOverflow)
+      window.removeEventListener("scroll", updateThreadRailOverflow)
+    }
+  }, [desktopRailNotes, updateThreadRailOverflow])
 
   useEffect(() => {
     return () => {
@@ -687,6 +734,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
   }, [])
 
   function handlePosted(note: SerializedNote) {
+    const initializedThread = Boolean(threadParent && !threadParent.thread && note.thread)
     setNotes((prev) => [
       note,
       ...prev.map((existing) => (
@@ -696,6 +744,27 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
       )),
     ])
     setNoteCount((prev) => prev + 1)
+    if (note.thread) {
+      setDesktopRailNotes((current) => {
+        const normalizedParent = threadParent && initializedThread
+          ? { ...threadParent, thread: { rootId: threadParent._id, position: 1 } }
+          : threadParent
+        const withParent = normalizedParent && !current.some((existing) => existing._id === normalizedParent._id)
+          ? [...current, normalizedParent]
+          : current
+        return mergeNotesById(withParent, [note])
+      })
+      if (threadParent) {
+        setDesktopTimelineNotes((current) => current.filter((existing) => existing._id !== threadParent._id))
+      }
+      if (initializedThread) {
+        setDesktopTimelineNoteCount((current) => Math.max(0, current - 1))
+        setDesktopRailThreadCount((current) => current + 1)
+      }
+    } else {
+      setDesktopTimelineNotes((current) => [note, ...current])
+      setDesktopTimelineNoteCount((current) => current + 1)
+    }
     setThreadParent(null)
   }
 
@@ -720,6 +789,11 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
         throw new Error(data?.error ?? "Não foi possível linkar a nota à thread.")
       }
       setNotes((current) => mergeNotesById(current, data.thread!))
+      setDesktopRailNotes((current) => mergeNotesById(current, data.thread!))
+      const linkedIds = new Set(data.thread.map((threadNote) => threadNote._id))
+      setDesktopTimelineNotes((current) => current.filter((existing) => !linkedIds.has(existing._id)))
+      setDesktopTimelineNoteCount((current) => Math.max(0, current - (threadParent.thread ? 1 : 2)))
+      if (!threadParent.thread) setDesktopRailThreadCount((current) => current + 1)
       setThreadParent(null)
     } catch (caughtError) {
       setNoteError(caughtError instanceof Error ? caughtError.message : "Não foi possível linkar a nota à thread.")
@@ -749,6 +823,12 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
             ? replacements.get(note._id) ?? note
             : note)
       })
+      setDesktopTimelineNotes((current) => current
+        .filter((note) => note._id !== id)
+        .map((note) => data?.thread?.find((replacement) => replacement._id === note._id) ?? note))
+      setDesktopRailNotes((current) => current
+        .filter((note) => note._id !== id)
+        .map((note) => data?.thread?.find((replacement) => replacement._id === note._id) ?? note))
       if (threadParent?._id === id) setThreadParent(null)
       setNoteCount((prev) => Math.max(0, prev - 1))
       router.refresh()
@@ -763,6 +843,8 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
 
   function handleUpdate(updatedNote: SerializedNote) {
     setNotes((prev) => prev.map((note) => note._id === updatedNote._id ? updatedNote : note))
+    setDesktopTimelineNotes((current) => current.map((note) => note._id === updatedNote._id ? updatedNote : note))
+    setDesktopRailNotes((current) => current.map((note) => note._id === updatedNote._id ? updatedNote : note))
   }
 
   async function handleHidePost(postToHide: SerializedPostSummary) {
@@ -782,7 +864,9 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
       }
 
       setTimelinePosts((prev) => prev.filter((post) => post._id !== postToHide._id))
+      setDesktopTimelinePosts((prev) => prev.filter((post) => post._id !== postToHide._id))
       setPostCount((prev) => Math.max(0, prev - 1))
+      setDesktopTimelinePostCount((prev) => Math.max(0, prev - 1))
       router.refresh()
     } catch (caughtError) {
       const message = caughtError instanceof Error ? caughtError.message : "Não foi possível esconder o post."
@@ -806,7 +890,9 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
       }
 
       setTimelinePosts((current) => current.filter((post) => post._id !== postToDelete._id))
+      setDesktopTimelinePosts((current) => current.filter((post) => post._id !== postToDelete._id))
       setPostCount((current) => Math.max(0, current - 1))
+      setDesktopTimelinePostCount((current) => Math.max(0, current - 1))
       router.refresh()
     } catch (caughtError) {
       const message = caughtError instanceof Error ? caughtError.message : "Não foi possível excluir o post."
@@ -849,13 +935,75 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
     { mode: "posts" as const, label: "Posts", count: postCount },
     { mode: "notes" as const, label: "Notas", count: noteCount },
   ]
+  const hasDesktopThreads = desktopThreadItems.length > 0
+  const hasDesktopStandaloneItems = desktopVisibleItems.length > 0
+
+  function renderNoteGroup(
+    item: Extract<TimelineDisplayItem, { type: "note-group" }>,
+    surface: "timeline" | "thread-rail"
+  ) {
+    return (
+      <NoteTimelineGroup notes={item.notes}>
+        {(note, placement, threadSize) => (
+          <NoteCard
+            note={note}
+            viewContext="home"
+            isAdmin={isAdmin}
+            onDelete={handleDelete}
+            onUpdate={handleUpdate}
+            onContinueThread={handleContinueThread}
+            deleting={deletingNoteId === note._id}
+            cropTallImages
+            timelineThreadPlacement={placement}
+            timelineThreadSize={threadSize}
+            showThreadLabel={item.notes.length === 1}
+            threadLinkSource={threadParent}
+            onLinkToThread={handleLinkToThread}
+            onCancelThreadLink={() => setThreadParent(null)}
+            linkingToThread={linkingNoteId === note._id}
+            commentsPanelMode={surface === "thread-rail" ? "viewport" : "adjacent"}
+            showTimelineBoundaries={false}
+          />
+        )}
+      </NoteTimelineGroup>
+    )
+  }
+
+  function renderTimelineItems(items: TimelineDisplayItem[]) {
+    return (
+      <ul className="ml-0 min-w-0 divide-y divide-neutral-200 dark:divide-white/10">
+        {items.map((item) => (
+          item.type === "note-group" ? (
+            <li key={item.id} className="min-w-0">
+              {renderNoteGroup(item, "timeline")}
+            </li>
+          ) : (
+            <PostTimelineItem
+              key={item.id}
+              post={item.post}
+              isAdmin={isAdmin}
+              onHide={handleHidePost}
+              onDelete={handleDeletePost}
+              hiding={hidingPostId === item.post._id}
+              deleting={deletingPostId === item.post._id}
+            />
+          )
+        ))}
+      </ul>
+    )
+  }
 
   return (
     <section
       ref={sectionRef}
       aria-label="Timeline"
       aria-busy={isPagePending}
-      className="flex w-full min-w-0 touch-pan-y flex-col gap-5 self-center"
+      className={[
+        "flex w-full min-w-0 touch-pan-y flex-col gap-5 self-center",
+        hasDesktopThreads
+          ? "min-[84rem]:w-[56.5rem] min-[84rem]:self-start min-[96rem]:w-[59.5rem]"
+          : "",
+      ].join(" ")}
       onPointerDownCapture={swipeNavigation.handlePointerDown}
       onPointerMoveCapture={swipeNavigation.handlePointerMove}
       onPointerUpCapture={swipeNavigation.handlePointerUp}
@@ -869,72 +1017,77 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
         onModeChange={switchMode}
       />
 
-      <div className="flex min-w-0 flex-col gap-5">
-        <div className="flex flex-col gap-3">
-          <div className="flex min-w-0 flex-col items-start gap-3">
-            <form
-              action="/"
-              className="w-[min(100%,14rem)] min-w-0 sm:w-56"
-              onSubmit={(event) => {
-                event.preventDefault()
-                if (searchDebounceRef.current) {
-                  clearTimeout(searchDebounceRef.current)
-                  searchDebounceRef.current = null
-                }
-                applySearch(searchInput)
-              }}
-            >
-              <div
-                className={[
-                  "flex h-8 min-w-0 items-center gap-1.5 rounded-full border px-2.5 text-neutral-950 transition-colors",
-                  "border-neutral-300 bg-transparent focus-within:border-neutral-500 focus-within:bg-white/70 focus-within:ring-1 focus-within:ring-neutral-500/50",
-                  "dark:border-white/10 dark:text-[#f1f1f1] dark:focus-within:border-[#A8A095]/50 dark:focus-within:bg-white/[0.04] dark:focus-within:ring-neutral-300/60",
-                  hasSearchInput ? "border-neutral-400 dark:border-[#A8A095]/45" : "",
-                ].join(" ")}
+      <div className={[
+        "flex min-w-0 flex-col gap-5",
+        hasDesktopThreads
+          ? "min-[84rem]:grid min-[84rem]:grid-cols-[34.5rem_20rem] min-[84rem]:items-start min-[84rem]:gap-8 min-[96rem]:grid-cols-[34.5rem_22rem] min-[96rem]:gap-12"
+          : "",
+      ].join(" ")}>
+        <div className="flex min-w-0 flex-col gap-5">
+          <div className="flex flex-col gap-3">
+            <div className="flex min-w-0 flex-col items-start gap-3">
+              <form
+                action="/"
+                className="w-[min(100%,14rem)] min-w-0 sm:w-56"
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  if (searchDebounceRef.current) {
+                    clearTimeout(searchDebounceRef.current)
+                    searchDebounceRef.current = null
+                  }
+                  applySearch(searchInput)
+                }}
               >
-                <MagnifyingGlassIcon className="size-3.5 shrink-0 text-neutral-500 dark:text-[#A8A095]" aria-hidden />
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  name="q"
-                  value={searchInput}
-                  onChange={(event) => setSearchInput(event.target.value)}
-                  placeholder="Pesquisar posts..."
-                  aria-label="Pesquisar posts e notas"
-                  autoComplete="off"
-                  maxLength={120}
-                  className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-neutral-600 dark:placeholder:text-[#c2bbb1]"
-                />
-                {optimisticFeedMode !== "all" && <input type="hidden" name="mode" value={optimisticFeedMode} />}
-                {hasSearchInput && (
-                  <>
-                    <span className="h-3.5 w-px bg-neutral-300 dark:bg-white/10" aria-hidden />
-                    <Link
-                      href={modeHref(optimisticFeedMode, "")}
-                      data-swipe-ignore
-                      onClick={(event) => {
-                        event.preventDefault()
-                        if (searchDebounceRef.current) {
-                          clearTimeout(searchDebounceRef.current)
-                          searchDebounceRef.current = null
-                        }
-                        setSearchInput("")
-                        applySearch("")
-                        searchInputRef.current?.focus()
-                      }}
-                      aria-label="Limpar busca"
-                      title="Limpar busca"
-                      className="grid size-6 shrink-0 place-items-center rounded-full text-neutral-600 transition-colors hover:bg-neutral-950/5 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#c2bbb1] dark:hover:bg-white/10 dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
-                    >
-                      <XMarkIcon className="size-3" aria-hidden />
-                    </Link>
-                  </>
-                )}
-              </div>
-            </form>
+                <div
+                  className={[
+                    "flex h-8 min-w-0 items-center gap-1.5 rounded-full border px-2.5 text-neutral-950 transition-colors",
+                    "border-neutral-300 bg-transparent focus-within:border-neutral-500 focus-within:bg-white/70 focus-within:ring-1 focus-within:ring-neutral-500/50",
+                    "dark:border-white/10 dark:text-[#f1f1f1] dark:focus-within:border-[#A8A095]/50 dark:focus-within:bg-white/[0.04] dark:focus-within:ring-neutral-300/60",
+                    hasSearchInput ? "border-neutral-400 dark:border-[#A8A095]/45" : "",
+                  ].join(" ")}
+                >
+                  <MagnifyingGlassIcon className="size-3.5 shrink-0 text-neutral-500 dark:text-[#A8A095]" aria-hidden />
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    name="q"
+                    value={searchInput}
+                    onChange={(event) => setSearchInput(event.target.value)}
+                    placeholder="Pesquisar posts..."
+                    aria-label="Pesquisar posts e notas"
+                    autoComplete="off"
+                    maxLength={120}
+                    className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-neutral-600 dark:placeholder:text-[#c2bbb1]"
+                  />
+                  {optimisticFeedMode !== "all" && <input type="hidden" name="mode" value={optimisticFeedMode} />}
+                  {hasSearchInput && (
+                    <>
+                      <span className="h-3.5 w-px bg-neutral-300 dark:bg-white/10" aria-hidden />
+                      <Link
+                        href={modeHref(optimisticFeedMode, "")}
+                        data-swipe-ignore
+                        onClick={(event) => {
+                          event.preventDefault()
+                          if (searchDebounceRef.current) {
+                            clearTimeout(searchDebounceRef.current)
+                            searchDebounceRef.current = null
+                          }
+                          setSearchInput("")
+                          applySearch("")
+                          searchInputRef.current?.focus()
+                        }}
+                        aria-label="Limpar busca"
+                        title="Limpar busca"
+                        className="grid size-6 shrink-0 place-items-center rounded-full text-neutral-600 transition-colors hover:bg-neutral-950/5 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#c2bbb1] dark:hover:bg-white/10 dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
+                      >
+                        <XMarkIcon className="size-3" aria-hidden />
+                      </Link>
+                    </>
+                  )}
+                </div>
+              </form>
+            </div>
           </div>
-
-        </div>
 
         {isAdmin && (
           <div>
@@ -958,62 +1111,76 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, feed
             transition: swipeNavigation.isSwipeSettling ? "transform 120ms cubic-bezier(0.16, 1, 0.3, 1), opacity 100ms ease-out" : "none",
           }}
         >
-          {visibleItems.length === 0 ? (
-            <div className="text-sm text-zinc-600 dark:text-zinc-400">
-              <p>{hasSearch ? "Nenhum resultado encontrado." : "Nenhum post ou nota publicado ainda."}</p>
-            </div>
-          ) : (
-            <ul className="ml-0 min-w-0">
-              {visibleItems.map((item, index) => (
-                item.type === "note-group" ? (
-                  <li key={item.id} className="min-w-0">
-                    <NoteTimelineGroup notes={item.notes}>
-                      {(note, placement, threadSize) => (
-                        <NoteCard
-                          note={note}
-                          viewContext="home"
-                          isAdmin={isAdmin}
-                          onDelete={handleDelete}
-                          onUpdate={handleUpdate}
-                          onContinueThread={handleContinueThread}
-                          deleting={deletingNoteId === note._id}
-                          cropTallImages
-                          timelineThreadPlacement={placement}
-                          timelineThreadSize={threadSize}
-                          showThreadLabel={item.notes.length === 1}
-                          threadLinkSource={threadParent}
-                          onLinkToThread={handleLinkToThread}
-                          onCancelThreadLink={() => setThreadParent(null)}
-                          linkingToThread={linkingNoteId === note._id}
-                        />
-                      )}
-                    </NoteTimelineGroup>
-                  </li>
-                ) : (
-                  <PostTimelineItem
-                    key={item.id}
-                    post={item.post}
-                    isAdmin={isAdmin}
-                    onHide={handleHidePost}
-                    onDelete={handleDeletePost}
-                    hiding={hidingPostId === item.post._id}
-                    deleting={deletingPostId === item.post._id}
-                    showTopSeparator={itemShouldHaveTopSeparator(item, visibleItems[index - 1])}
-                    showBottomSeparator={itemNeedsTextSeparator(item)}
-                  />
-                )
-              ))}
-            </ul>
-          )}
+          <div className="min-[84rem]:hidden">
+            {visibleItems.length === 0 ? (
+              <div className="text-sm text-zinc-600 dark:text-zinc-400">
+                <p>{hasSearch ? "Nenhum resultado encontrado." : "Nenhum post ou nota publicado ainda."}</p>
+              </div>
+            ) : renderTimelineItems(visibleItems)}
 
-          <Pagination
-            currentPage={activePage}
-            totalPages={optimisticTotalPages}
-            mode={optimisticFeedMode}
-            searchQuery={searchQuery}
-            onPageChange={switchPage}
-          />
+            <Pagination
+              currentPage={activePage}
+              totalPages={optimisticTotalPages}
+              mode={optimisticFeedMode}
+              searchQuery={searchQuery}
+              onPageChange={switchPage}
+            />
+          </div>
+
+          <div className="hidden min-[84rem]:block">
+            {hasDesktopStandaloneItems ? renderTimelineItems(desktopVisibleItems) : (
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                {hasSearch ? "Nenhum resultado encontrado na timeline." : "Nenhum post ou nota solta nesta página."}
+              </p>
+            )}
+
+            <Pagination
+              currentPage={desktopActivePage}
+              totalPages={desktopTotalPages}
+              mode={optimisticFeedMode}
+              searchQuery={searchQuery}
+              onPageChange={switchPage}
+            />
+          </div>
         </div>
+        </div>
+
+        {hasDesktopThreads && (
+          <aside
+            aria-label={`Threads da timeline, ${desktopRailThreadCount} no total`}
+            className="relative hidden min-w-0 self-start min-[84rem]:sticky min-[84rem]:top-4 min-[84rem]:block"
+          >
+            <div
+              ref={threadRailScrollRef}
+              tabIndex={threadRailOverflow ? 0 : -1}
+              onScroll={updateThreadRailOverflow}
+              className="timeline-thread-scroll overflow-y-auto pr-2 outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:focus-visible:ring-neutral-300"
+            >
+              <ol className="ml-0 flex min-w-0 flex-col divide-y divide-neutral-200 border-t border-neutral-200 dark:divide-white/10 dark:border-white/10">
+                {desktopThreadItems.map((item) => (
+                  item.type === "note-group" && (
+                    <li key={`rail:${item.id}`} className="min-w-0">
+                      {renderNoteGroup(item, "thread-rail")}
+                    </li>
+                  )
+                ))}
+              </ol>
+            </div>
+            {threadRailOverflow && (
+              <div
+                aria-hidden
+                className="absolute right-0 top-0 z-10 size-2 bg-[#f4f4f4] dark:bg-[#040404]"
+              />
+            )}
+            <div
+              aria-hidden
+              className={[
+                "pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#f4f4f4] via-[#f4f4f4]/90 to-transparent transition-opacity duration-150 dark:from-[#040404] dark:via-[#040404]/90",
+                threadRailOverflow && !threadRailAtEnd ? "opacity-100" : "opacity-0",
+              ].join(" ")}
+            />
+          </aside>
+        )}
       </div>
     </section>
   )

@@ -3,7 +3,12 @@ import "server-only"
 import { revalidateTag, unstable_cache } from "next/cache"
 import { countNotes, getNotes, serializeNote, type SerializedNote } from "@/lib/db/notes"
 import { countPosts, getPosts, serializePostSummary, type SerializedPostSummary } from "@/lib/db/posts"
-import { getTimelinePage } from "@/lib/db/timeline"
+import {
+  countStandaloneNotes,
+  getNoteThreadPage,
+  getStandaloneTimelinePage,
+  getTimelinePage,
+} from "@/lib/db/timeline"
 
 export const PUBLIC_CONTENT_CACHE_TAG = "public-content"
 const PUBLIC_CONTENT_REVALIDATE_SECONDS = 60
@@ -13,6 +18,13 @@ export type PublicFeedMode = "all" | "posts" | "notes"
 export type CachedHomeFeed = {
   posts: SerializedPostSummary[]
   notes: SerializedNote[]
+}
+
+export type CachedDesktopHomeFeed = CachedHomeFeed & {
+  threadNotes: SerializedNote[]
+  postCount: number
+  looseNoteCount: number
+  threadCount: number
 }
 
 export const getCachedPublicContentCounts = unstable_cache(
@@ -54,6 +66,32 @@ export const getCachedHomeFeed = unstable_cache(
     return { posts: [], notes: notes.map(serializeNote) }
   },
   ["home-feed"],
+  { tags: [PUBLIC_CONTENT_CACHE_TAG], revalidate: PUBLIC_CONTENT_REVALIDATE_SECONDS }
+)
+
+export const getCachedDesktopHomeFeed = unstable_cache(
+  async (page: number, mode: PublicFeedMode, limit: number): Promise<CachedDesktopHomeFeed> => {
+    const [entries, postCount, looseNoteCount, threadPage] = await Promise.all([
+      getStandaloneTimelinePage({ page, limit, mode }),
+      mode === "notes" ? Promise.resolve(0) : countPosts({ excludeHiddenFromTimeline: true }),
+      mode === "posts" ? Promise.resolve(0) : countStandaloneNotes(),
+      mode === "posts" ? Promise.resolve({ threads: [], total: 0 }) : getNoteThreadPage({ page, limit }),
+    ])
+
+    return {
+      posts: entries
+        .filter((entry) => entry.type === "post")
+        .map((entry) => serializePostSummary(entry.post)),
+      notes: entries
+        .filter((entry) => entry.type === "note")
+        .map((entry) => serializeNote(entry.note)),
+      threadNotes: threadPage.threads.flat().map(serializeNote),
+      postCount,
+      looseNoteCount,
+      threadCount: threadPage.total,
+    }
+  },
+  ["home-feed-desktop"],
   { tags: [PUBLIC_CONTENT_CACHE_TAG], revalidate: PUBLIC_CONTENT_REVALIDATE_SECONDS }
 )
 
