@@ -543,7 +543,7 @@ function TimelineModeDock({
   return (
     <nav
       data-timeline-mode-dock
-      className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-1/2 z-50 flex -translate-x-1/2 flex-row items-center gap-0.5 rounded-full border border-neutral-200 bg-white p-0.5 shadow-[0_3px_8px_rgb(0_0_0_/_0.12)] dark:border-white/10 dark:bg-[#0b0b0b] dark:shadow-[0_3px_8px_rgb(0_0_0_/_0.35)] md:bottom-auto md:left-[calc(50%-18rem)] md:top-1/2 md:-ml-4 md:-translate-x-full md:-translate-y-1/2 md:flex-col"
+      className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-1/2 z-50 flex -translate-x-1/2 flex-row items-center gap-0.5 rounded-full border border-neutral-200 bg-white p-0.5 shadow-[0_3px_8px_rgb(0_0_0_/_0.12)] dark:border-white/10 dark:bg-[#0b0b0b] dark:shadow-[0_3px_8px_rgb(0_0_0_/_0.35)] md:bottom-auto md:left-[calc(50%-18rem)] md:top-1/2 md:-ml-4 md:-translate-x-full md:-translate-y-1/2 md:flex-col min-[84rem]:left-[calc(32.5vw-11.9625rem)]"
       aria-label="Filtros da timeline"
     >
       {options.map((option) => {
@@ -1020,15 +1020,15 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
       <div className={[
         "flex min-w-0 flex-col gap-5",
         hasDesktopThreads
-          ? "min-[84rem]:grid min-[84rem]:grid-cols-[34.5rem_minmax(0,1fr)] min-[84rem]:items-start min-[84rem]:gap-8 min-[96rem]:gap-12"
+          ? "min-[84rem]:grid min-[84rem]:translate-x-[calc(-17.5vw+6.0375rem)] min-[84rem]:grid-cols-[34.5rem_minmax(0,1fr)] min-[84rem]:items-start min-[84rem]:gap-8 min-[96rem]:gap-12"
           : "",
       ].join(" ")}>
         <div className="flex min-w-0 flex-col gap-5">
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 min-[84rem]:mb-[-2.5rem]">
             <div className="flex min-w-0 flex-col items-start gap-3">
               <form
                 action="/"
-                className="w-[min(100%,14rem)] min-w-0 sm:w-56"
+                className="w-[min(100%,14rem)] min-w-0 sm:w-56 min-[84rem]:relative min-[84rem]:top-[-2.375rem]"
                 onSubmit={(event) => {
                   event.preventDefault()
                   if (searchDebounceRef.current) {
