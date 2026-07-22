@@ -112,14 +112,23 @@ async function uploadImageFromFormData(
     return NextResponse.json({ error: "Imagem inválida ou corrompida." }, { status: 400 })
   }
 
-  const url = await uploadImage(image.filename, image.data, folder, image.contentType)
-  if (onUploaded) {
-    try {
-      await onUploaded(url)
-    } catch (error) {
-      await deleteImage(url).catch(() => undefined)
-      throw error
+  let uploadedUrl: string | undefined
+  try {
+    uploadedUrl = await uploadImage(image.filename, image.data, folder, image.contentType)
+    if (onUploaded) {
+      try {
+        await onUploaded(uploadedUrl)
+      } catch (error) {
+        await deleteImage(uploadedUrl).catch(() => undefined)
+        throw error
+      }
     }
+    return NextResponse.json({ url: uploadedUrl, contentType: image.contentType }, { status: 201 })
+  } catch (error) {
+    console.error("[image-upload] failed to store image", error)
+    return NextResponse.json(
+      { error: "Não foi possível armazenar a imagem agora. Tente novamente." },
+      { status: 502 }
+    )
   }
-  return NextResponse.json({ url, contentType: image.contentType }, { status: 201 })
 }

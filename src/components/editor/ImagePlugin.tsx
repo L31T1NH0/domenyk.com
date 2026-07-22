@@ -42,6 +42,23 @@ type MenuPosition = {
   maxHeight: number
 }
 
+async function readJsonResponse(response: Response): Promise<unknown> {
+  const body = await response.text()
+  if (!body.trim()) return null
+  try {
+    return JSON.parse(body) as unknown
+  } catch {
+    return null
+  }
+}
+
+function responseError(data: unknown, fallback: string): string {
+  if (typeof data === "object" && data && "error" in data && typeof data.error === "string" && data.error.trim()) {
+    return data.error
+  }
+  return fallback
+}
+
 export function ImagePlugin({
   compact = false,
   menuPlacement = "above",
@@ -212,9 +229,14 @@ export function ImagePlugin({
       const form = new FormData()
       form.append("file", file)
       const res = await fetch(uploadEndpoint, { method: "POST", body: form })
-      const data = await res.json()
-      if (!res.ok || !data.url) throw new Error(data.error ?? "Falha no upload")
-      insertImage(data.url)
+      const data = await readJsonResponse(res)
+      const url = typeof data === "object" && data && "url" in data && typeof data.url === "string"
+        ? data.url
+        : ""
+      if (!res.ok || !url) {
+        throw new Error(responseError(data, `Falha no upload (HTTP ${res.status})`))
+      }
+      insertImage(url)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível enviar a imagem.")
     } finally {
@@ -235,8 +257,10 @@ export function ImagePlugin({
     setError("")
     try {
       const res = await fetch(assetsEndpoint, { cache: "no-store" })
-      const data = await res.json()
-      if (!res.ok || !Array.isArray(data)) throw new Error(data?.error ?? "Não foi possível carregar os assets.")
+      const data = await readJsonResponse(res)
+      if (!res.ok || !Array.isArray(data)) {
+        throw new Error(responseError(data, `Não foi possível carregar os assets (HTTP ${res.status}).`))
+      }
       setAssets(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível carregar os assets.")
