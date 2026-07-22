@@ -131,7 +131,10 @@ type PostView = {
 }
 
 async function ensurePostIndexes(col: Awaited<ReturnType<typeof collectionRaw>>): Promise<void> {
-  const existingIndexes = await col.listIndexes().toArray()
+  const existingIndexes = await col.listIndexes().toArray().catch((error: unknown) => {
+    if (typeof error === "object" && error && "code" in error && error.code === 26) return []
+    throw error
+  })
   const textIndex = existingIndexes.find(index => index.key._fts === "text")
   
   if (textIndex && textIndex.name !== "title_text_content_text_tags_text") {
