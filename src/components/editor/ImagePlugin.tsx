@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext"
-import { $createParagraphNode, $insertNodes, $nodesOfType } from "lexical"
+import { $createParagraphNode, $nodesOfType } from "lexical"
 import {
   Bars3BottomLeftIcon,
   Bars3BottomRightIcon,
@@ -19,6 +19,7 @@ import {
   type ImageLayout,
   type ImageThemeMode,
 } from "./ImageNode"
+import { $insertEditorBlock } from "./insert-editor-block"
 
 type MediaAsset = {
   url: string
@@ -209,7 +210,7 @@ export function ImagePlugin({
     editor.update(() => {
       const paragraph = $createParagraphNode()
       paragraph.append($createImageNode(url, alt.trim(), layout, flowWidth, themeMode))
-      $insertNodes([paragraph])
+      $insertEditorBlock(paragraph)
     })
     closeMenu()
     setError("")
