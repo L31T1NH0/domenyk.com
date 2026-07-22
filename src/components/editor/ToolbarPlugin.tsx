@@ -136,7 +136,6 @@ export function ToolbarPlugin({
       {allowImages && (
         <ImagePlugin
           compact={compact}
-          comfortableOnMobile={comment}
           menuPlacement={placement === "bottom" ? "above" : "below"}
           uploadEndpoint={imageUploadEndpoint}
           assetsEndpoint={imageAssetsEndpoint}

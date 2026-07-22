@@ -6,6 +6,7 @@ import { headers } from "next/headers"
 import { PublicAnalytics } from "@/components/analytics/PublicAnalytics"
 import { siteCalendarYear } from "@/lib/datetime"
 import { ReadingPreferencesProvider, ReadingPreferencesScope } from "@/components/post/ReadingPreferencesContext"
+import { FlowImageAlphaOffset } from "@/components/post/FlowImageAlphaOffset"
 
 export default async function PublicLayout({ children }: { children: React.ReactNode }) {
   const currentYear = siteCalendarYear()
@@ -17,6 +18,7 @@ export default async function PublicLayout({ children }: { children: React.React
         <ReadingPreferencesScope data-public-shell data-scroll-progress-root className="mx-auto mb-4 flex w-full max-w-[36rem] flex-col overflow-x-visible px-4 sm:w-[min(100%,34.5rem)] sm:max-w-[100vw]">
           <div aria-hidden data-scroll-progress-bar />
           <ScrollProgressEffect />
+          <FlowImageAlphaOffset />
           <ViewReferrerTracker />
           <header className="flex items-center justify-end py-1">
             <PublicMenu />

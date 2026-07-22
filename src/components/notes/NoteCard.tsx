@@ -6,6 +6,7 @@ import {
   useEffect,
   useId,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -15,7 +16,7 @@ import {
 import { createPortal } from "react-dom"
 import { useUser } from "@clerk/nextjs"
 import { ChatBubbleLeftEllipsisIcon, LinkIcon, PencilIcon, XMarkIcon } from "@heroicons/react/24/outline"
-import { formatDistanceToNow } from "date-fns"
+import { formatDistance, formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import type { LexicalEditor as LexicalEditorInstance } from "lexical"
 import { LexicalEditor, readMarkdownFromEditor } from "@/components/editor/LexicalEditor"
@@ -28,6 +29,7 @@ import type { SerializedNote } from "@/lib/db/notes"
 import { noteDisplayTitle } from "@/lib/seo"
 import { NOTE_VIEW_TTL_MS, type NoteViewSource } from "@/lib/note-views"
 import type { NoteTimelinePlacement } from "@/components/notes/NoteTimelineGroup"
+import { usePretextImageFlow } from "@/components/post/usePretextImageFlow"
 
 type Props = {
   note: SerializedNote
@@ -229,9 +231,26 @@ export function NoteCard({ note, showMetadata = false, viewContext, isAdmin, onD
   const [editSession, setEditSession] = useState(0)
   const [savingEdit, setSavingEdit] = useState(false)
   const [editError, setEditError] = useState("")
+  const [relativeTimeNow, setRelativeTimeNow] = useState(() => Date.now())
   const touchStartRef = useRef(0)
   const activeImageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const closeThreshold = 80
+  const contentMarkup = useMemo(
+    () => ({ __html: note.contentHtml }),
+    [note.contentHtml]
+  )
+  usePretextImageFlow(contentRef, `${note._id}:${note.contentHtml}:${editing}`)
+
+  useEffect(() => {
+    const refreshRelativeTime = () => setRelativeTimeNow(Date.now())
+    const interval = window.setInterval(refreshRelativeTime, 60_000)
+    document.addEventListener("visibilitychange", refreshRelativeTime)
+
+    return () => {
+      window.clearInterval(interval)
+      document.removeEventListener("visibilitychange", refreshRelativeTime)
+    }
+  }, [])
 
   useEffect(() => {
     if (!viewContext) return
@@ -304,6 +323,12 @@ export function NoteCard({ note, showMetadata = false, viewContext, isAdmin, onD
 
     const images = Array.from(content.querySelectorAll("img"))
     for (const image of images) {
+      if (image.closest("figure[data-flow-image]")) {
+        image.dataset.timelineCropped = "false"
+        image.parentElement?.removeAttribute("data-timeline-crop-frame")
+        continue
+      }
+
       if (image.naturalWidth <= 0 || image.naturalHeight <= 0) continue
 
       const aspectRatio = image.naturalHeight / image.naturalWidth
@@ -334,7 +359,7 @@ export function NoteCard({ note, showMetadata = false, viewContext, isAdmin, onD
     }, closeDelay)
   }, [])
 
-  const ago = formatDistanceToNow(new Date(note.publishedAt), {
+  const ago = formatDistance(new Date(note.publishedAt), new Date(relativeTimeNow), {
     addSuffix: true,
     locale: ptBR,
   })
@@ -554,7 +579,7 @@ export function NoteCard({ note, showMetadata = false, viewContext, isAdmin, onD
           className="inline-flex min-h-6 items-center rounded text-xs text-neutral-600 transition-colors hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#c2bbb1] dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
           aria-label="Abrir nota"
         >
-          <time dateTime={note.publishedAt}>{ago}</time>
+          <time dateTime={note.publishedAt} suppressHydrationWarning>{ago}</time>
         </Link>
         {note.thread && (showThreadLabel || timelineThreadSize > 1) && (
           <Link
@@ -653,7 +678,7 @@ export function NoteCard({ note, showMetadata = false, viewContext, isAdmin, onD
           ].filter(Boolean).join(" ")}
           onClick={handleContentClick}
           onKeyDown={handleContentKeyDown}
-          dangerouslySetInnerHTML={{ __html: note.contentHtml }}
+          dangerouslySetInnerHTML={contentMarkup}
         />
       )}
 

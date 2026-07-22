@@ -31,9 +31,16 @@ export function MediaLibrary({ initialMedia }: Props) {
       const data = await res.json().catch(() => ({}))
       if (!res.ok || !data.url) throw new Error(data.error ?? "Erro ao enviar imagem.")
       setMedia((prev) => [
-        { url: data.url, pathname: file.name, size: file.size, uploadedAt: new Date().toISOString() },
+        {
+          url: data.url,
+          pathname: file.name,
+          size: file.size,
+          uploadedAt: new Date().toISOString(),
+          contentType: data.contentType ?? file.type,
+        },
         ...prev,
       ])
+      if (fileRef.current) fileRef.current.value = ""
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao enviar imagem.")
     } finally {
@@ -82,7 +89,7 @@ export function MediaLibrary({ initialMedia }: Props) {
         <input
           ref={fileRef}
           type="file"
-          accept="image/png,image/jpeg,image/webp"
+          accept="image/png,image/jpeg,image/webp,image/svg+xml,.svg"
           className="hidden"
           onChange={(e) => { if (e.target.files?.[0]) upload(e.target.files[0]) }}
         />
@@ -94,7 +101,7 @@ export function MediaLibrary({ initialMedia }: Props) {
         ) : (
           <div className="admin-media-upload-state">
             <span className="admin-media-upload-icon"><ArrowUpTrayIcon aria-hidden /></span>
-            <span><strong>Envie uma imagem</strong><small>Arraste um arquivo para esta área ou escolha no dispositivo. PNG, JPG e WebP.</small></span>
+            <span><strong>Envie uma imagem</strong><small>Arraste um arquivo para esta área ou escolha no dispositivo. SVG, PNG, JPG e WebP.</small></span>
             <button type="button" className="admin-button-secondary" onClick={() => fileRef.current?.click()}>Escolher arquivo</button>
           </div>
         )}

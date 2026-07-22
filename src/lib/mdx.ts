@@ -43,6 +43,7 @@ const paragraphIdCache = new Map<string, ReadonlySet<string>>()
 const markdownSanitizeSchema: SanitizeSchema = {
   ...defaultSchema,
   clobberPrefix: "user-content-",
+  tagNames: [...(defaultSchema.tagNames ?? []), "figure"],
   protocols: {
     ...defaultSchema.protocols,
     href: ["http", "https", "mailto"],
@@ -61,6 +62,11 @@ const markdownSanitizeSchema: SanitizeSchema = {
       "loading",
       "decoding",
     ],
+    figure: [
+      ["dataFlowImage", "left", "right"],
+      ["dataFlowWidth", "32", "42", "52"],
+      ["dataImageTheme", "adaptive"],
+    ],
     p: [
       ...(defaultSchema.attributes?.p ?? []),
       "dataPid",
@@ -71,6 +77,89 @@ const markdownSanitizeSchema: SanitizeSchema = {
       ["dataKind", "author", "co-author"],
     ],
   },
+}
+
+const FLOW_IMAGE_SIDES = new Set(["left", "right"])
+const FLOW_IMAGE_WIDTHS = new Set(["32", "42", "52"])
+
+function stringProperty(value: unknown): string | null {
+  if (typeof value === "string" || typeof value === "number") return String(value)
+  if (Array.isArray(value) && value.length > 0) return String(value[0])
+  return null
+}
+
+function directImageChild(node: Element): Element | null {
+  const images = node.children.filter(
+    (child): child is Element => child.type === "element" && child.tagName === "img"
+  )
+  return images.length === 1 ? images[0] : null
+}
+
+function rehypeNormalizeFlowImages() {
+  return (tree: Root) => {
+    let acceptedFlowImage = false
+
+    visit(tree, "element", (node: Element) => {
+      if (node.tagName !== "figure") return
+
+      const side = stringProperty(node.properties?.dataFlowImage)
+      const width = stringProperty(node.properties?.dataFlowWidth)
+      const theme = stringProperty(node.properties?.dataImageTheme)
+      const image = directImageChild(node)
+      const valid = Boolean(
+        side &&
+        width &&
+        FLOW_IMAGE_SIDES.has(side) &&
+        FLOW_IMAGE_WIDTHS.has(width) &&
+        image &&
+        !acceptedFlowImage
+      )
+
+      node.properties = node.properties ?? {}
+      if (!valid) {
+        delete node.properties.dataFlowImage
+        delete node.properties.dataFlowWidth
+        delete node.properties.dataImageTheme
+        return
+      }
+
+      acceptedFlowImage = true
+      node.properties.dataFlowImage = side
+      node.properties.dataFlowWidth = width
+      if (theme === "adaptive") node.properties.dataImageTheme = "adaptive"
+      else delete node.properties.dataImageTheme
+    })
+  }
+}
+
+function safeCssUrl(value: string): string {
+  return value
+    .replace(/\\/g, "%5C")
+    .replace(/"/g, "%22")
+    .replace(/[\n\r\f]/g, "")
+}
+
+function rehypeFlowImageStyles() {
+  return (tree: Root) => {
+    visit(tree, "element", (node: Element) => {
+      if (node.tagName !== "figure") return
+
+      const side = stringProperty(node.properties?.dataFlowImage)
+      const width = stringProperty(node.properties?.dataFlowWidth)
+      const image = directImageChild(node)
+      const source = stringProperty(image?.properties?.src)
+      if (
+        !side ||
+        !width ||
+        !source ||
+        !FLOW_IMAGE_SIDES.has(side) ||
+        !FLOW_IMAGE_WIDTHS.has(width)
+      ) return
+
+      node.properties = node.properties ?? {}
+      node.properties.style = `--flow-image-width:${width}%;--flow-image-shape:url("${safeCssUrl(source)}")`
+    })
+  }
 }
 
 function escapeHtmlAttribute(value: string): string {
@@ -379,6 +468,7 @@ function createProcessor(
     .use(remarkAuthorReferences, options)
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeRaw)
+    .use(rehypeNormalizeFlowImages)
     .use(rehypeRestrictImages, options.imagePolicy)
     .use(rehypeImageAltFallback, options.defaultImageAlt)
     .use(rehypeParagraphIds, onParagraphId)
@@ -388,6 +478,7 @@ function createProcessor(
     .use(rehypePrefixFragmentLinks)
     .use(rehypeHardenExternalLinks, options.externalLinkRel)
     .use(rehypeSanitize, markdownSanitizeSchema)
+    .use(rehypeFlowImageStyles)
     .use(rehypeStringify)
 }
 

@@ -34,9 +34,9 @@ import {
   type TextFormatType,
 } from "lexical"
 import { ToolbarPlugin } from "./ToolbarPlugin"
-import { IMAGE_TRANSFORMER, ImageNode } from "./ImageNode"
+import { FLOW_IMAGE_TRANSFORMER, IMAGE_TRANSFORMER, ImageNode } from "./ImageNode"
 
-const MARKDOWN_TRANSFORMERS = [IMAGE_TRANSFORMER, ...TRANSFORMERS]
+const MARKDOWN_TRANSFORMERS = [FLOW_IMAGE_TRANSFORMER, IMAGE_TRANSFORMER, ...TRANSFORMERS]
 const EDITOR_NODES = [HeadingNode, QuoteNode, ListNode, ListItemNode, CodeNode, CodeHighlightNode, LinkNode, ImageNode]
 const MARKDOWN_PASTE_PATTERN =
   /(^|\n)\s{0,3}(#{1,6}\s|[-*+]\s|\d+\.\s|>\s|```|\|.+\|)|!\[[^\]]*]\([^)]+\)|\[[^\]]+]\([^)]+\)|(\*\*|__)[\s\S]+?\3|(^|[^`])`[^`\n]+`/m

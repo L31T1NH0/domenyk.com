@@ -56,6 +56,44 @@ test("omitting imagePolicy preserves trusted post and note image behavior", () =
   assert.match(html, /<img src="https:\/\/images\.example\/post\.webp"/)
 })
 
+test("renders a sanitized flow image with server-generated shape styles", () => {
+  const html = renderMarkdownSync(
+    '<figure data-flow-image="left" data-flow-width="42"><img src="https://images.example/cutout.webp" alt="Pessoa em pé"></figure>'
+  )
+
+  assert.match(html, /<figure data-flow-image="left" data-flow-width="42" style="--flow-image-width:42%;--flow-image-shape:url\(&#x22;https:\/\/images\.example\/cutout\.webp&#x22;\)">/)
+  assert.match(html, /<img src="https:\/\/images\.example\/cutout\.webp" alt="Pessoa em pé">/)
+})
+
+test("preserves an explicit adaptive theme marker on a flow image", () => {
+  const html = renderMarkdownSync(
+    '<figure data-flow-image="right" data-flow-width="32" data-image-theme="adaptive"><img src="https://images.example/line-art.svg" alt="Desenho"></figure>'
+  )
+
+  assert.match(html, /data-image-theme="adaptive"/)
+  assert.match(html, /data-flow-image="right" data-flow-width="32"/)
+})
+
+test("keeps only the first flow figure and degrades later figures to ordinary content", () => {
+  const html = renderMarkdownSync([
+    '<figure data-flow-image="left" data-flow-width="42"><img src="https://images.example/one.webp" alt="Primeira"></figure>',
+    '<figure data-flow-image="right" data-flow-width="52" data-image-theme="adaptive"><img src="https://images.example/two.webp" alt="Segunda"></figure>',
+  ].join("\n\n"))
+
+  assert.equal((html.match(/data-flow-image=/g) ?? []).length, 1)
+  assert.equal((html.match(/data-image-theme=/g) ?? []).length, 0)
+  assert.match(html, /<figure><img src="https:\/\/images\.example\/two\.webp" alt="Segunda"><\/figure>/)
+})
+
+test("drops invalid flow metadata and never preserves authored inline styles", () => {
+  const html = renderMarkdownSync(
+    '<figure data-flow-image="outside" data-flow-width="999" style="position:fixed"><img src="https://images.example/cutout.webp" alt="Recorte"></figure>'
+  )
+
+  assert.match(html, /<figure><img src="https:\/\/images\.example\/cutout\.webp" alt="Recorte"><\/figure>/)
+  assert.doesNotMatch(html, /data-flow|position:fixed|--flow-image/)
+})
+
 test("fills empty image alt text with a contextual fallback without replacing authored text", () => {
   const html = renderMarkdownSync([
     "![](https://images.example/empty.webp)",

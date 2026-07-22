@@ -31,6 +31,8 @@ type PreparedBlock = {
   getPrepared: (fontSize: number) => ReturnType<typeof prepare>
 }
 
+const MAX_LOCAL_PRETEXT_CACHE_ENTRIES = 128
+
 function getLineHeightRatio(style: CSSStyleDeclaration, fallbackFontSize: number) {
   const lineHeight = Number.parseFloat(style.lineHeight)
   if (Number.isFinite(lineHeight) && fallbackFontSize > 0) return lineHeight / fallbackFontSize
@@ -43,11 +45,26 @@ function getLetterSpacing(style: CSSStyleDeclaration) {
 }
 
 function buildFont(style: CSSStyleDeclaration, fontSize: number) {
-  return `${style.fontStyle || "normal"} ${style.fontVariant || "normal"} ${style.fontWeight || "400"} ${style.fontStretch || "normal"} ${fontSize}px ${style.fontFamily || "sans-serif"}`
+  const variant = style.fontVariantCaps === "small-caps" ? "small-caps" : "normal"
+  return `${style.fontStyle || "normal"} ${variant} ${style.fontWeight || "400"} ${fontSize}px ${style.fontFamily || "sans-serif"}`
 }
 
 function normalizeText(text: string, whiteSpace: WhiteSpace) {
-  return whiteSpace === "pre-wrap" ? text.replace(/\r\n?/g, "\n").trim() : text.replace(/\s+/g, " ").trim()
+  return whiteSpace === "pre-wrap" ? text.replace(/\r\n?/g, "\n") : text.replace(/\s+/g, " ").trim()
+}
+
+function rememberPrepared(
+  cache: Map<string, ReturnType<typeof prepare>>,
+  key: string,
+  value: ReturnType<typeof prepare>
+) {
+  cache.set(key, value)
+  while (cache.size > MAX_LOCAL_PRETEXT_CACHE_ENTRIES) {
+    const oldest = cache.keys().next().value as string | undefined
+    if (!oldest) break
+    cache.delete(oldest)
+  }
+  return value
 }
 
 export function usePretextTextFit(
@@ -77,7 +94,7 @@ export function usePretextTextFit(
         const font = buildFont(style, size)
         const key = `${font}__${whiteSpace}__${letterSpacing ?? ""}__${normalizedText}`
         if (!cache.current.has(key)) {
-          cache.current.set(key, prepare(normalizedText, font, { whiteSpace, letterSpacing }))
+          rememberPrepared(cache.current, key, prepare(normalizedText, font, { whiteSpace, letterSpacing }))
         }
         return cache.current.get(key)!
       }
@@ -142,7 +159,7 @@ export function usePretextLineMetrics(
       const letterSpacing = getLetterSpacing(style)
       const key = `${font}__${whiteSpace}__${letterSpacing ?? ""}__${normalizedText}`
       if (!cache.current.has(key)) {
-        cache.current.set(key, prepare(normalizedText, font, { whiteSpace, letterSpacing }))
+        rememberPrepared(cache.current, key, prepare(normalizedText, font, { whiteSpace, letterSpacing }))
       }
 
       const next = layout(cache.current.get(key)!, width, fontSize * lineHeightRatio).lineCount
@@ -200,7 +217,7 @@ export function usePretextContentFontSize(
               const font = buildFont(style, size)
               const key = `${font}__${whiteSpace}__${letterSpacing ?? ""}__${text}`
               if (!cache.current.has(key)) {
-                cache.current.set(key, prepare(text, font, { whiteSpace, letterSpacing }))
+                rememberPrepared(cache.current, key, prepare(text, font, { whiteSpace, letterSpacing }))
               }
               return cache.current.get(key)!
             },

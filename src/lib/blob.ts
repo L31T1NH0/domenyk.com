@@ -2,8 +2,9 @@ import "server-only"
 
 import { put, del, list } from "@vercel/blob"
 import sharp from "sharp"
+import { sanitizeSvg } from "@/lib/svg-sanitizer"
 
-const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"])
+const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/svg+xml"])
 const MAX_IMAGE_INPUT_PIXELS = 16_000_000
 const MAX_IMAGE_INPUT_DIMENSION = 12_000
 const MAX_IMAGE_OUTPUT_DIMENSION = 2_400
@@ -33,6 +34,11 @@ function webpFilename(filename: string): string {
   return `${safe || "image"}.webp`
 }
 
+function svgFilename(filename: string): string {
+  const safe = safeFilename(filename).replace(/\.[^.]+$/, "")
+  return `${safe || "image"}.svg`
+}
+
 function detectImageType(data: Buffer): string | null {
   if (data.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]))) return "image/jpeg"
   if (data.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
@@ -44,6 +50,8 @@ function detectImageType(data: Buffer): string | null {
   ) {
     return "image/webp"
   }
+  const start = data.subarray(0, Math.min(data.length, 512)).toString("utf8").replace(/^\uFEFF/, "").trimStart()
+  if (/^(?:<\?xml[\s\S]*?\?>\s*)?<svg(?:\s|>)/i.test(start)) return "image/svg+xml"
   return null
 }
 
@@ -62,6 +70,29 @@ export async function sanitizeImageUpload(
 
   if (!detectedType || !isAllowedImageType(detectedType) || detectedType !== normalizedDeclaredType) {
     throw new Error("Invalid image")
+  }
+
+  if (detectedType === "image/svg+xml") {
+    const sanitized = sanitizeSvg(buffer)
+    const metadata = await sharp(sanitized, {
+      animated: false,
+      failOn: "error",
+      limitInputPixels: MAX_IMAGE_INPUT_PIXELS,
+    }).timeout({ seconds: IMAGE_PROCESSING_TIMEOUT_SECONDS }).metadata()
+    if (
+      !metadata.width ||
+      !metadata.height ||
+      metadata.width > MAX_IMAGE_INPUT_DIMENSION ||
+      metadata.height > MAX_IMAGE_INPUT_DIMENSION ||
+      metadata.width * metadata.height > MAX_IMAGE_INPUT_PIXELS
+    ) {
+      throw new Error("Invalid SVG dimensions")
+    }
+    return {
+      filename: svgFilename(filename),
+      data: sanitized,
+      contentType: "image/svg+xml",
+    }
   }
 
   const image = sharp(buffer, {
@@ -134,7 +165,7 @@ export async function deleteImage(url: string): Promise<void> {
   await del(url)
 }
 
-export type MediaItem = { url: string; pathname: string; size: number; uploadedAt: Date }
+export type MediaItem = { url: string; pathname: string; size: number; uploadedAt: Date; contentType: string }
 export type SerializedMediaItem = Omit<MediaItem, "uploadedAt"> & { uploadedAt: string }
 
 export function serializeMediaItem(item: MediaItem): SerializedMediaItem {
@@ -152,6 +183,9 @@ export async function listMedia(): Promise<MediaItem[]> {
       pathname: blob.pathname,
       size: blob.size,
       uploadedAt: blob.uploadedAt,
+      contentType: blob.pathname.toLocaleLowerCase("en-US").endsWith(".svg")
+        ? "image/svg+xml"
+        : "image/webp",
     })))
 
     if (!page.hasMore) break

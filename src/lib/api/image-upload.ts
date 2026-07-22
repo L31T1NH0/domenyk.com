@@ -99,7 +99,7 @@ async function uploadImageFromFormData(
   }
 
   if (!isAllowedImageType(file.type)) {
-    return NextResponse.json({ error: "Arquivo inválido. Envie PNG, JPG ou WebP." }, { status: 400 })
+    return NextResponse.json({ error: "Arquivo inválido. Envie SVG, PNG, JPG ou WebP." }, { status: 400 })
   }
 
   if (file.size > MAX_IMAGE_UPLOAD_BYTES) {
@@ -121,5 +121,5 @@ async function uploadImageFromFormData(
       throw error
     }
   }
-  return NextResponse.json({ url }, { status: 201 })
+  return NextResponse.json({ url, contentType: image.contentType }, { status: 201 })
 }

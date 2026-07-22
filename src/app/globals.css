@@ -1043,6 +1043,93 @@ html.light-mode [data-public-shell] .post-content h5 {
   opacity: 1;
 }
 
+.post-content:has(>figure[data-flow-image]) {
+  display: block;
+}
+
+.post-content:has(>figure[data-flow-image])>* {
+  margin-block: 0;
+}
+
+.post-content:has(>figure[data-flow-image])>*+* {
+  margin-top: var(--reading-block-spacing, 0.875rem);
+}
+
+.post-content:has(>figure[data-flow-image])>figure[data-flow-image]+p {
+  margin-top: 0;
+}
+
+.post-content figure[data-flow-image] {
+  display: block;
+  float: left;
+  width: min(var(--flow-image-width, 42%), 20rem);
+  max-width: 52%;
+  margin-top: 0.15rem;
+  margin-bottom: 0.75rem;
+  shape-outside: var(--flow-image-shape);
+  shape-image-threshold: 0.12;
+  shape-margin: clamp(0.65rem, 1.8vw, 1rem);
+}
+
+.post-content figure[data-flow-image]>img {
+  display: block;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  filter: none;
+}
+
+.post-content figure[data-flow-image="left"]>img {
+  margin: 0;
+}
+
+.post-content figure[data-flow-image="left"] {
+  float: left;
+  margin-left: calc(-1 * var(--flow-image-outer-alpha-offset, 0px));
+  margin-right: clamp(0.85rem, 2.2vw, 1.35rem);
+}
+
+.post-content figure[data-flow-image="right"] {
+  float: right;
+  margin-left: clamp(0.85rem, 2.2vw, 1.35rem);
+  margin-right: calc(-1 * var(--flow-image-outer-alpha-offset, 0px));
+}
+
+.post-content:has(>figure[data-flow-image])>h1,
+.post-content:has(>figure[data-flow-image])>h2,
+.post-content:has(>figure[data-flow-image])>h3,
+.post-content:has(>figure[data-flow-image])>h4,
+.post-content:has(>figure[data-flow-image])>h5,
+.post-content:has(>figure[data-flow-image])>h6,
+.post-content:has(>figure[data-flow-image])>blockquote,
+.post-content:has(>figure[data-flow-image])>ul,
+.post-content:has(>figure[data-flow-image])>ol {
+  clear: both;
+}
+
+.post-content:has(>figure[data-flow-image]) p:hover {
+  background: transparent;
+}
+
+@media (max-width: 40rem) {
+  .post-content figure[data-flow-image] {
+    float: none;
+    width: min(72%, 16rem);
+    max-width: 100%;
+    margin: 0 auto 1rem;
+    shape-outside: none;
+  }
+
+  .post-content figure[data-flow-image]>img {
+    max-height: min(62vh, 28rem);
+    object-fit: contain;
+  }
+}
+
 .post-style-editorial {
   --link-color: #ff4aa3;
   --editorial-ink: #f1f1f1;
@@ -1482,6 +1569,147 @@ html.light-mode [data-public-shell] .post-content-opinion strong {
 
 .note-content img {
   @apply h-auto w-full cursor-zoom-in rounded-md;
+}
+
+.note-content:not(.comment-content):has(>figure[data-flow-image]) {
+  display: block;
+}
+
+.note-content:not(.comment-content):has(>figure[data-flow-image])>* {
+  margin-block: 0;
+}
+
+.note-content:not(.comment-content):has(>figure[data-flow-image])>*+* {
+  margin-top: var(--reading-block-spacing, var(--note-reading-base-gap, 0.5rem));
+}
+
+.note-content:not(.comment-content):has(>figure[data-flow-image])>figure[data-flow-image]+p {
+  margin-top: 0;
+}
+
+.note-content:not(.comment-content) figure[data-flow-image] {
+  display: block;
+  float: left;
+  width: min(var(--flow-image-width, 42%), 14rem);
+  max-width: 52%;
+  margin-top: 0.1rem;
+  margin-bottom: 0.55rem;
+  shape-outside: var(--flow-image-shape);
+  shape-image-threshold: 0.12;
+  shape-margin: clamp(0.5rem, 1.8vw, 0.8rem);
+}
+
+.note-content:not(.comment-content) figure[data-flow-image]>img {
+  display: block;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  filter: none;
+}
+
+.note-content:not(.comment-content) figure[data-flow-image="left"] {
+  float: left;
+  margin-left: calc(-1 * var(--flow-image-outer-alpha-offset, 0px));
+  margin-right: clamp(0.65rem, 2.2vw, 1rem);
+}
+
+.note-content:not(.comment-content) figure[data-flow-image="right"] {
+  float: right;
+  margin-left: clamp(0.65rem, 2.2vw, 1rem);
+  margin-right: calc(-1 * var(--flow-image-outer-alpha-offset, 0px));
+}
+
+/* Pretext owns the line geometry only on reading surfaces with desktop room. */
+@media (min-width: 40.001rem) {
+  .post-content[data-pretext-flow-active],
+  .note-content:not(.comment-content)[data-pretext-flow-active] {
+    position: relative;
+    min-height: var(--pretext-flow-min-height, 0);
+  }
+
+  .post-content[data-pretext-flow-active] figure[data-flow-image],
+  .note-content:not(.comment-content)[data-pretext-flow-active] figure[data-flow-image] {
+    position: absolute;
+    top: var(--pretext-flow-image-top, 0);
+    float: none;
+    margin: 0;
+    shape-outside: none;
+  }
+
+  .post-content[data-pretext-flow-active] figure[data-flow-image="left"],
+  .note-content:not(.comment-content)[data-pretext-flow-active] figure[data-flow-image="left"] {
+    right: auto;
+    left: calc(-1 * var(--flow-image-outer-alpha-offset, 0px));
+  }
+
+  .post-content[data-pretext-flow-active] figure[data-flow-image="right"],
+  .note-content:not(.comment-content)[data-pretext-flow-active] figure[data-flow-image="right"] {
+    right: calc(-1 * var(--flow-image-outer-alpha-offset, 0px));
+    left: auto;
+  }
+
+  [data-pretext-flow-rendered] {
+    position: relative;
+    font-optical-sizing: none;
+  }
+
+  .pretext-flow-fragment {
+    position: absolute;
+    top: var(--pretext-fragment-top, 0);
+    left: var(--pretext-fragment-left, 0);
+    display: inline-block;
+    white-space: pre;
+  }
+
+  .pretext-flow-preserved-space {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  [data-pretext-flow-rendered] a:focus-visible .pretext-flow-fragment {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+  }
+}
+
+html:not(.light-mode) [data-public-shell] .post-content figure[data-image-theme="adaptive"]>img,
+html:not(.light-mode) [data-public-shell] .note-content:not(.comment-content) figure[data-image-theme="adaptive"]>img {
+  filter: invert(1);
+}
+
+.note-content:not(.comment-content):has(>figure[data-flow-image])>h1,
+.note-content:not(.comment-content):has(>figure[data-flow-image])>h2,
+.note-content:not(.comment-content):has(>figure[data-flow-image])>h3,
+.note-content:not(.comment-content):has(>figure[data-flow-image])>h4,
+.note-content:not(.comment-content):has(>figure[data-flow-image])>h5,
+.note-content:not(.comment-content):has(>figure[data-flow-image])>h6,
+.note-content:not(.comment-content):has(>figure[data-flow-image])>blockquote,
+.note-content:not(.comment-content):has(>figure[data-flow-image])>ul,
+.note-content:not(.comment-content):has(>figure[data-flow-image])>ol {
+  clear: both;
+}
+
+@media (max-width: 40rem) {
+  .note-content:not(.comment-content) figure[data-flow-image] {
+    float: none;
+    width: min(64%, 13rem);
+    max-width: 100%;
+    margin: 0 auto 0.75rem;
+    shape-outside: none;
+  }
+
+  .note-content:not(.comment-content) figure[data-flow-image]>img {
+    max-height: min(56vh, 22rem);
+    object-fit: contain;
+  }
 }
 
 .note-content-timeline [data-timeline-crop-frame] {

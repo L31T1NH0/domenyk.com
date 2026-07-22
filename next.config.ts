@@ -13,6 +13,10 @@ const privateCacheHeaders = [
   { key: "Cache-Control", value: "private, no-store, max-age=0, must-revalidate" },
 ];
 
+const flowAssetHeaders = [
+  { key: "Access-Control-Allow-Origin", value: "*" },
+];
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   experimental: {
@@ -37,6 +41,7 @@ const nextConfig: NextConfig = {
       { source: "/api/comments/:path*", headers: privateCacheHeaders },
       { source: "/api/messages/:path*", headers: privateCacheHeaders },
       { source: "/api/notifications/:path*", headers: privateCacheHeaders },
+      { source: "/images/flow/:path*", headers: flowAssetHeaders },
       {
         source: "/push-service-worker.js",
         headers: [
