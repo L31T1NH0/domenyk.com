@@ -17,6 +17,7 @@ import {
 } from "@vercel/blob"
 import sharp from "sharp"
 import { sanitizeSvg } from "@/lib/svg-sanitizer"
+import { unsharedImageUploadBody } from "@/lib/blob-upload-body"
 
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/svg+xml"])
 const MAX_IMAGE_INPUT_PIXELS = 16_000_000
@@ -220,7 +221,7 @@ export async function uploadImage(
   folder: "posts" | "notes" | "comments" | "media",
   contentType?: string
 ): Promise<string> {
-  const { url } = await put(`${folder}/${safeFilename(filename)}`, data, {
+  const { url } = await put(`${folder}/${safeFilename(filename)}`, unsharedImageUploadBody(data), {
     ...blobAuthOptions(),
     access: "public",
     addRandomSuffix: true,
