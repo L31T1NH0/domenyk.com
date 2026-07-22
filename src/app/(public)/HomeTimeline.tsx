@@ -543,7 +543,7 @@ function TimelineModeDock({
   return (
     <nav
       data-timeline-mode-dock
-      className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-1/2 z-50 flex -translate-x-1/2 flex-row items-center gap-0.5 rounded-full border border-neutral-200 bg-white p-0.5 shadow-[0_3px_8px_rgb(0_0_0_/_0.12)] dark:border-white/10 dark:bg-[#0b0b0b] dark:shadow-[0_3px_8px_rgb(0_0_0_/_0.35)] md:bottom-auto md:left-[calc(50%-18rem)] md:top-1/2 md:-ml-4 md:-translate-x-full md:-translate-y-1/2 md:flex-col min-[84rem]:left-[calc(32.5vw-11.9625rem)]"
+      className="home-timeline-mode-dock fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-1/2 z-50 flex -translate-x-1/2 flex-row items-center gap-0.5 rounded-full border border-neutral-200 bg-white p-0.5 shadow-[0_3px_8px_rgb(0_0_0_/_0.12)] dark:border-white/10 dark:bg-[#0b0b0b] dark:shadow-[0_3px_8px_rgb(0_0_0_/_0.35)] md:bottom-auto md:left-[calc(50%-18rem)] md:top-1/2 md:-ml-4 md:-translate-x-full md:-translate-y-1/2 md:flex-col min-[84rem]:left-[calc(32.5vw-11.9625rem)]"
       aria-label="Filtros da timeline"
     >
       {options.map((option) => {
@@ -1001,7 +1001,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
       className={[
         "flex w-full min-w-0 touch-pan-y flex-col gap-5 self-center",
         hasDesktopThreads
-          ? "min-[84rem]:w-[calc(50vw+14.25rem)] min-[84rem]:self-start min-[96rem]:w-[calc(50vw+13.25rem)] min-[96.5rem]:w-[61.5rem]"
+          ? "home-timeline-dual min-[84rem]:w-[calc(50vw+14.25rem)] min-[84rem]:self-start min-[96rem]:w-[calc(50vw+13.25rem)] min-[96.5rem]:w-[61.5rem]"
           : "",
       ].join(" ")}
       onPointerDownCapture={swipeNavigation.handlePointerDown}
@@ -1020,15 +1020,15 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
       <div className={[
         "flex min-w-0 flex-col gap-5",
         hasDesktopThreads
-          ? "min-[84rem]:grid min-[84rem]:translate-x-[calc(-17.5vw+6.0375rem)] min-[84rem]:grid-cols-[34.5rem_minmax(0,1fr)] min-[84rem]:items-start min-[84rem]:gap-8 min-[96rem]:gap-12"
+          ? "home-timeline-dual-grid min-[84rem]:grid min-[84rem]:translate-x-[calc(-17.5vw+6.0375rem)] min-[84rem]:grid-cols-[34.5rem_minmax(0,1fr)] min-[84rem]:items-start min-[84rem]:gap-8 min-[96rem]:gap-12"
           : "",
       ].join(" ")}>
         <div className="flex min-w-0 flex-col gap-5">
-          <div className="flex flex-col gap-3 min-[84rem]:mb-[-2.5rem]">
+          <div className="home-timeline-dual-search-row flex flex-col gap-3 min-[84rem]:mb-[-2.5rem]">
             <div className="flex min-w-0 flex-col items-start gap-3">
               <form
                 action="/"
-                className="w-[min(100%,14rem)] min-w-0 sm:w-56 min-[84rem]:relative min-[84rem]:top-[-2.375rem]"
+                className="home-timeline-dual-search w-[min(100%,14rem)] min-w-0 sm:w-56 min-[84rem]:relative min-[84rem]:top-[-2.375rem]"
                 onSubmit={(event) => {
                   event.preventDefault()
                   if (searchDebounceRef.current) {
@@ -1111,7 +1111,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
             transition: swipeNavigation.isSwipeSettling ? "transform 120ms cubic-bezier(0.16, 1, 0.3, 1), opacity 100ms ease-out" : "none",
           }}
         >
-          <div className="min-[84rem]:hidden">
+          <div className="home-timeline-single-feed min-[84rem]:hidden">
             {visibleItems.length === 0 ? (
               <div className="text-sm text-zinc-600 dark:text-zinc-400">
                 <p>{hasSearch ? "Nenhum resultado encontrado." : "Nenhum post ou nota publicado ainda."}</p>
@@ -1127,7 +1127,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
             />
           </div>
 
-          <div className="hidden min-[84rem]:block">
+          <div className="home-timeline-standalone-feed hidden min-[84rem]:block">
             {hasDesktopStandaloneItems ? renderTimelineItems(desktopVisibleItems) : (
               <p className="text-sm text-zinc-600 dark:text-zinc-400">
                 {hasSearch ? "Nenhum resultado encontrado na timeline." : "Nenhum post ou nota solta nesta página."}
@@ -1148,7 +1148,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
         {hasDesktopThreads && (
           <aside
             aria-label={`Threads da timeline, ${desktopRailThreadCount} no total`}
-            className="relative hidden min-w-0 self-start min-[84rem]:sticky min-[84rem]:top-4 min-[84rem]:block"
+            className="home-timeline-thread-rail relative hidden min-w-0 self-start min-[84rem]:sticky min-[84rem]:top-4 min-[84rem]:block"
           >
             <div
               ref={threadRailScrollRef}

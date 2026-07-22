@@ -366,7 +366,7 @@ export function PublicMenu() {
   return (
     <div
       ref={rootRef}
-      className={`relative z-40 ${isHome ? "min-[84rem]:translate-x-[calc(32.5vw-12.2125rem)] min-[96rem]:translate-x-[calc(32.5vw-13.2125rem)] min-[96.5rem]:translate-x-[calc(35.0375rem-17.5vw)]" : ""}`}
+      className={`relative z-40 ${isHome ? "home-tablet-landscape-menu min-[84rem]:translate-x-[calc(32.5vw-12.2125rem)] min-[96rem]:translate-x-[calc(32.5vw-13.2125rem)] min-[96.5rem]:translate-x-[calc(35.0375rem-17.5vw)]" : ""}`}
     >
       <button
         ref={triggerRef}
@@ -402,7 +402,7 @@ export function PublicMenu() {
           role={view === "notifications" || view === "reading" ? "dialog" : "menu"}
           aria-label={view === "account" ? "Menu da conta" : view === "language" ? "Menu de idiomas" : view === "notifications" ? "Configurar notificações" : view === "reading" ? "Configurar leitura" : "Menu do site"}
           onKeyDown={handleMenuKeyDown}
-          className={`${view === "notifications" || view === "reading" ? "w-[min(19rem,calc(100vw-2rem))]" : "w-[min(17rem,calc(100vw-2rem))]"} public-menu-panel absolute right-0 top-11 max-h-[calc(100dvh-4rem)] origin-top-right overflow-x-hidden overflow-y-auto rounded-[10px] border border-zinc-200 bg-white p-1.5 text-zinc-950 shadow-[0_6px_8px_rgba(0,0,0,0.12)] sm:left-0 sm:right-auto sm:origin-top-left ${isHome ? "min-[84rem]:!left-auto min-[84rem]:!right-0 min-[84rem]:origin-top-right" : ""} dark:border-white/10 dark:bg-[#151515] dark:text-zinc-100 dark:shadow-[0_6px_8px_rgba(0,0,0,0.38)]`}
+          className={`${view === "notifications" || view === "reading" ? "w-[min(19rem,calc(100vw-2rem))]" : "w-[min(17rem,calc(100vw-2rem))]"} public-menu-panel absolute right-0 top-11 max-h-[calc(100dvh-4rem)] origin-top-right overflow-x-hidden overflow-y-auto rounded-[10px] border border-zinc-200 bg-white p-1.5 text-zinc-950 shadow-[0_6px_8px_rgba(0,0,0,0.12)] sm:left-0 sm:right-auto sm:origin-top-left ${isHome ? "home-tablet-landscape-menu-panel min-[84rem]:!left-auto min-[84rem]:!right-0 min-[84rem]:origin-top-right" : ""} dark:border-white/10 dark:bg-[#151515] dark:text-zinc-100 dark:shadow-[0_6px_8px_rgba(0,0,0,0.38)]`}
         >
           {view === "notifications" ? (
             <div className="p-1">

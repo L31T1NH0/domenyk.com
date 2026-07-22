@@ -760,6 +760,72 @@
   background-clip: padding-box;
 }
 
+/* Tablets in landscape use the two-timeline desktop structure, while keeping
+   the compact 1rem viewport gutters used by the mobile public shell. */
+@media (min-width: 64rem) and (max-width: 83.999rem) and (orientation: landscape) {
+  html:root {
+    scrollbar-gutter: stable both-edges;
+  }
+
+  .home-timeline-dual {
+    position: relative;
+    left: 50%;
+    width: calc(100vw - 2rem);
+    align-self: flex-start;
+    transform: translateX(calc(-50vw + 1rem));
+  }
+
+  .home-timeline-dual-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 2rem;
+  }
+
+  .home-timeline-dual-search-row {
+    margin-bottom: -2.5rem;
+  }
+
+  .home-timeline-dual-search {
+    position: relative;
+    top: -2.375rem;
+  }
+
+  .home-timeline-single-feed {
+    display: none;
+  }
+
+  .home-timeline-standalone-feed,
+  .home-timeline-thread-rail {
+    display: block;
+  }
+
+  .home-timeline-thread-rail {
+    position: sticky;
+    top: 1rem;
+  }
+
+  .home-timeline-mode-dock {
+    top: auto;
+    bottom: max(0.75rem, env(safe-area-inset-bottom));
+    left: 50%;
+    margin-left: 0;
+    translate: none;
+    transform: translateX(-50%);
+    flex-direction: row;
+  }
+
+  .home-tablet-landscape-menu {
+    translate: calc(50vw - 17.25rem) 0;
+  }
+
+  .home-tablet-landscape-menu-panel {
+    right: 0 !important;
+    left: auto !important;
+    transform-origin: top right;
+  }
+}
+
 html {
   /* Keep the content width stable when navigating between short and long pages. */
   overflow-y: scroll;
