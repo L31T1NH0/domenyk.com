@@ -770,8 +770,9 @@
 
 /* Tablets in landscape use the two-timeline desktop structure, while keeping
    the compact 1rem viewport gutters used by the mobile public shell. Physical
-   tablet resolution can map to a smaller CSS viewport because of pixel ratio. */
-@media (min-width: 48rem) and (min-height: 30rem) and (max-width: 83.999rem) and (orientation: landscape) {
+   tablet resolution can map to a smaller CSS viewport because of pixel ratio,
+   and browser chrome can substantially reduce the available viewport height. */
+@media (min-width: 40rem) and (max-width: 83.999rem) and (orientation: landscape) and (max-aspect-ratio: 21/10) {
   html:root {
     scrollbar-gutter: stable both-edges;
   }
