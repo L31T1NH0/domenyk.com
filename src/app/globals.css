@@ -760,9 +760,18 @@
   background-clip: padding-box;
 }
 
+/* The home menu trigger sits at the right edge of its current layout. Keep its
+   panel anchored there so wider menu views always expand into the viewport. */
+.home-tablet-landscape-menu-panel {
+  right: 0 !important;
+  left: auto !important;
+  transform-origin: top right;
+}
+
 /* Tablets in landscape use the two-timeline desktop structure, while keeping
-   the compact 1rem viewport gutters used by the mobile public shell. */
-@media (min-width: 64rem) and (max-width: 83.999rem) and (orientation: landscape) {
+   the compact 1rem viewport gutters used by the mobile public shell. Physical
+   tablet resolution can map to a smaller CSS viewport because of pixel ratio. */
+@media (min-width: 48rem) and (min-height: 30rem) and (max-width: 83.999rem) and (orientation: landscape) {
   html:root {
     scrollbar-gutter: stable both-edges;
   }
@@ -817,12 +826,6 @@
 
   .home-tablet-landscape-menu {
     translate: calc(50vw - 17.25rem) 0;
-  }
-
-  .home-tablet-landscape-menu-panel {
-    right: 0 !important;
-    left: auto !important;
-    transform-origin: top right;
   }
 }
 
