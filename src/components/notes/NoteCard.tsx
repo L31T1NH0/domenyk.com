@@ -646,6 +646,7 @@ export function NoteCard({ note, showMetadata = false, viewContext, isAdmin, onD
       ) : (
         <div
           ref={contentRef}
+          data-note-reading-surface="timeline"
           className={[
             "note-content text-[0.8125rem] leading-relaxed text-neutral-900 dark:text-[#f1f1f1]",
             cropTallImages ? "note-content-timeline" : "",

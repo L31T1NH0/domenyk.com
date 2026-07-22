@@ -863,7 +863,7 @@ img:hover {
   font-optical-sizing: auto;
   min-width: 0;
   max-width: 100%;
-  line-height: 1.7;
+  line-height: var(--reading-line-height, 1.7);
   overflow-wrap: anywhere;
 }
 
@@ -1197,7 +1197,7 @@ html.light-mode [data-public-shell] .post-content h5 {
   gap: 1.35rem;
   color: var(--editorial-body);
   font-family: var(--font-reading), "Times New Roman", Times, serif;
-  line-height: 1.82;
+  line-height: var(--reading-line-height, 1.82);
   letter-spacing: 0;
 }
 
@@ -1211,7 +1211,7 @@ html.light-mode [data-public-shell] .post-content h5 {
 .post-content-editorial>p:first-of-type {
   color: var(--editorial-ink);
   font-size: 1.08em;
-  line-height: 1.72;
+  line-height: var(--reading-lead-line-height, 1.72);
 }
 
 .post-content-editorial>p:first-of-type::first-letter {
@@ -1257,7 +1257,7 @@ html.light-mode [data-public-shell] .post-content h5 {
   color: var(--editorial-ink);
   font-size: 1.2em;
   font-style: italic;
-  line-height: 1.55;
+  line-height: var(--reading-quote-line-height, 1.55);
 }
 
 .post-content-editorial p:hover {
@@ -1300,7 +1300,7 @@ html.light-mode [data-public-shell] .post-content h5 {
 
 .post-content-opinion {
   gap: 1.1rem;
-  line-height: 1.7;
+  line-height: var(--reading-line-height, 1.7);
 }
 
 .post-content-opinion>p:first-of-type {
@@ -1384,6 +1384,26 @@ html.light-mode [data-public-shell] .post-content-opinion strong {
   font-family: var(--font-reading), "Times New Roman", Times, serif;
   font-kerning: normal;
   font-optical-sizing: auto;
+}
+
+.note-content:not(.comment-content)[data-note-reading-surface="timeline"] {
+  --note-reading-base-size: 0.8125rem;
+  --note-reading-base-line-height: 1.4;
+  --note-reading-base-gap: 0.5rem;
+}
+
+.note-content:not(.comment-content)[data-note-reading-surface="detail"] {
+  --note-reading-base-size: 0.9375rem;
+  --note-reading-base-line-height: 1.4;
+  --note-reading-base-gap: 0.5rem;
+}
+
+.note-content:not(.comment-content)[data-note-reading-surface] {
+  /* Manual choices are absolute so notes stay in sync with post content. */
+  gap: var(--reading-block-spacing, var(--note-reading-base-gap));
+  font-size: var(--reading-font-size, var(--note-reading-base-size));
+  letter-spacing: var(--reading-letter-spacing, 0em);
+  line-height: var(--reading-line-height, var(--note-reading-base-line-height));
 }
 
 .note-content p {

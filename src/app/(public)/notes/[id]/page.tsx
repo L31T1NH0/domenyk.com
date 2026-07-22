@@ -170,6 +170,7 @@ export default async function NotePage({ params }: Props) {
                     </h2>
                   )}
                   <div
+                    data-note-reading-surface="detail"
                     className="note-content text-[15px] leading-relaxed text-neutral-900 dark:text-[#f1f1f1]"
                     dangerouslySetInnerHTML={{ __html: threadNote.contentHtml }}
                   />

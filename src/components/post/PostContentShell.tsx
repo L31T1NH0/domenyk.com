@@ -1,9 +1,10 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent } from "react"
+import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, MouseEvent } from "react"
 import { XMarkIcon } from "@heroicons/react/24/solid"
-import { usePostContentFontSize } from "./usePostContentFontSize"
+import { DEFAULT_READING_METRICS, effectiveReadingMetrics } from "@/lib/reading-preferences"
+import { useReadingPreferences } from "./ReadingPreferencesContext"
 
 type Props = {
   html: string
@@ -16,14 +17,31 @@ type ActiveImage = {
   alt: string
 }
 
-export function PostContentShell({ html, className, variant = "default" }: Props) {
+type ReadingContentStyle = CSSProperties & {
+  "--reading-line-height": number
+  "--reading-lead-line-height": number
+  "--reading-quote-line-height": number
+}
+
+export function PostContentShell({ html, className }: Props) {
   const ref = useRef<HTMLDivElement>(null)
-  const fontSize = usePostContentFontSize(
-    ref,
-    variant === "editorial"
-      ? { minSize: 16, maxSize: 18, maxLinesPerParagraph: 9 }
-      : { minSize: 16, maxSize: 17, maxLinesPerParagraph: 8 }
-  )
+  const autoFontSize = DEFAULT_READING_METRICS.autoFontSize
+  const { preferences, setMetrics } = useReadingPreferences()
+  const baseLineHeight = DEFAULT_READING_METRICS.baseLineHeight
+  const baseBlockSpacing = DEFAULT_READING_METRICS.baseBlockSpacing
+  const readingMetrics = effectiveReadingMetrics(preferences, {
+    autoFontSize,
+    baseLineHeight,
+    baseBlockSpacing,
+  })
+  const readingStyle: ReadingContentStyle = {
+    fontSize: readingMetrics.fontSize,
+    gap: `${readingMetrics.blockSpacing}rem`,
+    letterSpacing: `${readingMetrics.letterSpacing}em`,
+    "--reading-line-height": readingMetrics.lineHeight,
+    "--reading-lead-line-height": preferences.lineHeight ?? baseLineHeight,
+    "--reading-quote-line-height": preferences.lineHeight ?? baseLineHeight,
+  }
   const [activeImage, setActiveImage] = useState<ActiveImage | null>(null)
   const [visible, setVisible] = useState(false)
   const dialogRef = useRef<HTMLDialogElement>(null)
@@ -32,6 +50,12 @@ export function PostContentShell({ html, className, variant = "default" }: Props
   const touchStartRef = useRef(0)
   const activeImageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const threshold = 80
+
+  useEffect(() => {
+    setMetrics({ autoFontSize, baseLineHeight, baseBlockSpacing })
+  }, [autoFontSize, baseLineHeight, baseBlockSpacing, setMetrics])
+
+  useEffect(() => () => setMetrics(DEFAULT_READING_METRICS), [setMetrics])
 
   const close = useCallback(() => {
     if (activeImageTimerRef.current) clearTimeout(activeImageTimerRef.current)
@@ -180,7 +204,7 @@ export function PostContentShell({ html, className, variant = "default" }: Props
         ref={ref}
         data-post-content
         className={["post-content flex flex-col gap-3.5", className].filter(Boolean).join(" ")}
-        style={{ fontSize }}
+        style={readingStyle}
         onClick={handleClick}
         onKeyDown={handleKeyDown}
         dangerouslySetInnerHTML={{ __html: html }}

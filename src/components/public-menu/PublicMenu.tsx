@@ -10,6 +10,7 @@ import {
   ArrowRightStartOnRectangleIcon,
   Bars3Icon,
   BellIcon,
+  BookOpenIcon,
   CheckIcon,
   ChevronRightIcon,
   Cog6ToothIcon,
@@ -18,7 +19,9 @@ import {
   InformationCircleIcon,
   EnvelopeIcon,
   MoonIcon,
+  MinusIcon,
   PencilSquareIcon,
+  PlusIcon,
   SunIcon,
   UserCircleIcon,
 } from "@heroicons/react/24/outline"
@@ -27,9 +30,90 @@ import { useThemeSwitcher } from "@/components/ThemeSwitcher"
 import { PushSubscriptionManager } from "@/components/notifications/PushSubscriptionManager"
 import { revokePrivatePushForCurrentDevice } from "@/lib/client-push"
 import { POST_READING_POSITION_SKIP_RESTORE_KEY } from "@/lib/post-reading-position"
+import {
+  effectiveReadingMetrics,
+  hasCustomReadingPreferences,
+  READING_PREFERENCE_RANGES,
+  type ReadingPreferenceKey,
+} from "@/lib/reading-preferences"
+import { useReadingPreferences } from "@/components/post/ReadingPreferencesContext"
 import { usePublicMenu } from "./PublicMenuContext"
 
 const ITEM_CLASS_NAME = "group flex min-h-9 w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-[13px] text-zinc-700 outline-none transition-colors hover:bg-zinc-100 focus-visible:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-white/[0.07] dark:focus-visible:bg-white/[0.07]"
+const READING_STEPPER_BUTTON_CLASS_NAME = "grid size-9 shrink-0 place-items-center text-zinc-600 outline-none transition-colors hover:bg-zinc-100 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zinc-500 disabled:cursor-not-allowed disabled:text-zinc-300 disabled:hover:bg-transparent dark:text-zinc-300 dark:hover:bg-white/[0.07] dark:focus-visible:ring-zinc-300 dark:disabled:text-zinc-600"
+
+type ReadingStepperProps = {
+  label: string
+  value: string
+  preferenceKey: ReadingPreferenceKey
+  currentValue: number
+  onAdjust: (key: ReadingPreferenceKey, direction: -1 | 1) => void
+  onReset: (key: ReadingPreferenceKey) => void
+  resetLabel: string
+}
+
+function ReadingStepper({
+  label,
+  value,
+  preferenceKey,
+  currentValue,
+  onAdjust,
+  onReset,
+  resetLabel,
+}: ReadingStepperProps) {
+  const range = READING_PREFERENCE_RANGES[preferenceKey]
+  const atMinimum = currentValue <= range.min
+  const atMaximum = currentValue >= range.max
+
+  return (
+    <div className="flex min-h-12 items-center justify-between gap-3 px-2 py-1.5">
+      <span className="min-w-0 flex-1 text-[12px] leading-[1.35] text-zinc-700 dark:text-zinc-200">
+        {label}
+      </span>
+      <div
+        role="group"
+        data-reading-preference={preferenceKey}
+        aria-label={`Ajustar ${label.toLocaleLowerCase("pt-BR")}`}
+        className="flex shrink-0 overflow-hidden rounded-md border border-zinc-200 bg-white dark:border-white/10 dark:bg-[#151515]"
+      >
+        <button
+          type="button"
+          data-reading-decrement
+          disabled={atMinimum}
+          onClick={() => onAdjust(preferenceKey, -1)}
+          aria-label={`Diminuir ${label.toLocaleLowerCase("pt-BR")}`}
+          className={READING_STEPPER_BUTTON_CLASS_NAME}
+        >
+          <MinusIcon className="size-3.5" aria-hidden />
+        </button>
+        <button
+          type="button"
+          data-reading-reset
+          onClick={() => onReset(preferenceKey)}
+          aria-label={resetLabel}
+          title={resetLabel}
+          className="min-w-[5.25rem] border-x border-zinc-200 px-2 text-center text-[11px] font-medium tabular-nums text-zinc-700 outline-none transition-colors hover:bg-zinc-100 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zinc-500 dark:border-white/10 dark:text-zinc-200 dark:hover:bg-white/[0.07] dark:focus-visible:ring-zinc-300"
+        >
+          <span aria-live="polite">{value}</span>
+        </button>
+        <button
+          type="button"
+          data-reading-increment
+          disabled={atMaximum}
+          onClick={() => onAdjust(preferenceKey, 1)}
+          aria-label={`Aumentar ${label.toLocaleLowerCase("pt-BR")}`}
+          className={READING_STEPPER_BUTTON_CLASS_NAME}
+        >
+          <PlusIcon className="size-3.5" aria-hidden />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function formatDecimal(value: number, precision: number) {
+  return value.toFixed(precision).replace(".", ",")
+}
 
 function skipReadingPositionRestore(href: string) {
   try {
@@ -56,13 +140,20 @@ export function PublicMenu() {
   const { isLoaded, isSignedIn, user } = useUser()
   const clerk = useClerk()
   const { darkMode, toggleTheme } = useThemeSwitcher()
+  const {
+    preferences: readingPreferences,
+    metrics: readingBaseMetrics,
+    adjustPreference,
+    resetPreference,
+    resetPreferences,
+  } = useReadingPreferences()
   const { currentLocale, options } = usePublicMenu()
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const [verifiedAdminUserId, setVerifiedAdminUserId] = useState<string | null>(null)
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [unreadNotifications, setUnreadNotifications] = useState(0)
-  const [view, setView] = useState<"main" | "account" | "language" | "notifications">("main")
+  const [view, setView] = useState<"main" | "account" | "language" | "notifications" | "reading">("main")
   const menuId = useId()
   const rootRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -71,6 +162,8 @@ export function PublicMenu() {
   const languageTriggerRef = useRef<HTMLButtonElement>(null)
   const notificationsBackRef = useRef<HTMLButtonElement>(null)
   const notificationsTriggerRef = useRef<HTMLButtonElement>(null)
+  const readingBackRef = useRef<HTMLButtonElement>(null)
+  const readingTriggerRef = useRef<HTMLButtonElement>(null)
   const focusFirstOnOpenRef = useRef(false)
   const userCreatedAt = user?.createdAt?.getTime()
 
@@ -169,6 +262,16 @@ export function PublicMenu() {
     requestAnimationFrame(() => notificationsTriggerRef.current?.focus())
   }
 
+  function openReadingView() {
+    setView("reading")
+    requestAnimationFrame(() => readingBackRef.current?.focus())
+  }
+
+  function closeReadingView() {
+    setView("main")
+    requestAnimationFrame(() => readingTriggerRef.current?.focus())
+  }
+
   useEffect(() => {
     if (!open) return
     if (focusFirstOnOpenRef.current) {
@@ -188,6 +291,8 @@ export function PublicMenu() {
         closeLanguageView()
       } else if (view === "notifications") {
         closeNotificationsView()
+      } else if (view === "reading") {
+        closeReadingView()
       } else {
         closeMenu({ restoreFocus: true })
       }
@@ -202,7 +307,7 @@ export function PublicMenu() {
   }, [open, view])
 
   function handleMenuKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    if (view === "notifications") return
+    if (view === "notifications" || view === "reading") return
     if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return
     const items = menuItems()
     if (items.length === 0) return
@@ -236,7 +341,9 @@ export function PublicMenu() {
   }
 
   const isPostPage = /(?:^|\/)posts\/[^/]+$/.test(pathname)
+  const isNotePage = pathname === "/notes" || /^\/notes\/[^/]+$/.test(pathname)
   const isHome = pathname === "/"
+  const hasReadingControls = isHome || isPostPage || isNotePage
   const hasUnreadItems = unreadMessages > 0 || unreadNotifications > 0
   const currentLanguageOption = options.find(({ locale }) => locale === currentLocale)
   const currentLanguageDetails = currentLanguageOption
@@ -245,6 +352,16 @@ export function PublicMenu() {
   const orderedLanguageOptions = currentLanguageOption
     ? [currentLanguageOption, ...options.filter(({ locale }) => locale !== currentLocale)]
     : options
+  const readingMetrics = effectiveReadingMetrics(readingPreferences, readingBaseMetrics)
+  const hasCustomReading = hasCustomReadingPreferences(readingPreferences)
+  const readingValues: Record<ReadingPreferenceKey, string> = {
+    fontSize: readingPreferences.fontSize === null
+      ? "Automática"
+      : `${formatDecimal(readingMetrics.fontSize, 0)} px`,
+    lineHeight: `${formatDecimal(readingMetrics.lineHeight, 3)}×`,
+    letterSpacing: `${formatDecimal(readingMetrics.letterSpacing, 3)} em`,
+    blockSpacing: `${formatDecimal(readingMetrics.blockSpacing, 3)} rem`,
+  }
 
   return (
     <div
@@ -282,10 +399,10 @@ export function PublicMenu() {
       {open && (
         <div
           id={menuId}
-          role={view === "notifications" ? "dialog" : "menu"}
-          aria-label={view === "account" ? "Menu da conta" : view === "language" ? "Menu de idiomas" : view === "notifications" ? "Configurar notificações" : "Menu do site"}
+          role={view === "notifications" || view === "reading" ? "dialog" : "menu"}
+          aria-label={view === "account" ? "Menu da conta" : view === "language" ? "Menu de idiomas" : view === "notifications" ? "Configurar notificações" : view === "reading" ? "Configurar leitura" : "Menu do site"}
           onKeyDown={handleMenuKeyDown}
-          className={`${view === "notifications" ? "w-[min(19rem,calc(100vw-2rem))]" : "w-[min(17rem,calc(100vw-2rem))]"} public-menu-panel absolute right-0 top-11 origin-top-right rounded-[10px] border border-zinc-200 bg-white p-1.5 text-zinc-950 shadow-[0_6px_8px_rgba(0,0,0,0.12)] sm:left-0 sm:right-auto sm:origin-top-left ${isHome ? "min-[84rem]:!left-auto min-[84rem]:!right-0 min-[84rem]:origin-top-right" : ""} dark:border-white/10 dark:bg-[#151515] dark:text-zinc-100 dark:shadow-[0_6px_8px_rgba(0,0,0,0.38)]`}
+          className={`${view === "notifications" || view === "reading" ? "w-[min(19rem,calc(100vw-2rem))]" : "w-[min(17rem,calc(100vw-2rem))]"} public-menu-panel absolute right-0 top-11 max-h-[calc(100dvh-4rem)] origin-top-right overflow-x-hidden overflow-y-auto rounded-[10px] border border-zinc-200 bg-white p-1.5 text-zinc-950 shadow-[0_6px_8px_rgba(0,0,0,0.12)] sm:left-0 sm:right-auto sm:origin-top-left ${isHome ? "min-[84rem]:!left-auto min-[84rem]:!right-0 min-[84rem]:origin-top-right" : ""} dark:border-white/10 dark:bg-[#151515] dark:text-zinc-100 dark:shadow-[0_6px_8px_rgba(0,0,0,0.38)]`}
         >
           {view === "notifications" ? (
             <div className="p-1">
@@ -302,6 +419,66 @@ export function PublicMenu() {
                 <p className="mb-3 text-[11px] leading-[1.55] text-zinc-500 dark:text-zinc-400">Escolha o que deseja receber neste dispositivo.</p>
                 <PushSubscriptionManager compact showAdminEvents={Boolean(isLoaded && isSignedIn && admin)} />
               </div>
+            </div>
+          ) : view === "reading" ? (
+            <div>
+              <button
+                ref={readingBackRef}
+                type="button"
+                onClick={closeReadingView}
+                className={ITEM_CLASS_NAME}
+              >
+                <ArrowLeftIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
+                <span className="font-medium">Leitura</span>
+              </button>
+
+              <div className="mt-1 divide-y divide-zinc-200 border-y border-zinc-200 py-1 dark:divide-white/10 dark:border-white/10">
+                <ReadingStepper
+                  label="Tamanho"
+                  value={readingValues.fontSize}
+                  preferenceKey="fontSize"
+                  currentValue={readingMetrics.fontSize}
+                  onAdjust={adjustPreference}
+                  onReset={resetPreference}
+                  resetLabel="Restaurar tamanho automático"
+                />
+                <ReadingStepper
+                  label="Entrelinha"
+                  value={readingValues.lineHeight}
+                  preferenceKey="lineHeight"
+                  currentValue={readingMetrics.lineHeight}
+                  onAdjust={adjustPreference}
+                  onReset={resetPreference}
+                  resetLabel="Restaurar entrelinha padrão"
+                />
+                <ReadingStepper
+                  label="Espaço entre letras"
+                  value={readingValues.letterSpacing}
+                  preferenceKey="letterSpacing"
+                  currentValue={readingMetrics.letterSpacing}
+                  onAdjust={adjustPreference}
+                  onReset={resetPreference}
+                  resetLabel="Restaurar espaço entre letras"
+                />
+                <ReadingStepper
+                  label="Espaço entre blocos"
+                  value={readingValues.blockSpacing}
+                  preferenceKey="blockSpacing"
+                  currentValue={readingMetrics.blockSpacing}
+                  onAdjust={adjustPreference}
+                  onReset={resetPreference}
+                  resetLabel="Restaurar espaço entre blocos"
+                />
+              </div>
+
+              <button
+                type="button"
+                disabled={!hasCustomReading}
+                onClick={resetPreferences}
+                className="mt-1 min-h-9 w-full rounded-md px-2.5 py-2 text-[12px] font-medium text-zinc-700 outline-none transition-colors hover:bg-zinc-100 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zinc-500 disabled:cursor-not-allowed disabled:text-zinc-300 disabled:hover:bg-transparent dark:text-zinc-200 dark:hover:bg-white/[0.07] dark:focus-visible:ring-zinc-300 dark:disabled:text-zinc-600"
+              >
+                Restaurar tudo
+              </button>
             </div>
           ) : view === "language" ? (
             <>
@@ -452,6 +629,23 @@ export function PublicMenu() {
                       <CrownIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
                       Admin
                     </Link>
+                  )}
+                  {hasReadingControls && (
+                    <button
+                      ref={readingTriggerRef}
+                      type="button"
+                      role="menuitem"
+                      data-reading-settings
+                      onClick={openReadingView}
+                      className={ITEM_CLASS_NAME}
+                    >
+                      <BookOpenIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
+                      <span className="flex-1">Leitura</span>
+                      <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                        {hasCustomReading ? "Personalizada" : "Automática"}
+                      </span>
+                      <ChevronRightIcon className="size-3.5 text-zinc-400" aria-hidden />
+                    </button>
                   )}
                   <button type="button" role="menuitem" onClick={toggleTheme} className={ITEM_CLASS_NAME}>
                     {darkMode
