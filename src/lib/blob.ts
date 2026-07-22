@@ -3,11 +3,14 @@ import "server-only"
 import {
   BlobAccessError,
   BlobContentTypeNotAllowedError,
+  BlobError,
   BlobFileTooLargeError,
+  BlobRequestAbortedError,
   BlobServiceNotAvailable,
   BlobServiceRateLimited,
   BlobStoreNotFoundError,
   BlobStoreSuspendedError,
+  BlobUnknownError,
   put,
   del,
   list,
@@ -53,10 +56,30 @@ export function imageStorageErrorMessage(error: unknown): string {
   if (error instanceof BlobServiceNotAvailable) {
     return "O armazenamento de imagens está temporariamente indisponível."
   }
+  if (error instanceof BlobRequestAbortedError) {
+    return "A conexão com o armazenamento foi interrompida durante o envio."
+  }
+  if (error instanceof BlobUnknownError) {
+    return "O Vercel Blob retornou um erro não identificado (blob_unknown)."
+  }
   if (error instanceof Error && /No (?:blob credentials|read-write token) found/i.test(error.message)) {
     return "O armazenamento de imagens não está configurado neste ambiente."
   }
-  return "Não foi possível armazenar a imagem agora. Tente novamente."
+  if (error instanceof BlobError && /OIDC/i.test(error.message)) {
+    return "A autorização OIDC deste deploy não corresponde ao armazenamento configurado (blob_oidc)."
+  }
+  if (error instanceof Error && /fetch failed/i.test(error.message)) {
+    const cause = error.cause
+    const causeCode = typeof cause === "object" && cause && "code" in cause && typeof cause.code === "string"
+      ? cause.code.toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 40)
+      : "unknown"
+    return `A função não conseguiu se conectar ao Vercel Blob (blob_transport_${causeCode}).`
+  }
+
+  const errorType = error instanceof Error
+    ? error.constructor.name.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 40) || "Error"
+    : "Unknown"
+  return `Não foi possível armazenar a imagem (blob_unexpected_${errorType}).`
 }
 
 export function isAllowedImageType(type: string): boolean {
