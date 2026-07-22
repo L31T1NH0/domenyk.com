@@ -1,6 +1,17 @@
 import "server-only"
 
-import { put, del, list } from "@vercel/blob"
+import {
+  BlobAccessError,
+  BlobContentTypeNotAllowedError,
+  BlobFileTooLargeError,
+  BlobServiceNotAvailable,
+  BlobServiceRateLimited,
+  BlobStoreNotFoundError,
+  BlobStoreSuspendedError,
+  put,
+  del,
+  list,
+} from "@vercel/blob"
 import sharp from "sharp"
 import { sanitizeSvg } from "@/lib/svg-sanitizer"
 
@@ -14,6 +25,39 @@ const IMAGE_WEBP_FALLBACK_QUALITY = 64
 
 export const MAX_IMAGE_UPLOAD_BYTES = 4 * 1024 * 1024
 const MAX_SANITIZED_IMAGE_BYTES = 4 * 1024 * 1024
+
+function blobAuthOptions(): { token?: string } {
+  const token = process.env.BLOB_READ_WRITE_TOKEN?.trim()
+  return token ? { token } : {}
+}
+
+export function imageStorageErrorMessage(error: unknown): string {
+  if (error instanceof BlobAccessError) {
+    return "O armazenamento recusou a credencial configurada. Reconecte o Vercel Blob ao projeto."
+  }
+  if (error instanceof BlobStoreNotFoundError) {
+    return "O armazenamento de imagens configurado não existe mais."
+  }
+  if (error instanceof BlobStoreSuspendedError) {
+    return "O armazenamento de imagens está suspenso. Verifique o limite ou faturamento na Vercel."
+  }
+  if (error instanceof BlobFileTooLargeError) {
+    return "O armazenamento recusou a imagem por exceder o limite de tamanho."
+  }
+  if (error instanceof BlobContentTypeNotAllowedError) {
+    return "O armazenamento recusou o formato desta imagem."
+  }
+  if (error instanceof BlobServiceRateLimited) {
+    return "O armazenamento recebeu muitos envios. Aguarde alguns segundos e tente novamente."
+  }
+  if (error instanceof BlobServiceNotAvailable) {
+    return "O armazenamento de imagens está temporariamente indisponível."
+  }
+  if (error instanceof Error && /No (?:blob credentials|read-write token) found/i.test(error.message)) {
+    return "O armazenamento de imagens não está configurado neste ambiente."
+  }
+  return "Não foi possível armazenar a imagem agora. Tente novamente."
+}
 
 export function isAllowedImageType(type: string): boolean {
   return ALLOWED_IMAGE_TYPES.has(type.toLowerCase())
@@ -154,6 +198,7 @@ export async function uploadImage(
   contentType?: string
 ): Promise<string> {
   const { url } = await put(`${folder}/${safeFilename(filename)}`, data, {
+    ...blobAuthOptions(),
     access: "public",
     addRandomSuffix: true,
     contentType,
@@ -162,7 +207,7 @@ export async function uploadImage(
 }
 
 export async function deleteImage(url: string): Promise<void> {
-  await del(url)
+  await del(url, blobAuthOptions())
 }
 
 export type MediaItem = { url: string; pathname: string; size: number; uploadedAt: Date; contentType: string }
@@ -177,7 +222,7 @@ export async function listMedia(): Promise<MediaItem[]> {
   let cursor: string | undefined
 
   do {
-    const page = await list({ prefix: "media/", cursor, limit: 1_000 })
+    const page = await list({ ...blobAuthOptions(), prefix: "media/", cursor, limit: 1_000 })
     media.push(...page.blobs.map((blob) => ({
       url: blob.url,
       pathname: blob.pathname,

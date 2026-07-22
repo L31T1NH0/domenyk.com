@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import {
   deleteImage,
+  imageStorageErrorMessage,
   isAllowedImageType,
   MAX_IMAGE_UPLOAD_BYTES,
   sanitizeImageUpload,
@@ -127,7 +128,7 @@ async function uploadImageFromFormData(
   } catch (error) {
     console.error("[image-upload] failed to store image", error)
     return NextResponse.json(
-      { error: "Não foi possível armazenar a imagem agora. Tente novamente." },
+      { error: imageStorageErrorMessage(error) },
       { status: 502 }
     )
   }
