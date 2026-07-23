@@ -69,6 +69,29 @@ test("returns the full width outside the vertical image band", () => {
   }), { left: 0, width: 320 })
 })
 
+test("keeps a readable text slot beside a 52 percent image on a narrow viewport", () => {
+  const geometry = {
+    width: 100,
+    height: 180,
+    left: 0,
+    right: 0,
+    rows: Array.from({ length: 18 }, () => ({ left: 0.1, right: 0.9 })),
+  }
+  const base = {
+    geometry,
+    containerWidth: 320,
+    bandTop: 40,
+    bandBottom: 60,
+    imageTop: 0,
+    imageHeight: 299.52,
+    imageWidth: 166.4,
+    shapeMargin: 8,
+  }
+
+  assert.ok(lineSlotForAlphaBand({ ...base, side: "left", imageLeft: 0 }).width >= 160)
+  assert.ok(lineSlotForAlphaBand({ ...base, side: "right", imageLeft: 153.6 }).width >= 160)
+})
+
 test("stabilizes rich inline fragments using their painted browser widths", () => {
   assert.deepEqual(stabilizePaintedLine([
     { left: 100, width: 58, gapBefore: 0 },

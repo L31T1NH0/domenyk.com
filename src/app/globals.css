@@ -1118,8 +1118,8 @@ html.light-mode [data-public-shell] .post-content h5 {
 @media (max-width: 40rem) {
   .post-content figure[data-flow-image] {
     float: none;
-    width: min(72%, 16rem);
-    max-width: 100%;
+    width: min(var(--flow-image-width, 42%), 16rem);
+    max-width: 52%;
     margin: 0 auto 1rem;
     shape-outside: none;
   }
@@ -1623,61 +1623,65 @@ html.light-mode [data-public-shell] .post-content-opinion strong {
   margin-right: calc(-1 * var(--flow-image-outer-alpha-offset, 0px));
 }
 
-/* Pretext owns the line geometry only on reading surfaces with desktop room. */
-@media (min-width: 40.001rem) {
-  .post-content[data-pretext-flow-active],
-  .note-content:not(.comment-content)[data-pretext-flow-active] {
-    position: relative;
-    min-height: var(--pretext-flow-min-height, 0);
-  }
+/* Pretext owns the line geometry on every reading viewport. */
+.post-content[data-pretext-flow-active],
+.note-content:not(.comment-content)[data-pretext-flow-active] {
+  position: relative;
+  min-height: var(--pretext-flow-min-height, 0);
+}
 
-  .post-content[data-pretext-flow-active] figure[data-flow-image],
-  .note-content:not(.comment-content)[data-pretext-flow-active] figure[data-flow-image] {
-    position: absolute;
-    top: var(--pretext-flow-image-top, 0);
-    float: none;
-    margin: 0;
-    shape-outside: none;
-  }
+.post-content[data-pretext-flow-active] figure[data-flow-image],
+.note-content:not(.comment-content)[data-pretext-flow-active] figure[data-flow-image] {
+  position: absolute;
+  top: var(--pretext-flow-image-top, 0);
+  float: none;
+  margin: 0;
+  shape-outside: none;
+}
 
-  .post-content[data-pretext-flow-active] figure[data-flow-image="left"],
-  .note-content:not(.comment-content)[data-pretext-flow-active] figure[data-flow-image="left"] {
-    right: auto;
-    left: calc(-1 * var(--flow-image-outer-alpha-offset, 0px));
-  }
+.post-content[data-pretext-flow-active] figure[data-flow-image="left"],
+.note-content:not(.comment-content)[data-pretext-flow-active] figure[data-flow-image="left"] {
+  right: auto;
+  left: calc(-1 * var(--flow-image-outer-alpha-offset, 0px));
+}
 
-  .post-content[data-pretext-flow-active] figure[data-flow-image="right"],
-  .note-content:not(.comment-content)[data-pretext-flow-active] figure[data-flow-image="right"] {
-    right: calc(-1 * var(--flow-image-outer-alpha-offset, 0px));
-    left: auto;
-  }
+.post-content[data-pretext-flow-active] figure[data-flow-image="right"],
+.note-content:not(.comment-content)[data-pretext-flow-active] figure[data-flow-image="right"] {
+  right: calc(-1 * var(--flow-image-outer-alpha-offset, 0px));
+  left: auto;
+}
 
-  [data-pretext-flow-rendered] {
-    position: relative;
-    font-optical-sizing: none;
-  }
+.post-content[data-pretext-flow-active] figure[data-flow-image]>img,
+.note-content:not(.comment-content)[data-pretext-flow-active] figure[data-flow-image]>img {
+  max-height: none;
+  object-fit: fill;
+}
 
-  .pretext-flow-fragment {
-    position: absolute;
-    top: var(--pretext-fragment-top, 0);
-    left: var(--pretext-fragment-left, 0);
-    display: inline-block;
-    white-space: pre;
-  }
+[data-pretext-flow-rendered] {
+  position: relative;
+  font-optical-sizing: none;
+}
 
-  .pretext-flow-preserved-space {
-    position: absolute;
-    width: 0;
-    height: 0;
-    overflow: hidden;
-    opacity: 0;
-    pointer-events: none;
-  }
+.pretext-flow-fragment {
+  position: absolute;
+  top: var(--pretext-fragment-top, 0);
+  left: var(--pretext-fragment-left, 0);
+  display: inline-block;
+  white-space: pre;
+}
 
-  [data-pretext-flow-rendered] a:focus-visible .pretext-flow-fragment {
-    outline: 2px solid currentColor;
-    outline-offset: 2px;
-  }
+.pretext-flow-preserved-space {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+[data-pretext-flow-rendered] a:focus-visible .pretext-flow-fragment {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
 }
 
 html:not(.light-mode) [data-public-shell] .post-content figure[data-image-theme="adaptive"]>img,
@@ -1700,8 +1704,8 @@ html:not(.light-mode) [data-public-shell] .note-content:not(.comment-content) fi
 @media (max-width: 40rem) {
   .note-content:not(.comment-content) figure[data-flow-image] {
     float: none;
-    width: min(64%, 13rem);
-    max-width: 100%;
+    width: min(var(--flow-image-width, 42%), 13rem);
+    max-width: 52%;
     margin: 0 auto 0.75rem;
     shape-outside: none;
   }

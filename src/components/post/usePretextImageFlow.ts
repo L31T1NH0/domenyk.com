@@ -34,7 +34,6 @@ type PositionedFragment = {
   top: number
 }
 
-const DESKTOP_FLOW_QUERY = "(min-width: 40.001rem)"
 const MIN_LINE_WIDTH = 24
 const LINE_WIDTH_GUARD = 4
 const MAX_GENERATED_LINES = 2_000
@@ -291,10 +290,15 @@ function layoutParagraph({
   return true
 }
 
-function styleSignature(container: HTMLElement, paragraphs: HTMLParagraphElement[]) {
+function styleSignature(
+  container: HTMLElement,
+  figure: HTMLElement,
+  paragraphs: HTMLParagraphElement[]
+) {
   const containerStyle = window.getComputedStyle(container)
   return [
     container.clientWidth,
+    figure.getBoundingClientRect().width,
     containerStyle.fontSize,
     containerStyle.lineHeight,
     containerStyle.letterSpacing,
@@ -328,7 +332,6 @@ export function usePretextImageFlow(
       element,
       nodes: cloneNodes(Array.from(element.childNodes)),
     }))
-    const mediaQuery = window.matchMedia(DESKTOP_FLOW_QUERY)
     const abortController = new AbortController()
     let disposed = false
     let geometry: FlowImageAlphaGeometry | null = null
@@ -343,23 +346,21 @@ export function usePretextImageFlow(
     }
 
     const render = (force = false) => {
-      if (disposed || !geometry || !mediaQuery.matches) {
+      if (disposed || !geometry) {
         restore()
         return
       }
-      const signature = styleSignature(container, paragraphs)
+      const signature = styleSignature(container, figure, paragraphs)
       if (!force && signature === lastSignature) return
       lastSignature = signature
-      for (const template of templates) restoreParagraph(template)
+
+      // Measure the authored CSS size before activating the absolute Pretext
+      // layer. This keeps the geometry aligned across desktop and mobile
+      // breakpoints without duplicating CSS width rules in JavaScript.
+      restore()
 
       const containerWidth = container.clientWidth
-      const requestedWidth = Math.min(0.52, Math.max(
-        0,
-        parsePixelValue(figure.dataset.flowWidth ?? "42", 42) / 100
-      ))
-      const rootFontSize = parsePixelValue(window.getComputedStyle(document.documentElement).fontSize, 16)
-      const maximumImageWidth = rootFontSize * (container.classList.contains("post-content") ? 20 : 14)
-      const imageWidth = Math.min(containerWidth * requestedWidth, maximumImageWidth)
+      const imageWidth = figure.getBoundingClientRect().width
       const imageHeight = imageWidth * (geometry.height / geometry.width)
       if (!containerWidth || !imageWidth || !imageHeight) {
         restore()
@@ -402,14 +403,13 @@ export function usePretextImageFlow(
         render(force)
       })
     }
-    const onMediaChange = () => scheduleRender(true)
     const onFontsLoaded = () => scheduleRender(true)
     const onPreferencesChange = () => scheduleRender(true)
     const resizeObserver = new ResizeObserver(() => scheduleRender())
     resizeObserver.observe(container)
+    resizeObserver.observe(figure)
     const themeObserver = new MutationObserver(() => scheduleRender(true))
     themeObserver.observe(document.documentElement, { attributeFilter: ["class"], attributes: true })
-    mediaQuery.addEventListener("change", onMediaChange)
     document.fonts.addEventListener("loadingdone", onFontsLoaded)
     window.addEventListener("readingpreferenceschange", onPreferencesChange)
 
@@ -426,7 +426,6 @@ export function usePretextImageFlow(
       if (scheduledFrame) cancelAnimationFrame(scheduledFrame)
       resizeObserver.disconnect()
       themeObserver.disconnect()
-      mediaQuery.removeEventListener("change", onMediaChange)
       document.fonts.removeEventListener("loadingdone", onFontsLoaded)
       window.removeEventListener("readingpreferenceschange", onPreferencesChange)
       restore()

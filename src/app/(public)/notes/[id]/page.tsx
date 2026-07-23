@@ -8,6 +8,7 @@ import { getNote, getNoteThread, serializeNote } from "@/lib/db/notes"
 import { absoluteUrl, authorJsonLd, buildPageMetadata, descriptionFromMarkdown, isNoteIndexable, jsonLd, noteDisplayTitle, preferredContentImages, siteConfig } from "@/lib/seo"
 import { headers } from "next/headers"
 import { NoteViewTracker } from "@/components/notes/NoteViewTracker"
+import { NoteContentShell } from "@/components/notes/NoteContentShell"
 import { PostDescriptionDisclosure } from "@/components/post/PostDescriptionDisclosure"
 import { formatSiteDate } from "@/lib/datetime"
 
@@ -169,10 +170,10 @@ export default async function NotePage({ params }: Props) {
                       </Link>
                     </h2>
                   )}
-                  <div
-                    data-note-reading-surface="detail"
-                    className="note-content text-[15px] leading-relaxed text-neutral-900 dark:text-[#f1f1f1]"
-                    dangerouslySetInnerHTML={{ __html: threadNote.contentHtml }}
+                  <NoteContentShell
+                    surface="detail"
+                    html={threadNote.contentHtml}
+                    className="text-[15px] leading-relaxed text-neutral-900 dark:text-[#f1f1f1]"
                   />
                   {threadNote.images && threadNote.images.length > 0 && (
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
