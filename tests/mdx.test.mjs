@@ -65,6 +65,17 @@ test("renders a sanitized flow image with server-generated shape styles", () => 
   assert.match(html, /<img src="https:\/\/images\.example\/cutout\.webp" alt="Pessoa em pé">/)
 })
 
+test("moves a legacy terminal flow figure before the text it must affect", () => {
+  const html = renderMarkdownSync([
+    "Primeiro parágrafo.",
+    "Segundo parágrafo.",
+    '<figure data-flow-image="left" data-flow-width="32"><img src="https://images.example/cutout.webp" alt="Recorte"></figure>',
+  ].join("\n\n"))
+
+  assert.ok(html.indexOf("<figure") < html.indexOf("<p"))
+  assert.equal((html.match(/data-flow-image=/g) ?? []).length, 1)
+})
+
 test("preserves an explicit adaptive theme marker on a flow image", () => {
   const html = renderMarkdownSync(
     '<figure data-flow-image="right" data-flow-width="32" data-image-theme="adaptive"><img src="https://images.example/line-art.svg" alt="Desenho"></figure>'

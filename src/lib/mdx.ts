@@ -98,6 +98,7 @@ function directImageChild(node: Element): Element | null {
 function rehypeNormalizeFlowImages() {
   return (tree: Root) => {
     let acceptedFlowImage = false
+    let acceptedFlowFigure: Element | null = null
 
     visit(tree, "element", (node: Element) => {
       if (node.tagName !== "figure") return
@@ -124,11 +125,30 @@ function rehypeNormalizeFlowImages() {
       }
 
       acceptedFlowImage = true
+      acceptedFlowFigure = node
       node.properties.dataFlowImage = side
       node.properties.dataFlowWidth = width
       if (theme === "adaptive") node.properties.dataImageTheme = "adaptive"
       else delete node.properties.dataImageTheme
     })
+
+    // Earlier editor versions could append a contour figure after the last
+    // paragraph when the image menu stole focus. A terminal float has no text
+    // to affect, so render that legacy shape at the start of the reading flow.
+    if (!acceptedFlowFigure) return
+    const meaningfulChildren = tree.children.filter((child) => (
+      child.type !== "text" || child.value.trim().length > 0
+    ))
+    if (meaningfulChildren.at(-1) !== acceptedFlowFigure) return
+
+    const firstParagraph = tree.children.find((child): child is Element => (
+      child.type === "element" && child.tagName === "p"
+    ))
+    const figureIndex = tree.children.indexOf(acceptedFlowFigure)
+    if (!firstParagraph || figureIndex < 0) return
+
+    tree.children.splice(figureIndex, 1)
+    tree.children.splice(tree.children.indexOf(firstParagraph), 0, acceptedFlowFigure)
   }
 }
 

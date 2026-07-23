@@ -19,7 +19,7 @@ import {
   type ImageLayout,
   type ImageThemeMode,
 } from "./ImageNode"
-import { $insertEditorBlock } from "./insert-editor-block"
+import { $insertEditorBlock, $insertEditorFlowBlock } from "./insert-editor-block"
 
 type MediaAsset = {
   url: string
@@ -210,7 +210,8 @@ export function ImagePlugin({
     editor.update(() => {
       const paragraph = $createParagraphNode()
       paragraph.append($createImageNode(url, alt.trim(), layout, flowWidth, themeMode))
-      $insertEditorBlock(paragraph)
+      if (layout === "block") $insertEditorBlock(paragraph)
+      else $insertEditorFlowBlock(paragraph)
     })
     closeMenu()
     setError("")
@@ -399,7 +400,7 @@ export function ImagePlugin({
 
           {layout !== "block" && (
             <p className="mt-2 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
-              Use SVG, PNG ou WebP com transparência para o texto acompanhar a silhueta.
+              A figura entra no início. Use SVG, PNG ou WebP com transparência para o texto acompanhar a silhueta.
             </p>
           )}
 
