@@ -1,9 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { ArrowDownTrayIcon } from "@heroicons/react/24/outline"
 import { DeleteActionMenu } from "@/components/actions/DeleteActionMenu"
 import { messageCategoryLabel } from "@/lib/message-categories"
-import { formatSiteDate } from "@/lib/datetime"
+import { formatSiteDate, siteDateKey } from "@/lib/datetime"
 
 type Entry = { _id: string; authorName: string; body: string; createdAt: string; readAt?: string; isOwn: boolean }
 type Thread = { _id: string; ownerName: string; subject: string; category: string; status: string; entries?: Entry[]; updatedAt: string; lastMessage?: { body: string } | null }
@@ -13,6 +14,8 @@ export function AdminMessages() {
   const [selected, setSelected] = useState<string | null>(null)
   const [reply, setReply] = useState("")
   const [busy, setBusy] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const [actionError, setActionError] = useState("")
   const [cursor, setCursor] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(false)
   const [archived, setArchived] = useState(false)
@@ -20,6 +23,7 @@ export function AdminMessages() {
 
   async function selectThread(id: string) {
     setSelected(id)
+    setActionError("")
     const response = await fetch(`/api/messages/${id}/read`, { method: "POST" })
     if (!response.ok) return
     const detail = await response.json()
@@ -74,6 +78,36 @@ export function AdminMessages() {
     setSelected(null)
   }
 
+  async function downloadThread() {
+    if (!thread) return
+    setExporting(true)
+    setActionError("")
+    try {
+      const response = await fetch("/api/admin/messages/download", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: [thread._id] }),
+      })
+      if (!response.ok) {
+        const data = await response.json().catch(() => null) as { error?: string } | null
+        throw new Error(data?.error ?? "Não foi possível exportar a conversa.")
+      }
+
+      const url = URL.createObjectURL(await response.blob())
+      const anchor = document.createElement("a")
+      anchor.href = url
+      anchor.download = `conversa-${siteDateKey()}.md`
+      document.body.append(anchor)
+      anchor.click()
+      anchor.remove()
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Não foi possível exportar a conversa.")
+    } finally {
+      setExporting(false)
+    }
+  }
+
   async function loadMore() {
     if (!cursor) return
     const params = new URLSearchParams({ cursor, ...(archived ? { archived: "1" } : {}) })
@@ -95,7 +129,8 @@ export function AdminMessages() {
       {!thread ? <p className="text-sm text-neutral-500">Selecione uma mensagem.</p> : <>
         <div className="border-b border-neutral-200 pb-4 dark:border-neutral-800">
           <div className="flex items-start justify-between gap-4"><div><h1 className="text-xl font-semibold">{thread.subject}</h1><p className="mt-1 text-sm text-neutral-500">Enviado por {thread.ownerName}</p></div><span className="rounded-full border border-neutral-300 px-2 py-1 text-xs text-neutral-600 dark:border-neutral-700 dark:text-neutral-400">{statusLabel(thread.status)}</span></div>
-          <div className="mt-4 flex flex-wrap gap-2"><Action onClick={() => changeStatus("accepted")} disabled={busy} tone="success">Aceitar sugestão</Action><Action onClick={() => changeStatus("declined")} disabled={busy} tone="danger">Negar</Action><Action onClick={() => changeStatus(thread.status === "closed" ? "open" : "closed")} disabled={busy}>{thread.status === "closed" ? "Reabrir" : "Encerrar"}</Action><Action onClick={archiveThread} disabled={busy}>{archived ? "Desarquivar" : "Arquivar"}</Action><DeleteActionMenu title={`Excluir “${thread.subject}”?`} description="O assunto e todas as respostas serão apagados permanentemente." onDelete={deleteThread} triggerLabel="Excluir" triggerVariant="text" disabled={busy} /></div>
+          <div className="mt-4 flex flex-wrap gap-2"><Action onClick={() => changeStatus("accepted")} disabled={busy} tone="success">Aceitar sugestão</Action><Action onClick={() => changeStatus("declined")} disabled={busy} tone="danger">Negar</Action><Action onClick={() => changeStatus(thread.status === "closed" ? "open" : "closed")} disabled={busy}>{thread.status === "closed" ? "Reabrir" : "Encerrar"}</Action><Action onClick={archiveThread} disabled={busy}>{archived ? "Desarquivar" : "Arquivar"}</Action><Action onClick={() => void downloadThread()} disabled={exporting}><ArrowDownTrayIcon className="size-3.5" aria-hidden />{exporting ? "Exportando…" : "Exportar conversa"}</Action><DeleteActionMenu title={`Excluir “${thread.subject}”?`} description="O assunto e todas as respostas serão apagados permanentemente." onDelete={deleteThread} triggerLabel="Excluir" triggerVariant="text" disabled={busy} /></div>
+          {actionError && <p className="mt-3 text-xs text-red-700 dark:text-red-400" role="alert">{actionError}</p>}
         </div>
         {!thread.entries ? <p className="py-6 text-sm text-neutral-500">Carregando conversa…</p> : <>
           <ol className="space-y-6 py-6">{thread.entries.map((entry) => <li key={entry._id}><div className="flex justify-between gap-3 text-xs text-neutral-500"><strong className="font-medium text-neutral-800 dark:text-neutral-200">{entry.authorName}</strong><span><time dateTime={entry.createdAt}>{formatSiteDate(entry.createdAt, { dateStyle: "short", timeStyle: "short" })}</time>{entry.isOwn && <span className="ml-2">· {entry.readAt ? `lida em ${formatSiteDate(entry.readAt, { dateStyle: "short", timeStyle: "short" })}` : "não lida"}</span>}</span></div><p className="mt-2 whitespace-pre-wrap text-sm leading-6">{entry.body}</p></li>)}</ol>
@@ -108,7 +143,7 @@ export function AdminMessages() {
 
 function Action({ children, onClick, disabled, tone }: { children: React.ReactNode; onClick: () => void; disabled: boolean; tone?: "success" | "danger" }) {
   const color = tone === "success" ? "border-emerald-700 text-emerald-700 dark:border-emerald-500 dark:text-emerald-400" : tone === "danger" ? "border-red-700 text-red-700 dark:border-red-500 dark:text-red-400" : "border-neutral-400 dark:border-neutral-600"
-  return <button disabled={disabled} onClick={onClick} className={`rounded-md border px-3 py-1.5 text-xs disabled:opacity-40 ${color}`}>{children}</button>
+  return <button type="button" disabled={disabled} onClick={onClick} className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs disabled:opacity-40 ${color}`}>{children}</button>
 }
 
 function statusLabel(status: string) { return status === "open" ? "aguardando" : status === "accepted" ? "aceita" : status === "declined" ? "negada" : status === "closed" ? "encerrada" : "respondida" }
