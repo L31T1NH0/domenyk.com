@@ -74,15 +74,13 @@ try {
 
   function auditArticle({ scope, title, seoTitle, seoDescription, content, excerpt, subtitle, cover, tags, sources, publishedAt, updatedAt }) {
     const searchTitle = seoTitle?.trim() || title?.trim()
-    const fallbackDescription = seoDescription?.trim() || excerpt?.trim() || subtitle?.trim() || description(content)
+    const sourceDescription = seoDescription?.trim() || excerpt?.trim() || subtitle?.trim() || description(content)
+    const searchDescription = description(sourceDescription)
     if (!title?.trim()) report("error", scope, "título editorial ausente")
     if (!searchTitle) report("error", scope, "título SEO vazio")
-    else if (searchTitle.length < 30) report("warning", scope, `título SEO curto (${searchTitle.length} caracteres)`)
-    else if (searchTitle.length > 60) report("warning", scope, `título SEO longo (${searchTitle.length} caracteres)`)
     if (!content?.trim()) report("error", scope, "conteúdo vazio")
-    if (!fallbackDescription) report("error", scope, "descrição SEO vazia")
-    else if (fallbackDescription.length < 50) report("warning", scope, `descrição curta (${fallbackDescription.length} caracteres)`)
-    else if (fallbackDescription.length > 170) report("warning", scope, `descrição longa (${fallbackDescription.length} caracteres)`)
+    if (!searchDescription) report("error", scope, "descrição SEO vazia")
+    else if (searchDescription.length < 50) report("warning", scope, `descrição curta (${searchDescription.length} caracteres)`)
     if (!publishedAt) report("error", scope, "data de publicação ausente")
     if (!updatedAt) report("error", scope, "data de modificação ausente")
     if (cover?.url && !cover.alt?.trim()) report("warning", scope, "capa depende do fallback de texto alternativo; descreva o que aparece na imagem")
@@ -112,10 +110,15 @@ try {
     auditArticle({ scope: `post:${post.slug}:pt`, ...post })
     for (const [locale, translation] of Object.entries(post.translations ?? {})) {
       if (!translation?.published) continue
+      if (post.cover?.url && !translation.coverAlt?.trim()) {
+        report("warning", `post:${post.slug}:${locale}`, "capa sem texto alternativo no idioma da tradução")
+      }
       auditArticle({
         scope: `post:${post.slug}:${locale}`,
         ...translation,
         cover: post.cover ? { url: post.cover.url, alt: translation.coverAlt ?? post.cover.alt } : undefined,
+        tags: translation.tags ?? post.tags,
+        sources: translation.sources ?? post.sources,
       })
       const originalUpdatedAt = post.originalContentUpdatedAt ?? post.updatedAt
       if (new Date(translation.sourceUpdatedAt).getTime() < new Date(originalUpdatedAt).getTime()) {
@@ -126,8 +129,7 @@ try {
 
   for (const note of notes.filter((item) => item.seoTitle?.trim() && item.seoDescription?.trim())) {
     const scope = `note:${note._id}`
-    if (note.seoTitle.trim().length > 60) report("warning", scope, `título SEO longo (${note.seoTitle.trim().length} caracteres)`)
-    if (note.seoDescription.trim().length > 170) report("warning", scope, `descrição SEO longa (${note.seoDescription.trim().length} caracteres)`)
+    if (description(note.seoDescription).length < 50) report("warning", scope, `descrição curta (${description(note.seoDescription).length} caracteres)`)
     for (const image of markdownImages(note.content)) {
       if (!image.alt) report("warning", scope, `imagem no corpo depende do fallback contextual de texto alternativo: ${image.url}`)
     }

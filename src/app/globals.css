@@ -725,6 +725,10 @@
   --scroll-progress-visible: 0;
 }
 
+.timeline-thread-scroll {
+  overflow-anchor: none;
+}
+
 @supports not selector(::-webkit-scrollbar) {
   .timeline-thread-scroll {
     scrollbar-width: thin;

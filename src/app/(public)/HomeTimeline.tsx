@@ -5,9 +5,8 @@ import Link from "next/link"
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition, type MouseEvent, type PointerEvent } from "react"
 import { useRouter } from "next/navigation"
 import {
+  ArrowUturnLeftIcon,
   ChatBubbleBottomCenterTextIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
   DocumentTextIcon,
   EyeSlashIcon,
   MagnifyingGlassIcon,
@@ -39,7 +38,6 @@ type Props = {
   feedMode: FeedMode
   searchQuery: string
   searchError?: string
-  currentPage: number
   pageSize: number
   isAdmin: boolean
 }
@@ -53,6 +51,29 @@ type TimelineDisplayItem =
   | { type: "note-group"; id: string; date: string; notes: SerializedNote[] }
 
 type FeedMode = "all" | "posts" | "notes"
+
+type InfiniteTimelineResponse = {
+  posts?: SerializedPostSummary[]
+  notes?: SerializedNote[]
+  desktopPosts?: SerializedPostSummary[]
+  desktopNotes?: SerializedNote[]
+  desktopThreadNotes?: SerializedNote[]
+  error?: string
+}
+
+type ThreadRailManualSession = {
+  origin: number
+  threshold: number
+  qualified: boolean
+}
+
+type ThreadRailPosition = {
+  threadId: string | null
+  offsetWithinThread: number
+  fallbackScrollTop: number
+}
+
+type ThreadRailPill = "return" | null
 
 function postDate(post: SerializedPostSummary) {
   return post.publishedAt ?? post.createdAt
@@ -215,15 +236,6 @@ function PostTimelineItem({
   )
 }
 
-function pageHref(page: number, mode: FeedMode, searchQuery: string) {
-  const params = new URLSearchParams()
-  if (mode !== "all") params.set("mode", mode)
-  if (searchQuery) params.set("q", searchQuery)
-  if (page > 1) params.set("page", String(page))
-  const query = params.toString()
-  return query ? `/?${query}` : "/"
-}
-
 function modeHref(mode: FeedMode, searchQuery: string) {
   const params = new URLSearchParams()
   if (mode !== "all") params.set("mode", mode)
@@ -246,21 +258,14 @@ function useTimelineFeed({
   postCount,
   noteCount,
   mode,
-  page,
-  pageSize,
 }: {
   notes: SerializedNote[]
   posts: SerializedPostSummary[]
   postCount: number
   noteCount: number
   mode: FeedMode
-  page: number
-  pageSize: number
 }) {
   const timelineCount = postCount + noteCount
-  const total = mode === "posts" ? postCount : mode === "notes" ? noteCount : timelineCount
-  const totalPages = Math.max(1, Math.ceil(total / pageSize))
-  const activePage = Math.min(page, totalPages)
 
   const allItems = useMemo<TimelineItem[]>(() => {
     return [
@@ -302,11 +307,72 @@ function useTimelineFeed({
     })
   }, [allItems, mode])
 
-  return { timelineCount, totalPages, activePage, visibleItems }
+  return { timelineCount, visibleItems }
+}
+
+function mergePostsById(current: SerializedPostSummary[], incoming: SerializedPostSummary[]) {
+  const postsById = new Map(current.map((post) => [post._id, post]))
+  for (const post of incoming) postsById.set(post._id, post)
+  return Array.from(postsById.values())
 }
 
 function isInteractiveTarget(target: EventTarget) {
   return target instanceof Element && Boolean(target.closest("input, textarea, select, button, [data-swipe-ignore]"))
+}
+
+function threadSpanAtScrollPosition(rail: HTMLDivElement, scrollTop = rail.scrollTop) {
+  const threads = Array.from(rail.querySelectorAll<HTMLElement>("[data-thread-index]"))
+  if (threads.length === 0) return Math.max(1, rail.clientHeight)
+
+  const firstOffset = threads[0].offsetTop
+  let activeIndex = 0
+  for (let index = 1; index < threads.length; index += 1) {
+    if (scrollTop < threads[index].offsetTop - firstOffset) break
+    activeIndex = index
+  }
+
+  const current = threads[activeIndex]
+  const next = threads[activeIndex + 1]
+  return Math.max(1, next ? next.offsetTop - current.offsetTop : current.offsetHeight)
+}
+
+function captureThreadRailPosition(rail: HTMLDivElement): ThreadRailPosition {
+  const threads = Array.from(rail.querySelectorAll<HTMLElement>("[data-thread-index]"))
+  if (threads.length === 0) {
+    return { threadId: null, offsetWithinThread: 0, fallbackScrollTop: rail.scrollTop }
+  }
+
+  const firstOffset = threads[0].offsetTop
+  let active = threads[0]
+  for (let index = 1; index < threads.length; index += 1) {
+    if (rail.scrollTop < threads[index].offsetTop - firstOffset) break
+    active = threads[index]
+  }
+
+  const activeStart = active.offsetTop - firstOffset
+  return {
+    threadId: active.dataset.threadId ?? null,
+    offsetWithinThread: Math.max(0, rail.scrollTop - activeStart),
+    fallbackScrollTop: rail.scrollTop,
+  }
+}
+
+function resolveThreadRailPosition(rail: HTMLDivElement, position: ThreadRailPosition) {
+  const threads = Array.from(rail.querySelectorAll<HTMLElement>("[data-thread-index]"))
+  const firstOffset = threads[0]?.offsetTop ?? 0
+  const anchorIndex = position.threadId
+    ? threads.findIndex((thread) => thread.dataset.threadId === position.threadId)
+    : -1
+  const anchor = anchorIndex >= 0 ? threads[anchorIndex] : null
+  const nextAnchor = anchorIndex >= 0 ? threads[anchorIndex + 1] : null
+  const anchorSpan = anchor
+    ? Math.max(1, nextAnchor ? nextAnchor.offsetTop - anchor.offsetTop : anchor.offsetHeight)
+    : 0
+  const requestedTop = anchor
+    ? anchor.offsetTop - firstOffset + Math.min(position.offsetWithinThread, anchorSpan - 1)
+    : position.fallbackScrollTop
+  const maxScrollTop = Math.max(0, rail.scrollHeight - rail.clientHeight)
+  return Math.min(maxScrollTop, Math.max(0, requestedTop))
 }
 
 function getAdjacentMode(deltaX: number, mode: FeedMode) {
@@ -427,96 +493,6 @@ function useTimelineSwipeNavigation(mode: FeedMode, switchMode: (mode: FeedMode)
   }
 }
 
-function Pagination({
-  currentPage,
-  totalPages,
-  mode,
-  searchQuery,
-  onPageChange,
-}: {
-  currentPage: number
-  totalPages: number
-  mode: FeedMode
-  searchQuery: string
-  onPageChange: (page: number) => void
-}) {
-  if (totalPages <= 1) return null
-
-  const visiblePageCount = Math.min(3, totalPages)
-  const startPage = Math.max(
-    1,
-    Math.min(currentPage - 1, totalPages - visiblePageCount + 1)
-  )
-  const pages = Array.from({ length: visiblePageCount }, (_, index) => startPage + index)
-
-  return (
-    <nav
-      className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-t border-neutral-200 pt-4 dark:border-white/10"
-      aria-label="Paginação"
-    >
-      {currentPage > 1 && (
-        <a
-          href={pageHref(currentPage - 1, mode, searchQuery)}
-          data-swipe-ignore
-          onClick={(event) => {
-            event.preventDefault()
-            onPageChange(currentPage - 1)
-          }}
-          rel="prev"
-          className="group col-start-1 inline-flex min-h-11 w-fit items-center gap-1.5 rounded-md pr-2 text-sm text-neutral-600 transition-colors hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-neutral-400 dark:hover:text-neutral-100 dark:focus-visible:ring-neutral-300"
-        >
-          <ChevronLeftIcon className="size-4 transition-transform duration-150 group-hover:-translate-x-0.5 motion-reduce:transition-none" aria-hidden />
-          <span>Anterior</span>
-        </a>
-      )}
-
-      <ol className="col-start-2 row-start-1 flex items-center justify-center gap-0.5" aria-label="Páginas">
-        {pages.map((page) => {
-          const active = page === currentPage
-          return (
-            <li key={page}>
-              <a
-                href={pageHref(page, mode, searchQuery)}
-                data-swipe-ignore
-                onClick={(event) => {
-                  event.preventDefault()
-                  onPageChange(page)
-                }}
-                aria-current={active ? "page" : undefined}
-                aria-label={active ? `Página ${page}, atual` : `Ir para a página ${page}`}
-                className={[
-                  "relative inline-flex size-10 items-center justify-center rounded-md text-sm tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:focus-visible:ring-neutral-300",
-                  active
-                    ? "font-semibold text-neutral-950 after:absolute after:inset-x-2.5 after:bottom-1 after:h-0.5 after:rounded-full after:bg-[#E00070] dark:text-neutral-100"
-                    : "text-neutral-500 hover:bg-neutral-950/5 hover:text-neutral-950 dark:text-neutral-500 dark:hover:bg-white/[0.06] dark:hover:text-neutral-100",
-                ].join(" ")}
-              >
-                {page}
-              </a>
-            </li>
-          )
-        })}
-      </ol>
-
-      {currentPage < totalPages && (
-        <a
-          href={pageHref(currentPage + 1, mode, searchQuery)}
-          data-swipe-ignore
-          onClick={(event) => {
-            event.preventDefault()
-            onPageChange(currentPage + 1)
-          }}
-          rel="next"
-          className="group col-start-3 inline-flex min-h-11 w-fit items-center gap-1.5 justify-self-end rounded-md pl-2 text-sm text-neutral-600 transition-colors hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-neutral-400 dark:hover:text-neutral-100 dark:focus-visible:ring-neutral-300"
-        >
-          <span>Próxima</span>
-          <ChevronRightIcon className="size-4 transition-transform duration-150 group-hover:translate-x-0.5 motion-reduce:transition-none" aria-hidden />
-        </a>
-      )}
-    </nav>
-  )
-}
-
 type ModeOption = {
   mode: FeedMode
   label: string
@@ -589,10 +565,26 @@ function TimelineModeDock({
   )
 }
 
-export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desktopPosts, desktopNotes, desktopThreadNotes, desktopPostCount, desktopLooseNoteCount, desktopThreadCount, feedMode, searchQuery, searchError = "", currentPage, pageSize, isAdmin }: Props) {
+export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desktopPosts, desktopNotes, desktopThreadNotes, desktopPostCount, desktopLooseNoteCount, desktopThreadCount, feedMode, searchQuery, searchError = "", pageSize, isAdmin }: Props) {
   const router = useRouter()
   const sectionRef = useRef<HTMLElement>(null)
+  const primaryFeedRef = useRef<HTMLDivElement>(null)
   const threadRailScrollRef = useRef<HTMLDivElement>(null)
+  const loadMoreSentinelRef = useRef<HTMLDivElement>(null)
+  const loadAbortRef = useRef<AbortController | null>(null)
+  const loadingMoreRef = useRef(false)
+  const nextPageRef = useRef(2)
+  const lastSyncedThreadIndexRef = useRef(0)
+  const wasDualTimelineViewportRef = useRef(false)
+  const threadRailNeedsImmediateResyncRef = useRef(false)
+  const threadRailAutoTargetRef = useRef<number | null>(null)
+  const threadRailLastScrollTopRef = useRef(0)
+  const threadRailManualInputRef = useRef(false)
+  const threadRailManualInputTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const threadRailManualSessionRef = useRef<ThreadRailManualSession | null>(null)
+  const manualThreadRailPositionRef = useRef<ThreadRailPosition | null>(null)
+  const undoThreadRailPositionRef = useRef<ThreadRailPosition | null>(null)
+  const threadRailPillRef = useRef<ThreadRailPill>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastRequestedSearchRef = useRef(searchQuery)
@@ -608,8 +600,12 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
   const [desktopRailThreadCount, setDesktopRailThreadCount] = useState(desktopThreadCount)
   const [threadRailOverflow, setThreadRailOverflow] = useState(false)
   const [threadRailAtEnd, setThreadRailAtEnd] = useState(true)
+  const [threadRailPill, setThreadRailPill] = useState<ThreadRailPill>(null)
+  const [loadedPage, setLoadedPage] = useState(1)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [loadMoreError, setLoadMoreError] = useState("")
+  const [isDualTimelineViewport, setIsDualTimelineViewport] = useState(false)
   const optimisticFeedMode = feedMode
-  const optimisticPage = currentPage
   const hasSearch = searchQuery.length > 0
   const [searchInput, setSearchInput] = useState(searchQuery)
   const hasSearchInput = searchInput.length > 0
@@ -620,28 +616,20 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
   const [noteError, setNoteError] = useState("")
   const [threadParent, setThreadParent] = useState<SerializedNote | null>(null)
   const [linkingNoteId, setLinkingNoteId] = useState<string | null>(null)
-  const [isPagePending, startPageTransition] = useTransition()
-  const { timelineCount, totalPages: optimisticTotalPages, activePage, visibleItems } = useTimelineFeed({
+  const [isNavigationPending, startNavigationTransition] = useTransition()
+  const { timelineCount, visibleItems } = useTimelineFeed({
     notes,
     posts: timelinePosts,
     postCount,
     noteCount,
     mode: optimisticFeedMode,
-    page: optimisticPage,
-    pageSize,
   })
-  const {
-    totalPages: desktopTotalPages,
-    activePage: desktopActivePage,
-    visibleItems: desktopVisibleItems,
-  } = useTimelineFeed({
+  const { visibleItems: desktopVisibleItems } = useTimelineFeed({
     notes: desktopTimelineNotes,
     posts: desktopTimelinePosts,
     postCount: desktopTimelinePostCount,
     noteCount: desktopTimelineNoteCount,
     mode: optimisticFeedMode,
-    page: optimisticPage,
-    pageSize,
   })
   const desktopThreadItems = useMemo<TimelineDisplayItem[]>(() => (
     groupNotesByThread(desktopRailNotes).flatMap((thread) => {
@@ -654,6 +642,144 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
       return [{ type: "note-group", id: `note-group:${rootId}`, date: latestDate, notes: thread }]
     })
   ), [desktopRailNotes])
+  const mobileTotal = optimisticFeedMode === "posts"
+    ? postCount
+    : optimisticFeedMode === "notes"
+      ? noteCount
+      : postCount + noteCount
+  const desktopPrimaryTotal = desktopTimelinePostCount + desktopTimelineNoteCount
+  const primaryTotal = isDualTimelineViewport ? desktopPrimaryTotal : mobileTotal
+  const primaryPageCount = Math.max(1, Math.ceil(primaryTotal / pageSize))
+  const threadPageCount = Math.max(1, Math.ceil(desktopRailThreadCount / pageSize))
+  const hasMorePrimaryItems = !searchError && loadedPage < primaryPageCount
+  const hasMoreThreadItems = !searchError && isDualTimelineViewport && loadedPage < threadPageCount
+  const hasMoreTimelineItems = hasMorePrimaryItems || hasMoreThreadItems
+
+  useEffect(() => {
+    function updateViewportMode() {
+      const rail = threadRailScrollRef.current
+      const isDual = Boolean(rail && rail.getClientRects().length > 0)
+      const wasDual = wasDualTimelineViewportRef.current
+      wasDualTimelineViewportRef.current = isDual
+      setIsDualTimelineViewport(isDual)
+      if (!isDual) {
+        threadRailNeedsImmediateResyncRef.current = true
+        threadRailAutoTargetRef.current = null
+        threadRailLastScrollTopRef.current = 0
+        manualThreadRailPositionRef.current = null
+        undoThreadRailPositionRef.current = null
+        threadRailManualSessionRef.current = null
+        threadRailPillRef.current = null
+        setThreadRailPill(null)
+      } else if (!wasDual) {
+        threadRailNeedsImmediateResyncRef.current = true
+        threadRailAutoTargetRef.current = null
+        lastSyncedThreadIndexRef.current = -1
+      }
+    }
+
+    updateViewportMode()
+    window.addEventListener("resize", updateViewportMode)
+    window.addEventListener("orientationchange", updateViewportMode)
+    return () => {
+      window.removeEventListener("resize", updateViewportMode)
+      window.removeEventListener("orientationchange", updateViewportMode)
+    }
+  }, [desktopThreadItems.length])
+
+  const loadNextPage = useCallback(async () => {
+    if (loadingMoreRef.current) return
+    const page = nextPageRef.current
+    loadingMoreRef.current = true
+    setIsLoadingMore(true)
+    setLoadMoreError("")
+
+    const controller = new AbortController()
+    loadAbortRef.current?.abort()
+    loadAbortRef.current = controller
+
+    try {
+      const params = new URLSearchParams({ page: String(page), mode: optimisticFeedMode })
+      if (searchQuery) params.set("q", searchQuery)
+      const response = await fetch(`/api/timeline?${params.toString()}`, { signal: controller.signal })
+      const data = await response.json().catch(() => null) as InfiniteTimelineResponse | null
+      if (!response.ok || !data) {
+        throw new Error(data?.error ?? "Não foi possível carregar mais itens.")
+      }
+      if (
+        !Array.isArray(data.posts) ||
+        !Array.isArray(data.notes) ||
+        !Array.isArray(data.desktopPosts) ||
+        !Array.isArray(data.desktopNotes) ||
+        !Array.isArray(data.desktopThreadNotes)
+      ) {
+        throw new Error("A resposta da timeline é inválida.")
+      }
+
+      setTimelinePosts((current) => mergePostsById(current, data.posts!))
+      setNotes((current) => mergeNotesById(current, data.notes!))
+      setDesktopTimelinePosts((current) => mergePostsById(current, data.desktopPosts!))
+      setDesktopTimelineNotes((current) => mergeNotesById(current, data.desktopNotes!))
+      setDesktopRailNotes((current) => mergeNotesById(current, data.desktopThreadNotes!))
+      nextPageRef.current = page + 1
+      setLoadedPage(page)
+    } catch (caughtError) {
+      if (caughtError instanceof DOMException && caughtError.name === "AbortError") return
+      setLoadMoreError(caughtError instanceof Error ? caughtError.message : "Não foi possível carregar mais itens.")
+    } finally {
+      if (loadAbortRef.current === controller) loadAbortRef.current = null
+      loadingMoreRef.current = false
+      setIsLoadingMore(false)
+    }
+  }, [optimisticFeedMode, searchQuery])
+
+  const setThreadRailPillState = useCallback((pill: ThreadRailPill) => {
+    threadRailPillRef.current = pill
+    setThreadRailPill(pill)
+  }, [])
+
+  const clearThreadRailControl = useCallback(() => {
+    manualThreadRailPositionRef.current = null
+    undoThreadRailPositionRef.current = null
+    threadRailManualSessionRef.current = null
+    setThreadRailPillState(null)
+  }, [setThreadRailPillState])
+
+  const beginThreadRailManualInteraction = useCallback(() => {
+    const rail = threadRailScrollRef.current
+    if (!rail) return
+
+    threadRailAutoTargetRef.current = null
+    threadRailManualInputRef.current = true
+    if (threadRailManualInputTimerRef.current) clearTimeout(threadRailManualInputTimerRef.current)
+    threadRailManualInputTimerRef.current = setTimeout(() => {
+      threadRailManualInputRef.current = false
+      threadRailManualInputTimerRef.current = null
+    }, 400)
+
+    if (threadRailPillRef.current === "return") {
+      manualThreadRailPositionRef.current = null
+      undoThreadRailPositionRef.current = null
+      threadRailManualSessionRef.current = null
+    }
+    if (threadRailPillRef.current) {
+      setThreadRailPillState(null)
+    }
+
+    if (!threadRailManualSessionRef.current) {
+      threadRailManualSessionRef.current = {
+        origin: threadRailLastScrollTopRef.current,
+        threshold: threadSpanAtScrollPosition(rail, threadRailLastScrollTopRef.current),
+        qualified: false,
+      }
+    }
+  }, [setThreadRailPillState])
+
+  const handleThreadRailKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (["ArrowDown", "ArrowUp", "PageDown", "PageUp", "Home", "End", " "].includes(event.key)) {
+      beginThreadRailManualInteraction()
+    }
+  }, [beginThreadRailManualInteraction])
 
   const updateThreadRailOverflow = useCallback(() => {
     const rail = threadRailScrollRef.current
@@ -670,26 +796,199 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
     setThreadRailAtEnd(!hasOverflow || atEnd)
   }, [])
 
+  const syncThreadRailToPrimaryScroll = useCallback((fromPrimaryScroll = false, force = false) => {
+    const primary = primaryFeedRef.current
+    const rail = threadRailScrollRef.current
+    if (!primary || !rail || !isDualTimelineViewport || desktopThreadItems.length === 0) return
+
+    const primaryTop = primary.getBoundingClientRect().top + window.scrollY
+    const primaryProgress = Math.max(0, window.scrollY + 16 - primaryTop)
+    const threadElements = Array.from(
+      rail.querySelectorAll<HTMLElement>("[data-thread-index]")
+    )
+    if (threadElements.length === 0) return
+
+    const firstThreadOffset = threadElements[0].offsetTop
+    let targetIndex = 0
+    for (let index = 1; index < threadElements.length; index += 1) {
+      const threadStart = threadElements[index].offsetTop - firstThreadOffset
+      if (primaryProgress < threadStart) break
+      targetIndex = index
+    }
+    const target = threadElements[targetIndex]
+    const targetTop = target.offsetTop - firstThreadOffset
+    const nextTarget = threadElements[targetIndex + 1]
+    const targetBottom = nextTarget
+      ? nextTarget.offsetTop - firstThreadOffset
+      : Number.POSITIVE_INFINITY
+    const requiresImmediateResync = threadRailNeedsImmediateResyncRef.current
+
+    if (manualThreadRailPositionRef.current) {
+      if (threadRailManualInputRef.current) return
+
+      const targetChanged = targetIndex !== lastSyncedThreadIndexRef.current
+      if (!fromPrimaryScroll || !targetChanged) return
+
+      if (rail.scrollTop >= targetTop - 2 && rail.scrollTop < targetBottom - 2) {
+        undoThreadRailPositionRef.current = manualThreadRailPositionRef.current
+        manualThreadRailPositionRef.current = null
+        threadRailManualSessionRef.current = null
+        lastSyncedThreadIndexRef.current = targetIndex
+        setThreadRailPillState("return")
+        return
+      }
+
+      undoThreadRailPositionRef.current = manualThreadRailPositionRef.current
+      manualThreadRailPositionRef.current = null
+      threadRailManualSessionRef.current = null
+      lastSyncedThreadIndexRef.current = targetIndex
+      threadRailAutoTargetRef.current = targetTop
+      setThreadRailPillState("return")
+      rail.scrollTo({
+        top: targetTop,
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      })
+      return
+    }
+
+    const targetChanged = targetIndex !== lastSyncedThreadIndexRef.current
+    if (!force && !targetChanged && !requiresImmediateResync) return
+    if (threadRailAutoTargetRef.current === targetTop) return
+
+    threadRailNeedsImmediateResyncRef.current = false
+    lastSyncedThreadIndexRef.current = targetIndex
+    threadRailAutoTargetRef.current = targetTop
+    rail.scrollTo({
+      top: targetTop,
+      behavior: requiresImmediateResync || window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+    })
+  }, [desktopThreadItems.length, isDualTimelineViewport, setThreadRailPillState])
+
+  const returnToSavedThreadPosition = useCallback(() => {
+    const rail = threadRailScrollRef.current
+    const savedPosition = undoThreadRailPositionRef.current
+    if (!rail || !savedPosition) {
+      clearThreadRailControl()
+      return
+    }
+
+    const targetTop = resolveThreadRailPosition(rail, savedPosition)
+    manualThreadRailPositionRef.current = savedPosition
+    undoThreadRailPositionRef.current = null
+    threadRailManualSessionRef.current = {
+      origin: targetTop,
+      threshold: threadSpanAtScrollPosition(rail, targetTop),
+      qualified: true,
+    }
+    setThreadRailPillState(null)
+    threadRailAutoTargetRef.current = targetTop
+    rail.scrollTo({
+      top: targetTop,
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+    })
+  }, [clearThreadRailControl, setThreadRailPillState])
+
+  const dismissThreadRailPill = useCallback(() => {
+    clearThreadRailControl()
+  }, [clearThreadRailControl])
+
+  const handleThreadRailScroll = useCallback(() => {
+    updateThreadRailOverflow()
+    const rail = threadRailScrollRef.current
+    if (!rail) return
+
+    if (threadRailManualInputRef.current) {
+      if (threadRailManualInputTimerRef.current) clearTimeout(threadRailManualInputTimerRef.current)
+      threadRailManualInputTimerRef.current = setTimeout(() => {
+        threadRailManualInputRef.current = false
+        threadRailManualInputTimerRef.current = null
+      }, 400)
+      threadRailAutoTargetRef.current = null
+      const session = threadRailManualSessionRef.current
+      if (session) {
+        if (Math.abs(rail.scrollTop - session.origin) >= session.threshold) {
+          session.qualified = true
+        }
+        if (session.qualified) {
+          manualThreadRailPositionRef.current = captureThreadRailPosition(rail)
+        }
+      }
+    } else {
+      const autoTarget = threadRailAutoTargetRef.current
+      if (autoTarget !== null && Math.abs(rail.scrollTop - autoTarget) <= 2) {
+        threadRailAutoTargetRef.current = null
+      }
+    }
+
+    threadRailLastScrollTopRef.current = rail.scrollTop
+    if (!hasMoreThreadItems) return
+    const remaining = rail.scrollHeight - rail.scrollTop - rail.clientHeight
+    if (remaining <= rail.clientHeight * 0.75) void loadNextPage()
+  }, [hasMoreThreadItems, loadNextPage, updateThreadRailOverflow])
+
   useEffect(() => {
     const rail = threadRailScrollRef.current
     if (!rail) return
-    const frame = window.requestAnimationFrame(updateThreadRailOverflow)
-    const observer = new ResizeObserver(updateThreadRailOverflow)
+    const handleRailResize = () => {
+      updateThreadRailOverflow()
+      const manualPosition = manualThreadRailPositionRef.current
+      if (!manualPosition || threadRailManualInputRef.current) return
+      const preservedTop = resolveThreadRailPosition(rail, manualPosition)
+      if (Math.abs(rail.scrollTop - preservedTop) <= 2) return
+      rail.scrollTop = preservedTop
+      threadRailLastScrollTopRef.current = preservedTop
+    }
+    const frame = window.requestAnimationFrame(handleRailResize)
+    const observer = new ResizeObserver(handleRailResize)
     observer.observe(rail)
     if (rail.firstElementChild) observer.observe(rail.firstElementChild)
-    window.addEventListener("resize", updateThreadRailOverflow)
+    window.addEventListener("resize", handleRailResize)
     window.addEventListener("scroll", updateThreadRailOverflow, { passive: true })
     return () => {
       window.cancelAnimationFrame(frame)
       observer.disconnect()
-      window.removeEventListener("resize", updateThreadRailOverflow)
+      window.removeEventListener("resize", handleRailResize)
       window.removeEventListener("scroll", updateThreadRailOverflow)
     }
   }, [desktopRailNotes, updateThreadRailOverflow])
 
   useEffect(() => {
+    const frame = window.requestAnimationFrame(() => syncThreadRailToPrimaryScroll(false))
+    const handlePrimaryScroll = () => syncThreadRailToPrimaryScroll(true)
+    window.addEventListener("scroll", handlePrimaryScroll, { passive: true })
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.removeEventListener("scroll", handlePrimaryScroll)
+    }
+  }, [syncThreadRailToPrimaryScroll])
+
+  useEffect(() => {
+    const sentinel = loadMoreSentinelRef.current
+    if (!sentinel || !hasMorePrimaryItems) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) void loadNextPage()
+      },
+      { rootMargin: "600px 0px" }
+    )
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [hasMorePrimaryItems, loadNextPage])
+
+  useEffect(() => {
+    const rail = threadRailScrollRef.current
+    if (!rail || !hasMoreThreadItems || !isDualTimelineViewport) return
+    const frame = window.requestAnimationFrame(() => {
+      if (rail.scrollHeight <= rail.clientHeight + 1) void loadNextPage()
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [desktopRailNotes, hasMoreThreadItems, isDualTimelineViewport, loadNextPage])
+
+  useEffect(() => {
     return () => {
       if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current)
+      if (threadRailManualInputTimerRef.current) clearTimeout(threadRailManualInputTimerRef.current)
+      loadAbortRef.current?.abort()
     }
   }, [])
 
@@ -698,7 +997,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
     if (normalizedQuery === searchQuery) return
     lastRequestedSearchRef.current = normalizedQuery
 
-    startPageTransition(() => {
+    startNavigationTransition(() => {
       router.replace(modeHref(optimisticFeedMode, normalizedQuery), { scroll: false })
     })
   }, [optimisticFeedMode, router, searchQuery])
@@ -909,21 +1208,13 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
 
   function switchMode(nextMode: FeedMode) {
     const currentInputQuery = normalizeSearchQuery(searchInput)
-    if (nextMode === optimisticFeedMode && optimisticPage === 1 && currentInputQuery === searchQuery) {
+    if (nextMode === optimisticFeedMode && currentInputQuery === searchQuery) {
       scrollToTimelineStart()
       return
     }
 
-    startPageTransition(() => {
+    startNavigationTransition(() => {
       router.push(modeHref(nextMode, currentInputQuery), { scroll: false })
-    })
-    scrollToTimelineStart()
-  }
-
-  function switchPage(nextPage: number) {
-    const clampedPage = Math.min(Math.max(1, nextPage), optimisticTotalPages)
-    startPageTransition(() => {
-      router.push(pageHref(clampedPage, optimisticFeedMode, searchQuery), { scroll: false })
     })
     scrollToTimelineStart()
   }
@@ -997,7 +1288,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
     <section
       ref={sectionRef}
       aria-label="Timeline"
-      aria-busy={isPagePending}
+      aria-busy={isNavigationPending || isLoadingMore}
       className={[
         "flex w-full min-w-0 touch-pan-y flex-col gap-5 self-center",
         hasDesktopThreads
@@ -1101,9 +1392,10 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
         {hideError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{hideError}</p>}
         {noteError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{noteError}</p>}
         {searchError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{searchError}</p>}
-        {isPagePending && <p role="status" className="sr-only">Carregando página da timeline...</p>}
+        {isNavigationPending && <p role="status" className="sr-only">Atualizando a timeline...</p>}
 
         <div
+          ref={primaryFeedRef}
           className="min-w-0 will-change-transform motion-reduce:!translate-x-0 motion-reduce:!opacity-100 motion-reduce:!transition-none"
           style={{
             opacity: 1 - Math.min(Math.abs(swipeNavigation.swipeOffset) / 420, 0.18),
@@ -1117,14 +1409,6 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
                 <p>{hasSearch ? "Nenhum resultado encontrado." : "Nenhum post ou nota publicado ainda."}</p>
               </div>
             ) : renderTimelineItems(visibleItems)}
-
-            <Pagination
-              currentPage={activePage}
-              totalPages={optimisticTotalPages}
-              mode={optimisticFeedMode}
-              searchQuery={searchQuery}
-              onPageChange={switchPage}
-            />
           </div>
 
           <div className="home-timeline-standalone-feed hidden min-[84rem]:block">
@@ -1133,14 +1417,38 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
                 {hasSearch ? "Nenhum resultado encontrado na timeline." : "Nenhum post ou nota solta nesta página."}
               </p>
             )}
+          </div>
 
-            <Pagination
-              currentPage={desktopActivePage}
-              totalPages={desktopTotalPages}
-              mode={optimisticFeedMode}
-              searchQuery={searchQuery}
-              onPageChange={switchPage}
-            />
+          <div
+            ref={loadMoreSentinelRef}
+            className="flex min-h-20 flex-col items-center justify-center border-t border-neutral-200 pt-4 dark:border-white/10"
+          >
+            {loadMoreError ? (
+              <div className="flex flex-col items-center gap-2 text-center">
+                <p role="alert" className="text-sm text-red-700 dark:text-red-300">{loadMoreError}</p>
+                <button
+                  type="button"
+                  data-swipe-ignore
+                  onClick={() => void loadNextPage()}
+                  className="min-h-10 rounded-md px-3 text-sm text-neutral-700 transition-colors hover:bg-neutral-950/5 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#c2bbb1] dark:hover:bg-white/10 dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
+                >
+                  Tentar novamente
+                </button>
+              </div>
+            ) : hasMoreTimelineItems ? (
+              <button
+                type="button"
+                data-swipe-ignore
+                onClick={() => void loadNextPage()}
+                disabled={isLoadingMore}
+                aria-live="polite"
+                className="min-h-10 rounded-md px-3 text-sm text-neutral-600 transition-colors hover:bg-neutral-950/5 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:cursor-wait disabled:opacity-60 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-neutral-100 dark:focus-visible:ring-neutral-300"
+              >
+                {isLoadingMore ? "Carregando…" : "Carregar mais"}
+              </button>
+            ) : (visibleItems.length > 0 || desktopVisibleItems.length > 0) ? (
+              <p className="text-sm text-neutral-500 dark:text-neutral-500">Fim da timeline.</p>
+            ) : null}
           </div>
         </div>
         </div>
@@ -1152,14 +1460,24 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
           >
             <div
               ref={threadRailScrollRef}
+              data-thread-rail
               tabIndex={threadRailOverflow ? 0 : -1}
-              onScroll={updateThreadRailOverflow}
+              onScroll={handleThreadRailScroll}
+              onWheelCapture={beginThreadRailManualInteraction}
+              onPointerDownCapture={beginThreadRailManualInteraction}
+              onTouchStartCapture={beginThreadRailManualInteraction}
+              onKeyDown={handleThreadRailKeyDown}
               className="timeline-thread-scroll overflow-y-auto pr-2 outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:focus-visible:ring-neutral-300"
             >
               <ol className="ml-0 flex min-w-0 flex-col divide-y divide-neutral-200 dark:divide-white/10">
-                {desktopThreadItems.map((item) => (
+                {desktopThreadItems.map((item, index) => (
                   item.type === "note-group" && (
-                    <li key={`rail:${item.id}`} className="min-w-0">
+                    <li
+                      key={`rail:${item.id}`}
+                      data-thread-index={index}
+                      data-thread-id={item.id}
+                      className="min-w-0 scroll-mt-1"
+                    >
                       {renderNoteGroup(item, "thread-rail")}
                     </li>
                   )
@@ -1179,6 +1497,35 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
                 threadRailOverflow && !threadRailAtEnd ? "opacity-100" : "opacity-0",
               ].join(" ")}
             />
+            {threadRailPill && (
+              <div
+                aria-live="polite"
+                className="pointer-events-none absolute inset-x-3 bottom-4 z-20 flex justify-center"
+              >
+                <div className="pointer-events-auto inline-flex max-w-full items-center rounded-full border border-neutral-200 bg-white p-0.5 text-neutral-800 shadow-[0_3px_8px_rgb(0_0_0_/_0.12)] dark:border-white/10 dark:bg-[#0b0b0b] dark:text-[#d8d4ce] dark:shadow-[0_3px_8px_rgb(0_0_0_/_0.35)]">
+                  <button
+                    type="button"
+                    data-thread-return-pill
+                    data-thread-pill={threadRailPill}
+                    onClick={returnToSavedThreadPosition}
+                    className="flex min-h-10 min-w-0 items-center gap-1.5 truncate rounded-l-full px-3 text-[11px] font-medium transition-colors hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-neutral-500 dark:hover:bg-white/[0.07] dark:focus-visible:ring-neutral-300"
+                  >
+                    <ArrowUturnLeftIcon className="size-3.5 shrink-0" aria-hidden />
+                    <span className="truncate">Voltar para onde você estava</span>
+                  </button>
+                  <span className="h-4 w-px shrink-0 bg-neutral-200 dark:bg-white/10" aria-hidden />
+                  <button
+                    type="button"
+                    data-thread-pill-dismiss
+                    onClick={dismissThreadRailPill}
+                    aria-label="Manter sincronização"
+                    className="grid size-10 shrink-0 place-items-center rounded-r-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-neutral-500 dark:text-[#A8A095] dark:hover:bg-white/[0.07] dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
+                  >
+                    <XMarkIcon className="size-3.5" strokeWidth={1.7} aria-hidden />
+                  </button>
+                </div>
+              </div>
+            )}
           </aside>
         )}
       </div>

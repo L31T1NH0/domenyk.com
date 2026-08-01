@@ -399,7 +399,6 @@ export function PostEditor({ post }: Props) {
       const data = await res.json().catch(() => null)
       if (!res.ok || !data?.url) throw new Error(data?.error ?? "Erro ao enviar imagem.")
       setCoverUrl(data.url)
-      if (!drafts.pt.coverAlt) updateDraft("pt", { coverAlt: drafts.pt.title })
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Erro ao enviar imagem.")
     } finally {
@@ -424,6 +423,14 @@ export function PostEditor({ post }: Props) {
       setError("Salve primeiro a versão original em português. Seu rascunho desta tradução foi mantido.")
       return
     }
+    const willBePublished = published ?? activeVersion.published
+    if (willBePublished && coverUrl.trim() && (
+      !draft.coverAlt.trim()
+      || draft.coverAlt.trim().toLocaleLowerCase() === draft.title.trim().toLocaleLowerCase()
+    )) {
+      setError("Descreva o que aparece na imagem de capa. O texto alternativo não deve repetir o título.")
+      return
+    }
 
     setSaving(true)
     setError("")
@@ -446,7 +453,7 @@ export function PostEditor({ post }: Props) {
       slug,
       style,
       hiddenFromTimeline: !visibleInTimeline,
-      cover: coverUrl.trim() ? { url: coverUrl.trim(), alt: draft.coverAlt || draft.title } : null,
+      cover: coverUrl.trim() ? { url: coverUrl.trim(), alt: draft.coverAlt.trim() } : null,
       showCoverInTimeline: Boolean(coverUrl.trim()) && showCoverInTimeline,
       friendImage: friendImage.trim() || undefined,
       coAuthorUserId: coAuthorUserId.trim() || null,
@@ -701,8 +708,8 @@ export function PostEditor({ post }: Props) {
                 placeholder={activeDraft.title || "Título exibido nos resultados de busca"}
                 className={FIELD_CLASS_NAME}
               />
-              <span className={`text-xs ${activeDraft.seoTitle.length > 0 && (activeDraft.seoTitle.length < 30 || activeDraft.seoTitle.length > 60) ? "text-amber-700 dark:text-amber-300" : "text-neutral-500"}`}>
-                {activeDraft.seoTitle.length}/180 · recomendado: 30–60
+              <span className="text-xs text-neutral-500">
+                {activeDraft.seoTitle.length}/180 · use um título específico e fiel ao texto
               </span>
             </div>
             <div className="flex flex-col gap-1">
@@ -738,8 +745,8 @@ export function PostEditor({ post }: Props) {
               placeholder="Descrição curta e específica para o resultado de busca"
               className={`${FIELD_CLASS_NAME} resize-y`}
             />
-            <span className={`text-xs ${activeDraft.seoDescription.length > 0 && (activeDraft.seoDescription.length < 50 || activeDraft.seoDescription.length > 170) ? "text-amber-700 dark:text-amber-300" : "text-neutral-500"}`}>
-              {activeDraft.seoDescription.length}/500 · recomendado: 50–170
+            <span className={`text-xs ${activeDraft.seoDescription.length > 0 && activeDraft.seoDescription.length < 50 ? "text-amber-700 dark:text-amber-300" : "text-neutral-500"}`}>
+              {activeDraft.seoDescription.length}/500 · a publicação gera um trecho de até 160 caracteres
             </span>
           </div>
 

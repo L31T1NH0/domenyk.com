@@ -27,6 +27,15 @@ export type CachedDesktopHomeFeed = CachedHomeFeed & {
   threadCount: number
 }
 
+export type HomeTimelinePage = CachedHomeFeed & {
+  desktopPosts: SerializedPostSummary[]
+  desktopNotes: SerializedNote[]
+  desktopThreadNotes: SerializedNote[]
+  desktopPostCount: number
+  desktopLooseNoteCount: number
+  desktopThreadCount: number
+}
+
 export const getCachedPublicContentCounts = unstable_cache(
   async () => {
     const [totalPosts, totalNotes] = await Promise.all([
@@ -94,6 +103,87 @@ export const getCachedDesktopHomeFeed = unstable_cache(
   ["home-feed-desktop"],
   { tags: [PUBLIC_CONTENT_CACHE_TAG], revalidate: PUBLIC_CONTENT_REVALIDATE_SECONDS }
 )
+
+export async function getHomeTimelinePage({
+  page,
+  mode,
+  limit,
+  search,
+}: {
+  page: number
+  mode: PublicFeedMode
+  limit: number
+  search?: string
+}): Promise<HomeTimelinePage> {
+  const normalizedSearch = search?.trim()
+
+  if (!normalizedSearch) {
+    const [feed, desktop] = await Promise.all([
+      getCachedHomeFeed(page, mode, limit),
+      getCachedDesktopHomeFeed(page, mode, limit),
+    ])
+
+    return {
+      ...feed,
+      desktopPosts: desktop.posts,
+      desktopNotes: desktop.notes,
+      desktopThreadNotes: desktop.threadNotes,
+      desktopPostCount: desktop.postCount,
+      desktopLooseNoteCount: desktop.looseNoteCount,
+      desktopThreadCount: desktop.threadCount,
+    }
+  }
+
+  let posts: SerializedPostSummary[] = []
+  let notes: SerializedNote[] = []
+
+  if (mode === "all") {
+    const entries = await getTimelinePage({ page, limit, search: normalizedSearch })
+    posts = entries
+      .filter((entry) => entry.type === "post")
+      .map((entry) => serializePostSummary(entry.post))
+    notes = entries
+      .filter((entry) => entry.type === "note")
+      .map((entry) => serializeNote(entry.note))
+  } else if (mode === "posts") {
+    const result = await getPosts({
+      page,
+      limit,
+      excludeHiddenFromTimeline: true,
+      search: normalizedSearch,
+    })
+    posts = result.posts.map((post) => serializePostSummary(post))
+  } else {
+    const result = await getNotes({ page, limit, search: normalizedSearch })
+    notes = result.notes.map(serializeNote)
+  }
+
+  const [desktopEntries, desktopPostCount, desktopLooseNoteCount, threadPage] = await Promise.all([
+    getStandaloneTimelinePage({ page, limit, search: normalizedSearch, mode }),
+    mode === "notes"
+      ? Promise.resolve(0)
+      : countPosts({ excludeHiddenFromTimeline: true, search: normalizedSearch }),
+    mode === "posts" ? Promise.resolve(0) : countStandaloneNotes(normalizedSearch),
+    mode === "posts"
+      ? Promise.resolve({ threads: [], total: 0 })
+      : getNoteThreadPage({ page, limit, search: normalizedSearch }),
+  ])
+
+  return {
+    posts,
+    notes,
+    desktopPosts: desktopEntries
+      .filter((entry) => entry.type === "post")
+      .map((entry) => serializePostSummary(entry.post)),
+    desktopNotes: desktopEntries
+      .filter((entry) => entry.type === "note")
+      .map((entry) => serializeNote(entry.note)),
+    desktopThreadNotes: threadPage.threads.flat().map(serializeNote),
+    desktopPostCount,
+    desktopLooseNoteCount,
+    desktopThreadCount: threadPage.total,
+  }
+}
 
 export const getCachedPublicPosts = unstable_cache(
   async (page: number, limit: number) => {

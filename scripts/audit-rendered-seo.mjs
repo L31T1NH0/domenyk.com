@@ -16,6 +16,30 @@ function decoded(value = "") {
 const issues = []
 const robotsResponse = await fetch(new URL("/robots.txt", baseUrl))
 const robotsText = await robotsResponse.text()
+for (const userAgent of ["OAI-SearchBot", "GPTBot", "ChatGPT-User"]) {
+  if (!robotsText.includes(`User-Agent: ${userAgent}`)) {
+    issues.push({ url: "/robots.txt", message: `política explícita ausente para ${userAgent}` })
+  }
+}
+
+const llmsResponse = await fetch(new URL("/llms.txt", baseUrl))
+const llmsText = await llmsResponse.text()
+if (!llmsResponse.ok) {
+  issues.push({ url: "/llms.txt", message: `arquivo respondeu ${llmsResponse.status}` })
+} else {
+  if (!llmsResponse.headers.get("content-type")?.includes("text/markdown")) {
+    issues.push({ url: "/llms.txt", message: "Content-Type não é text/markdown" })
+  }
+  if (!/^#\s+\S+/m.test(llmsText)) {
+    issues.push({ url: "/llms.txt", message: "título H1 ausente" })
+  }
+  if (!llmsText.includes("/sitemap/index.xml")) {
+    issues.push({ url: "/llms.txt", message: "sitemap não referenciado" })
+  }
+  if (allMatches(llmsText, /^\s*-\s+\[[^\]]+\]\((https?:\/\/[^)]+)\)/gm).length === 0) {
+    issues.push({ url: "/llms.txt", message: "nenhum link de conteúdo encontrado" })
+  }
+}
 const sitemapPaths = robotsText.split("\n")
   .map((line) => line.match(/^Sitemap:\s*(\S+)/i)?.[1])
   .filter(Boolean)
@@ -52,6 +76,7 @@ for (const publicUrl of sitemapUrls) {
   const h1Count = (html.match(/<h1\b/gi) ?? []).length
   const missingImageAltCount = allMatches(html, /<img\b([^>]*)>/gi)
     .filter((attributes) => !/\balt="[^"]*"/i.test(attributes)).length
+  const structuredTypes = new Set()
 
   if (!title) issues.push({ url: publicUrl, message: "title ausente" })
   if (!description) issues.push({ url: publicUrl, message: "meta description ausente" })
@@ -67,10 +92,24 @@ for (const publicUrl of sitemapUrls) {
 
   for (const payload of allMatches(html, /<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi)) {
     try {
-      JSON.parse(payload)
+      const data = JSON.parse(payload)
+      const nodes = Array.isArray(data?.["@graph"]) ? data["@graph"] : [data]
+      for (const node of nodes) {
+        const types = Array.isArray(node?.["@type"]) ? node["@type"] : [node?.["@type"]]
+        for (const type of types.filter(Boolean)) structuredTypes.add(type)
+      }
     } catch {
       issues.push({ url: publicUrl, message: "JSON-LD inválido" })
     }
+  }
+
+  if (requested.pathname === "/") {
+    for (const type of ["WebSite", "Person", "Blog"]) {
+      if (!structuredTypes.has(type)) issues.push({ url: publicUrl, message: `JSON-LD ${type} ausente` })
+    }
+  }
+  if (/\/(?:[a-z]{2}\/)?posts\//.test(requested.pathname) && !structuredTypes.has("BlogPosting")) {
+    issues.push({ url: publicUrl, message: "JSON-LD BlogPosting ausente" })
   }
 }
 
@@ -86,6 +125,7 @@ console.log(JSON.stringify({
     sitemaps: sitemapPaths.length,
     pages: results.length,
     successfulPages: results.filter((result) => result.status === 200).length,
+    llmsTxt: llmsResponse.status,
     issues: issues.length,
   },
   issues,

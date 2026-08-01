@@ -4,7 +4,7 @@ import { Source_Serif_4 } from "next/font/google"
 import localFont from "next/font/local"
 import Script from "next/script"
 import { cookies, headers } from "next/headers"
-import { absoluteUrl, authorJsonLd, jsonLd, siteConfig } from "@/lib/seo"
+import { absoluteUrl, authorJsonLd, blogJsonLd, jsonLd, siteConfig } from "@/lib/seo"
 import "./globals.css"
 
 const polySans = localFont({
@@ -117,8 +117,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   description: siteConfig.description,
                   inLanguage: "pt-BR",
                   publisher: { "@id": `${siteConfig.url}/#person` },
+                  potentialAction: {
+                    "@type": "SearchAction",
+                    target: {
+                      "@type": "EntryPoint",
+                      urlTemplate: `${siteConfig.url}/?q={search_term_string}`,
+                    },
+                    "query-input": "required name=search_term_string",
+                  },
                 },
                 authorJsonLd(),
+                blogJsonLd(),
               ],
             }),
           }}

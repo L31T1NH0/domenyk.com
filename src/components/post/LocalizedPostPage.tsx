@@ -6,7 +6,7 @@ import { headers } from "next/headers"
 import { getPostByLocalizedSlug, getPostByPublicId, getPostBySlug, getRelatedPosts, type Post, type PostStyle } from "@/lib/db/posts"
 import { isAdmin } from "@/lib/auth"
 import { renderMarkdown } from "@/lib/mdx"
-import { absoluteUrl, authorJsonLd, buildPageMetadata, descriptionFromMarkdown, jsonLd, preferredContentImages, siteConfig } from "@/lib/seo"
+import { absoluteUrl, authorJsonLd, buildPageMetadata, descriptionFromMarkdown, jsonLd, preferredContentImages, siteConfig, wordCountFromMarkdown } from "@/lib/seo"
 import { getCachedClerkUserImage } from "@/lib/clerk-users"
 import {
   POST_LOCALE_DETAILS,
@@ -247,12 +247,20 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
                 dateModified: version.updatedAt.toISOString(),
                 author: authorJsonLd(),
                 publisher: { "@id": `${siteConfig.url}/#person` },
+                isPartOf: { "@id": `${siteConfig.url}/#blog` },
                 inLanguage: details.htmlLang,
                 keywords: version.tags,
                 articleSection: themes.map((theme) => theme.name),
                 about: themes.map((theme) => ({ "@type": "Thing", name: theme.name, url: absoluteUrl(`/temas/${theme.slug}`) })),
-                citation: version.sources?.map((source) => source.url),
+                ...(version.sources?.length ? {
+                  citation: version.sources.map((source) => ({
+                    "@type": "CreativeWork",
+                    ...(source.label?.trim() ? { name: source.label.trim() } : {}),
+                    url: source.url,
+                  })),
+                } : {}),
                 timeRequired: `PT${version.readingTimeMinutes}M`,
+                wordCount: wordCountFromMarkdown(version.content),
                 isAccessibleForFree: true,
               },
               {

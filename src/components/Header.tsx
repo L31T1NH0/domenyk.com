@@ -9,6 +9,17 @@ const name = "Domenyk"
 export function Header() {
   const pathname = usePathname()
   const isAbout = pathname === "/sobre"
+  const isHome = pathname === "/"
+
+  const nameElement = isHome ? (
+    <h1 className="text-2xl font-semibold tracking-tight text-neutral-950 dark:text-[#f1f1f1]">
+      {name}
+    </h1>
+  ) : (
+    <strong className="text-2xl font-semibold tracking-tight text-neutral-950 dark:text-[#f1f1f1]">
+      {name}
+    </strong>
+  )
 
   return (
     <header className="flex flex-col items-center gap-4 pb-2">
@@ -24,15 +35,11 @@ export function Header() {
               alt={name}
             />
           </Link>
-          <strong className="text-2xl font-semibold tracking-tight text-neutral-950 dark:text-[#f1f1f1]">
-            {name}
-          </strong>
+          {nameElement}
         </>
       ) : (
         <Link href="/" className="transition-opacity hover:opacity-80">
-          <strong className="text-2xl font-semibold tracking-tight text-neutral-950 dark:text-[#f1f1f1]">
-            {name}
-          </strong>
+          {nameElement}
         </Link>
       )}
     </header>

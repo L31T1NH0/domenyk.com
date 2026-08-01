@@ -6,9 +6,11 @@ import {
   buildPageMetadata,
   imageUrlsFromMarkdown,
   isNoteIndexable,
+  metadataDescription,
   noteDisplayTitle,
   preferredContentImages,
   titleFromMarkdown,
+  wordCountFromMarkdown,
 } from "../src/lib/seo.ts"
 import {
   isPostVersionIndexable,
@@ -54,6 +56,18 @@ test("does not erase an inherited title when a page title is omitted", () => {
   const metadata = buildPageMetadata()
   assert.equal(Object.hasOwn(metadata, "title"), false)
   assert.equal(new URL(metadata.alternates.canonical).pathname, "/")
+})
+
+test("publishes concise metadata descriptions without changing the source text", () => {
+  const source = "Uma descrição editorial longa " + "com contexto relevante ".repeat(20)
+  const concise = metadataDescription(source)
+  assert.ok(concise.length <= 163)
+  assert.match(concise, /\.\.\.$/)
+  assert.ok(source.length > concise.length)
+})
+
+test("counts readable words instead of markdown syntax", () => {
+  assert.equal(wordCountFromMarkdown("## Título\n\nUma frase com **cinco** palavras."), 6)
 })
 
 test("derives concise, markup-free titles for untitled notes", () => {

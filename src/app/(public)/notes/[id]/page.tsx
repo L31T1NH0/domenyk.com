@@ -85,9 +85,11 @@ export default async function NotePage({ params }: Props) {
                 dateModified: serializedNote.updatedAt,
                 author: authorJsonLd(),
                 publisher: { "@id": `${siteConfig.url}/#person` },
+                isPartOf: isThread
+                  ? [{ "@id": `${siteConfig.url}/#blog` }, { "@id": `${threadRootUrl}#thread` }]
+                  : { "@id": `${siteConfig.url}/#blog` },
                 inLanguage: "pt-BR",
                 isAccessibleForFree: true,
-                ...(isThread ? { isPartOf: { "@id": `${threadRootUrl}#thread` } } : {}),
               },
               ...(isThread ? [{
                 "@type": "ItemList",

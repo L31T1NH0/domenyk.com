@@ -56,6 +56,15 @@ export function descriptionFromMarkdown(markdown: string, maxLength = 155): stri
   return `${truncated.slice(0, truncated.lastIndexOf(" ") || maxLength).trim()}...`
 }
 
+export function metadataDescription(value: string, maxLength = 160): string {
+  return descriptionFromMarkdown(value, maxLength) || siteConfig.description
+}
+
+export function wordCountFromMarkdown(markdown: string): number {
+  const text = descriptionFromMarkdown(markdown, Number.MAX_SAFE_INTEGER)
+  return text ? text.split(/\s+/).length : 0
+}
+
 export function titleFromMarkdown(markdown: string, maxLength = 68): string {
   const description = descriptionFromMarkdown(markdown, maxLength)
   if (!description) return ""
@@ -107,6 +116,21 @@ export function authorJsonLd() {
   }
 }
 
+export function blogJsonLd() {
+  return {
+    "@type": "Blog",
+    "@id": `${siteConfig.url}/#blog`,
+    url: siteConfig.url,
+    name: siteConfig.name,
+    description: siteConfig.description,
+    inLanguage: "pt-BR",
+    author: { "@id": `${siteConfig.url}/#person` },
+    publisher: { "@id": `${siteConfig.url}/#person` },
+    isPartOf: { "@id": `${siteConfig.url}/#website` },
+    about: authorTopics.map((name) => ({ "@type": "Thing", name })),
+  }
+}
+
 export function isNoteIndexable(note: { seoTitle?: string; seoDescription?: string }): boolean {
   return Boolean(note.seoTitle?.trim() && note.seoDescription?.trim())
 }
@@ -141,10 +165,11 @@ export function buildPageMetadata({
   const url = absoluteUrl(path)
   const imageUrl = absoluteUrl(image)
   const images = [{ url: imageUrl, alt: title ?? siteConfig.title }]
+  const conciseDescription = metadataDescription(description)
 
   return {
     ...(title ? { title } : {}),
-    description,
+    description: conciseDescription,
     alternates: {
       canonical: url,
       languages,
@@ -164,7 +189,7 @@ export function buildPageMetadata({
         },
     openGraph: {
       title: title ?? siteConfig.title,
-      description,
+      description: conciseDescription,
       url,
       siteName: siteConfig.name,
       locale: openGraphLocale,
@@ -178,7 +203,7 @@ export function buildPageMetadata({
     twitter: {
       card: "summary_large_image",
       title: title ?? siteConfig.title,
-      description,
+      description: conciseDescription,
       images: [imageUrl],
     },
   }
