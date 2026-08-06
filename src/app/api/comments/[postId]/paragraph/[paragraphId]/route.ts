@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getCommentsPage, createComment, deleteComment, serializeComment, MAX_COMMENTS_PER_RESPONSE } from "@/lib/db/comments"
 import { getAdminUserId, getAuthUser, getAuthUserId, isAdmin } from "@/lib/auth"
-import { createNotification } from "@/lib/db/notifications"
+import { createNotification } from "@/lib/admin-notifications"
 import { getPostById } from "@/lib/db/posts"
 import { toObjectId } from "@/lib/validation"
 import { rateLimit } from "@/lib/rate-limit"
@@ -137,7 +137,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     recipientId: adminId, actorId: user.id, actorImageUrl: user.imageUrl, kind: "comment",
     title: `Comentário em um trecho de ${version.title}`,
     description: `${user.name} comentou em um parágrafo.`, href: `/posts/${post.slug}#${paragraphId}`,
-  }).catch(() => null)
+  }, "paragraph_comments").catch(() => null)
 
   return NextResponse.json(serializeComment(comment, true), { status: 201 })
 }

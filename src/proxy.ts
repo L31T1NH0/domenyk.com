@@ -49,7 +49,8 @@ export default clerkMiddleware(async (auth, req) => {
   requestHeaders.set("x-site-language", documentLanguage(req.nextUrl.pathname))
   const continueRequest = () => NextResponse.next({ request: { headers: requestHeaders } })
 
-  if (req.nextUrl.pathname.startsWith("/api/") && shouldBlockApiMutation(req)) {
+  const clerkWebhook = req.nextUrl.pathname === "/api/webhooks/clerk"
+  if (!clerkWebhook && req.nextUrl.pathname.startsWith("/api/") && shouldBlockApiMutation(req)) {
     return NextResponse.json({ error: "Origem não permitida." }, { status: 403 })
   }
 

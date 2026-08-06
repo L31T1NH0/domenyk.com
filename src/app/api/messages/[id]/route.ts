@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { addMessageReply, deleteMessageThread, getMessageThread, getMessageThreadForOwner, serializeMessageThread, setMessageThreadArchived, setMessageThreadStatus, type MessageThread } from "@/lib/db/messages"
-import { createNotification, deleteNotificationsForMessageThread } from "@/lib/db/notifications"
+import { createNotification } from "@/lib/admin-notifications"
+import { deleteNotificationsForMessageThread } from "@/lib/db/notifications"
 import { getAdminUserId, getAuthUser, isAdmin } from "@/lib/auth"
 import { rateLimit } from "@/lib/rate-limit"
 import { requestIdentity } from "@/lib/request-identity"
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const updated = await addMessageReply(id, { authorId: user.id, authorName: user.name, body, isAdmin: admin, ownerId: admin ? undefined : user.id })
   if (!updated) return NextResponse.json({ error: "Esta conversa atingiu o limite de respostas." }, { status: 409 })
   const recipientId = admin ? null : getAdminUserId()
-  if (recipientId) await createNotification({ recipientId, actorId: user.id, actorImageUrl: user.imageUrl, kind: "reply", title: `Resposta em: ${thread.subject}`, description: `${user.name} respondeu à mensagem.`, href: `/admin/messages#${id}` }).catch(() => null)
+  if (recipientId) await createNotification({ recipientId, actorId: user.id, actorImageUrl: user.imageUrl, kind: "reply", title: `Resposta em: ${thread.subject}`, description: `${user.name} respondeu à mensagem.`, href: `/admin/messages#${id}` }, "message_replies").catch(() => null)
   if (admin) {
     await sendMessageReplyPush(thread.ownerId, {
       title: `Domenyk respondeu: ${thread.subject}`,

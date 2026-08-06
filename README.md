@@ -8,6 +8,7 @@ Use Node.js 22 (see `.nvmrc`) and configure these environment variables in `.env
 - `BLOB_READ_WRITE_TOKEN`
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
 - `CLERK_SECRET_KEY`
+- `CLERK_WEBHOOK_SIGNING_SECRET` (signing secret for the Clerk webhook)
 - `ADMIN_USER_ID`
 - `NEXT_PUBLIC_SITE_URL`
 - `CLERK_AUTHORIZED_PARTIES` (comma-separated trusted origins, when using previews or extra domains)
@@ -25,7 +26,7 @@ npm run push:keys
 
 Copy the generated values to `.env.local` and to the corresponding Vercel environment variables. Keep the same pair across deployments; replacing it invalidates existing browser subscriptions.
 
-When someone creates an account through the site, the first authenticated page load stores a notification in the admin notification center and also delivers it by Web Push when admin push subscriptions are configured. Repeated page loads are deduplicated automatically.
+Configure a Clerk webhook endpoint at `https://your-domain.example/api/webhooks/clerk`, subscribe it to `user.created`, and store its signing secret in `CLERK_WEBHOOK_SIGNING_SECRET`. Account notifications are deduplicated automatically when Clerk retries a delivery.
 
 When `INDEXNOW_KEY` is configured, the site exposes it at `/indexnow-key.txt` and notifies IndexNow after publishing, updating, hiding, unpublishing, changing a URL, or deleting indexable content. Failed notifications never block an editorial save.
 

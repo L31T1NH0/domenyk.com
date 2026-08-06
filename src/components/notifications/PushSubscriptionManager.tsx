@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import { useUser } from "@clerk/nextjs"
 import { BellAlertIcon, BellSlashIcon } from "@heroicons/react/24/outline"
 import { applicationServerKey, pushStatusFor, waitForPushVerification } from "@/lib/client-push"
+import { ADMIN_PUSH_TOPIC_OPTIONS, type AdminPushTopic } from "@/lib/notification-events"
 
 type Topic = "posts" | "notes"
 type State = "loading" | "ready" | "saving" | "enabled" | "denied" | "unsupported" | "unconfigured" | "error"
@@ -20,7 +21,7 @@ export function PushSubscriptionManager({
   const [publicKey, setPublicKey] = useState("")
   const [subscription, setSubscription] = useState<PushSubscription | null>(null)
   const [topics, setTopics] = useState<Topic[]>([])
-  const [adminEvents, setAdminEvents] = useState(false)
+  const [adminTopics, setAdminTopics] = useState<AdminPushTopic[]>([])
   const [messageEvents, setMessageEvents] = useState(false)
   const [message, setMessage] = useState("")
 
@@ -50,7 +51,7 @@ export function PushSubscriptionManager({
       }
       const status = await pushStatusFor(current)
       setTopics(status.topics ?? [])
-      setAdminEvents(status.adminEvents === true)
+      setAdminTopics(status.adminTopics)
       setMessageEvents(status.messageEvents === true)
       setState("enabled")
     } catch {
@@ -69,12 +70,23 @@ export function PushSubscriptionManager({
     }
   }, [load, user?.id])
 
-  async function persist(current: PushSubscription, nextTopics: Topic[], nextAdminEvents: boolean, nextMessageEvents: boolean) {
+  async function persist(
+    current: PushSubscription,
+    nextTopics: Topic[],
+    nextAdminTopics: AdminPushTopic[],
+    nextMessageEvents: boolean
+  ) {
     const json = current.toJSON()
     const response = await fetch("/api/push/subscriptions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...json, topics: nextTopics, adminEvents: nextAdminEvents, messageEvents: nextMessageEvents }),
+      body: JSON.stringify({
+        ...json,
+        topics: nextTopics,
+        adminEvents: nextAdminTopics.length > 0,
+        adminTopics: nextAdminTopics,
+        messageEvents: nextMessageEvents,
+      }),
     })
     if (!response.ok) {
       const data = await response.json().catch(() => null) as { error?: string } | null
@@ -99,12 +111,12 @@ export function PushSubscriptionManager({
         applicationServerKey: applicationServerKey(publicKey),
       })
       const nextTopics: Topic[] = ["posts", "notes"]
-      const nextAdminEvents = false
+      const nextAdminTopics: AdminPushTopic[] = []
       const nextMessageEvents = false
-      await persist(current, nextTopics, nextAdminEvents, nextMessageEvents)
+      await persist(current, nextTopics, nextAdminTopics, nextMessageEvents)
       setSubscription(current)
       setTopics(nextTopics)
-      setAdminEvents(nextAdminEvents)
+      setAdminTopics(nextAdminTopics)
       setMessageEvents(nextMessageEvents)
       setState("enabled")
       setMessage("Notificações ativadas neste dispositivo.")
@@ -114,19 +126,18 @@ export function PushSubscriptionManager({
     }
   }
 
-  async function updatePreference(topic: Topic | "admin" | "messages", checked: boolean) {
+  async function updatePreferences(
+    nextTopics: Topic[],
+    nextAdminTopics: AdminPushTopic[],
+    nextMessageEvents: boolean
+  ) {
     if (!subscription) return
-    const nextTopics = topic === "admin" || topic === "messages"
-      ? topics
-      : checked ? Array.from(new Set([...topics, topic])) : topics.filter((item) => item !== topic)
-    const nextAdminEvents = topic === "admin" ? checked : adminEvents
-    const nextMessageEvents = topic === "messages" ? checked : messageEvents
     setState("saving")
     setMessage("")
     try {
-      await persist(subscription, nextTopics, nextAdminEvents, nextMessageEvents)
+      await persist(subscription, nextTopics, nextAdminTopics, nextMessageEvents)
       setTopics(nextTopics)
-      setAdminEvents(nextAdminEvents)
+      setAdminTopics(nextAdminTopics)
       setMessageEvents(nextMessageEvents)
       setState("enabled")
       setMessage("Preferências salvas.")
@@ -134,6 +145,20 @@ export function PushSubscriptionManager({
       setState("enabled")
       setMessage(error instanceof Error ? error.message : "Não foi possível salvar suas preferências.")
     }
+  }
+
+  function updateReaderPreference(topic: Topic, checked: boolean) {
+    const nextTopics = checked
+      ? Array.from(new Set([...topics, topic]))
+      : topics.filter((item) => item !== topic)
+    return updatePreferences(nextTopics, adminTopics, messageEvents)
+  }
+
+  function updateAdminPreference(topic: AdminPushTopic, checked: boolean) {
+    const nextAdminTopics = checked
+      ? Array.from(new Set([...adminTopics, topic]))
+      : adminTopics.filter((item) => item !== topic)
+    return updatePreferences(topics, nextAdminTopics, messageEvents)
   }
 
   async function disable() {
@@ -149,7 +174,7 @@ export function PushSubscriptionManager({
       await subscription.unsubscribe()
       setSubscription(null)
       setTopics([])
-      setAdminEvents(false)
+      setAdminTopics([])
       setMessageEvents(false)
       setState("ready")
       setMessage("Notificações desativadas neste dispositivo.")
@@ -188,23 +213,36 @@ export function PushSubscriptionManager({
         <legend className={`font-medium text-zinc-950 dark:text-white ${compact ? "mb-2 text-xs" : "mb-3 text-sm"}`}>Avisar neste dispositivo sobre</legend>
         <label className={`flex cursor-pointer items-center justify-between gap-4 rounded-md px-2 py-1.5 hover:bg-zinc-100 dark:hover:bg-white/[0.06] ${compact ? "min-h-9" : "min-h-10"}`}>
           <span className={`${compact ? "text-xs" : "text-sm"} text-zinc-700 dark:text-zinc-200`}>Novos posts</span>
-          <input type="checkbox" checked={topics.includes("posts")} onChange={(event) => void updatePreference("posts", event.target.checked)} className="size-4 accent-zinc-950 dark:accent-white" />
+          <input type="checkbox" checked={topics.includes("posts")} onChange={(event) => void updateReaderPreference("posts", event.target.checked)} className="size-4 accent-zinc-950 dark:accent-white" />
         </label>
         <label className={`flex cursor-pointer items-center justify-between gap-4 rounded-md px-2 py-1.5 hover:bg-zinc-100 dark:hover:bg-white/[0.06] ${compact ? "min-h-9" : "min-h-10"}`}>
           <span className={`${compact ? "text-xs" : "text-sm"} text-zinc-700 dark:text-zinc-200`}>Novas notas</span>
-          <input type="checkbox" checked={topics.includes("notes")} onChange={(event) => void updatePreference("notes", event.target.checked)} className="size-4 accent-zinc-950 dark:accent-white" />
+          <input type="checkbox" checked={topics.includes("notes")} onChange={(event) => void updateReaderPreference("notes", event.target.checked)} className="size-4 accent-zinc-950 dark:accent-white" />
         </label>
         {isLoaded && isSignedIn && (
           <label className={`flex cursor-pointer items-center justify-between gap-4 rounded-md px-2 py-1.5 hover:bg-zinc-100 dark:hover:bg-white/[0.06] ${compact ? "min-h-10" : "min-h-10"}`}>
             <span><span className={`block text-zinc-700 dark:text-zinc-200 ${compact ? "text-xs" : "text-sm"}`}>Mensagens privadas</span><span className={`block text-zinc-500 dark:text-zinc-400 ${compact ? "mt-0.5 text-[10px] leading-4" : "text-xs"}`}>Quando Domenyk responder uma conversa</span></span>
-            <input type="checkbox" checked={messageEvents} onChange={(event) => void updatePreference("messages", event.target.checked)} className="size-4 accent-zinc-950 dark:accent-white" />
+            <input type="checkbox" checked={messageEvents} onChange={(event) => void updatePreferences(topics, adminTopics, event.target.checked)} className="size-4 accent-zinc-950 dark:accent-white" />
           </label>
         )}
         {showAdminEvents && (
-          <label className={`flex cursor-pointer items-center justify-between gap-4 rounded-md px-2 py-1.5 hover:bg-zinc-100 dark:hover:bg-white/[0.06] ${compact ? "min-h-10" : "min-h-10"}`}>
-            <span><span className={`block text-zinc-700 dark:text-zinc-200 ${compact ? "text-xs" : "text-sm"}`}>Atividade privada</span><span className={`block text-zinc-500 dark:text-zinc-400 ${compact ? "mt-0.5 text-[10px] leading-4" : "text-xs"}`}>Comentários, mensagens e visitas identificadas</span></span>
-            <input type="checkbox" checked={adminEvents} onChange={(event) => void updatePreference("admin", event.target.checked)} className="size-4 accent-zinc-950 dark:accent-white" />
-          </label>
+          <div className={`border-t border-zinc-200 dark:border-white/10 ${compact ? "mt-2 pt-2" : "mt-3 pt-3"}`}>
+            <p className={`px-2 font-medium text-zinc-950 dark:text-white ${compact ? "mb-1 text-xs" : "mb-1.5 text-sm"}`}>Administração</p>
+            {ADMIN_PUSH_TOPIC_OPTIONS.map((option) => (
+              <label key={option.value} className={`flex cursor-pointer items-center justify-between gap-4 rounded-md px-2 py-1.5 hover:bg-zinc-100 dark:hover:bg-white/[0.06] ${compact ? "min-h-10" : "min-h-11"}`}>
+                <span>
+                  <span className={`block text-zinc-700 dark:text-zinc-200 ${compact ? "text-xs" : "text-sm"}`}>{option.label}</span>
+                  <span className={`block text-zinc-500 dark:text-zinc-400 ${compact ? "mt-0.5 text-[10px] leading-4" : "text-xs leading-5"}`}>{option.description}</span>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={adminTopics.includes(option.value)}
+                  onChange={(event) => void updateAdminPreference(option.value, event.target.checked)}
+                  className="size-4 shrink-0 accent-zinc-950 dark:accent-white"
+                />
+              </label>
+            ))}
+          </div>
         )}
       </fieldset>
       <div className={`flex flex-wrap items-center gap-3 border-t border-zinc-200 dark:border-white/10 ${compact ? "mt-3 pt-3" : "mt-4 pt-4"}`}>

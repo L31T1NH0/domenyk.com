@@ -1,14 +1,11 @@
 import "server-only"
 
-import { createHash } from "crypto"
 import { ObjectId } from "mongodb"
 import { getDb } from "./client"
 import { toObjectId } from "../validation"
-import { sendAdminPush } from "../push"
-import { rateLimit } from "../rate-limit"
 import { dailyNotificationAggregateKey } from "../notification-aggregation"
 
-type NotificationKind = "account" | "comment" | "message" | "reply" | "view"
+export type NotificationKind = "account" | "comment" | "message" | "reply" | "view" | "site_visit"
 
 export type NotificationOccurrenceDetails = {
   id?: string
@@ -22,6 +19,7 @@ export type NotificationOccurrenceDetails = {
   language?: string
   visitorType?: string
   trafficType?: string
+  page?: string
   reading?: {
     completedAt: Date
     activeSeconds: number
@@ -39,7 +37,6 @@ type NotificationOccurrence = NotificationOccurrenceDetails & {
 
 const MAX_NOTIFICATION_OCCURRENCES = 200
 const ENGAGEMENT_TOKEN_TTL_MS = 4 * 60 * 60_000
-const AGGREGATE_PUSH_WINDOW_MS = 10 * 60_000
 
 export type Notification = {
   _id: ObjectId
@@ -58,6 +55,9 @@ export type Notification = {
   updatedAt: Date
 }
 
+export type NotificationInput = Omit<Notification, "_id" | "count" | "occurrences" | "createdAt" | "updatedAt">
+export type AggregateNotificationInput = Omit<Notification, "_id" | "count" | "occurrences" | "readAt" | "createdAt" | "updatedAt"> & { aggregateKey: string }
+
 let indexesPromise: Promise<unknown> | undefined
 
 async function collection() {
@@ -72,7 +72,7 @@ async function collection() {
 }
 
 export async function createNotification(
-  data: Omit<Notification, "_id" | "count" | "occurrences" | "createdAt" | "updatedAt">,
+  data: NotificationInput,
   occurrenceDetails: NotificationOccurrenceDetails = {}
 ) {
   if (data.actorId && data.actorId === data.recipientId) return null
@@ -84,17 +84,11 @@ export async function createNotification(
     createdAt: now,
     updatedAt: now,
   } as Notification)
-  await sendAdminPush({
-    title: data.title,
-    body: data.description,
-    url: data.href,
-    tag: `admin-${data.kind}-${result.insertedId.toString()}`,
-  }).catch(() => undefined)
   return result.insertedId
 }
 
 export async function createNotificationOnce(
-  data: Omit<Notification, "_id" | "count" | "occurrences" | "createdAt" | "updatedAt"> & { aggregateKey: string },
+  data: NotificationInput & { aggregateKey: string },
   occurrenceDetails: NotificationOccurrenceDetails = {}
 ) {
   if (data.actorId && data.actorId === data.recipientId) return null
@@ -120,17 +114,11 @@ export async function createNotificationOnce(
   }
   if (!result.upsertedId) return null
 
-  await sendAdminPush({
-    title: data.title,
-    body: data.description,
-    url: data.href,
-    tag: `admin-${data.kind}-${result.upsertedId.toString()}`,
-  }).catch(() => undefined)
   return result.upsertedId
 }
 
 export async function aggregateNotification(
-  data: Omit<Notification, "_id" | "count" | "occurrences" | "readAt" | "createdAt" | "updatedAt"> & { aggregateKey: string },
+  data: AggregateNotificationInput,
   occurrenceDetails: NotificationOccurrenceDetails = {}
 ) {
   const now = new Date()
@@ -172,15 +160,7 @@ export async function aggregateNotification(
     ],
     { upsert: true }
   )
-  const aggregateHash = createHash("sha256").update(aggregateKey).digest("hex").slice(0, 20)
-  if (await rateLimit(`notification-push:${aggregateHash}`, { limit: 1, windowMs: AGGREGATE_PUSH_WINDOW_MS })) {
-    await sendAdminPush({
-      title: data.title,
-      body: data.description,
-      url: data.href,
-      tag: `admin-${data.kind}-${aggregateHash}`,
-    }).catch(() => undefined)
-  }
+  return aggregateKey
 }
 
 export async function listNotifications(recipientId: string, limit = 100) {

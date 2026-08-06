@@ -14,6 +14,7 @@ import {
   type PushTopic,
   type StoredPushSubscription,
 } from "@/lib/db/push-subscriptions"
+import type { AdminPushTopic } from "@/lib/notification-events"
 
 export type PushPayload = {
   title: string
@@ -123,10 +124,13 @@ export async function sendReaderPush(input: {
   return { ...result, deduplicated: false }
 }
 
-export async function sendAdminPush(payload: Omit<PushPayload, "kind" | "tag"> & { tag?: string }) {
+export async function sendAdminPush(
+  topic: AdminPushTopic,
+  payload: Omit<PushPayload, "kind" | "tag"> & { tag?: string }
+) {
   const adminId = getAdminUserId()
   if (!adminId) return { configured: Boolean(vapidConfig()), sentCount: 0, failedCount: 0 }
-  return deliver(await listAdminPushSubscriptions(adminId), {
+  return deliver(await listAdminPushSubscriptions(adminId, topic), {
     ...payload,
     kind: "admin",
     tag: payload.tag ?? `admin-${Date.now()}`,

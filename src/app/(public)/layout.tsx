@@ -7,10 +7,16 @@ import { PublicAnalytics } from "@/components/analytics/PublicAnalytics"
 import { siteCalendarYear } from "@/lib/datetime"
 import { ReadingPreferencesProvider, ReadingPreferencesScope } from "@/components/post/ReadingPreferencesContext"
 import { FlowImageAlphaOffset } from "@/components/post/FlowImageAlphaOffset"
+import { SiteVisitTracker } from "@/components/notifications/SiteVisitTracker"
+import { getSiteVisitNotificationSettings } from "@/lib/db/notification-settings"
 
 export default async function PublicLayout({ children }: { children: React.ReactNode }) {
   const currentYear = siteCalendarYear()
-  const nonce = (await headers()).get("x-nonce") ?? undefined
+  const [requestHeaders, siteVisitSettings] = await Promise.all([
+    headers(),
+    getSiteVisitNotificationSettings(),
+  ])
+  const nonce = requestHeaders.get("x-nonce") ?? undefined
 
   return (
     <ReadingPreferencesProvider>
@@ -20,6 +26,7 @@ export default async function PublicLayout({ children }: { children: React.React
           <ScrollProgressEffect />
           <FlowImageAlphaOffset />
           <ViewReferrerTracker />
+          {siteVisitSettings.enabled && <SiteVisitTracker />}
           <header className="flex items-center justify-end py-1">
             <PublicMenu />
           </header>

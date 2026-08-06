@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getAdminUserId, getAuthUser, isAdmin } from "@/lib/auth"
 import { getNote } from "@/lib/db/notes"
 import { recordNoteView } from "@/lib/db/note-metrics"
-import { aggregateNotification, createNotification } from "@/lib/db/notifications"
+import { aggregateNotification, createNotification } from "@/lib/admin-notifications"
 import { isNoteViewSource, NOTE_VIEW_TTL_MS } from "@/lib/note-views"
 import { noteDisplayTitle } from "@/lib/seo"
 import { rateLimit } from "@/lib/rate-limit"
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ not
           title: `${viewer.name} abriu uma nota`,
           description: `“${title}” recebeu uma view real · ${result.metrics.directViews} no total.`,
           href: `/notes/${noteId}`,
-        }, details).catch(() => undefined)
+        }, "identified_note_views", details).catch(() => undefined)
       } else {
         await aggregateNotification({
           recipientId: adminId,
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ not
           title: `Novas views reais em uma nota`,
           description: `“${title}” chegou a ${result.metrics.directViews} views reais.`,
           href: `/notes/${noteId}`,
-        }, details).catch(() => undefined)
+        }, "anonymous_note_views", details).catch(() => undefined)
       }
     }
   }

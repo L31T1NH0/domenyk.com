@@ -165,18 +165,9 @@ export function PublicMenu() {
   const readingBackRef = useRef<HTMLButtonElement>(null)
   const readingTriggerRef = useRef<HTMLButtonElement>(null)
   const focusFirstOnOpenRef = useRef(false)
-  const userCreatedAt = user?.createdAt?.getTime()
-
   useEffect(() => {
     if (!isLoaded || !isSignedIn || !user?.id) return
     let cancelled = false
-    const accountAge = userCreatedAt ? Date.now() - userCreatedAt : Number.POSITIVE_INFINITY
-    if (accountAge >= 0 && accountAge <= 30 * 60 * 1000) {
-      fetch("/api/account/registration", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      }).catch(() => undefined)
-    }
     fetch("/api/account/admin", { cache: "no-store" })
       .then((response) => response.ok ? response.json() : { admin: false })
       .then((data) => { if (!cancelled) setVerifiedAdminUserId(data.admin === true ? user.id : null) })
@@ -184,7 +175,7 @@ export function PublicMenu() {
       .then((response) => response.ok ? response.json() : { unread: 0 })
       .then((data) => { if (!cancelled) setUnreadMessages(Math.max(0, Number(data.unread) || 0)) })
     return () => { cancelled = true }
-  }, [isLoaded, isSignedIn, user?.id, userCreatedAt])
+  }, [isLoaded, isSignedIn, user?.id])
 
   const admin = Boolean(isLoaded && isSignedIn && user?.id && verifiedAdminUserId === user.id)
 

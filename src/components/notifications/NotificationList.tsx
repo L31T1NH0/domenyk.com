@@ -14,7 +14,7 @@ type Item = {
   href: string
   actorImageUrl?: string
   count: number
-  kind: "account" | "comment" | "message" | "reply" | "view"
+  kind: "account" | "comment" | "message" | "reply" | "view" | "site_visit"
   occurrences?: Array<{
     occurredAt: string
     source?: string
@@ -27,6 +27,7 @@ type Item = {
     language?: string
     visitorType?: string
     trafficType?: string
+    page?: string
     reading?: {
       completedAt: string
       activeSeconds: number
@@ -154,8 +155,9 @@ function NotificationDropdown({ item, anchor, onClose }: { item: Item; anchor: H
       <ol className="px-4 py-1">
         {occurrenceItems.map((occurrence, index) => {
           const date = new Date(occurrence.occurredAt)
-          const viewDetails = [
-            ["Leitura", occurrence.reading ? `Concluída · ${readingDuration(occurrence.reading.activeSeconds)}` : "Não confirmada"],
+          const viewDetails: Array<[string, string | undefined]> = [
+            ...(item.kind === "view" ? [["Leitura", occurrence.reading ? `Concluída · ${readingDuration(occurrence.reading.activeSeconds)}` : "Não confirmada"] as [string, string]] : []),
+            ["Página visitada", occurrence.page],
             ["Origem", occurrence.source],
             ["Dispositivo", occurrence.device],
             ["Navegador", occurrence.browser],
@@ -185,7 +187,7 @@ function NotificationDropdown({ item, anchor, onClose }: { item: Item; anchor: H
                     {occurrenceDateFormatter.format(date)} · {occurrenceTimeFormatter.format(date)}
                   </time>
                 </span>
-                {item.kind === "view" && (
+                {(item.kind === "view" || item.kind === "site_visit") && (
                   viewDetails.length ? (
                     <dl className="mt-2 grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
                       {viewDetails.map(([label, value]) => (
@@ -310,7 +312,7 @@ export function NotificationList() {
         <ol className="mt-8 border-t border-zinc-300 dark:border-zinc-800">
           {items.map((item) => {
             const expanded = expandedId === item._id
-            const expandable = item.count > 1 || item.kind === "view"
+            const expandable = item.count > 1 || item.kind === "view" || item.kind === "site_visit"
             const content = (
               <>
                 {item.actorImageUrl ? (

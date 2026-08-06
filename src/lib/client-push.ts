@@ -1,6 +1,9 @@
+import { normalizeAdminPushTopics, type AdminPushTopic } from "@/lib/notification-events"
+
 type PushStatus = {
   topics: Array<"posts" | "notes">
   adminEvents: boolean
+  adminTopics: AdminPushTopic[]
   messageEvents: boolean
   subscribed: boolean
   pending: boolean
@@ -23,11 +26,12 @@ export async function pushStatusFor(subscription: PushSubscription): Promise<Pus
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(subscription.toJSON()),
   })
-  if (!response.ok) return { topics: [], adminEvents: false, messageEvents: false, subscribed: false, pending: false }
+  if (!response.ok) return { topics: [], adminEvents: false, adminTopics: [], messageEvents: false, subscribed: false, pending: false }
   const status = await response.json() as Partial<PushStatus>
   return {
     topics: Array.isArray(status.topics) ? status.topics : [],
     adminEvents: status.adminEvents === true,
+    adminTopics: normalizeAdminPushTopics(status.adminTopics, status.adminEvents === true),
     messageEvents: status.messageEvents === true,
     subscribed: status.subscribed === true,
     pending: status.pending === true,
@@ -106,6 +110,7 @@ export async function setMessagePushPreference(enabled: boolean) {
       ...subscription.toJSON(),
       topics: status.topics,
       adminEvents: status.adminEvents,
+      adminTopics: status.adminTopics,
       messageEvents: enabled,
     }),
   })

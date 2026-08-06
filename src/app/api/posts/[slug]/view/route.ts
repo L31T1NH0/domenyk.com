@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "crypto"
 import { NextRequest, NextResponse } from "next/server"
 import { getAdminUserId, getAuthUser, isAdmin } from "@/lib/auth"
 import { recordActivityEvent } from "@/lib/db/activity"
-import { aggregateNotification, createNotification } from "@/lib/db/notifications"
+import { aggregateNotification, createNotification } from "@/lib/admin-notifications"
 import { getPostByPublicId, incrementPostViewsOnce } from "@/lib/db/posts"
 import { isPostLocale } from "@/lib/post-locales"
 import { getPostVersion } from "@/lib/post-versions"
@@ -89,13 +89,13 @@ export async function POST(
         title: `${viewer.name} visitou ${version.title}`,
         description: `Visita de usuário autenticado · ${result.views} visualizações no total.`,
         href: `/posts/${post.slug}`,
-      }, details).catch(() => undefined)
+      }, "identified_post_views", details).catch(() => undefined)
     } else {
       await aggregateNotification({
         recipientId: adminId, kind: "view", aggregateKey: `view:${publicId}`,
         title: `Novas visualizações em ${version.title}`,
         description: `O post chegou a ${result.views} visualizações.`, href: `/posts/${post.slug}`,
-      }, details).catch(() => undefined)
+      }, "anonymous_post_views", details).catch(() => undefined)
     }
   }
 

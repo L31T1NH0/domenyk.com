@@ -3,6 +3,10 @@ import "server-only"
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto"
 import { ObjectId } from "mongodb"
 import { getDb } from "./client"
+import {
+  normalizeAdminPushTopics,
+  type AdminPushTopic,
+} from "../notification-events"
 
 export const PUSH_TOPICS = ["posts", "notes"] as const
 export type PushTopic = (typeof PUSH_TOPICS)[number]
@@ -19,6 +23,7 @@ export type StoredPushSubscription = {
   challengeExpiresAt?: Date
   verifiedAt?: Date
   adminEvents: boolean
+  adminTopics?: AdminPushTopic[]
   adminUserId?: string
   adminVerifiedAt?: Date
   messageEvents: boolean
@@ -68,6 +73,7 @@ async function subscriptions() {
     col.createIndex({ endpoint: 1 }, { unique: true }),
     col.createIndex({ topics: 1, updatedAt: -1 }),
     col.createIndex({ adminEvents: 1, adminUserId: 1 }),
+    col.createIndex({ adminTopics: 1, adminUserId: 1 }),
     col.createIndex({ messageEvents: 1, messageUserId: 1 }),
     col.createIndex({ retentionUntil: 1 }, { expireAfterSeconds: 0 }),
     col.createIndex({ status: 1, challengeExpiresAt: 1 }),
@@ -105,7 +111,7 @@ export async function upsertPushSubscription(data: {
   keys: { p256dh: string; auth: string }
   topics: PushTopic[]
   userAgent?: string
-  admin?: { enabled: boolean; userId: string }
+  admin?: { topics: AdminPushTopic[]; userId: string }
   messages?: { enabled: boolean; userId: string }
 }): Promise<{ subscription: StoredPushSubscription; challengeToken: string | null }> {
   const col = await subscriptions()
@@ -140,8 +146,9 @@ export async function upsertPushSubscription(data: {
   }
 
   if (data.admin) {
-    $set.adminEvents = data.admin.enabled
-    if (data.admin.enabled) {
+    $set.adminTopics = data.admin.topics
+    $set.adminEvents = data.admin.topics.length > 0
+    if (data.admin.topics.length > 0) {
       $set.adminUserId = data.admin.userId
       $set.adminVerifiedAt = now
     } else {
@@ -150,6 +157,7 @@ export async function upsertPushSubscription(data: {
     }
   } else {
     $set.adminEvents = false
+    $unset.adminTopics = ""
     $unset.adminUserId = ""
     $unset.adminVerifiedAt = ""
   }
@@ -250,7 +258,7 @@ export async function revokePrivatePushSubscription(endpoint: string, userId: st
   await Promise.all([
     col.updateOne(
       { endpoint, adminUserId: userId },
-      { $set: { adminEvents: false, updatedAt: new Date() }, $unset: { adminUserId: "", adminVerifiedAt: "" } }
+      { $set: { adminEvents: false, updatedAt: new Date() }, $unset: { adminTopics: "", adminUserId: "", adminVerifiedAt: "" } }
     ),
     col.updateOne(
       { endpoint, messageUserId: userId },
@@ -277,7 +285,7 @@ export async function revokeAdminPushDevice(id: string, adminUserId: string) {
   if (!ObjectId.isValid(id)) return false
   const result = await (await subscriptions()).updateOne(
     { _id: new ObjectId(id), adminUserId },
-    { $set: { adminEvents: false, updatedAt: new Date() }, $unset: { adminUserId: "", adminVerifiedAt: "" } }
+    { $set: { adminEvents: false, updatedAt: new Date() }, $unset: { adminTopics: "", adminUserId: "", adminVerifiedAt: "" } }
   )
   return result.modifiedCount > 0
 }
@@ -285,7 +293,7 @@ export async function revokeAdminPushDevice(id: string, adminUserId: string) {
 export async function revokeAllAdminPushDevices(adminUserId: string) {
   const result = await (await subscriptions()).updateMany(
     { adminEvents: true, adminUserId },
-    { $set: { adminEvents: false, updatedAt: new Date() }, $unset: { adminUserId: "", adminVerifiedAt: "" } }
+    { $set: { adminEvents: false, updatedAt: new Date() }, $unset: { adminTopics: "", adminUserId: "", adminVerifiedAt: "" } }
   )
   return result.modifiedCount
 }
@@ -299,8 +307,30 @@ export async function listPushSubscriptionsForTopic(topic: PushTopic) {
   return (await subscriptions()).find({ status: "active", topics: topic }).toArray()
 }
 
-export async function listAdminPushSubscriptions(adminUserId: string) {
-  return (await subscriptions()).find({ status: "active", adminEvents: true, adminUserId, adminVerifiedAt: { $type: "date" } }).toArray()
+export function adminPushTopicsFor(subscription: Pick<StoredPushSubscription, "adminEvents" | "adminTopics">) {
+  return normalizeAdminPushTopics(subscription.adminTopics, subscription.adminEvents === true)
+}
+
+export async function listAdminPushDevices(adminUserId: string) {
+  return (await subscriptions()).find({
+    status: "active",
+    adminEvents: true,
+    adminUserId,
+    adminVerifiedAt: { $type: "date" },
+  }).toArray()
+}
+
+export async function listAdminPushSubscriptions(adminUserId: string, topic: AdminPushTopic) {
+  return (await subscriptions()).find({
+    status: "active",
+    adminEvents: true,
+    adminUserId,
+    adminVerifiedAt: { $type: "date" },
+    $or: [
+      { adminTopics: topic },
+      { adminTopics: { $exists: false } },
+    ],
+  }).toArray()
 }
 
 export async function listMessagePushSubscriptions(userId: string) {

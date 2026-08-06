@@ -4,6 +4,7 @@ import {
   deletePushSubscription,
   getPushSubscription,
   PUSH_TOPICS,
+  adminPushTopicsFor,
   pushCapabilityMatches,
   revokePrivatePushSubscription,
   upsertPushSubscription,
@@ -11,6 +12,7 @@ import {
   verifyMessagePushSubscription,
   type PushTopic,
 } from "@/lib/db/push-subscriptions"
+import { normalizeAdminPushTopics } from "@/lib/notification-events"
 import { rateLimit } from "@/lib/rate-limit"
 import { requestIdentity } from "@/lib/request-identity"
 import { isSameOriginRequest } from "@/lib/csrf"
@@ -68,7 +70,7 @@ export async function PUT(req: NextRequest) {
   }
   const admin = await isAdmin()
   const userId = await getAuthUserId()
-  if (subscription?.adminEvents && userId && subscription.adminUserId === userId) {
+  if (admin && subscription.adminEvents && userId && subscription.adminUserId === userId) {
     await verifyAdminPushSubscription(body.endpoint, userId)
   }
   if (subscription?.messageEvents && userId && subscription.messageUserId === userId) {
@@ -79,6 +81,7 @@ export async function PUT(req: NextRequest) {
     pending: subscription.status === "pending",
     topics: subscription.status === "active" ? subscription.topics : [],
     adminEvents: subscription.status === "active" && admin ? subscription.adminEvents === true : false,
+    adminTopics: subscription.status === "active" && admin ? adminPushTopicsFor(subscription) : [],
     messageEvents: Boolean(subscription.status === "active" && userId && subscription.messageEvents && subscription.messageUserId === userId),
   })
 }
@@ -95,6 +98,7 @@ export async function POST(req: NextRequest) {
     keys?: { p256dh?: unknown; auth?: unknown }
     topics?: unknown
     adminEvents?: unknown
+    adminTopics?: unknown
     messageEvents?: unknown
   } | null
   if (
@@ -128,7 +132,12 @@ export async function POST(req: NextRequest) {
     keys: { p256dh: body.keys.p256dh, auth: body.keys.auth },
     topics: topicsFrom(body.topics),
     userAgent: req.headers.get("user-agent")?.slice(0, 300),
-    ...(admin && userId ? { admin: { enabled: body.adminEvents === true, userId } } : {}),
+    ...(admin && userId ? {
+      admin: {
+        topics: normalizeAdminPushTopics(body.adminTopics, body.adminEvents === true),
+        userId,
+      },
+    } : {}),
     ...(userId ? { messages: { enabled: body.messageEvents === true, userId } } : {}),
   })
 

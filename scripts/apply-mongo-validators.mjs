@@ -126,7 +126,7 @@ const validators = {
     ],
     {
       endpoint: string, expirationTime: numberOrNull, keys: object, topics: array,
-      adminEvents: bool, messageEvents: bool, failureCount: number,
+      adminEvents: bool, adminTopics: array, messageEvents: bool, failureCount: number,
       createdAt: date, updatedAt: date, retentionUntil: date,
     }
   ),

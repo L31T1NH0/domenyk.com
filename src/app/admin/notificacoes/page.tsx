@@ -1,12 +1,14 @@
 import { PushSubscriptionManager } from "@/components/notifications/PushSubscriptionManager"
 import { getAdminUserId } from "@/lib/auth"
-import { listAdminPushSubscriptions, listPushCampaigns, pushSubscriptionCounts } from "@/lib/db/push-subscriptions"
+import { adminPushTopicsFor, listAdminPushDevices, listPushCampaigns, pushSubscriptionCounts } from "@/lib/db/push-subscriptions"
+import { getSiteVisitNotificationSettings } from "@/lib/db/notification-settings"
 import { getNotes } from "@/lib/db/notes"
 import { getPosts } from "@/lib/db/posts"
 import { descriptionFromMarkdown, noteDisplayTitle } from "@/lib/seo"
 import { ManualPushComposer, type PushContentOption } from "./ManualPushComposer"
 import { AdminPushDevices, type AdminPushDevice } from "./AdminPushDevices"
 import { AdminCommandHeader } from "../AdminCommandHeader"
+import { AdminNotificationSettings } from "./AdminNotificationSettings"
 
 function deviceLabel(userAgent?: string) {
   if (!userAgent) return "Dispositivo não identificado"
@@ -28,17 +30,19 @@ function deviceLabel(userAgent?: string) {
 
 export default async function AdminPushPage() {
   const adminId = getAdminUserId()
-  const [{ posts }, { notes }, counts, campaigns, storedDevices] = await Promise.all([
+  const [{ posts }, { notes }, counts, campaigns, storedDevices, visitSettings] = await Promise.all([
     getPosts({ limit: 200 }),
     getNotes({ limit: 200 }),
     pushSubscriptionCounts(),
     listPushCampaigns(),
-    adminId ? listAdminPushSubscriptions(adminId) : Promise.resolve([]),
+    adminId ? listAdminPushDevices(adminId) : Promise.resolve([]),
+    getSiteVisitNotificationSettings(),
   ])
   const devices: AdminPushDevice[] = storedDevices.map((device) => ({
     id: device._id.toString(),
     label: deviceLabel(device.userAgent),
     updatedAt: device.updatedAt.toISOString(),
+    topics: adminPushTopicsFor(device),
     ...(device.lastSuccessAt ? { lastSuccessAt: device.lastSuccessAt.toISOString() } : {}),
   }))
   const content: PushContentOption[] = [
@@ -60,7 +64,7 @@ export default async function AdminPushPage() {
 
   return (
     <>
-      <AdminCommandHeader title="Notificações push" description="Assinaturas, alertas privados e disparos editoriais." />
+      <AdminCommandHeader title="Notificações push" description="Preferências por evento, origens e disparos editoriais." />
       <section className="admin-push-summary" aria-label="Resumo das assinaturas">
         {[
           ["Dispositivos", counts.devices],
@@ -69,6 +73,12 @@ export default async function AdminPushPage() {
           ["Seus dispositivos", counts.adminDevices],
         ].map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}
       </section>
+
+      <AdminNotificationSettings
+        initialSiteVisitsEnabled={visitSettings.enabled}
+        initialStoreSiteVisits={visitSettings.storeInHistory}
+        webhookConfigured={Boolean(process.env.CLERK_WEBHOOK_SIGNING_SECRET?.trim())}
+      />
 
       <ManualPushComposer content={content} />
 

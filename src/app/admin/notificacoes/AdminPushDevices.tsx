@@ -4,12 +4,14 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { ComputerDesktopIcon, XMarkIcon } from "@heroicons/react/24/outline"
 import { formatSiteDate } from "@/lib/datetime"
+import { ADMIN_PUSH_TOPIC_LABELS, type AdminPushTopic } from "@/lib/notification-events"
 
 export type AdminPushDevice = {
   id: string
   label: string
   updatedAt: string
   lastSuccessAt?: string
+  topics: AdminPushTopic[]
 }
 
 export function AdminPushDevices({ devices }: { devices: AdminPushDevice[] }) {
@@ -53,6 +55,7 @@ export function AdminPushDevices({ devices }: { devices: AdminPushDevice[] }) {
               Atualizado em {formatSiteDate(device.updatedAt, { dateStyle: "short", timeStyle: "short" })}
               {device.lastSuccessAt ? ` · último envio ${formatSiteDate(device.lastSuccessAt, { dateStyle: "short", timeStyle: "short" })}` : ""}
             </span>
+            <span>{device.topics.map((topic) => ADMIN_PUSH_TOPIC_LABELS[topic]).join(" · ")}</span>
           </div>
           <button
             type="button"
