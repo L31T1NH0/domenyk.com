@@ -30,6 +30,12 @@ Configure a Clerk webhook endpoint at `https://your-domain.example/api/webhooks/
 
 When `INDEXNOW_KEY` is configured, the site exposes it at `/indexnow-key.txt` and notifies IndexNow after publishing, updating, hiding, unpublishing, changing a URL, or deleting indexable content. Failed notifications never block an editorial save.
 
+## Importação da Mesa Editorial
+
+Em `/admin/notes`, a seção **Importar revisão editorial** aceita o arquivo `domenyk-editorial-import.json` exportado pela ferramenta local `/home/leite/wiki/tools/editorial-workbench`. O site mostra uma prévia antes de aplicar qualquer mudança.
+
+O pacote encontra cada nota por `sha256(normalize(content))`, porque os IDs do arquivo bruto e os IDs MongoDB são diferentes. Correspondências ausentes, duplicadas ou ambíguas bloqueiam a aplicação. Depois da confirmação, unidades revisadas atualizam o conteúdo das partes correspondentes; unidades arquivadas são excluídas junto com seus comentários e imagens associadas. O cache público e o IndexNow são invalidados após a operação.
+
 ## SEO data migration
 
 Preview the additive post migration without writing to the database:

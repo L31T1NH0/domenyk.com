@@ -2130,3 +2130,11 @@ html.light-mode [data-public-shell] .note-content a:hover {
   .admin-comment-details { margin-left: 0; }
   .admin-comment-details > header { flex-direction: column; }
 }
+
+.admin-pick-list > li { display:flex; align-items:center; justify-content:space-between; gap:15px; border-top:1px solid #e5e5e2; padding:11px 0; list-style:none; }
+.admin-pick-list > li > span:first-child { min-width:0; }
+.admin-pick-list > li strong,.admin-pick-list > li small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.admin-pick-list > li small { margin-top:3px; color:#888; font-size:10px; }
+.dark-mode .admin-pick-list > li { border-color:#262626; }
+.admin-editor-actions.admin-field-wide { display:flex; justify-content:flex-end; gap:8px; }
+@media (max-width: 600px) { .admin-editor-actions.admin-field-wide { flex-direction:column; } }
