@@ -105,14 +105,14 @@ function getPostStyleClasses(style: PostStyle) {
 
   if (style === "opinion") {
     return {
-      page: "post-style-opinion",
+      page: "post-reading-page post-style-opinion",
       article: "mt-8 border-l-2 border-[#E00070] pl-4 sm:pl-7",
       eyebrow: "mb-4 block text-[11px] font-semibold uppercase tracking-[0.24em] text-[#E00070]",
       content: "post-content-opinion",
     }
   }
 
-  return { page: "", article: "mt-6", eyebrow: "", content: "" }
+  return { page: "post-reading-page", article: "mt-6", eyebrow: "", content: "" }
 }
 
 const findPost = cache(async function findPost(slug: string, locale: PostLocale): Promise<Post | null> {
