@@ -1155,8 +1155,9 @@ html.light-mode [data-public-shell] .post-content h5 {
 
 @media (min-width: 84rem) {
   .post-reading-page {
+    position: relative;
+    left: calc(-17.5vw + 6.0375rem);
     width: 36.5rem;
-    transform: translateX(calc(-17.5vw + 6.0375rem));
   }
 }
 
