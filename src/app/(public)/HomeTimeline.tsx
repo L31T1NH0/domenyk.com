@@ -1503,7 +1503,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
             <div
               aria-hidden
               className={[
-                "pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#f4f4f4] via-[#f4f4f4]/90 to-transparent transition-opacity duration-150 min-[40rem]:max-[83.999rem]:right-[-1rem] dark:from-[#040404] dark:via-[#040404]/90",
+                "pointer-events-none absolute inset-x-[-1rem] bottom-0 h-16 bg-gradient-to-t from-[#f4f4f4] via-[#f4f4f4]/90 to-transparent transition-opacity duration-150 dark:from-[#040404] dark:via-[#040404]/90",
                 threadRailOverflow && !threadRailAtEnd ? "opacity-100" : "opacity-0",
               ].join(" ")}
             />
