@@ -13,7 +13,13 @@ function getClientPromise(): Promise<MongoClient> {
   if (!uri) throw new Error("MONGODB_URI is not set")
 
   if (!global._mongoClientPromise) {
-    const client = new MongoClient(uri)
+    const client = new MongoClient(uri, {
+      // Keep serverless instances from exhausting the Atlas M0 connection limit.
+      // The pool still reuses connections, but releases idle ones after traffic subsides.
+      maxPoolSize: 10,
+      minPoolSize: 0,
+      maxIdleTimeMS: 30_000,
+    })
     const retryableConnection = resetOnRejection(client.connect(), async () => {
       if (global._mongoClientPromise === retryableConnection) {
         global._mongoClient = undefined

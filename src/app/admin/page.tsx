@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { ArrowUpRightIcon } from "@heroicons/react/24/outline"
+import { ArrowDownTrayIcon, ArrowUpRightIcon } from "@heroicons/react/24/outline"
 import { getPosts } from "@/lib/db/posts"
 import { getActivityDashboard } from "@/lib/db/activity"
 import { ActivityChart } from "./ActivityChart"
@@ -11,7 +11,17 @@ export default async function AdminDashboard() {
     <AdminCommandHeader
       title="Visão geral"
       description="Leitura, conversa e publicação nos últimos 14 dias."
-      actions={<Link href="/admin/posts/new" className="admin-button-primary">Novo post</Link>}
+      actions={
+        <>
+          <form action="/api/admin/database/download" method="post">
+            <button type="submit" className="admin-control-button" title="Baixar todas as coleções, documentos e índices do MongoDB">
+              <ArrowDownTrayIcon aria-hidden />
+              Backup MongoDB
+            </button>
+          </form>
+          <Link href="/admin/posts/new" className="admin-button-primary">Novo post</Link>
+        </>
+      }
     />
 
     <section className="admin-overview-focus" aria-label="Desempenho editorial">
