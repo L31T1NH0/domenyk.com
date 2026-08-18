@@ -76,16 +76,16 @@ export function BackHome({ boundaryId = "post-content-boundary", label = "Voltar
         ref={linkRef}
         href={href}
         className={[
-          "hidden md:flex fixed left-[calc(50%-18rem)] -translate-x-full -translate-y-1/2 -ml-4 z-40 items-center justify-center p-1.5 rounded-full text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-[top,transform] duration-150 hover:scale-110",
+          "group hidden md:flex fixed left-[calc(50%-18rem)] -translate-x-full -translate-y-1/2 -ml-4 z-40 items-center justify-center p-1.5 rounded-full text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-[top] duration-150",
           variant === "editorial"
             ? "editorial-back-home"
-            : "min-[84rem]:left-[calc(32.5vw-11.9625rem)]",
+            : "min-[84rem]:left-[calc(32.5vw-8.9625rem)]",
         ].join(" ")}
         style={{ top }}
         aria-label={label}
         title={label}
       >
-        <ChevronLeftIcon className="size-7 text-zinc-700 dark:text-zinc-300" aria-hidden="true" />
+        <ChevronLeftIcon className="size-7 transition-[width,height] duration-150 group-hover:size-[1.925rem] motion-reduce:transition-none" aria-hidden="true" />
       </Link>
     </>
   )

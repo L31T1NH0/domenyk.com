@@ -1226,6 +1226,16 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
     { mode: "posts" as const, label: "Posts", count: postCount },
     { mode: "notes" as const, label: "Notas", count: noteCount },
   ]
+  const searchPlaceholder = optimisticFeedMode === "posts"
+    ? "Pesquisar posts..."
+    : optimisticFeedMode === "notes"
+      ? "Pesquisar notas..."
+      : "Pesquisar..."
+  const searchLabel = optimisticFeedMode === "posts"
+    ? "Pesquisar posts"
+    : optimisticFeedMode === "notes"
+      ? "Pesquisar notas"
+      : "Pesquisar posts e notas"
   const hasDesktopThreads = desktopThreadItems.length > 0
   const hasDesktopStandaloneItems = desktopVisibleItems.length > 0
 
@@ -1314,12 +1324,12 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
           ? "home-timeline-dual-grid min-[84rem]:grid min-[84rem]:translate-x-[calc(-17.5vw+6.0375rem)] min-[84rem]:grid-cols-[34.5rem_minmax(0,1fr)] min-[84rem]:items-start min-[84rem]:gap-8 min-[96rem]:gap-12"
           : "",
       ].join(" ")}>
-        <div className="flex min-w-0 flex-col gap-5">
-          <div className="home-timeline-dual-search-row flex flex-col gap-3 min-[84rem]:mb-[-2.5rem]">
+        <div className="home-timeline-primary-column flex min-w-0 flex-col gap-5">
+          <div className="home-timeline-dual-search-row flex flex-col gap-3">
             <div className="flex min-w-0 flex-col items-start gap-3">
               <form
                 action="/"
-                className="home-timeline-dual-search w-[min(100%,14rem)] min-w-0 sm:w-56 min-[84rem]:relative min-[84rem]:top-[-2.375rem]"
+                className="home-timeline-dual-search w-[min(100%,14rem)] min-w-0 sm:w-56"
                 onSubmit={(event) => {
                   event.preventDefault()
                   if (searchDebounceRef.current) {
@@ -1344,8 +1354,8 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
                     name="q"
                     value={searchInput}
                     onChange={(event) => setSearchInput(event.target.value)}
-                    placeholder="Pesquisar posts..."
-                    aria-label="Pesquisar posts e notas"
+                    placeholder={searchPlaceholder}
+                    aria-label={searchLabel}
                     autoComplete="off"
                     maxLength={120}
                     className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-neutral-600 dark:placeholder:text-[#c2bbb1]"
@@ -1493,7 +1503,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
             <div
               aria-hidden
               className={[
-                "pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#f4f4f4] via-[#f4f4f4]/90 to-transparent transition-opacity duration-150 dark:from-[#040404] dark:via-[#040404]/90",
+                "pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#f4f4f4] via-[#f4f4f4]/90 to-transparent transition-opacity duration-150 min-[40rem]:max-[83.999rem]:right-[-1rem] dark:from-[#040404] dark:via-[#040404]/90",
                 threadRailOverflow && !threadRailAtEnd ? "opacity-100" : "opacity-0",
               ].join(" ")}
             />

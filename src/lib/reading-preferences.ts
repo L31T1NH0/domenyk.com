@@ -67,7 +67,7 @@ function baseMetricForPreference(key: ReadingPreferenceKey, metrics: ReadingMetr
   if (key === "fontSize") return metrics.autoFontSize
   if (key === "lineHeight") return metrics.baseLineHeight
   if (key === "blockSpacing") return metrics.baseBlockSpacing
-  return 0
+  return 0.005
 }
 
 export function clampReadingPreference(key: ReadingPreferenceKey, value: number) {
@@ -149,7 +149,7 @@ export function effectiveReadingMetrics(
   return {
     fontSize: preferences.fontSize ?? metrics.autoFontSize,
     lineHeight: preferences.lineHeight ?? metrics.baseLineHeight,
-    letterSpacing: preferences.letterSpacing ?? 0,
+    letterSpacing: preferences.letterSpacing ?? 0.005,
     blockSpacing: preferences.blockSpacing ?? metrics.baseBlockSpacing,
   }
 }
