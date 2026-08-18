@@ -182,27 +182,40 @@ export function PublicMenu() {
   useEffect(() => {
     if (!admin) return
     let cancelled = false
+    let requestInFlight = false
 
-    function refreshUnreadNotifications() {
-      fetch("/api/notifications", { cache: "no-store" })
-        .then((response) => response.ok ? response.json() : { unread: 0 })
-        .then((data) => {
-          if (!cancelled) setUnreadNotifications(Math.max(0, Number(data.unread) || 0))
-        })
+    async function refreshUnreadNotifications() {
+      if (document.visibilityState !== "visible" || requestInFlight) return
+      requestInFlight = true
+      try {
+        const response = await fetch("/api/notifications/unread", { cache: "no-store" })
+        if (!response.ok) return
+        const data = await response.json()
+        if (!cancelled) setUnreadNotifications(Math.max(0, Number(data.unread) || 0))
+      } catch {
+        // Keep the last known count when the network is temporarily unavailable.
+      } finally {
+        requestInFlight = false
+      }
     }
 
-    refreshUnreadNotifications()
-    const interval = window.setInterval(refreshUnreadNotifications, 45_000)
-    const onFocus = () => refreshUnreadNotifications()
+    void refreshUnreadNotifications()
+    const interval = window.setInterval(() => void refreshUnreadNotifications(), 120_000)
+    const onFocus = () => void refreshUnreadNotifications()
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") void refreshUnreadNotifications()
+    }
     window.addEventListener("focus", onFocus)
+    document.addEventListener("visibilitychange", onVisibilityChange)
     window.addEventListener("notifications:changed", refreshUnreadNotifications)
     return () => {
       cancelled = true
       window.clearInterval(interval)
       window.removeEventListener("focus", onFocus)
+      document.removeEventListener("visibilitychange", onVisibilityChange)
       window.removeEventListener("notifications:changed", refreshUnreadNotifications)
     }
-  }, [admin, open])
+  }, [admin])
 
   function menuItems() {
     return Array.from(
