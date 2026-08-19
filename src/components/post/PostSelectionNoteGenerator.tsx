@@ -1,12 +1,20 @@
 "use client"
 
-import { XMarkIcon } from "@heroicons/react/24/outline"
-import { useCallback, useEffect, useId, useRef, useState } from "react"
+import { DocumentPlusIcon } from "@heroicons/react/24/outline"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 
-type CreatedNote = {
-  _id: string
+type CreatedNote = { _id: string }
+
+type DropdownPosition = {
+  left: number
+  top: number
+  above: boolean
 }
+
+const DROPDOWN_WIDTH = 288
+const DROPDOWN_ESTIMATED_HEIGHT = 176
+const VIEWPORT_MARGIN = 12
 
 function quoteAsMarkdown(text: string) {
   return text
@@ -17,14 +25,23 @@ function quoteAsMarkdown(text: string) {
 
 export function PostSelectionNoteGenerator({ postPath }: { postPath: string }) {
   const router = useRouter()
-  const titleId = useId()
-  const dialogRef = useRef<HTMLDialogElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const actionRef = useRef<HTMLButtonElement>(null)
   const selectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [excerpt, setExcerpt] = useState("")
+  const [position, setPosition] = useState<DropdownPosition | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
 
-  const readSelection = useCallback(() => {
+  const close = useCallback(() => {
+    if (submitting) return
+    setPosition(null)
+    setExcerpt("")
+    setError("")
+    window.getSelection()?.removeAllRanges()
+  }, [submitting])
+
+  const readSelection = useCallback((focusAction = false) => {
     const selection = window.getSelection()
     if (!selection || selection.isCollapsed || selection.rangeCount === 0) return
 
@@ -40,21 +57,36 @@ export function PostSelectionNoteGenerator({ postPath }: { postPath: string }) {
     if (!content || !end || !content.contains(end)) return
 
     const selectedText = selection.toString().replace(/\s+/g, " ").trim()
-    if (!selectedText) return
+    const selectionRect = range.getBoundingClientRect()
+    if (!selectedText || (selectionRect.width === 0 && selectionRect.height === 0)) return
+
+    const availableWidth = Math.min(DROPDOWN_WIDTH, window.innerWidth - VIEWPORT_MARGIN * 2)
+    const centeredLeft = selectionRect.left + selectionRect.width / 2 - availableWidth / 2
+    const left = Math.min(
+      window.innerWidth - availableWidth - VIEWPORT_MARGIN,
+      Math.max(VIEWPORT_MARGIN, centeredLeft)
+    )
+    const above = selectionRect.bottom + DROPDOWN_ESTIMATED_HEIGHT + VIEWPORT_MARGIN > window.innerHeight
 
     setExcerpt(selectedText)
     setError("")
-    if (!dialogRef.current?.open) dialogRef.current?.showModal()
+    setPosition({
+      left,
+      top: above ? Math.max(VIEWPORT_MARGIN, selectionRect.top - 8) : selectionRect.bottom + 8,
+      above,
+    })
+
+    if (focusAction) requestAnimationFrame(() => actionRef.current?.focus())
   }, [])
 
   useEffect(() => {
-    const handlePointerUp = () => window.setTimeout(readSelection, 0)
+    const handlePointerUp = () => window.setTimeout(() => readSelection(), 0)
     const handleKeyUp = (event: globalThis.KeyboardEvent) => {
-      if (event.key === "Shift" || event.shiftKey) readSelection()
+      if (event.key === "Shift" || event.shiftKey) readSelection(true)
     }
     const handleSelectionChange = () => {
       if (selectionTimerRef.current) clearTimeout(selectionTimerRef.current)
-      selectionTimerRef.current = setTimeout(readSelection, 500)
+      selectionTimerRef.current = setTimeout(() => readSelection(), 500)
     }
 
     document.addEventListener("pointerup", handlePointerUp)
@@ -68,13 +100,30 @@ export function PostSelectionNoteGenerator({ postPath }: { postPath: string }) {
     }
   }, [readSelection])
 
-  function close() {
-    if (submitting) return
-    dialogRef.current?.close()
-    window.getSelection()?.removeAllRanges()
-    setExcerpt("")
-    setError("")
-  }
+  useEffect(() => {
+    if (!position) return
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!dropdownRef.current?.contains(event.target as Node)) close()
+    }
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== "Escape") return
+      event.preventDefault()
+      close()
+    }
+    const handleViewportChange = () => close()
+
+    document.addEventListener("pointerdown", handlePointerDown)
+    document.addEventListener("keydown", handleKeyDown)
+    window.addEventListener("scroll", handleViewportChange, true)
+    window.addEventListener("resize", handleViewportChange)
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown)
+      document.removeEventListener("keydown", handleKeyDown)
+      window.removeEventListener("scroll", handleViewportChange, true)
+      window.removeEventListener("resize", handleViewportChange)
+    }
+  }, [close, position])
 
   async function publish() {
     if (!excerpt || submitting) return
@@ -93,7 +142,7 @@ export function PostSelectionNoteGenerator({ postPath }: { postPath: string }) {
         throw new Error(data?.error ?? "Não foi possível publicar a nota.")
       }
 
-      dialogRef.current?.close()
+      setPosition(null)
       router.push(`/notes/${data._id}`)
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Não foi possível publicar a nota.")
@@ -101,49 +150,34 @@ export function PostSelectionNoteGenerator({ postPath }: { postPath: string }) {
     }
   }
 
+  if (!position) return null
+
   return (
-    <dialog
-      ref={dialogRef}
-      aria-labelledby={titleId}
-      onCancel={(event) => {
-        event.preventDefault()
-        close()
+    <div
+      ref={dropdownRef}
+      role="dialog"
+      aria-label="Gerar nota a partir do trecho selecionado"
+      className="fixed z-[70] w-[min(18rem,calc(100vw-1.5rem))] rounded-[10px] border border-neutral-200 bg-white p-1.5 text-neutral-950 shadow-[0_4px_8px_rgb(0_0_0_/_0.12)] dark:border-white/10 dark:bg-[#0b0b0b] dark:text-[#f1f1f1] dark:shadow-[0_4px_8px_rgb(0_0_0_/_0.45)]"
+      style={{
+        left: position.left,
+        top: position.top,
+        transform: position.above ? "translateY(-100%)" : undefined,
       }}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) close()
-      }}
-      className="fixed inset-0 m-auto w-[min(32rem,calc(100vw-2rem))] rounded-xl border border-neutral-200 bg-white p-0 text-neutral-950 shadow-2xl backdrop:bg-black/60 dark:border-white/10 dark:bg-[#0b0b0b] dark:text-[#f1f1f1]"
     >
-      <div className="flex items-center justify-between gap-4 border-b border-neutral-200 px-5 py-4 dark:border-white/10">
-        <h2 id={titleId} className="text-base font-semibold">Gerar nota</h2>
-        <button
-          type="button"
-          onClick={close}
-          disabled={submitting}
-          aria-label="Fechar"
-          className="grid size-8 place-items-center rounded-full text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:opacity-50 dark:hover:bg-white/10 dark:hover:text-white"
-        >
-          <XMarkIcon className="size-4" aria-hidden />
-        </button>
-      </div>
-
-      <div className="px-5 py-4">
-        <p className="text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Trecho selecionado</p>
-        <blockquote className="mt-2 max-h-56 overflow-y-auto border-l-2 border-[#E00070] pl-3 text-sm leading-relaxed text-neutral-700 dark:text-[#d8d4ce]">
-          {excerpt}
-        </blockquote>
-        <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">A nota incluirá este trecho e o link “Leia o post completo”.</p>
-        {error && <p role="alert" className="mt-3 text-sm text-red-700 dark:text-red-300">{error}</p>}
-      </div>
-
-      <div className="flex justify-end gap-2 border-t border-neutral-200 px-5 py-4 dark:border-white/10">
-        <button type="button" onClick={close} disabled={submitting} className="rounded-lg px-4 py-2 text-sm font-medium text-neutral-600 transition hover:bg-neutral-100 disabled:opacity-50 dark:text-neutral-300 dark:hover:bg-white/10">
-          Cancelar
-        </button>
-        <button type="button" onClick={() => void publish()} disabled={submitting || !excerpt} className="rounded-lg bg-neutral-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-neutral-700 disabled:cursor-wait disabled:opacity-50 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200">
-          {submitting ? "Publicando…" : "Publicar nota"}
-        </button>
-      </div>
-    </dialog>
+      <blockquote className="line-clamp-3 border-l border-[#E00070] px-2.5 py-1.5 text-xs leading-[1.5] text-neutral-600 dark:text-[#A8A095]">
+        {excerpt}
+      </blockquote>
+      {error && <p role="alert" className="px-2.5 py-1.5 text-xs leading-5 text-red-700 dark:text-red-400">{error}</p>}
+      <button
+        ref={actionRef}
+        type="button"
+        onClick={() => void publish()}
+        disabled={submitting}
+        className="mt-1 flex min-h-10 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-[13px] font-medium text-neutral-700 outline-none transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:bg-neutral-100 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-neutral-500 disabled:cursor-wait disabled:opacity-50 dark:text-[#d8d4ce] dark:hover:bg-white/[0.07] dark:hover:text-[#f1f1f1] dark:focus-visible:bg-white/[0.07] dark:focus-visible:ring-neutral-300"
+      >
+        <DocumentPlusIcon className="size-4 shrink-0" aria-hidden />
+        {submitting ? "Gerando nota…" : "Gerar nota"}
+      </button>
+    </div>
   )
 }
