@@ -15,7 +15,6 @@ import {
   del,
   list,
 } from "@vercel/blob"
-import sharp from "sharp"
 import { sanitizeSvg } from "@/lib/svg-sanitizer"
 import { unsharedImageUploadBody } from "@/lib/blob-upload-body"
 
@@ -29,6 +28,19 @@ const IMAGE_WEBP_FALLBACK_QUALITY = 64
 
 export const MAX_IMAGE_UPLOAD_BYTES = 4 * 1024 * 1024
 const MAX_SANITIZED_IMAGE_BYTES = 4 * 1024 * 1024
+
+type SharpFactory = typeof import("sharp")
+let sharpPromise: Promise<SharpFactory> | undefined
+
+function loadSharp(): Promise<SharpFactory> {
+  if (!sharpPromise) {
+    sharpPromise = import("sharp").then((module) => {
+      const imported = module as unknown as { default?: SharpFactory }
+      return imported.default ?? module as unknown as SharpFactory
+    })
+  }
+  return sharpPromise
+}
 
 function blobAuthOptions(): { token?: string } {
   const token = process.env.BLOB_READ_WRITE_TOKEN?.trim()
@@ -139,6 +151,8 @@ export async function sanitizeImageUpload(
   if (!detectedType || !isAllowedImageType(detectedType) || detectedType !== normalizedDeclaredType) {
     throw new Error("Invalid image")
   }
+
+  const sharp = await loadSharp()
 
   if (detectedType === "image/svg+xml") {
     const sanitized = sanitizeSvg(buffer)
