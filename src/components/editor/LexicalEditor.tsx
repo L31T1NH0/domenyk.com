@@ -35,6 +35,10 @@ import {
 } from "lexical"
 import { ToolbarPlugin } from "./ToolbarPlugin"
 import { FLOW_IMAGE_TRANSFORMER, IMAGE_TRANSFORMER, ImageNode } from "./ImageNode"
+import {
+  prepareLatexForLexicalImport,
+  restoreLatexAfterLexicalExport,
+} from "./latex-markdown"
 
 const MARKDOWN_TRANSFORMERS = [FLOW_IMAGE_TRANSFORMER, IMAGE_TRANSFORMER, ...TRANSFORMERS]
 const EDITOR_NODES = [HeadingNode, QuoteNode, ListNode, ListItemNode, CodeNode, CodeHighlightNode, LinkNode, ImageNode]
@@ -103,7 +107,9 @@ type Props = {
 export function readMarkdownFromEditor(editor: LexicalEditorInstance) {
   let markdown = ""
   editor.getEditorState().read(() => {
-    markdown = $convertToMarkdownString(MARKDOWN_TRANSFORMERS).trim()
+    markdown = restoreLatexAfterLexicalExport(
+      $convertToMarkdownString(MARKDOWN_TRANSFORMERS)
+    ).trim()
   })
   return markdown
 }
@@ -132,7 +138,10 @@ function markdownToSerializedNodes(markdown: string): SerializedClipboardNode[] 
 
   importEditor.update(
     () => {
-      $convertFromMarkdownString(markdown, MARKDOWN_TRANSFORMERS)
+      $convertFromMarkdownString(
+        prepareLatexForLexicalImport(markdown),
+        MARKDOWN_TRANSFORMERS
+      )
     },
     { discrete: true }
   )
@@ -363,7 +372,10 @@ export function LexicalEditor({
     nodes: EDITOR_NODES,
     onError: (error: Error) => console.error(error),
     editorState: initialMarkdown
-      ? () => $convertFromMarkdownString(initialMarkdown, MARKDOWN_TRANSFORMERS)
+      ? () => $convertFromMarkdownString(
+          prepareLatexForLexicalImport(initialMarkdown),
+          MARKDOWN_TRANSFORMERS
+        )
       : undefined,
   }), [initialMarkdown, namespace])
 
@@ -373,7 +385,9 @@ export function LexicalEditor({
 
       const emitChange = () => {
         state.read(() => {
-          onChange($convertToMarkdownString(MARKDOWN_TRANSFORMERS).trim())
+          onChange(restoreLatexAfterLexicalExport(
+            $convertToMarkdownString(MARKDOWN_TRANSFORMERS)
+          ).trim())
         })
       }
 
