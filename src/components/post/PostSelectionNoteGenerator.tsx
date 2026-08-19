@@ -15,12 +15,74 @@ type DropdownPosition = {
 const DROPDOWN_WIDTH = 288
 const DROPDOWN_ESTIMATED_HEIGHT = 176
 const VIEWPORT_MARGIN = 12
+const MAX_GENERATED_NOTE_LENGTH = 19_500
 
-function quoteAsMarkdown(text: string) {
-  return text
-    .split(/\r?\n/)
-    .map((line) => `> ${line.trim()}`)
-    .join("\n")
+function normalizeInlineWhitespace(value: string) {
+  return value.replace(/\s+/g, " ")
+}
+
+function escapeMarkdownText(value: string) {
+  return normalizeInlineWhitespace(value).replace(/([\\*_[\]])/g, "\\$1")
+}
+
+function serializeInlineNode(node: Node): string {
+  if (node.nodeType === Node.TEXT_NODE) return escapeMarkdownText(node.textContent ?? "")
+  if (!(node instanceof HTMLElement)) return ""
+
+  const content = Array.from(node.childNodes).map(serializeInlineNode).join("")
+  const tag = node.tagName.toLowerCase()
+  if (tag === "strong" || tag === "b") return content.trim() ? `**${content.trim()}**` : ""
+  if (tag === "em" || tag === "i") return content.trim() ? `*${content.trim()}*` : ""
+  if (tag === "code") return content.trim() ? `\`${content.trim().replace(/`/g, "\\`")}\`` : ""
+  if (tag === "a") {
+    const href = node.getAttribute("href")
+    return href && content.trim() ? `[${content.trim()}](${href})` : content
+  }
+  if (tag === "br") return "\n"
+  return content
+}
+
+function prefixLines(value: string, prefix: string) {
+  return value.split("\n").map((line) => `${prefix}${line}`).join("\n")
+}
+
+function serializeBlockNode(node: Node, listIndex?: number): string {
+  if (node.nodeType === Node.TEXT_NODE) return escapeMarkdownText(node.textContent ?? "")
+  if (!(node instanceof HTMLElement)) return ""
+
+  const tag = node.tagName.toLowerCase()
+  if (tag === "ul" || tag === "ol") {
+    return Array.from(node.children)
+      .filter((child) => child.tagName.toLowerCase() === "li")
+      .map((child, index) => serializeBlockNode(child, tag === "ol" ? index + 1 : undefined))
+      .filter(Boolean)
+      .join("\n")
+  }
+  if (tag === "li") {
+    const content = Array.from(node.childNodes).map(serializeInlineNode).join("").trim()
+    return content ? `${listIndex ? `${listIndex}.` : "-"} ${content}` : ""
+  }
+
+  const content = Array.from(node.childNodes).map(serializeInlineNode).join("").trim()
+  if (!content) return ""
+  if (/^h[1-6]$/.test(tag)) return `${"#".repeat(Number(tag[1]))} ${content}`
+  if (tag === "blockquote") return prefixLines(content, "> ")
+  return content
+}
+
+function selectionAsMarkdown(range: Range) {
+  const fragment = range.cloneContents()
+  const container = document.createElement("div")
+  container.append(fragment)
+  const blockSelector = "p,h1,h2,h3,h4,h5,h6,blockquote,ul,ol,pre"
+  const topLevelBlocks = Array.from(container.querySelectorAll<HTMLElement>(blockSelector))
+    .filter((element) => !element.parentElement?.closest(blockSelector))
+
+  const markdown = topLevelBlocks.length > 0
+    ? topLevelBlocks.map((element) => serializeBlockNode(element)).filter(Boolean).join("\n\n")
+    : Array.from(container.childNodes).map(serializeBlockNode).join("")
+
+  return markdown.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim()
 }
 
 export function PostSelectionNoteGenerator({ postPath }: { postPath: string }) {
@@ -29,6 +91,7 @@ export function PostSelectionNoteGenerator({ postPath }: { postPath: string }) {
   const actionRef = useRef<HTMLButtonElement>(null)
   const selectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [excerpt, setExcerpt] = useState("")
+  const [selectedContent, setSelectedContent] = useState("")
   const [position, setPosition] = useState<DropdownPosition | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
@@ -37,6 +100,7 @@ export function PostSelectionNoteGenerator({ postPath }: { postPath: string }) {
     if (submitting) return
     setPosition(null)
     setExcerpt("")
+    setSelectedContent("")
     setError("")
     window.getSelection()?.removeAllRanges()
   }, [submitting])
@@ -57,8 +121,9 @@ export function PostSelectionNoteGenerator({ postPath }: { postPath: string }) {
     if (!content || !end || !content.contains(end)) return
 
     const selectedText = selection.toString().replace(/\s+/g, " ").trim()
+    const markdown = selectionAsMarkdown(range)
     const selectionRect = range.getBoundingClientRect()
-    if (!selectedText || (selectionRect.width === 0 && selectionRect.height === 0)) return
+    if (!selectedText || !markdown || (selectionRect.width === 0 && selectionRect.height === 0)) return
 
     const availableWidth = Math.min(DROPDOWN_WIDTH, window.innerWidth - VIEWPORT_MARGIN * 2)
     const centeredLeft = selectionRect.left + selectionRect.width / 2 - availableWidth / 2
@@ -69,7 +134,8 @@ export function PostSelectionNoteGenerator({ postPath }: { postPath: string }) {
     const above = selectionRect.bottom + DROPDOWN_ESTIMATED_HEIGHT + VIEWPORT_MARGIN > window.innerHeight
 
     setExcerpt(selectedText)
-    setError("")
+    setSelectedContent(markdown)
+    setError(markdown.length > MAX_GENERATED_NOTE_LENGTH ? "Selecione um trecho menor para gerar a nota." : "")
     setPosition({
       left,
       top: above ? Math.max(VIEWPORT_MARGIN, selectionRect.top - 8) : selectionRect.bottom + 8,
@@ -126,12 +192,12 @@ export function PostSelectionNoteGenerator({ postPath }: { postPath: string }) {
   }, [close, position])
 
   async function publish() {
-    if (!excerpt || submitting) return
+    if (!selectedContent || selectedContent.length > MAX_GENERATED_NOTE_LENGTH || submitting) return
     setSubmitting(true)
     setError("")
 
     try {
-      const content = `${quoteAsMarkdown(excerpt)}\n\n[Leia o post completo](${postPath})`
+      const content = `${selectedContent}\n\n[Leia o post completo](${postPath})`
       const response = await fetch("/api/admin/notes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -172,7 +238,7 @@ export function PostSelectionNoteGenerator({ postPath }: { postPath: string }) {
         ref={actionRef}
         type="button"
         onClick={() => void publish()}
-        disabled={submitting}
+        disabled={submitting || selectedContent.length > MAX_GENERATED_NOTE_LENGTH}
         className="mt-1 flex min-h-10 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-[13px] font-medium text-neutral-700 outline-none transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:bg-neutral-100 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-neutral-500 disabled:cursor-wait disabled:opacity-50 dark:text-[#d8d4ce] dark:hover:bg-white/[0.07] dark:hover:text-[#f1f1f1] dark:focus-visible:bg-white/[0.07] dark:focus-visible:ring-neutral-300"
       >
         <DocumentPlusIcon className="size-4 shrink-0" aria-hidden />

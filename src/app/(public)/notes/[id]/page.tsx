@@ -11,6 +11,8 @@ import { NoteViewTracker } from "@/components/notes/NoteViewTracker"
 import { NoteContentShell } from "@/components/notes/NoteContentShell"
 import { PostDescriptionDisclosure } from "@/components/post/PostDescriptionDisclosure"
 import { formatSiteDate } from "@/lib/datetime"
+import { isAdmin } from "@/lib/auth"
+import { NoteDetailAdminActions } from "@/components/notes/NoteDetailAdminActions"
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -47,7 +49,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function NotePage({ params }: Props) {
   const nonce = (await headers()).get("x-nonce") ?? undefined
   const { id } = await params
-  const note = await getCachedNote(id)
+  const [note, admin] = await Promise.all([getCachedNote(id), isAdmin()])
   if (!note) notFound()
 
   const serializedNote = serializeNote(note)
@@ -116,17 +118,20 @@ export default async function NotePage({ params }: Props) {
         }}
       />
       <section aria-label={isThread ? "Thread de notas" : "Nota"}>
-        <header className="mb-4">
-          <h1 className={isThread || note.title || note.seoTitle ? "text-balance text-lg font-semibold leading-snug text-neutral-950 dark:text-[#f1f1f1]" : "sr-only"}>
-            {isThread
-              ? serializedThread[0].title || serializedThread[0].seoTitle || "Thread de notas"
-              : visibleTitle}
-          </h1>
-          {isThread && (
-            <p className="mt-2 text-xs text-neutral-600 dark:text-[#c2bbb1]">
-              {serializedThread.length} notas na thread
-            </p>
-          )}
+        <header className="mb-4 flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className={isThread || note.title || note.seoTitle ? "text-balance text-lg font-semibold leading-snug text-neutral-950 dark:text-[#f1f1f1]" : "sr-only"}>
+              {isThread
+                ? serializedThread[0].title || serializedThread[0].seoTitle || "Thread de notas"
+                : visibleTitle}
+            </h1>
+            {isThread && (
+              <p className="mt-2 text-xs text-neutral-600 dark:text-[#c2bbb1]">
+                {serializedThread.length} notas na thread
+              </p>
+            )}
+          </div>
+          {admin && <NoteDetailAdminActions noteId={serializedNote._id} />}
         </header>
 
         <ol className="m-0 list-none p-0">
