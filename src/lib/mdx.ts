@@ -3,9 +3,11 @@ import "server-only"
 import { unified } from "unified"
 import remarkParse from "remark-parse"
 import remarkGfm from "remark-gfm"
+import remarkMath from "remark-math"
 import remarkRehype from "remark-rehype"
 import rehypeSlug from "rehype-slug"
 import rehypeAutolinkHeadings from "rehype-autolink-headings"
+import rehypeKatex from "rehype-katex"
 import rehypeStringify from "rehype-stringify"
 import rehypeRaw from "rehype-raw"
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize"
@@ -76,6 +78,10 @@ const markdownSanitizeSchema: SanitizeSchema = {
       ...(defaultSchema.attributes?.span ?? []),
       ["dataRole", "author-reference"],
       ["dataKind", "author", "co-author"],
+    ],
+    code: [
+      ...(defaultSchema.attributes?.code ?? []),
+      ["className", /^language-./, "math-inline", "math-display"],
     ],
   },
 }
@@ -515,6 +521,7 @@ function createProcessor(
   return unified()
     .use(remarkParse)
     .use(remarkGfm)
+    .use(remarkMath)
     .use(remarkAuthorReferences, options)
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeRaw)
@@ -529,6 +536,13 @@ function createProcessor(
     .use(rehypeHardenExternalLinks, options.externalLinkRel)
     .use(rehypeMarkNoteSourceLinks)
     .use(rehypeSanitize, markdownSanitizeSchema)
+    // KaTeX runs after untrusted HTML is sanitized. It emits complete HTML and
+    // MathML on the server, so formulas need no JavaScript in the browser.
+    .use(rehypeKatex, {
+      maxExpand: 1000,
+      maxSize: 20,
+      strict: "error",
+    })
     .use(rehypeFlowImageStyles)
     .use(rehypeStringify)
 }

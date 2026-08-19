@@ -981,6 +981,19 @@ img:hover {
   overflow-wrap: anywhere;
 }
 
+.post-content .katex-display,
+.note-content .katex-display {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 0.15em;
+}
+
+.post-content .katex,
+.note-content .katex {
+  overflow-wrap: normal;
+}
+
 .post-content a {
   color: var(--link-color);
 }

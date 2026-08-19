@@ -5,6 +5,7 @@ import localFont from "next/font/local"
 import Script from "next/script"
 import { cookies, headers } from "next/headers"
 import { absoluteUrl, authorJsonLd, blogJsonLd, jsonLd, siteConfig } from "@/lib/seo"
+import "katex/dist/katex.min.css"
 import "./globals.css"
 
 const polySans = localFont({

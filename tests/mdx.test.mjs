@@ -24,6 +24,29 @@ test("preserves the author reference data attributes through sanitization", () =
   assert.match(html, /data-role="author-reference" data-kind="co-author"/)
 })
 
+test("renders inline and display LaTeX to static accessible markup", () => {
+  const html = renderMarkdownSync([
+    "A identidade de Euler é $e^{i\\pi} + 1 = 0$.",
+    "$$",
+    "\\int_0^1 x^2 \\, dx = \\frac{1}{3}",
+    "$$",
+  ].join("\n\n"))
+
+  assert.equal((html.match(/class="katex"/g) ?? []).length, 2)
+  assert.match(html, /class="katex-display"/)
+  assert.match(html, /<math xmlns="http:\/\/www\.w3\.org\/1998\/Math\/MathML"/)
+  assert.ok(html.includes('<annotation encoding="application/x-tex">e^{i\\pi} + 1 = 0</annotation>'))
+  assert.doesNotMatch(html, /language-math|math-inline|math-display/)
+})
+
+test("keeps unsafe LaTeX commands inert instead of accepting authored HTML", () => {
+  const html = renderMarkdownSync("$\\htmlClass{evil}{x}$ <script>alert(1)</script>")
+
+  assert.doesNotMatch(html, /class="evil"|<script/i)
+  assert.match(html, /class="katex"/)
+  assert.ok(html.includes('<annotation encoding="application/x-tex">\\htmlClass{evil}{x}</annotation>'))
+})
+
 test("restricted image policy requires an exact origin and path and enforces the limit", () => {
   const options = {
     imagePolicy: {
