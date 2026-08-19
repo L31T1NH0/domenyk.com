@@ -21,6 +21,7 @@ import { formatSiteDate } from "@/lib/datetime"
 import { BackHome } from "@/components/BackHome"
 import { ParagraphCommentsLayer } from "@/components/post/ParagraphCommentsLayer"
 import { PostContentShell } from "@/components/post/PostContentShell"
+import { PostSelectionNoteGenerator } from "@/components/post/PostSelectionNoteGenerator"
 import { PostMetaBar } from "@/components/post/PostMetaBar"
 import { PostEngagementTracker } from "@/components/post/PostEngagementTracker"
 import { PostReadingPosition } from "@/components/post/PostReadingPosition"
@@ -291,6 +292,7 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
         variant={style === "editorial" ? "editorial" : "default"}
       />
       <PostEngagementTracker publicId={version.publicId} readingTimeMinutes={version.readingTimeMinutes} />
+      {admin && <PostSelectionNoteGenerator postPath={localizedPostPath(post, locale)} />}
       {!version.published && <p className="mt-2 text-xs text-amber-400">{copy.draft}</p>}
 
       <article className={["relative flex flex-col gap-6", styleClasses.article].join(" ")}>
