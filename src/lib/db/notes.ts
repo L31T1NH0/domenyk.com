@@ -409,7 +409,13 @@ export async function deleteNote(id: string): Promise<{ deleted: boolean; thread
       }).sort({ threadPosition: 1, _id: 1 }).toArray()
     }
   }
-  if (result.deletedCount === 1) await deleteNoteMetrics(id)
+  if (result.deletedCount === 1) {
+    // Metrics are auxiliary. A cleanup failure must not turn a completed note
+    // deletion into an HTTP 500 or leave the admin UI reporting false failure.
+    await deleteNoteMetrics(id).catch((error) => {
+      console.error("Failed to delete note metrics", { noteId: id, error })
+    })
+  }
   return { deleted: result.deletedCount === 1, thread: repairedThread }
 }
 

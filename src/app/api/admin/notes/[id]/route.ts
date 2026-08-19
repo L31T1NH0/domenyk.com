@@ -44,7 +44,9 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if (!toObjectId(id)) return NextResponse.json({ error: "ID inválido" }, { status: 400 })
 
   const marked = await markNoteDeleting(id)
-  if (!marked) return NextResponse.json({ error: "Nota não encontrada" }, { status: 404 })
+  // DELETE is idempotent: a retry after a partial/late cleanup failure should
+  // still be reported as success when the note no longer exists.
+  if (!marked) return NextResponse.json({ ok: true, thread: [] })
   const comments = await getCommentsForParent(id)
   const contents = comments.map((comment) => comment.content)
   await queueCommentImagesForCleanup(contents)

@@ -117,6 +117,12 @@ export async function getNoteMetricsMap(noteIds: ObjectId[]): Promise<Map<string
 export async function deleteNoteMetrics(noteId: string): Promise<void> {
   const objectId = toObjectId(noteId)
   if (!objectId) return
-  const { metrics, events } = await collections()
+  // Deleting auxiliary data must not depend on index creation. In a fresh
+  // serverless instance, collections() also reconciles indexes; an index
+  // conflict there used to make the API return 500 after the note itself had
+  // already been deleted.
+  const db = await getDb()
+  const metrics = db.collection<StoredNoteMetrics>("note_metrics")
+  const events = db.collection<NoteViewEvent>("note_view_events")
   await Promise.all([metrics.deleteOne({ noteId: objectId }), events.deleteMany({ noteId: objectId })])
 }
