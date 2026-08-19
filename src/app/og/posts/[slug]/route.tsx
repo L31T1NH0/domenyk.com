@@ -4,6 +4,7 @@ import { descriptionFromMarkdown, siteConfig } from "@/lib/seo"
 import { isPostLocale } from "@/lib/post-locales"
 import { getPostVersion } from "@/lib/post-versions"
 import { isPostVersionIndexable, postSeoDescription, postSeoTitle } from "@/lib/post-seo"
+import { loadSharpForSvg } from "@/lib/sharp"
 
 export const runtime = "nodejs"
 
@@ -44,6 +45,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
   const title = postSeoTitle(version)
   const description = postSeoDescription(version, descriptionFromMarkdown(version.content, 120)) || siteConfig.description
   const tags = version.tags.slice(0, 3)
+
+  await loadSharpForSvg()
 
   return new ImageResponse(
     (
@@ -95,7 +98,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
                 fontSize: 22,
               }}
             >
-              #{tag}
+              {`#${tag}`}
             </div>
           )) : (
             <div style={{ fontSize: 24, color: "#E00070" }}>Política e liberalismo</div>

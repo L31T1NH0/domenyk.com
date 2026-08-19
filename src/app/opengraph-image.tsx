@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og"
 import { siteConfig } from "@/lib/seo"
+import { loadSharpForSvg } from "@/lib/sharp"
 
 export const alt = siteConfig.title
 export const size = {
@@ -8,7 +9,9 @@ export const size = {
 }
 export const contentType = "image/png"
 
-export default function Image() {
+export default async function Image() {
+  await loadSharpForSvg()
+
   return new ImageResponse(
     (
       <div
