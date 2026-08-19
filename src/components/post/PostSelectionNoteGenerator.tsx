@@ -85,7 +85,13 @@ function selectionAsMarkdown(range: Range) {
   return markdown.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim()
 }
 
-export function PostSelectionNoteGenerator({ postPath }: { postPath: string }) {
+export function PostSelectionNoteGenerator({
+  postPath,
+  postTitle,
+}: {
+  postPath: string
+  postTitle: string
+}) {
   const router = useRouter()
   const dropdownRef = useRef<HTMLDivElement>(null)
   const actionRef = useRef<HTMLButtonElement>(null)
@@ -197,7 +203,8 @@ export function PostSelectionNoteGenerator({ postPath }: { postPath: string }) {
     setError("")
 
     try {
-      const content = `${selectedContent}\n\n[Leia o post completo](${postPath})`
+      const sourceLabel = `Continuar lendo: ${escapeMarkdownText(postTitle)}`
+      const content = `${selectedContent}\n\n[${sourceLabel}](${postPath})`
       const response = await fetch("/api/admin/notes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

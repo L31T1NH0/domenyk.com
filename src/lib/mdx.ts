@@ -56,6 +56,7 @@ const markdownSanitizeSchema: SanitizeSchema = {
       ...(defaultSchema.attributes?.a ?? []),
       ["rel", "ugc", "nofollow", "noopener", "noreferrer"],
       ["target", "_blank"],
+      ["dataNoteSourceLink", "post"],
     ],
     img: [
       ...(defaultSchema.attributes?.img ?? []),
@@ -478,6 +479,35 @@ function rehypeHardenExternalLinks(rel?: readonly string[]) {
   }
 }
 
+const NOTE_SOURCE_LINK_LABELS = new Set([
+  "Leia o post completo",
+  "Continuar lendo no post original",
+])
+const NOTE_SOURCE_LINK_PREFIX = "Continuar lendo: "
+
+function rehypeMarkNoteSourceLinks() {
+  return (tree: Root) => {
+    visit(tree, "element", (node: Element) => {
+      if (node.tagName !== "a") return
+      const href = node.properties?.href
+      const label = node.children
+        .filter((child) => child.type === "text")
+        .map((child) => child.value)
+        .join("")
+        .trim()
+
+      if (
+        typeof href !== "string" ||
+        !/^\/(?:[a-z]{2}\/)?posts\//.test(href) ||
+        (!NOTE_SOURCE_LINK_LABELS.has(label) && !label.startsWith(NOTE_SOURCE_LINK_PREFIX))
+      ) return
+
+      node.properties = node.properties ?? {}
+      node.properties.dataNoteSourceLink = "post"
+    })
+  }
+}
+
 function createProcessor(
   options: MarkdownRenderOptions = {},
   onParagraphId?: (paragraphId: string) => void
@@ -497,6 +527,7 @@ function createProcessor(
     .use(rehypeAutolinkHeadings, { behavior: "wrap" })
     .use(rehypePrefixFragmentLinks)
     .use(rehypeHardenExternalLinks, options.externalLinkRel)
+    .use(rehypeMarkNoteSourceLinks)
     .use(rehypeSanitize, markdownSanitizeSchema)
     .use(rehypeFlowImageStyles)
     .use(rehypeStringify)

@@ -292,7 +292,12 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
         variant={style === "editorial" ? "editorial" : "default"}
       />
       <PostEngagementTracker publicId={version.publicId} readingTimeMinutes={version.readingTimeMinutes} />
-      {admin && <PostSelectionNoteGenerator postPath={localizedPostPath(post, locale)} />}
+      {admin && (
+        <PostSelectionNoteGenerator
+          postPath={localizedPostPath(post, locale)}
+          postTitle={version.title}
+        />
+      )}
       {!version.published && <p className="mt-2 text-xs text-amber-400">{copy.draft}</p>}
 
       <article className={["relative flex flex-col gap-6", styleClasses.article].join(" ")}>

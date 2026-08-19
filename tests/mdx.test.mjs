@@ -126,6 +126,16 @@ test("marks external links from user content as untrusted", () => {
   assert.match(html, /rel="ugc nofollow noopener noreferrer"/)
 })
 
+test("marks generated note links back to their source post", () => {
+  const current = renderMarkdownSync("[Continuar lendo: Título do post](/posts/texto)")
+  const legacy = renderMarkdownSync("[Leia o post completo](/en/posts/essay)")
+  const ordinary = renderMarkdownSync("[Outro post](/posts/outro-texto)")
+
+  assert.match(current, /data-note-source-link="post"/)
+  assert.match(legacy, /data-note-source-link="post"/)
+  assert.doesNotMatch(ordinary, /data-note-source-link/)
+})
+
 test("paragraph IDs preserve the first legacy ID and disambiguate duplicates and collisions", () => {
   const sharedPrefix = "x".repeat(80)
   const markdown = [
