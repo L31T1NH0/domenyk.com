@@ -1,5 +1,5 @@
 import { after, NextRequest, NextResponse } from "next/server"
-import { deleteNote, markNoteDeleting, normalizeNoteContent, serializeNote, updateNote } from "@/lib/db/notes"
+import { deleteNote, normalizeNoteContent, serializeNote, updateNote } from "@/lib/db/notes"
 import { adminOnly } from "@/lib/auth"
 import { asString, asTrustedImageUrlArray, toObjectId } from "@/lib/validation"
 import { deleteCommentsForParent, getCommentsForParent } from "@/lib/db/comments"
@@ -43,17 +43,56 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const { id } = await params
   if (!toObjectId(id)) return NextResponse.json({ error: "ID inválido" }, { status: 400 })
 
-  const marked = await markNoteDeleting(id)
-  // DELETE is idempotent: a retry after a partial/late cleanup failure should
-  // still be reported as success when the note no longer exists.
-  if (!marked) return NextResponse.json({ ok: true, thread: [] })
-  const comments = await getCommentsForParent(id)
-  const contents = comments.map((comment) => comment.content)
-  await queueCommentImagesForCleanup(contents)
-  await deleteCommentsForParent(id)
-  const result = await deleteNote(id)
-  await deleteCommentImagesFromContents(contents)
-  invalidatePublicContentCache()
+  // Delete the primary record first. Comment/image/cache cleanup is auxiliary
+  // and must not prevent or misreport the note deletion.
+  let result: Awaited<ReturnType<typeof deleteNote>>
+  try {
+    result = await deleteNote(id)
+  } catch (error) {
+    console.error("Failed to delete primary note record", { noteId: id, error })
+    const databaseCode = typeof error === "object" && error && "code" in error
+      ? String(error.code)
+      : null
+    return NextResponse.json(
+      { error: `Falha ao excluir a nota no banco de dados${databaseCode ? ` (código ${databaseCode})` : ""}.` },
+      { status: 500 }
+    )
+  }
+  if (!result.deleted) return NextResponse.json({ ok: true, thread: [] })
+
+  let contents: string[] = []
+  try {
+    const comments = await getCommentsForParent(id)
+    contents = comments.map((comment) => comment.content)
+  } catch (error) {
+    console.error("Failed to read comments while deleting note", { noteId: id, error })
+  }
+
+  if (contents.length > 0) {
+    await queueCommentImagesForCleanup(contents).catch((error) => {
+      console.error("Failed to queue comment images while deleting note", { noteId: id, error })
+    })
+  }
+  await deleteCommentsForParent(id).catch((error) => {
+    console.error("Failed to delete comments while deleting note", { noteId: id, error })
+  })
+  if (contents.length > 0) {
+    await deleteCommentImagesFromContents(contents).catch((error) => {
+      console.error("Failed to delete comment images while deleting note", { noteId: id, error })
+    })
+  }
+
+  try {
+    invalidatePublicContentCache()
+  } catch (error) {
+    console.error("Failed to invalidate public cache after deleting note", { noteId: id, error })
+  }
   after(() => notifyIndexNow([`/notes/${id}`]))
-  return NextResponse.json({ ok: result.deleted, thread: result.thread.map(serializeNote) })
+  let serializedThread: ReturnType<typeof serializeNote>[] = []
+  try {
+    serializedThread = result.thread.map(serializeNote)
+  } catch (error) {
+    console.error("Failed to serialize repaired note thread after deletion", { noteId: id, error })
+  }
+  return NextResponse.json({ ok: true, thread: serializedThread })
 }

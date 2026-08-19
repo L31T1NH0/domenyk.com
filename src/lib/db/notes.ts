@@ -372,41 +372,45 @@ export async function deleteNote(id: string): Promise<{ deleted: boolean; thread
   const result = await col.deleteOne({ _id: objectId })
   let repairedThread: Note[] = []
   if (result.deletedCount === 1 && note.threadRootId) {
-    const remaining = await col.find({
-      threadRootId: note.threadRootId,
-      deleting: { $ne: true },
-    }).sort({ threadPosition: 1, _id: 1 }).toArray()
-
-    if (remaining.length === 1) {
-      await col.updateOne(
-        { _id: remaining[0]._id },
-        { $unset: { threadRootId: "", previousNoteId: "", threadPosition: "" } }
-      )
-      const standalone = await col.findOne({ _id: remaining[0]._id })
-      if (standalone) repairedThread = [standalone]
-    } else if (remaining.length > 1) {
-      const nextRootId = remaining[0]._id
-      await col.bulkWrite(remaining.map((member, index) => ({
-        updateOne: {
-          filter: { _id: member._id },
-          update: index === 0
-            ? {
-                $set: { threadRootId: nextRootId, threadPosition: 1 },
-                $unset: { previousNoteId: "" },
-              }
-            : {
-                $set: {
-                  threadRootId: nextRootId,
-                  previousNoteId: remaining[index - 1]._id,
-                  threadPosition: index + 1,
-                },
-              },
-        },
-      })))
-      repairedThread = await col.find({
-        threadRootId: nextRootId,
+    try {
+      const remaining = await col.find({
+        threadRootId: note.threadRootId,
         deleting: { $ne: true },
       }).sort({ threadPosition: 1, _id: 1 }).toArray()
+
+      if (remaining.length === 1) {
+        await col.updateOne(
+          { _id: remaining[0]._id },
+          { $unset: { threadRootId: "", previousNoteId: "", threadPosition: "" } }
+        )
+        const standalone = await col.findOne({ _id: remaining[0]._id })
+        if (standalone) repairedThread = [standalone]
+      } else if (remaining.length > 1) {
+        const nextRootId = remaining[0]._id
+        await col.bulkWrite(remaining.map((member, index) => ({
+          updateOne: {
+            filter: { _id: member._id },
+            update: index === 0
+              ? {
+                  $set: { threadRootId: nextRootId, threadPosition: 1 },
+                  $unset: { previousNoteId: "" },
+                }
+              : {
+                  $set: {
+                    threadRootId: nextRootId,
+                    previousNoteId: remaining[index - 1]._id,
+                    threadPosition: index + 1,
+                  },
+                },
+          },
+        })))
+        repairedThread = await col.find({
+          threadRootId: nextRootId,
+          deleting: { $ne: true },
+        }).sort({ threadPosition: 1, _id: 1 }).toArray()
+      }
+    } catch (error) {
+      console.error("Failed to repair note thread after deletion", { noteId: id, error })
     }
   }
   if (result.deletedCount === 1) {
