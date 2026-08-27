@@ -29,7 +29,7 @@ export const ADMIN_PUSH_TOPIC_OPTIONS: ReadonlyArray<{
   { value: "anonymous_post_views", label: "Visitas anônimas em posts", description: "Leituras qualificadas sem uma conta identificada." },
   { value: "identified_note_views", label: "Visitas identificadas em notas", description: "Aberturas diretas de notas por usuários autenticados." },
   { value: "anonymous_note_views", label: "Visitas anônimas em notas", description: "Aberturas diretas de notas sem uma conta identificada." },
-  { value: "site_visits", label: "Qualquer visita ao site", description: "Funciona somente enquanto o monitor global estiver ligado." },
+  { value: "site_visits", label: "Qualquer visita ao site", description: "O histórico da central continua independente desta opção." },
 ]
 
 export const ADMIN_PUSH_TOPIC_LABELS = Object.fromEntries(

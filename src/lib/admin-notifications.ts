@@ -76,14 +76,17 @@ export async function notifySiteVisit(input: {
   data: AggregateNotificationInput
   occurrenceDetails?: NotificationOccurrenceDetails
   storeInHistory: boolean
+  sendPush: boolean
 }) {
   await Promise.all([
     input.storeInHistory
       ? storeAggregateNotification(input.data, input.occurrenceDetails).catch(() => undefined)
       : Promise.resolve(),
-    sendAdminPush("site_visits", {
-      ...pushPayload(input.data),
-      tag: `admin-site-visit-${randomUUID()}`,
-    }).catch(() => undefined),
+    input.sendPush
+      ? sendAdminPush("site_visits", {
+          ...pushPayload(input.data),
+          tag: `admin-site-visit-${randomUUID()}`,
+        }).catch(() => undefined)
+      : Promise.resolve(),
   ])
 }

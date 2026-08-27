@@ -4,6 +4,7 @@ import { type NextRequest, userAgent } from "next/server"
 import type { NotificationOccurrenceDetails } from "./db/notifications"
 
 export type ViewClientContext = {
+  visitorId?: unknown
   referrer?: unknown
   landingPage?: unknown
   language?: unknown

@@ -75,7 +75,7 @@ export default async function AdminPushPage() {
       </section>
 
       <AdminNotificationSettings
-        initialSiteVisitsEnabled={visitSettings.enabled}
+        initialPushSiteVisits={visitSettings.pushEnabled}
         initialStoreSiteVisits={visitSettings.storeInHistory}
         webhookConfigured={Boolean(process.env.CLERK_WEBHOOK_SIGNING_SECRET?.trim())}
       />

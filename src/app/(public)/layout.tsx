@@ -26,7 +26,7 @@ export default async function PublicLayout({ children }: { children: React.React
           <ScrollProgressEffect />
           <FlowImageAlphaOffset />
           <ViewReferrerTracker />
-          {siteVisitSettings.enabled && <SiteVisitTracker />}
+          {(siteVisitSettings.pushEnabled || siteVisitSettings.storeInHistory) && <SiteVisitTracker />}
           <header className="flex items-center justify-end py-1">
             <PublicMenu />
           </header>

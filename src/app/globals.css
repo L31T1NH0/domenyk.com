@@ -611,7 +611,7 @@
 .admin-notification-settings-grid>div { min-width:0; padding:19px; }
 .admin-notification-settings-grid>div+div { border-left:1px solid #dededb; background:#f6f6f4; }
 .dark-mode .admin-notification-settings-grid>div+div { border-color:#292929; background:#0d0d0d; }
-.admin-notification-settings-kicker { margin-bottom:14px; color:#858585; font-size:9px; font-weight:680; letter-spacing:.08em; text-transform:uppercase; }
+.admin-notification-settings-title { margin-bottom:14px; color:#858585; font-size:9px; font-weight:680; letter-spacing:.08em; text-transform:uppercase; }
 .admin-notification-settings .admin-toggle-row+.admin-toggle-row { margin-top:16px; border-top:1px solid #e5e5e2; padding-top:16px; }
 .dark-mode .admin-notification-settings .admin-toggle-row+.admin-toggle-row { border-color:#262626; }
 .admin-notification-settings-note,.admin-notification-settings-help { margin-top:16px; color:#777; font-size:10px; line-height:1.55; }

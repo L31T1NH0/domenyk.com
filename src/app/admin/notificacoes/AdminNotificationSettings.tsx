@@ -3,23 +3,23 @@
 import { useState } from "react"
 
 export function AdminNotificationSettings({
-  initialSiteVisitsEnabled,
+  initialPushSiteVisits,
   initialStoreSiteVisits,
   webhookConfigured,
 }: {
-  initialSiteVisitsEnabled: boolean
+  initialPushSiteVisits: boolean
   initialStoreSiteVisits: boolean
   webhookConfigured: boolean
 }) {
-  const [siteVisitsEnabled, setSiteVisitsEnabled] = useState(initialSiteVisitsEnabled)
+  const [pushSiteVisits, setPushSiteVisits] = useState(initialPushSiteVisits)
   const [storeSiteVisits, setStoreSiteVisits] = useState(initialStoreSiteVisits)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState("")
 
-  async function save(nextEnabled: boolean, nextStore: boolean) {
-    const previousEnabled = siteVisitsEnabled
+  async function save(nextPush: boolean, nextStore: boolean) {
+    const previousPush = pushSiteVisits
     const previousStore = storeSiteVisits
-    setSiteVisitsEnabled(nextEnabled)
+    setPushSiteVisits(nextPush)
     setStoreSiteVisits(nextStore)
     setSaving(true)
     setMessage("")
@@ -28,27 +28,38 @@ export function AdminNotificationSettings({
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          siteVisitsEnabled: nextEnabled,
+          pushSiteVisits: nextPush,
           storeSiteVisits: nextStore,
         }),
       })
       const data = await response.json().catch(() => null) as {
         error?: string
-        siteVisitsEnabled?: boolean
+        pushSiteVisits?: boolean
         storeSiteVisits?: boolean
       } | null
       if (!response.ok) throw new Error(data?.error || "Não foi possível salvar as configurações.")
-      setSiteVisitsEnabled(data?.siteVisitsEnabled === true)
+      setPushSiteVisits(data?.pushSiteVisits === true)
       setStoreSiteVisits(data?.storeSiteVisits === true)
       setMessage("Configuração salva.")
     } catch (error) {
-      setSiteVisitsEnabled(previousEnabled)
+      setPushSiteVisits(previousPush)
       setStoreSiteVisits(previousStore)
       setMessage(error instanceof Error ? error.message : "Não foi possível salvar as configurações.")
     } finally {
       setSaving(false)
     }
   }
+
+  const visitStatus = storeSiteVisits
+    ? pushSiteVisits
+      ? "Histórico e Web Push ativos."
+      : "Histórico ativo; Web Push desligado."
+    : pushSiteVisits
+      ? "Somente Web Push ativo; nenhuma visita é salva na central."
+      : "Monitor de visitas desligado."
+  const deduplicationStatus = storeSiteVisits || pushSiteVisits
+    ? " A mesma pessoa na mesma página é ignorada por 1 hora."
+    : ""
 
   return (
     <section className="admin-workspace-panel admin-notification-settings">
@@ -60,35 +71,37 @@ export function AdminNotificationSettings({
       </header>
       <div className="admin-notification-settings-grid" aria-busy={saving}>
         <div>
-          <p className="admin-notification-settings-kicker">Visitas em tempo real</p>
+          <h3 className="admin-notification-settings-title">Visitas ao site</h3>
           <label className="admin-toggle-row">
             <span>
-              <strong>Notificar qualquer visita ao site</strong>
-              <small>Quando desligado, o rastreador nem é enviado às páginas públicas e não chama a API.</small>
-            </span>
-            <input
-              type="checkbox"
-              checked={siteVisitsEnabled}
-              disabled={saving}
-              onChange={(event) => void save(event.target.checked, storeSiteVisits)}
-            />
-          </label>
-          <label className="admin-toggle-row">
-            <span>
-              <strong>Salvar visitas na central</strong>
-              <small>Desligue para receber somente Web Push, sem criar histórico no banco.</small>
+              <strong>Salvar na central de notificações</strong>
+              <small>Cria um histórico no banco mesmo quando o Web Push está desligado.</small>
             </span>
             <input
               type="checkbox"
               checked={storeSiteVisits}
               disabled={saving}
-              onChange={(event) => void save(siteVisitsEnabled, event.target.checked)}
+              onChange={(event) => void save(pushSiteVisits, event.target.checked)}
             />
           </label>
-          <p className="admin-notification-settings-note" role="status">{message || (siteVisitsEnabled ? "Monitor ativo para novos carregamentos do site." : "Monitor inativo.")}</p>
+          <label className="admin-toggle-row">
+            <span>
+              <strong>Enviar também por Web Push</strong>
+              <small>Envia aos dispositivos que ativaram “Qualquer visita ao site”.</small>
+            </span>
+            <input
+              type="checkbox"
+              checked={pushSiteVisits}
+              disabled={saving}
+              onChange={(event) => void save(event.target.checked, storeSiteVisits)}
+            />
+          </label>
+          <p className="admin-notification-settings-note" role="status">
+            {message ? `${message} ${visitStatus}${deduplicationStatus}` : `${visitStatus}${deduplicationStatus}`}
+          </p>
         </div>
         <div>
-          <p className="admin-notification-settings-kicker">Cadastro de contas</p>
+          <h3 className="admin-notification-settings-title">Cadastro de contas</h3>
           <div className="admin-webhook-status">
             <span className={webhookConfigured ? "is-ready" : "is-missing"} aria-hidden />
             <div>

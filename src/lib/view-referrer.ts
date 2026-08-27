@@ -2,6 +2,7 @@ const INTERNAL_REFERRER_KEY = "domenyk:internal-referrer"
 const ENTRY_PAGE_KEY = "domenyk:entry-page"
 const KNOWN_VISITOR_KEY = "domenyk:known-visitor"
 const VISITOR_TYPE_KEY = "domenyk:visitor-type"
+const VISITOR_ID_KEY = "domenyk:visitor-id"
 
 type StoredReferrer = {
   from: string
@@ -26,6 +27,19 @@ export function initializeVisitorContext() {
       localStorage.setItem(KNOWN_VISITOR_KEY, new Date().toISOString())
     }
   } catch {}
+}
+
+function visitorId() {
+  try {
+    const stored = localStorage.getItem(VISITOR_ID_KEY)
+    if (stored) return stored.slice(0, 64)
+
+    const id = crypto.randomUUID()
+    localStorage.setItem(VISITOR_ID_KEY, id)
+    return id
+  } catch {
+    return ""
+  }
 }
 
 function viewReferrer() {
@@ -54,6 +68,7 @@ export function viewClientContext() {
 
   const entryUrl = new URL(landingPage, window.location.origin)
   return {
+    visitorId: visitorId(),
     referrer: viewReferrer(),
     landingPage: entryUrl.pathname.slice(0, 500),
     language: navigator.language.slice(0, 35),

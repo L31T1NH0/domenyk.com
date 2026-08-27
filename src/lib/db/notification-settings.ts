@@ -4,7 +4,8 @@ import { revalidateTag, unstable_cache } from "next/cache"
 import type { AnyBulkWriteOperation } from "mongodb"
 import { getDb } from "@/lib/db/client"
 
-const SITE_VISIT_ENABLED_KEY = "notifications.site-visits.enabled"
+// Keep the existing key so current installations preserve their preference.
+const SITE_VISIT_PUSH_KEY = "notifications.site-visits.enabled"
 const SITE_VISIT_STORE_KEY = "notifications.site-visits.store"
 const NOTIFICATION_SETTINGS_CACHE_TAG = "notification-settings"
 
@@ -15,17 +16,17 @@ type BooleanSetting = {
 }
 
 export type SiteVisitNotificationSettings = {
-  enabled: boolean
+  pushEnabled: boolean
   storeInHistory: boolean
 }
 
 async function readSiteVisitNotificationSettings(): Promise<SiteVisitNotificationSettings> {
   const documents = await (await getDb()).collection<BooleanSetting>("settings").find({
-    _id: { $in: [SITE_VISIT_ENABLED_KEY, SITE_VISIT_STORE_KEY] },
+    _id: { $in: [SITE_VISIT_PUSH_KEY, SITE_VISIT_STORE_KEY] },
   }).toArray()
   const settings = new Map(documents.map((document) => [document._id, document.value]))
   return {
-    enabled: settings.get(SITE_VISIT_ENABLED_KEY) === true,
+    pushEnabled: settings.get(SITE_VISIT_PUSH_KEY) === true,
     storeInHistory: settings.get(SITE_VISIT_STORE_KEY) === true,
   }
 }
@@ -41,11 +42,11 @@ export async function setSiteVisitNotificationSettings(
 ): Promise<SiteVisitNotificationSettings> {
   const now = new Date()
   const operations: AnyBulkWriteOperation<BooleanSetting>[] = []
-  if (typeof input.enabled === "boolean") {
+  if (typeof input.pushEnabled === "boolean") {
     operations.push({
       updateOne: {
-        filter: { _id: SITE_VISIT_ENABLED_KEY },
-        update: { $set: { value: input.enabled, updatedAt: now } },
+        filter: { _id: SITE_VISIT_PUSH_KEY },
+        update: { $set: { value: input.pushEnabled, updatedAt: now } },
         upsert: true,
       },
     })

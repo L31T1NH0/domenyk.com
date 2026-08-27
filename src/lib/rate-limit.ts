@@ -18,6 +18,10 @@ async function collection() {
   return col
 }
 
+function isDuplicateKeyError(error: unknown) {
+  return typeof error === "object" && error !== null && "code" in error && error.code === 11000
+}
+
 export async function rateLimit(
   key: string,
   opts: { limit: number; windowMs: number }
@@ -38,7 +42,7 @@ export async function rateLimit(
       { upsert: true, returnDocument: "after" }
     )
   } catch (error) {
-    if (!(typeof error === "object" && error && "code" in error && error.code === 11000)) throw error
+    if (!isDuplicateKeyError(error)) throw error
     bucket = await col.findOneAndUpdate(
       { _id: bucketId },
       { $inc: { count: 1 } },
@@ -47,4 +51,27 @@ export async function rateLimit(
   }
 
   return Boolean(bucket && bucket.count <= opts.limit)
+}
+
+/**
+ * Atomically claims a rolling window for a key. Unlike rateLimit, the window
+ * starts at the accepted request instead of at a fixed clock boundary.
+ */
+export async function claimOncePerWindow(key: string, windowMs: number): Promise<boolean> {
+  const now = new Date()
+  const expiresAt = new Date(now.getTime() + windowMs)
+
+  try {
+    const result = await (await collection()).updateOne(
+      { _id: key, expiresAt: { $lte: now } },
+      { $set: { count: 1, expiresAt } },
+      { upsert: true }
+    )
+    return result.upsertedCount === 1 || result.modifiedCount === 1
+  } catch (error) {
+    // An unexpired document does not match the filter. Its attempted upsert
+    // collides with the existing _id, which means another visit owns the window.
+    if (isDuplicateKeyError(error)) return false
+    throw error
+  }
 }

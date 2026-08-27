@@ -15,11 +15,15 @@ export async function PATCH(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => null) as {
+    pushSiteVisits?: unknown
     siteVisitsEnabled?: unknown
     storeSiteVisits?: unknown
   } | null
+  const pushSiteVisits = typeof body?.pushSiteVisits === "boolean"
+    ? body.pushSiteVisits
+    : body?.siteVisitsEnabled
   const input = {
-    ...(typeof body?.siteVisitsEnabled === "boolean" ? { enabled: body.siteVisitsEnabled } : {}),
+    ...(typeof pushSiteVisits === "boolean" ? { pushEnabled: pushSiteVisits } : {}),
     ...(typeof body?.storeSiteVisits === "boolean" ? { storeInHistory: body.storeSiteVisits } : {}),
   }
   if (Object.keys(input).length === 0) {
@@ -28,7 +32,8 @@ export async function PATCH(req: NextRequest) {
 
   const settings = await setSiteVisitNotificationSettings(input)
   return NextResponse.json({
-    siteVisitsEnabled: settings.enabled,
+    pushSiteVisits: settings.pushEnabled,
+    siteVisitsEnabled: settings.pushEnabled,
     storeSiteVisits: settings.storeInHistory,
   })
 }

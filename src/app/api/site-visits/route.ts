@@ -3,9 +3,11 @@ import { after, NextRequest, NextResponse } from "next/server"
 import { getAdminUserId, getAuthUser, getAuthUserId } from "@/lib/auth"
 import { notifySiteVisit } from "@/lib/admin-notifications"
 import { getSiteVisitNotificationSettings } from "@/lib/db/notification-settings"
-import { rateLimit } from "@/lib/rate-limit"
+import { claimOncePerWindow, rateLimit } from "@/lib/rate-limit"
 import { requestIdentity } from "@/lib/request-identity"
 import { viewRequestDetails, type ViewClientContext } from "@/lib/view-request-details"
+
+const VISIT_DEDUPLICATION_WINDOW_MS = 60 * 60_000
 
 function validPublicPath(value: unknown): value is string {
   return typeof value === "string" && value.startsWith("/") && !value.startsWith("//") &&
@@ -15,7 +17,7 @@ function validPublicPath(value: unknown): value is string {
 
 export async function POST(req: NextRequest) {
   const settings = await getSiteVisitNotificationSettings()
-  if (!settings.enabled) return new Response(null, { status: 204 })
+  if (!settings.pushEnabled && !settings.storeInHistory) return new Response(null, { status: 204 })
   const adminId = getAdminUserId()
   if (!adminId) return NextResponse.json({ error: "Admin user is not configured" }, { status: 503 })
 
@@ -39,8 +41,25 @@ export async function POST(req: NextRequest) {
   }
   if (userId && userId === adminId) return new Response(null, { status: 204 })
 
-  const viewer = userId ? await getAuthUser() : null
   const pathHash = createHash("sha256").update(path).digest("hex").slice(0, 24)
+  const clientVisitorId = typeof body?.visitorId === "string" && /^[a-f\d-]{36}$/i.test(body.visitorId)
+    ? body.visitorId
+    : null
+  const visitor = userId
+    ? `account:${userId}`
+    : clientVisitorId
+      ? `browser:${clientVisitorId}`
+      : `network:${identity}`
+  const visitHash = createHash("sha256").update(`${visitor}\n${path}`).digest("hex")
+  const firstVisitInWindow = await claimOncePerWindow(
+    `site-visit-page:${visitHash}`,
+    VISIT_DEDUPLICATION_WINDOW_MS
+  )
+  if (!firstVisitInWindow) {
+    return NextResponse.json({ received: true, deduplicated: true }, { status: 202 })
+  }
+
+  const viewer = userId ? await getAuthUser() : null
   const description = viewer
     ? `${viewer.name} abriu ${path}.`
     : `Uma pessoa abriu ${path}.`
@@ -56,6 +75,7 @@ export async function POST(req: NextRequest) {
     },
     occurrenceDetails: details,
     storeInHistory: settings.storeInHistory,
+    sendPush: settings.pushEnabled,
   }).catch(() => undefined))
 
   return NextResponse.json({ received: true }, { status: 202 })
