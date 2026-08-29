@@ -12,6 +12,7 @@ import {
 
 export const PUBLIC_CONTENT_CACHE_TAG = "public-content"
 const PUBLIC_CONTENT_REVALIDATE_SECONDS = 60
+const PUBLIC_SEARCH_REVALIDATE_SECONDS = 30
 
 export type PublicFeedMode = "all" | "posts" | "notes"
 
@@ -46,6 +47,19 @@ export const getCachedPublicContentCounts = unstable_cache(
   },
   ["public-content-counts"],
   { tags: [PUBLIC_CONTENT_CACHE_TAG], revalidate: PUBLIC_CONTENT_REVALIDATE_SECONDS }
+)
+
+export const getCachedPublicSearchContentCounts = unstable_cache(
+  async (search: string) => {
+    const normalizedSearch = search.trim()
+    const [totalPosts, totalNotes] = await Promise.all([
+      countPosts({ excludeHiddenFromTimeline: true, search: normalizedSearch }),
+      countNotes(normalizedSearch),
+    ])
+    return { totalPosts, totalNotes }
+  },
+  ["public-content-search-counts"],
+  { tags: [PUBLIC_CONTENT_CACHE_TAG], revalidate: PUBLIC_SEARCH_REVALIDATE_SECONDS }
 )
 
 export const getCachedHomeFeed = unstable_cache(
@@ -104,36 +118,12 @@ export const getCachedDesktopHomeFeed = unstable_cache(
   { tags: [PUBLIC_CONTENT_CACHE_TAG], revalidate: PUBLIC_CONTENT_REVALIDATE_SECONDS }
 )
 
-export async function getHomeTimelinePage({
-  page,
-  mode,
-  limit,
-  search,
-}: {
-  page: number
-  mode: PublicFeedMode
-  limit: number
-  search?: string
-}): Promise<HomeTimelinePage> {
-  const normalizedSearch = search?.trim()
-
-  if (!normalizedSearch) {
-    const [feed, desktop] = await Promise.all([
-      getCachedHomeFeed(page, mode, limit),
-      getCachedDesktopHomeFeed(page, mode, limit),
-    ])
-
-    return {
-      ...feed,
-      desktopPosts: desktop.posts,
-      desktopNotes: desktop.notes,
-      desktopThreadNotes: desktop.threadNotes,
-      desktopPostCount: desktop.postCount,
-      desktopLooseNoteCount: desktop.looseNoteCount,
-      desktopThreadCount: desktop.threadCount,
-    }
-  }
-
+async function getHomeSearchTimelinePage(
+  page: number,
+  mode: PublicFeedMode,
+  limit: number,
+  normalizedSearch: string
+): Promise<HomeTimelinePage> {
   let posts: SerializedPostSummary[] = []
   let notes: SerializedNote[] = []
 
@@ -183,6 +173,45 @@ export async function getHomeTimelinePage({
     desktopLooseNoteCount,
     desktopThreadCount: threadPage.total,
   }
+}
+
+const getCachedHomeSearchTimelinePage = unstable_cache(
+  getHomeSearchTimelinePage,
+  ["home-search-feed"],
+  { tags: [PUBLIC_CONTENT_CACHE_TAG], revalidate: PUBLIC_SEARCH_REVALIDATE_SECONDS }
+)
+
+export async function getHomeTimelinePage({
+  page,
+  mode,
+  limit,
+  search,
+}: {
+  page: number
+  mode: PublicFeedMode
+  limit: number
+  search?: string
+}): Promise<HomeTimelinePage> {
+  const normalizedSearch = search?.trim()
+
+  if (!normalizedSearch) {
+    const [feed, desktop] = await Promise.all([
+      getCachedHomeFeed(page, mode, limit),
+      getCachedDesktopHomeFeed(page, mode, limit),
+    ])
+
+    return {
+      ...feed,
+      desktopPosts: desktop.posts,
+      desktopNotes: desktop.notes,
+      desktopThreadNotes: desktop.threadNotes,
+      desktopPostCount: desktop.postCount,
+      desktopLooseNoteCount: desktop.looseNoteCount,
+      desktopThreadCount: desktop.threadCount,
+    }
+  }
+
+  return getCachedHomeSearchTimelinePage(page, mode, limit, normalizedSearch)
 }
 
 export const getCachedPublicPosts = unstable_cache(

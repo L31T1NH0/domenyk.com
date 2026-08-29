@@ -1,7 +1,5 @@
 import type { Metadata } from "next"
 import { headers } from "next/headers"
-import { countPosts } from "@/lib/db/posts"
-import { countNotes } from "@/lib/db/notes"
 import { isAdmin } from "@/lib/auth"
 import { rateLimit } from "@/lib/rate-limit"
 import { requestIdentityFromHeaders } from "@/lib/request-identity"
@@ -10,6 +8,7 @@ import { buildPageMetadata } from "@/lib/seo"
 import {
   getHomeTimelinePage,
   getCachedPublicContentCounts,
+  getCachedPublicSearchContentCounts,
 } from "@/lib/public-content-cache"
 
 const HOME_TIMELINE_PAGE_SIZE = 10
@@ -64,27 +63,20 @@ export default async function HomePage({
   const searchError = searchAllowed ? "" : "Muitas buscas. Aguarde um instante e tente novamente."
 
   const adminPromise = isAdmin()
-  let totalPosts: number
-  let totalNotes: number
-
-  if (!effectiveSearch) {
-    const counts = await getCachedPublicContentCounts()
-    totalPosts = counts.totalPosts
-    totalNotes = counts.totalNotes
-  } else {
-    [totalPosts, totalNotes] = await Promise.all([
-      countPosts({ excludeHiddenFromTimeline: true, search: effectiveSearch }),
-      countNotes(effectiveSearch),
-    ])
-  }
-  const initialPage = await getHomeTimelinePage({
-    page: 1,
-    mode: feedMode,
-    limit: HOME_TIMELINE_PAGE_SIZE,
-    search: effectiveSearch || undefined,
-  })
-
-  const admin = await adminPromise
+  const countsPromise = effectiveSearch
+    ? getCachedPublicSearchContentCounts(effectiveSearch)
+    : getCachedPublicContentCounts()
+  const [counts, initialPage, admin] = await Promise.all([
+    countsPromise,
+    getHomeTimelinePage({
+      page: 1,
+      mode: feedMode,
+      limit: HOME_TIMELINE_PAGE_SIZE,
+      search: effectiveSearch || undefined,
+    }),
+    adminPromise,
+  ])
+  const { totalPosts, totalNotes } = counts
   return (
     <>
       <h1 className="sr-only">Domenyk</h1>
