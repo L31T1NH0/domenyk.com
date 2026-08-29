@@ -4,6 +4,7 @@ import { descriptionFromMarkdown, siteConfig } from "@/lib/seo"
 import { isPostLocale } from "@/lib/post-locales"
 import { getPostVersion } from "@/lib/post-versions"
 import { isPostVersionIndexable, postSeoDescription, postSeoTitle } from "@/lib/post-seo"
+import { ogProfileImageSrc } from "@/lib/og-profile-image"
 import { loadSharpForSvg } from "@/lib/sharp"
 
 export const runtime = "nodejs"
@@ -66,7 +67,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
             <img
-              src={`${siteConfig.url}/images/profile.jpg`}
+              src={ogProfileImageSrc}
               alt=""
               width={72}
               height={72}

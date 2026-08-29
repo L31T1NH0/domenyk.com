@@ -164,7 +164,13 @@ export function buildPageMetadata({
 } = {}): Metadata {
   const url = absoluteUrl(path)
   const imageUrl = absoluteUrl(image)
-  const images = [{ url: imageUrl, alt: title ?? siteConfig.title }]
+  const images = [{
+    url: imageUrl,
+    alt: title ?? siteConfig.title,
+    ...(image === siteConfig.image
+      ? { width: 1200, height: 630, type: "image/png" as const }
+      : {}),
+  }]
   const conciseDescription = metadataDescription(description)
 
   return {

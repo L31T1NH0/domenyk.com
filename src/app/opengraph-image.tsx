@@ -1,7 +1,9 @@
 import { ImageResponse } from "next/og"
 import { siteConfig } from "@/lib/seo"
+import { ogProfileImageSrc } from "@/lib/og-profile-image"
 import { loadSharpForSvg } from "@/lib/sharp"
 
+export const runtime = "nodejs"
 export const alt = siteConfig.title
 export const size = {
   width: 1200,
@@ -29,7 +31,7 @@ export default async function Image() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
           <img
-            src={`${siteConfig.url}/images/profile.jpg`}
+            src={ogProfileImageSrc}
             alt=""
             width={112}
             height={112}

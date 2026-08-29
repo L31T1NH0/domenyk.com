@@ -58,6 +58,16 @@ test("does not erase an inherited title when a page title is omitted", () => {
   assert.equal(new URL(metadata.alternates.canonical).pathname, "/")
 })
 
+test("describes the default Open Graph image with its real dimensions", () => {
+  const metadata = buildPageMetadata()
+  const [image] = metadata.openGraph.images
+
+  assert.equal(new URL(image.url).pathname, "/opengraph-image")
+  assert.equal(image.width, 1200)
+  assert.equal(image.height, 630)
+  assert.equal(image.type, "image/png")
+})
+
 test("publishes concise metadata descriptions without changing the source text", () => {
   const source = "Uma descrição editorial longa " + "com contexto relevante ".repeat(20)
   const concise = metadataDescription(source)
