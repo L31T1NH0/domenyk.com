@@ -5,6 +5,7 @@ import { getActiveThemeUpdates } from "@/lib/db/themes"
 import { absoluteUrl, preferredContentImages } from "@/lib/seo"
 import { getSitemapDescriptors, SITEMAP_PAGE_SIZE } from "@/lib/sitemaps"
 import { localizedPostPath, POST_LOCALE_DETAILS, POST_LOCALES } from "@/lib/post-locales"
+import { ARTICLE_COLLECTION_PATH, NOTES_COLLECTION_PATH } from "@/lib/editorial-content-types"
 
 const FALLBACK_DATE = new Date("2026-07-12T00:00:00.000Z")
 
@@ -30,10 +31,16 @@ async function indexSitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 1,
     },
     {
-      url: absoluteUrl("/notes"),
+      url: absoluteUrl(ARTICLE_COLLECTION_PATH),
+      lastModified: latestPostDate ?? FALLBACK_DATE,
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    {
+      url: absoluteUrl(NOTES_COLLECTION_PATH),
       lastModified: latestNoteDate ?? FALLBACK_DATE,
       changeFrequency: "weekly",
-      priority: 0.7,
+      priority: 0.8,
     },
     {
       url: absoluteUrl("/sobre"),

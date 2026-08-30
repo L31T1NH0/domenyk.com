@@ -3,14 +3,18 @@ import { getNotes, serializeNote } from "@/lib/db/notes"
 import { isAdmin } from "@/lib/auth"
 import { Header } from "@/components/Header"
 import { NotesTimeline } from "./NotesTimeline"
-import { absoluteUrl, buildPageMetadata, jsonLd, noteDisplayTitle, siteConfig } from "@/lib/seo"
+import { buildPageMetadata, jsonLd } from "@/lib/seo"
+import { NOTES_COLLECTION_PATH, collectionMachineMetadata, contentCollectionJsonLd } from "@/lib/content-semantics"
 import { headers } from "next/headers"
 
-export const metadata: Metadata = buildPageMetadata({
-  title: "Notas",
-  description: "Notas rápidas e registros curtos de Domenyk.",
-  path: "/notes",
-})
+export const metadata: Metadata = {
+  ...buildPageMetadata({
+    title: "Notas e threads",
+    description: "Coleção de notas de Domenyk, incluindo notas autônomas e threads ordenadas de notas relacionadas.",
+    path: NOTES_COLLECTION_PATH,
+  }),
+  other: collectionMachineMetadata("notes"),
+}
 
 export default async function NotesPage() {
   const nonce = (await headers()).get("x-nonce") ?? undefined
@@ -25,25 +29,7 @@ export default async function NotesPage() {
         nonce={nonce}
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: jsonLd({
-            "@context": "https://schema.org",
-            "@type": "CollectionPage",
-            "@id": `${absoluteUrl("/notes")}#collection`,
-            url: absoluteUrl("/notes"),
-            name: "Notas",
-            description: "Notas rápidas e registros curtos de Domenyk.",
-            inLanguage: "pt-BR",
-            publisher: { "@id": `${siteConfig.url}/#person` },
-            mainEntity: {
-              "@type": "ItemList",
-              itemListElement: serializedNotes.map((note, index) => ({
-                "@type": "ListItem",
-                position: index + 1,
-                url: absoluteUrl(`/notes/${note._id}`),
-                name: noteDisplayTitle(note),
-              })),
-            },
-          }),
+          __html: jsonLd(contentCollectionJsonLd({ mode: "notes", notes: serializedNotes })),
         }}
       />
       <div className="flex flex-col gap-6">

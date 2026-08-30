@@ -179,6 +179,9 @@ export function buildPageMetadata({
     alternates: {
       canonical: url,
       languages,
+      types: {
+        "text/markdown": absoluteUrl("/llms.txt"),
+      },
     },
     robots: noIndex
       ? { index: false, follow: false }

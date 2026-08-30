@@ -9,11 +9,16 @@ import {
 } from "./post-locales"
 import { postSeoDescription, postSeoTitle } from "./post-seo"
 import { absoluteUrl, descriptionFromMarkdown, metadataDescription, noteDisplayTitle, siteConfig } from "./seo"
+import {
+  ARTICLE_COLLECTION_PATH,
+  CONTENT_TYPE_DEFINITIONS,
+  NOTES_COLLECTION_PATH,
+} from "./editorial-content-types"
 
 type LlmsTxtInput = {
   posts: PostSummary[]
   themes: Array<Pick<Theme, "name" | "slug" | "description">>
-  notes: Array<Pick<Note, "_id" | "title" | "seoTitle" | "seoDescription" | "content">>
+  notes: Array<Pick<Note, "_id" | "title" | "seoTitle" | "seoDescription" | "content" | "threadRootId" | "threadPosition">>
 }
 
 type LlmsPostVersion = {
@@ -57,13 +62,21 @@ export function buildLlmsTxt({ posts, themes, notes }: LlmsTxtInput): string {
     "",
     `> ${siteConfig.description}`,
     "",
-    "Domenyk publica ensaios e notas sobre política, economia, liberalismo, filosofia, instituições e tecnologia. Os textos identificam agentes, incentivos e consequências.",
+    "Domenyk publica artigos, notas e threads de notas sobre política, economia, liberalismo, filosofia, instituições e tecnologia.",
+    "",
+    "## Tipos de conteúdo",
+    "",
+    `- Artigo (\`${CONTENT_TYPE_DEFINITIONS.article.code}\`): ${CONTENT_TYPE_DEFINITIONS.article.description}`,
+    `- Nota (\`${CONTENT_TYPE_DEFINITIONS.note.code}\`): ${CONTENT_TYPE_DEFINITIONS.note.description}`,
+    `- Thread de notas (\`${CONTENT_TYPE_DEFINITIONS.thread.code}\`): ${CONTENT_TYPE_DEFINITIONS.thread.description}`,
+    "- As URLs individuais de artigos mantêm o segmento técnico `/posts/` por compatibilidade; semanticamente, esses textos são artigos.",
     "",
     "## Páginas principais",
     "",
-    linkLine("Início", "/", "Linha do tempo com posts e notas publicados."),
+    linkLine("Início", "/", "Coleção mista de artigos, notas autônomas e threads de notas."),
+    linkLine("Artigos", ARTICLE_COLLECTION_PATH, "Somente artigos: textos longos, autônomos e estruturados."),
+    linkLine("Notas e threads", NOTES_COLLECTION_PATH, "Somente notas autônomas e threads ordenadas de notas."),
     linkLine("Sobre Domenyk", "/sobre", "Trajetória intelectual, temas de estudo e método de análise do autor."),
-    linkLine("Notas", "/notes", "Registros curtos, hipóteses e argumentos em desenvolvimento."),
   ]
 
   if (themes.length > 0) {
@@ -78,8 +91,8 @@ export function buildLlmsTxt({ posts, themes, notes }: LlmsTxtInput): string {
     if (entries.length === 0) continue
 
     const heading = locale === "pt"
-      ? "Textos em português"
-      : `Textos em ${POST_LOCALE_DETAILS[locale].nativeLabel}`
+      ? "Artigos em português"
+      : `Artigos em ${POST_LOCALE_DETAILS[locale].nativeLabel}`
     lines.push("", `## ${heading}`, "")
 
     for (const { post, version } of entries) {
@@ -94,11 +107,19 @@ export function buildLlmsTxt({ posts, themes, notes }: LlmsTxtInput): string {
 
   if (notes.length > 0) {
     lines.push("", "## Notas indexáveis", "")
+    const listedThreads = new Set<string>()
     for (const note of notes) {
+      const threadRootId = note.threadRootId?.toString()
+      if (threadRootId && listedThreads.has(threadRootId)) continue
+      if (threadRootId) listedThreads.add(threadRootId)
+      const representative = threadRootId
+        ? notes.find((candidate) => candidate._id.toString() === threadRootId) ?? note
+        : note
+      const contentType = threadRootId ? "Thread de notas" : "Nota"
       lines.push(linkLine(
-        note.seoTitle?.trim() || noteDisplayTitle(note),
-        `/notes/${note._id.toString()}`,
-        note.seoDescription?.trim() || descriptionFromMarkdown(note.content)
+        `${contentType} — ${representative.seoTitle?.trim() || noteDisplayTitle(representative)}`,
+        `/notes/${representative._id.toString()}`,
+        `Tipo: ${threadRootId ? CONTENT_TYPE_DEFINITIONS.thread.code : CONTENT_TYPE_DEFINITIONS.note.code}. ${representative.seoDescription?.trim() || descriptionFromMarkdown(representative.content)}`
       ))
     }
   }
@@ -109,6 +130,8 @@ export function buildLlmsTxt({ posts, themes, notes }: LlmsTxtInput): string {
     "",
     `- Idioma principal: português do Brasil (${siteConfig.locale.replace("_", "-")}).`,
     `- Autor e editor: ${siteConfig.author}.`,
+    `- Coleção canônica de artigos: ${absoluteUrl(ARTICLE_COLLECTION_PATH)}`,
+    `- Coleção canônica de notas e threads: ${absoluteUrl(NOTES_COLLECTION_PATH)}`,
     `- Sitemap: ${absoluteUrl("/sitemap/index.xml")}`,
     `- Robots: ${absoluteUrl("/robots.txt")}`,
     ""

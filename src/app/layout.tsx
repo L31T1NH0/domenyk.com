@@ -5,6 +5,7 @@ import localFont from "next/font/local"
 import Script from "next/script"
 import { cookies, headers } from "next/headers"
 import { absoluteUrl, authorJsonLd, blogJsonLd, jsonLd, siteConfig } from "@/lib/seo"
+import { ARTICLE_COLLECTION_PATH, NOTES_COLLECTION_PATH, editorialVocabularyJsonLd } from "@/lib/content-semantics"
 import "katex/dist/katex.min.css"
 import "./globals.css"
 
@@ -54,7 +55,10 @@ export const metadata: Metadata = {
     icon: [{ url: "/favicon.ico", sizes: "256x256", type: "image/x-icon" }],
     shortcut: "/favicon.ico",
   },
-  alternates: { canonical: "/" },
+  alternates: {
+    canonical: "/",
+    types: { "text/markdown": "/llms.txt" },
+  },
   openGraph: {
     title: siteConfig.title,
     description: siteConfig.description,
@@ -118,6 +122,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   description: siteConfig.description,
                   inLanguage: "pt-BR",
                   publisher: { "@id": `${siteConfig.url}/#person` },
+                  hasPart: [
+                    { "@id": `${absoluteUrl(ARTICLE_COLLECTION_PATH)}#collection` },
+                    { "@id": `${absoluteUrl(NOTES_COLLECTION_PATH)}#collection` },
+                  ],
                   potentialAction: {
                     "@type": "SearchAction",
                     target: {
@@ -129,6 +137,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 },
                 authorJsonLd(),
                 blogJsonLd(),
+                ...editorialVocabularyJsonLd(),
               ],
             }),
           }}

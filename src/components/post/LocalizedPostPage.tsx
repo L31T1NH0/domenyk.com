@@ -7,6 +7,7 @@ import { getPostByLocalizedSlug, getPostByPublicId, getPostBySlug, getRelatedPos
 import { isAdmin } from "@/lib/auth"
 import { renderMarkdown } from "@/lib/mdx"
 import { absoluteUrl, authorJsonLd, buildPageMetadata, descriptionFromMarkdown, jsonLd, preferredContentImages, siteConfig, wordCountFromMarkdown } from "@/lib/seo"
+import { ARTICLE_COLLECTION_PATH, CONTENT_TYPE_IDS, articleMachineMetadata } from "@/lib/content-semantics"
 import { getCachedClerkUserImage } from "@/lib/clerk-users"
 import {
   POST_LOCALE_DETAILS,
@@ -151,22 +152,25 @@ export async function getLocalizedPostMetadata(slug: string, locale: PostLocale)
   const [preferredImage] = preferredContentImages({ cover: version.cover?.url, markdown: version.content })
   const publishedLocales = getPublishedPostLocales(post)
 
-  return buildPageMetadata({
-    title: postSeoTitle(version),
-    description,
-    path: canonicalPath,
-    image: preferredImage ?? `/og/posts/${encodeURIComponent(post.slug)}?locale=${locale}`,
-    type: "article",
-    publishedTime: version.publishedAt?.toISOString(),
-    modifiedTime: version.updatedAt.toISOString(),
-    tags: version.tags,
-    noIndex: !isPostVersionIndexable(version),
-    languages: languageUrls(post),
-    openGraphLocale: details.openGraphLocale,
-    openGraphAlternateLocales: publishedLocales
-      .filter((availableLocale) => availableLocale !== locale)
-      .map((availableLocale) => POST_LOCALE_DETAILS[availableLocale].openGraphLocale),
-  })
+  return {
+    ...buildPageMetadata({
+      title: postSeoTitle(version),
+      description,
+      path: canonicalPath,
+      image: preferredImage ?? `/og/posts/${encodeURIComponent(post.slug)}?locale=${locale}`,
+      type: "article",
+      publishedTime: version.publishedAt?.toISOString(),
+      modifiedTime: version.updatedAt.toISOString(),
+      tags: version.tags,
+      noIndex: !isPostVersionIndexable(version),
+      languages: languageUrls(post),
+      openGraphLocale: details.openGraphLocale,
+      openGraphAlternateLocales: publishedLocales
+        .filter((availableLocale) => availableLocale !== locale)
+        .map((availableLocale) => POST_LOCALE_DETAILS[availableLocale].openGraphLocale),
+    }),
+    other: articleMachineMetadata(),
+  }
 }
 
 export async function LocalizedPostPage({ slug, locale }: { slug: string; locale: PostLocale }) {
@@ -238,8 +242,9 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
             "@context": "https://schema.org",
             "@graph": [
               {
-                "@type": "BlogPosting",
+                "@type": "Article",
                 "@id": `${postUrl}#article`,
+                additionalType: CONTENT_TYPE_IDS.article,
                 mainEntityOfPage: postUrl,
                 headline: version.title,
                 description,
@@ -248,7 +253,10 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
                 dateModified: version.updatedAt.toISOString(),
                 author: authorJsonLd(),
                 publisher: { "@id": `${siteConfig.url}/#person` },
-                isPartOf: { "@id": `${siteConfig.url}/#blog` },
+                isPartOf: [
+                  { "@id": `${siteConfig.url}/#blog` },
+                  { "@id": `${absoluteUrl(ARTICLE_COLLECTION_PATH)}#collection` },
+                ],
                 inLanguage: details.htmlLang,
                 keywords: version.tags,
                 articleSection: themes.map((theme) => theme.name),
