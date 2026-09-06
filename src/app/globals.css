@@ -783,14 +783,6 @@
   background-clip: padding-box;
 }
 
-/* The home menu trigger sits at the right edge of its current layout. Keep its
-   panel anchored there so wider menu views always expand into the viewport. */
-.home-tablet-landscape-menu-panel {
-  right: 0 !important;
-  left: auto !important;
-  transform-origin: top right;
-}
-
 @media (max-width: 83.999rem) {
   .home-timeline-utility-rail {
     display: none !important;
@@ -860,7 +852,7 @@
     flex-direction: row;
   }
 
-  .home-tablet-landscape-menu {
+  .public-menu-position {
     translate: calc(50vw - 17.25rem) 0;
   }
 }
@@ -1218,10 +1210,6 @@ body:has(.post-reading-page) {
 [data-public-shell]:has(.post-reading-page) {
   width: min(100%, calc(var(--post-reading-width) + 2rem));
   max-width: 100%;
-}
-
-[data-public-shell]:has(.post-reading-page) > header {
-  width: min(100%, var(--post-reading-width));
 }
 
 .post-reading-page {
