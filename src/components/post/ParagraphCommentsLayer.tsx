@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react"
 import { createPortal } from "react-dom"
 import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/outline"
 import { ParagraphThread } from "./ParagraphThread"
@@ -26,7 +26,7 @@ export function ParagraphCommentsLayer({ postId, isAdmin = false, containerSelec
   const [paragraphIds, setParagraphIds] = useState<string[]>([])
   const [buttonPosition, setButtonPosition] = useState<ParagraphPosition | null>(null)
   const [isTouch, setIsTouch] = useState(false)
-  const [compactTopicsExpanded, setCompactTopicsExpanded] = useState(false)
+  const [topicsHeight, setTopicsHeight] = useState(128)
   const layerRef = useRef<HTMLDivElement>(null)
   const hoveredPidRef = useRef<string | null>(null)
   const positionFrameRef = useRef<number | null>(null)
@@ -148,8 +148,8 @@ export function ParagraphCommentsLayer({ postId, isAdmin = false, containerSelec
 
   useEffect(() => {
     const onChange = (event: Event) => {
-      const detail = (event as CustomEvent<{ expanded?: boolean }>).detail
-      setCompactTopicsExpanded(Boolean(detail?.expanded))
+      const detail = (event as CustomEvent<{ height?: number }>).detail
+      setTopicsHeight(typeof detail?.height === "number" && Number.isFinite(detail.height) && detail.height > 0 ? detail.height : 128)
     }
 
     window.addEventListener("paragraph-topics-compact-change", onChange)
@@ -274,8 +274,9 @@ export function ParagraphCommentsLayer({ postId, isAdmin = false, containerSelec
             "pointer-events-auto fixed right-4 bottom-4 left-4 z-[70] sm:left-auto sm:w-80 xl:bottom-4",
             variant === "editorial"
               ? "xl:left-auto xl:right-4 xl:top-[8rem] xl:w-72"
-              : `xl:right-auto xl:left-[var(--post-sidebar-left)] xl:w-[var(--post-sidebar-width)] ${compactTopicsExpanded ? "xl:top-[17rem]" : "xl:top-[14rem]"}`,
+              : "xl:right-auto xl:left-[var(--post-sidebar-left)] xl:w-[var(--post-sidebar-width)] xl:top-[calc(6rem+var(--post-topics-height))]",
           ].join(" ")}
+          style={{ "--post-topics-height": `${topicsHeight}px` } as CSSProperties}
         >
           <ParagraphThread
             postId={postId}
