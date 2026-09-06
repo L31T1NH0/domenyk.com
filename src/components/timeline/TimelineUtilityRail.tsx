@@ -339,54 +339,60 @@ export function TimelineUtilityRail({
   return (
     <aside
       aria-label="Navegação complementar da timeline"
-      className="home-timeline-utility-rail hidden min-w-0 self-start min-[84rem]:absolute min-[84rem]:left-[calc(100%+1rem)] min-[84rem]:right-[calc(100%-67.5vw-9.2125rem)] min-[84rem]:top-0 min-[84rem]:flex min-[84rem]:flex-col min-[84rem]:gap-9"
+      className="home-timeline-utility-rail hidden min-w-0 min-[84rem]:absolute min-[84rem]:bottom-0 min-[84rem]:left-[calc(100%+1rem)] min-[84rem]:right-[calc(100%-67.5vw-9.2125rem)] min-[84rem]:top-0 min-[84rem]:block"
     >
-      <section aria-labelledby="timeline-archives-title">
-        <h2
-          id="timeline-archives-title"
-          className="border-b border-neutral-200 pb-2.5 text-[11px] font-semibold text-neutral-700 dark:border-white/10 dark:text-[#d8d4ce]"
-        >
-          Arquivos
-        </h2>
-        {archives.length > 0 ? (
-          <div className="divide-y divide-neutral-200 dark:divide-white/10">
-            {archives.map((archive, index) => (
-              <ArchiveYear
-                key={archive.year}
-                archive={archive}
-                initiallyOpen={index === 0}
-                searchQuery={searchQuery}
-                feedMode={feedMode}
-              />
-            ))}
-          </div>
-        ) : (
-          <p className="py-3 text-[10px] leading-4 text-neutral-500 dark:text-[#8f8981]">
-            {searchQuery ? "Nenhum item nesta busca." : "Nenhum conteúdo arquivado."}
-          </p>
-        )}
-      </section>
+      <div
+        className="timeline-thread-scroll sticky top-4 max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-y-contain pr-1"
+      >
+        <div className="flex flex-col gap-9">
+          <section aria-labelledby="timeline-archives-title">
+            <h2
+              id="timeline-archives-title"
+              className="border-b border-neutral-200 pb-2.5 text-[11px] font-semibold text-neutral-700 dark:border-white/10 dark:text-[#d8d4ce]"
+            >
+              Arquivos
+            </h2>
+            {archives.length > 0 ? (
+              <div className="divide-y divide-neutral-200 dark:divide-white/10">
+                {archives.map((archive, index) => (
+                  <ArchiveYear
+                    key={archive.year}
+                    archive={archive}
+                    initiallyOpen={index === 0}
+                    searchQuery={searchQuery}
+                    feedMode={feedMode}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="py-3 text-[10px] leading-4 text-neutral-500 dark:text-[#8f8981]">
+                {searchQuery ? "Nenhum item nesta busca." : "Nenhum conteúdo arquivado."}
+              </p>
+            )}
+          </section>
 
-      {categories.length > 0 && (
-        <nav aria-labelledby="timeline-categories-title">
-          <h2
-            id="timeline-categories-title"
-            className="border-b border-neutral-200 pb-2.5 text-[11px] font-semibold text-neutral-700 dark:border-white/10 dark:text-[#d8d4ce]"
-          >
-            Categorias
-          </h2>
-          <ul className="mt-2.5 flex flex-col gap-1">
-            {categories.map((category) => (
-              <ArchiveCategory
-                key={category.slug}
-                category={category}
-                searchQuery={searchQuery}
-                feedMode={feedMode}
-              />
-            ))}
-          </ul>
-        </nav>
-      )}
+          {categories.length > 0 && (
+            <nav aria-labelledby="timeline-categories-title">
+              <h2
+                id="timeline-categories-title"
+                className="border-b border-neutral-200 pb-2.5 text-[11px] font-semibold text-neutral-700 dark:border-white/10 dark:text-[#d8d4ce]"
+              >
+                Categorias
+              </h2>
+              <ul className="mt-2.5 flex flex-col gap-1">
+                {categories.map((category) => (
+                  <ArchiveCategory
+                    key={category.slug}
+                    category={category}
+                    searchQuery={searchQuery}
+                    feedMode={feedMode}
+                  />
+                ))}
+              </ul>
+            </nav>
+          )}
+        </div>
+      </div>
     </aside>
   )
 }
