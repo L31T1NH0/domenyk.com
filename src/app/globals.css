@@ -1200,7 +1200,7 @@ html.light-mode [data-public-shell] .post-content h6 {
 }
 
 body:has(.post-reading-page) {
-  --post-reading-width: 40.25rem;
+  --post-reading-width: 39.875rem;
   --post-sidebar-width: 16rem;
   --post-column-gap: 3rem;
   --post-content-left: max(1rem, calc(50% - var(--post-reading-width) / 2));

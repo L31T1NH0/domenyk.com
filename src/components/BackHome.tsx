@@ -81,7 +81,7 @@ export function BackHome({ boundaryId = "post-content-boundary", label = "Voltar
             ? "editorial-back-home"
             : "post-back-home min-[84rem]:left-[calc(32.5vw-8.9625rem)]",
         ].join(" ")}
-        style={{ top }}
+        style={{ top, transform: "translateX(-1.5rem)" }}
         aria-label={label}
         title={label}
       >
