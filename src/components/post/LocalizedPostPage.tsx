@@ -224,7 +224,7 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
     }))
 
   return (
-    <div className={styleClasses.page} lang={details.htmlLang}>
+    <div className={`relative ${styleClasses.page}`} lang={details.htmlLang}>
       <DocumentLanguage language={details.htmlLang} />
       <PostLanguageMenuRegistration
         currentLocale={locale}
@@ -334,7 +334,6 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
             <PostContentShell html={html} className={styleClasses.content} />
             <PostReadingPosition postId={`${postId}:${locale}`} updatedAt={version.updatedAt.toISOString()} />
             <ParagraphCommentsLayer postId={postId} locale={locale} isAdmin={admin} />
-            <PostTopics />
           </div>
         )}
       </article>
@@ -383,9 +382,10 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
         </div>
       )}
 
-      <div className={["mb-6 mt-4 sm:mt-6", style === "editorial" ? "editorial-post-footer" : ""].join(" ")}>
+      <div id="post-comments" data-post-comments className={["mb-6 mt-4 sm:mt-6", style === "editorial" ? "editorial-post-footer" : ""].join(" ")}>
         <CommentThread postId={postId} locale={locale} isAdmin={admin} />
       </div>
+      {style !== "editorial" && <PostTopics key={`${postId}:${locale}`} />}
     </div>
   )
 }

@@ -814,8 +814,10 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
     const firstThreadOffset = threadElements[0].offsetTop
     let targetIndex = 0
     for (let index = 1; index < threadElements.length; index += 1) {
-      const threadStart = threadElements[index].offsetTop - firstThreadOffset
-      if (primaryProgress < threadStart) break
+      const previousThread = threadElements[index - 1]
+      const previousThreadStart = previousThread.offsetTop - firstThreadOffset
+      const advanceThreshold = previousThreadStart + previousThread.offsetHeight * 0.5
+      if (primaryProgress < advanceThreshold) break
       targetIndex = index
     }
     const target = threadElements[targetIndex]
@@ -1328,7 +1330,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
           : "",
       ].join(" ")}>
         <div className="home-timeline-primary-column flex min-w-0 flex-col gap-5">
-          <div className="home-timeline-dual-search-row flex flex-col gap-3">
+          <div className="home-timeline-dual-search-row relative z-10 flex flex-col gap-3">
             <div className="flex min-w-0 flex-col items-start gap-3">
               <form
                 action="/"
