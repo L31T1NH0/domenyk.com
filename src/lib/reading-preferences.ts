@@ -46,9 +46,9 @@ export const DEFAULT_READING_PREFERENCE_PROFILES: ReadingPreferenceProfiles = {
 }
 
 export const DEFAULT_READING_METRICS: ReadingMetrics = {
-  autoFontSize: 16,
-  baseLineHeight: 1.5,
-  baseBlockSpacing: 0.5,
+  autoFontSize: 18,
+  baseLineHeight: 1.65,
+  baseBlockSpacing: 0.75,
 }
 
 export const READING_PREFERENCE_RANGES: Record<ReadingPreferenceKey, ReadingPreferenceRange> = {

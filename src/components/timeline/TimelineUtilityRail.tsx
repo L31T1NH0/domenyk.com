@@ -51,7 +51,7 @@ function ArchiveItemResults({
                 href={item.href}
                 prefetch={false}
                 title={item.title}
-                className="flex min-w-0 items-center gap-1.5 rounded-sm text-[9px] leading-4 text-neutral-500 outline-none hover:text-neutral-950 focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#8f8981] dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
+                className="flex min-w-0 items-center gap-1.5 rounded-sm text-xs leading-5 text-neutral-600 outline-none hover:text-neutral-950 focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#A8A095] dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
               >
                 {item.cover && (
                   <Image
@@ -63,7 +63,7 @@ function ArchiveItemResults({
                     className="h-6 w-9 shrink-0 rounded-[3px] object-cover !grayscale-0"
                   />
                 )}
-                <span className="min-w-0 flex-1 truncate whitespace-nowrap">{item.title}</span>
+                <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{item.title}</span>
               </Link>
             </li>
           ))}
@@ -71,12 +71,12 @@ function ArchiveItemResults({
       )}
 
       {status === "loading" && (
-        <p role="status" className="py-1.5 text-center text-[9px] text-neutral-400 dark:text-[#77716a]">
+        <p role="status" className="py-1.5 text-center text-xs text-neutral-400 dark:text-[#77716a]">
           Carregando…
         </p>
       )}
       {status === "ready" && items.length === 0 && (
-        <p className="py-1.5 text-center text-[9px] text-neutral-400 dark:text-[#77716a]">
+        <p className="py-1.5 text-center text-xs text-neutral-400 dark:text-[#77716a]">
           {searchQuery ? "Nenhum item nesta busca." : "Nenhum conteúdo."}
         </p>
       )}
@@ -84,7 +84,7 @@ function ArchiveItemResults({
         <button
           type="button"
           onClick={() => void loadMore()}
-          className="mx-auto block min-h-7 rounded-sm px-1 text-[9px] text-neutral-500 underline decoration-neutral-400 underline-offset-2 outline-none hover:text-neutral-950 focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#8f8981] dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
+          className="mx-auto block min-h-8 rounded-sm px-1 text-xs text-neutral-600 underline decoration-neutral-400 underline-offset-2 outline-none hover:text-neutral-950 focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#A8A095] dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
         >
           Tentar novamente
         </button>
@@ -93,7 +93,7 @@ function ArchiveItemResults({
         <button
           type="button"
           onClick={() => void loadMore()}
-          className="mx-auto mt-1 block min-h-7 rounded-sm px-1 text-[9px] text-neutral-500 outline-none hover:text-neutral-950 focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#8f8981] dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
+          className="mx-auto mt-1 block min-h-8 rounded-sm px-1 text-xs text-neutral-600 outline-none hover:text-neutral-950 focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#A8A095] dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
         >
           Carregar mais
         </button>
@@ -165,14 +165,14 @@ function ArchiveMonth({
           setIsOpen(nextOpen)
           if (nextOpen && status === "idle") void loadMore()
         }}
-        className="flex min-h-7 w-full cursor-pointer items-center gap-1.5 rounded-sm text-[10px] leading-4 text-neutral-500 outline-none hover:text-neutral-950 focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#8f8981] dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
+        className="flex min-h-8 w-full cursor-pointer items-center gap-1.5 rounded-sm text-[13px] leading-5 text-neutral-600 outline-none hover:text-neutral-950 focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#A8A095] dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
       >
         <ChevronDownIcon
           aria-hidden
-          className={`size-2.5 shrink-0 text-neutral-400 transition-transform duration-150 motion-reduce:transition-none dark:text-[#77716a] ${isOpen ? "rotate-0" : "-rotate-90"}`}
+          className={`size-3.5 shrink-0 text-neutral-400 transition-transform duration-150 motion-reduce:transition-none dark:text-[#77716a] ${isOpen ? "rotate-0" : "-rotate-90"}`}
         />
-        <span className="min-w-0 flex-1 truncate text-left">{monthNames[month - 1]}</span>
-        <span className="shrink-0 font-editorial-mono text-[9px] tabular-nums" title={itemCountLabel(count)}>
+        <span className="min-w-0 flex-1 text-left [overflow-wrap:anywhere]">{monthNames[month - 1]}</span>
+        <span className="shrink-0 font-editorial-mono text-xs tabular-nums" title={itemCountLabel(count)}>
           {count}
         </span>
       </button>
@@ -248,14 +248,14 @@ function ArchiveCategory({
           setIsOpen(nextOpen)
           if (nextOpen && status === "idle") void loadMore()
         }}
-        className="flex min-h-7 w-full items-center gap-1.5 rounded-sm py-1 text-[10px] leading-4 text-neutral-600 outline-none hover:text-neutral-950 focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#9d968d] dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
+        className="flex min-h-8 w-full items-center gap-1.5 rounded-sm py-1 text-[13px] leading-5 text-neutral-600 outline-none hover:text-neutral-950 focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#9d968d] dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
       >
         <ChevronDownIcon
           aria-hidden
-          className={`size-2.5 shrink-0 text-neutral-400 transition-transform duration-150 motion-reduce:transition-none dark:text-[#77716a] ${isOpen ? "rotate-0" : "-rotate-90"}`}
+          className={`size-3.5 shrink-0 text-neutral-400 transition-transform duration-150 motion-reduce:transition-none dark:text-[#77716a] ${isOpen ? "rotate-0" : "-rotate-90"}`}
         />
-        <span className="min-w-0 flex-1 truncate text-left">{category.name}</span>
-        <span className="shrink-0 font-editorial-mono text-[9px] tabular-nums text-neutral-400 dark:text-[#77716a]">
+        <span className="min-w-0 flex-1 text-left [overflow-wrap:anywhere]">{category.name}</span>
+        <span className="shrink-0 font-editorial-mono text-xs tabular-nums text-neutral-400 dark:text-[#77716a]">
           {category.count}
         </span>
       </button>
@@ -293,14 +293,14 @@ function ArchiveYear({
         aria-expanded={isOpen}
         aria-controls={contentId}
         onClick={() => setIsOpen((current) => !current)}
-        className="flex min-h-7 w-full cursor-pointer items-center gap-2 rounded-sm text-[11px] text-neutral-700 outline-none hover:text-neutral-950 focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#c2bbb1] dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
+        className="flex min-h-8 w-full cursor-pointer items-center gap-2 rounded-sm text-sm text-neutral-700 outline-none hover:text-neutral-950 focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#c2bbb1] dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
       >
         <ChevronDownIcon
           aria-hidden
-          className={`size-3 shrink-0 text-neutral-400 transition-transform duration-150 motion-reduce:transition-none dark:text-[#77716a] ${isOpen ? "rotate-0" : "-rotate-90"}`}
+          className={`size-4 shrink-0 text-neutral-400 transition-transform duration-150 motion-reduce:transition-none dark:text-[#77716a] ${isOpen ? "rotate-0" : "-rotate-90"}`}
         />
         <span className="flex-1 text-left tabular-nums">{archive.year}</span>
-        <span className="font-editorial-mono text-[9px] text-neutral-500 dark:text-[#77716a]">
+        <span className="font-editorial-mono text-xs text-neutral-600 dark:text-[#77716a]">
           {archive.count}
         </span>
       </button>
@@ -348,7 +348,7 @@ export function TimelineUtilityRail({
           <section aria-labelledby="timeline-archives-title">
             <h2
               id="timeline-archives-title"
-              className="border-b border-neutral-200 pb-2.5 text-[11px] font-semibold text-neutral-700 dark:border-white/10 dark:text-[#d8d4ce]"
+              className="border-b border-neutral-200 pb-2.5 text-sm font-semibold text-neutral-700 dark:border-white/10 dark:text-[#d8d4ce]"
             >
               Arquivos
             </h2>
@@ -365,7 +365,7 @@ export function TimelineUtilityRail({
                 ))}
               </div>
             ) : (
-              <p className="py-3 text-[10px] leading-4 text-neutral-500 dark:text-[#8f8981]">
+              <p className="py-3 text-[13px] leading-5 text-neutral-600 dark:text-[#A8A095]">
                 {searchQuery ? "Nenhum item nesta busca." : "Nenhum conteúdo arquivado."}
               </p>
             )}
@@ -375,7 +375,7 @@ export function TimelineUtilityRail({
             <nav aria-labelledby="timeline-categories-title">
               <h2
                 id="timeline-categories-title"
-                className="border-b border-neutral-200 pb-2.5 text-[11px] font-semibold text-neutral-700 dark:border-white/10 dark:text-[#d8d4ce]"
+                className="border-b border-neutral-200 pb-2.5 text-sm font-semibold text-neutral-700 dark:border-white/10 dark:text-[#d8d4ce]"
               >
                 Categorias
               </h2>

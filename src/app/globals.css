@@ -1202,11 +1202,26 @@ html.light-mode [data-public-shell] .post-content h6 {
   }
 }
 
-@media (min-width: 84rem) {
-  .post-reading-page {
-    position: relative;
-    left: calc(-17.5vw + 9.0375rem);
-    width: 36.5rem;
+body:has(.post-reading-page) {
+  --post-reading-width: 41.25rem;
+  --post-sidebar-width: 16rem;
+  --post-column-gap: 3rem;
+  --post-sidebar-left: calc(50% + (var(--post-reading-width) + var(--post-column-gap) - var(--post-sidebar-width)) / 2);
+}
+
+[data-public-shell]:has(.post-reading-page) {
+  width: min(100%, calc(var(--post-reading-width) + 2rem));
+  max-width: 100%;
+}
+
+.post-reading-page {
+  position: relative;
+  width: min(100%, var(--post-reading-width));
+}
+
+@media (min-width: 80rem) {
+  [data-public-shell]:has(.post-reading-page) {
+    width: min(100%, calc(var(--post-reading-width) + var(--post-column-gap) + var(--post-sidebar-width) + 2rem));
   }
 }
 

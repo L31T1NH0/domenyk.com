@@ -274,7 +274,7 @@ export function ParagraphCommentsLayer({ postId, isAdmin = false, containerSelec
             "pointer-events-auto fixed right-4 bottom-4 left-4 z-[70] sm:left-auto sm:w-80 xl:bottom-4",
             variant === "editorial"
               ? "xl:left-auto xl:right-4 xl:top-[8rem] xl:w-72"
-              : `xl:right-auto xl:left-[calc(50%+20rem)] xl:w-64 ${compactTopicsExpanded ? "xl:top-[17rem]" : "xl:top-[14rem]"}`,
+              : `xl:right-auto xl:left-[var(--post-sidebar-left)] xl:w-[var(--post-sidebar-width)] ${compactTopicsExpanded ? "xl:top-[17rem]" : "xl:top-[14rem]"}`,
           ].join(" ")}
         >
           <ParagraphThread

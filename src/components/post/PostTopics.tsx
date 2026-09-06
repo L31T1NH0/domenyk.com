@@ -215,8 +215,10 @@ export function PostTopics({ containerSelector = "[data-post-content]" }: Props)
   return (
     <aside
       className={[
-        "left-[calc(50%+20rem)] z-20 hidden w-64 text-sm text-neutral-600 dark:text-[#A8A095] xl:block",
-        paragraphCommentsOpen ? "fixed top-24" : "absolute inset-y-0",
+        "z-20 hidden w-[var(--post-sidebar-width)] text-sm text-neutral-600 dark:text-[#A8A095] xl:block",
+        paragraphCommentsOpen
+          ? "fixed top-24 left-[var(--post-sidebar-left)]"
+          : "absolute inset-y-0 left-[calc(100%+var(--post-column-gap))]",
       ].join(" ")}
     >
       <div

@@ -115,9 +115,9 @@ export function ReadingPreferencesProvider({ children }: { children: ReactNode }
   const [metrics, setMetrics] = useState<ReadingMetrics>(DEFAULT_READING_METRICS)
   const routeMetrics = useMemo(() => (
     pathname === "/" || pathname === "/notes"
-      ? { autoFontSize: 13, baseLineHeight: NOTE_READING_LINE_HEIGHT, baseBlockSpacing: 0.5 }
+      ? { autoFontSize: 15, baseLineHeight: NOTE_READING_LINE_HEIGHT, baseBlockSpacing: 0.5 }
       : /^\/notes\/[^/]+$/.test(pathname)
-        ? { autoFontSize: 15, baseLineHeight: NOTE_READING_LINE_HEIGHT, baseBlockSpacing: 0.5 }
+        ? { autoFontSize: 17, baseLineHeight: NOTE_READING_LINE_HEIGHT, baseBlockSpacing: 0.5 }
         : metrics
   ), [pathname, metrics])
 
