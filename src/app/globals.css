@@ -1015,37 +1015,47 @@ img:hover {
 .post-content h2,
 .post-content h3,
 .post-content h4,
-.post-content h5 {
+.post-content h5,
+.post-content h6 {
   font-family: var(--font-display), Arial, system-ui, sans-serif;
+  font-weight: 600;
+  line-height: 1.3;
+  text-wrap: pretty;
   @apply m-0 text-[#f1f1f1];
 }
 
-.post-content h1,
-.post-content h4 {
-  @apply text-2xl font-bold leading-tight;
+.post-content h1 {
+  font-size: 1.75em;
+  font-weight: 700;
 }
 
 .post-content h2 {
-  @apply text-xl font-semibold leading-snug;
+  font-size: 1.625em;
+  font-weight: 700;
 }
 
 .post-content h3 {
-  @apply text-lg font-semibold leading-snug;
+  font-size: 1.5em;
+}
+
+.post-content h4 {
+  font-size: 1.375em;
 }
 
 .post-content h5 {
-  @apply text-base font-semibold leading-relaxed;
+  font-size: 1.3125em;
 }
 
 .post-content h6 {
-  @apply m-0 text-sm font-extralight bg-zinc-950 px-2 py-1 rounded-md max-w-fit;
+  font-size: 1.25em;
 }
 
 html.light-mode [data-public-shell] .post-content h1,
 html.light-mode [data-public-shell] .post-content h2,
 html.light-mode [data-public-shell] .post-content h3,
 html.light-mode [data-public-shell] .post-content h4,
-html.light-mode [data-public-shell] .post-content h5 {
+html.light-mode [data-public-shell] .post-content h5,
+html.light-mode [data-public-shell] .post-content h6 {
   color: #171717;
 }
 
@@ -1451,8 +1461,12 @@ html.light-mode [data-public-shell] .post-content h5 {
   line-height: 0.78;
 }
 
+.post-content-editorial h1,
 .post-content-editorial h2,
-.post-content-editorial h3 {
+.post-content-editorial h3,
+.post-content-editorial h4,
+.post-content-editorial h5,
+.post-content-editorial h6 {
   scroll-margin-top: 2rem;
   color: var(--editorial-ink);
   font-family: var(--font-display), Arial, sans-serif;
@@ -1463,16 +1477,10 @@ html.light-mode [data-public-shell] .post-content h5 {
   margin-top: 2.8rem;
   padding-top: 2.4rem;
   border-top: 1px solid var(--editorial-rule-strong);
-  font-size: clamp(2.3rem, 5vw, 3.65rem);
-  font-weight: 700;
-  line-height: 0.98;
 }
 
 .post-content-editorial h3 {
   margin-top: 1.5rem;
-  font-size: clamp(1.5rem, 3vw, 2.1rem);
-  font-weight: 600;
-  line-height: 1.08;
 }
 
 .post-content-editorial blockquote {
