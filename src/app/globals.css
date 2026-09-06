@@ -1217,17 +1217,6 @@ body:has(.post-reading-page) {
   width: min(100%, var(--post-reading-width));
 }
 
-.post-reading-page .post-back-home {
-  left: max(3rem, var(--post-content-left));
-  margin-left: -0.5rem;
-}
-
-@media (min-width: 56rem) {
-  .post-reading-page .post-back-home {
-    margin-left: -1rem;
-  }
-}
-
 @media (min-width: 80rem) {
   body:has(.post-reading-page) {
     --post-content-left: calc(50% - (var(--post-reading-width) + var(--post-column-gap) + var(--post-sidebar-width)) / 2);
@@ -2085,13 +2074,6 @@ html.light-mode [data-public-shell] .note-content a:hover {
   z-index: 9999;
   opacity: var(--scroll-progress-visible);
   transition: width 0.12s ease-out, opacity 0.12s ease-out;
-}
-
-@media (min-width: 88rem) {
-  .editorial-back-home {
-    left: calc(50% - 39rem);
-    margin-left: -1rem;
-  }
 }
 
 @media (max-width: 70rem) {
