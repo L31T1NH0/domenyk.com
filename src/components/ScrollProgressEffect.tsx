@@ -10,7 +10,7 @@ function setScrollVariables(progress: number, visible: boolean) {
 }
 
 function hasTopicMinimap(content: HTMLElement) {
-  return content.querySelector("h1, h2, h3, h4") !== null
+  return content.querySelector("h1, h2, h3, h4, h5, h6") !== null
 }
 
 export function ScrollProgressEffect() {
