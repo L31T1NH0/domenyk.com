@@ -866,6 +866,11 @@
 }
 
 @media (min-width: 84rem) {
+  :root {
+    --timeline-primary-offset: calc(-17.5vw + 6.0375rem);
+    --timeline-primary-left: calc(50% - 16.25rem + var(--timeline-primary-offset));
+  }
+
   .home-timeline-dual-grid .home-timeline-primary-column {
     position: relative;
     padding-top: 0.75rem;
@@ -1206,7 +1211,8 @@ body:has(.post-reading-page) {
   --post-reading-width: 41.25rem;
   --post-sidebar-width: 16rem;
   --post-column-gap: 3rem;
-  --post-sidebar-left: calc(50% + (var(--post-reading-width) + var(--post-column-gap) - var(--post-sidebar-width)) / 2);
+  --post-content-left: max(1rem, calc(50% - var(--post-reading-width) / 2));
+  --post-sidebar-left: calc(var(--post-content-left) + var(--post-reading-width) + var(--post-column-gap));
 }
 
 [data-public-shell]:has(.post-reading-page) {
@@ -1219,9 +1225,35 @@ body:has(.post-reading-page) {
   width: min(100%, var(--post-reading-width));
 }
 
+.post-reading-page .post-back-home {
+  left: max(3rem, var(--post-content-left));
+  margin-left: -0.5rem;
+}
+
+@media (min-width: 56rem) {
+  .post-reading-page .post-back-home {
+    margin-left: -1rem;
+  }
+}
+
 @media (min-width: 80rem) {
+  body:has(.post-reading-page) {
+    --post-content-left: calc(50% - (var(--post-reading-width) + var(--post-column-gap) + var(--post-sidebar-width)) / 2);
+  }
+
   [data-public-shell]:has(.post-reading-page) {
     width: min(100%, calc(var(--post-reading-width) + var(--post-column-gap) + var(--post-sidebar-width) + 2rem));
+  }
+}
+
+@media (min-width: 84rem) {
+  body:has(.post-reading-page) {
+    --post-content-left: var(--timeline-primary-left);
+  }
+
+  [data-public-shell]:has(.post-reading-page) {
+    margin-left: calc(var(--post-content-left) - 1rem);
+    margin-right: 0;
   }
 }
 

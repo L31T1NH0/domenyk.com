@@ -79,7 +79,7 @@ export function BackHome({ boundaryId = "post-content-boundary", label = "Voltar
           "group hidden md:flex fixed left-[calc(50%-18rem)] -translate-x-full -translate-y-1/2 -ml-4 z-40 items-center justify-center p-1.5 rounded-full text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-[top] duration-150",
           variant === "editorial"
             ? "editorial-back-home"
-            : "min-[84rem]:left-[calc(32.5vw-8.9625rem)]",
+            : "post-back-home min-[84rem]:left-[calc(32.5vw-8.9625rem)]",
         ].join(" ")}
         style={{ top }}
         aria-label={label}
