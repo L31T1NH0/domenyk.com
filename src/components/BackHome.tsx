@@ -11,9 +11,9 @@ type Props = {
   variant?: "default" | "editorial"
 }
 
-export function BackHome({ boundaryId = "post-content-boundary", label = "Voltar", href = "/", variant = "default" }: Props) {
+export function BackHome({ boundaryId = "post-content-boundary", label = "Voltar", href = "/" }: Props) {
   const linkRef = useRef<HTMLAnchorElement>(null)
-  const [top, setTop] = useState("50%")
+  const [position, setPosition] = useState<{ left: number; top: number } | null>(null)
 
   useEffect(() => {
     let frame = 0
@@ -22,8 +22,15 @@ export function BackHome({ boundaryId = "post-content-boundary", label = "Voltar
       frame = 0
       const boundary = document.getElementById(boundaryId)
       const link = linkRef.current
-      if (!boundary || !link) {
-        setTop("50%")
+      const content = link?.closest<HTMLElement>(".post-reading-page, .post-style-editorial")
+        ?? boundary?.parentElement
+      if (!content || !link) return
+
+      const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
+      const buttonWidth = link.getBoundingClientRect().width
+      const left = content.getBoundingClientRect().left - buttonWidth - 2.5 * rem
+      if (!window.matchMedia("(min-width: 48rem)").matches || left < 0.5 * rem) {
+        setPosition(null)
         return
       }
 
@@ -31,15 +38,12 @@ export function BackHome({ boundaryId = "post-content-boundary", label = "Voltar
       const buttonHeight = link.getBoundingClientRect().height
       const buttonTop = viewportCenter - buttonHeight / 2
       const buttonBottom = viewportCenter + buttonHeight / 2
-      const boundaryTop = boundary.getBoundingClientRect().top
+      const boundaryTop = boundary?.getBoundingClientRect().top ?? Infinity
       const gap = 12
-
-      if (boundaryTop >= buttonTop - gap && boundaryTop <= buttonBottom) {
-        setTop(`${boundaryTop + gap + buttonHeight / 2}px`)
-        return
-      }
-
-      setTop("50%")
+      const top = boundaryTop >= buttonTop - gap && boundaryTop <= buttonBottom
+        ? boundaryTop + gap + buttonHeight / 2
+        : viewportCenter
+      setPosition((current) => current?.left === left && current.top === top ? current : { left, top })
     }
 
     function scheduleMeasure() {
@@ -47,20 +51,27 @@ export function BackHome({ boundaryId = "post-content-boundary", label = "Voltar
       frame = window.requestAnimationFrame(measure)
     }
 
-    measure()
+    scheduleMeasure()
     window.addEventListener("scroll", scheduleMeasure, { passive: true })
     window.addEventListener("resize", scheduleMeasure)
+    const observer = new ResizeObserver(scheduleMeasure)
+    const link = linkRef.current
+    const content = link?.closest<HTMLElement>(".post-reading-page, .post-style-editorial")
+      ?? document.getElementById(boundaryId)?.parentElement
+    if (content) observer.observe(content)
+    if (link) observer.observe(link)
 
     return () => {
       if (frame) window.cancelAnimationFrame(frame)
       window.removeEventListener("scroll", scheduleMeasure)
       window.removeEventListener("resize", scheduleMeasure)
+      observer.disconnect()
     }
   }, [boundaryId])
 
   return (
     <>
-      <div className="md:hidden mt-4 mx-0">
+      <div className={position ? "hidden" : "mt-4 mx-0"}>
         <Link
           href={href}
           className="inline-flex w-fit h-fit items-center gap-2 py-1 text-zinc-600 hover:text-zinc-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:text-zinc-300 dark:hover:text-zinc-100 mx-0"
@@ -75,17 +86,19 @@ export function BackHome({ boundaryId = "post-content-boundary", label = "Voltar
       <Link
         ref={linkRef}
         href={href}
-        className={[
-          "group hidden md:flex fixed left-[calc(50%-18rem)] -translate-x-full -translate-y-1/2 -ml-4 z-40 items-center justify-center p-1.5 rounded-full text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-[top] duration-150",
-          variant === "editorial"
-            ? "editorial-back-home"
-            : "min-[84rem]:left-[calc(32.5vw-8.9625rem)]",
-        ].join(" ")}
-        style={{ top }}
+        className="fixed z-40 flex size-10 items-center justify-center rounded-full text-zinc-700 transition-[top] duration-150 hover:text-zinc-900 motion-reduce:transition-none dark:text-zinc-300 dark:hover:text-zinc-100"
+        style={{
+          top: position?.top ?? 0,
+          left: position?.left ?? 0,
+          transform: "translateY(-50%)",
+          visibility: position ? "visible" : "hidden",
+        }}
+        aria-hidden={!position}
+        tabIndex={position ? undefined : -1}
         aria-label={label}
         title={label}
       >
-        <ChevronLeftIcon className="size-7 transition-[width,height] duration-150 group-hover:size-[1.925rem] motion-reduce:transition-none" aria-hidden="true" />
+        <ChevronLeftIcon className="size-7" aria-hidden="true" />
       </Link>
     </>
   )

@@ -1326,7 +1326,7 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
       <div className={[
         "relative flex min-w-0 flex-col gap-5",
         hasDesktopThreads
-          ? "home-timeline-dual-grid min-[84rem]:left-[calc(-17.5vw+6.0375rem)] min-[84rem]:grid min-[84rem]:grid-cols-[34.5rem_minmax(0,1fr)] min-[84rem]:items-start min-[84rem]:gap-8 min-[96rem]:gap-12"
+          ? "home-timeline-dual-grid min-[84rem]:left-[var(--timeline-primary-offset)] min-[84rem]:grid min-[84rem]:grid-cols-[34.5rem_minmax(0,1fr)] min-[84rem]:items-start min-[84rem]:gap-8 min-[96rem]:gap-12"
           : "",
       ].join(" ")}>
         <div className="home-timeline-primary-column flex min-w-0 flex-col gap-5">
@@ -1544,9 +1544,11 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
           </aside>
         )}
 
-        {hasDesktopThreads && (
+        {(hasDesktopThreads || utilityRail.writingProgress.length > 0 || isAdmin) && (
           <TimelineUtilityRail
             {...utilityRail}
+            standalone={!hasDesktopThreads}
+            isAdmin={isAdmin}
             searchQuery={searchError ? "" : searchQuery}
             feedMode={feedMode}
           />

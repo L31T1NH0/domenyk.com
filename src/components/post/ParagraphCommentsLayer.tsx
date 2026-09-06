@@ -1,14 +1,15 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react"
 import { createPortal } from "react-dom"
 import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/outline"
 import { ParagraphThread } from "./ParagraphThread"
 import type { PostLocale } from "@/lib/post-locales"
 
 type ParagraphPosition = {
+  pid: string
   top: number
-  right: number
+  left: number
 }
 
 type Props = {
@@ -24,9 +25,9 @@ export function ParagraphCommentsLayer({ postId, isAdmin = false, containerSelec
   const [hoveredPid, setHoveredPid] = useState<string | null>(null)
   const [counts, setCounts] = useState<Record<string, number>>({})
   const [paragraphIds, setParagraphIds] = useState<string[]>([])
-  const [buttonPosition, setButtonPosition] = useState<ParagraphPosition | null>(null)
+  const [paragraphPositions, setParagraphPositions] = useState<ParagraphPosition[]>([])
   const [isTouch, setIsTouch] = useState(false)
-  const [compactTopicsExpanded, setCompactTopicsExpanded] = useState(false)
+  const [topicsHeight, setTopicsHeight] = useState(128)
   const layerRef = useRef<HTMLDivElement>(null)
   const hoveredPidRef = useRef<string | null>(null)
   const positionFrameRef = useRef<number | null>(null)
@@ -44,70 +45,68 @@ export function ParagraphCommentsLayer({ postId, isAdmin = false, containerSelec
     }
   }, [])
 
-  const scheduleHideButton = useCallback((delay = 1200) => {
+  const scheduleHideButton = useCallback((delay = 250) => {
     clearHideButtonTimer()
     hideButtonTimerRef.current = setTimeout(() => setHoveredPid(null), delay)
   }, [clearHideButtonTimer])
 
-  const updateButtonPosition = useCallback((pid: string) => {
-    const container = document.querySelector(containerSelector)
-    const paragraph = container?.querySelector<HTMLElement>(`[data-pid="${CSS.escape(pid)}"]`)
-
-    if (!paragraph) {
-      setButtonPosition(null)
-      return
-    }
-
-    const rect = paragraph.getBoundingClientRect()
-    const next = {
-      top: rect.top,
-      right: rect.right,
-    }
-
-    setButtonPosition((current) => (
-      current && Math.abs(current.top - next.top) < 0.5 && Math.abs(current.right - next.right) < 0.5
-        ? current
-        : next
-    ))
-  }, [containerSelector])
-
   useEffect(() => {
-    const container = document.querySelector(containerSelector)
-    if (!container) return
+    const container = document.querySelector<HTMLElement>(containerSelector)
+    const layer = layerRef.current
+    if (!container || !layer) return
 
-    function collectParagraphIds() {
-      const next = Array.from(container!.querySelectorAll<HTMLElement>("[data-pid]"), (el) => el.dataset.pid)
-        .filter((pid): pid is string => Boolean(pid))
-
-      setParagraphIds((current) => current.join("\n") === next.join("\n") ? current : next)
-    }
-
-    const scheduleHoveredPositionUpdate = () => {
-      const pid = hoveredPidRef.current
-      if (!pid || positionFrameRef.current !== null) return
-
-      positionFrameRef.current = window.requestAnimationFrame(() => {
-        positionFrameRef.current = null
-        updateButtonPosition(pid)
+    const measureParagraphs = () => {
+      positionFrameRef.current = null
+      const containerRect = container.getBoundingClientRect()
+      const layerRect = layer.getBoundingClientRect()
+      const paragraphs = Array.from(container.querySelectorAll<HTMLElement>("[data-pid]"))
+      const next = paragraphs.flatMap((paragraph) => {
+        const pid = paragraph.dataset.pid
+        if (!pid || paragraph.getClientRects().length === 0) return []
+        const rect = paragraph.getBoundingClientRect()
+        const lineHeight = parseFloat(getComputedStyle(paragraph).lineHeight) || 24
+        return [{
+          pid,
+          top: rect.top - layerRect.top + Math.max(0, (lineHeight - 32) / 2),
+          left: containerRect.right - layerRect.left + 12,
+        }]
       })
+      setParagraphPositions((current) => current.length === next.length && current.every((entry, index) => (
+        entry.pid === next[index].pid && Math.abs(entry.top - next[index].top) < 0.5 &&
+        Math.abs(entry.left - next[index].left) < 0.5
+      )) ? current : next)
+    }
+    const scheduleMeasure = () => {
+      if (positionFrameRef.current === null) {
+        positionFrameRef.current = window.requestAnimationFrame(measureParagraphs)
+      }
+    }
+    const resizeObserver = new ResizeObserver(scheduleMeasure)
+    const collectParagraphs = () => {
+      const paragraphs = Array.from(container.querySelectorAll<HTMLElement>("[data-pid]"))
+      const ids = paragraphs.map((paragraph) => paragraph.dataset.pid).filter((pid): pid is string => Boolean(pid))
+      setParagraphIds((current) => current.join("\n") === ids.join("\n") ? current : ids)
+      resizeObserver.disconnect()
+      resizeObserver.observe(container)
+      paragraphs.forEach((paragraph) => resizeObserver.observe(paragraph))
+      scheduleMeasure()
     }
 
-    collectParagraphIds()
-    const observer = new MutationObserver(collectParagraphIds)
-    observer.observe(container, { childList: true, subtree: true })
-    window.addEventListener("scroll", scheduleHoveredPositionUpdate, { passive: true })
-    window.addEventListener("resize", scheduleHoveredPositionUpdate)
+    collectParagraphs()
+    const observer = new MutationObserver(collectParagraphs)
+    observer.observe(container, { childList: true, subtree: true, characterData: true })
+    window.addEventListener("resize", scheduleMeasure)
 
     return () => {
       observer.disconnect()
-      window.removeEventListener("scroll", scheduleHoveredPositionUpdate)
-      window.removeEventListener("resize", scheduleHoveredPositionUpdate)
+      resizeObserver.disconnect()
+      window.removeEventListener("resize", scheduleMeasure)
       if (positionFrameRef.current !== null) {
         window.cancelAnimationFrame(positionFrameRef.current)
         positionFrameRef.current = null
       }
     }
-  }, [containerSelector, updateButtonPosition])
+  }, [containerSelector])
 
   useEffect(() => {
     const pids = paragraphIdsKey ? paragraphIdsKey.split("\n") : []
@@ -148,8 +147,8 @@ export function ParagraphCommentsLayer({ postId, isAdmin = false, containerSelec
 
   useEffect(() => {
     const onChange = (event: Event) => {
-      const detail = (event as CustomEvent<{ expanded?: boolean }>).detail
-      setCompactTopicsExpanded(Boolean(detail?.expanded))
+      const detail = (event as CustomEvent<{ height?: number }>).detail
+      setTopicsHeight(typeof detail?.height === "number" && Number.isFinite(detail.height) && detail.height > 0 ? detail.height : 128)
     }
 
     window.addEventListener("paragraph-topics-compact-change", onChange)
@@ -176,7 +175,6 @@ export function ParagraphCommentsLayer({ postId, isAdmin = false, containerSelec
       if (hoveredPidRef.current !== pid) {
         hoveredPidRef.current = pid
         setHoveredPid(pid)
-        updateButtonPosition(pid)
       }
     }
 
@@ -195,6 +193,7 @@ export function ParagraphCommentsLayer({ postId, isAdmin = false, containerSelec
         if (!isTouch) return
         const target = event.target as HTMLElement
         if (target.closest("a, button, img, textarea, input, select, [contenteditable='true']")) return
+        if (window.getSelection()?.toString().trim()) return
         setActivePid((current) => (current === pid ? null : pid))
       }
 
@@ -212,11 +211,9 @@ export function ParagraphCommentsLayer({ postId, isAdmin = false, containerSelec
       paragraphs.forEach((paragraph) => paragraph.classList.remove("paragraph-comments-target"))
       cleanups.forEach((cleanup) => cleanup())
     }
-  }, [clearHideButtonTimer, containerSelector, isTouch, scheduleHideButton, updateButtonPosition])
+  }, [clearHideButtonTimer, containerSelector, isTouch, paragraphIdsKey, scheduleHideButton])
 
-  const buttonPid = hoveredPid && buttonPosition ? hoveredPid : null
   const canUseDom = typeof document !== "undefined" && typeof window !== "undefined"
-  const viewportWidth = canUseDom ? window.innerWidth : 0
   const handleThreadCountChange = useCallback((count: number) => {
     if (!activePid) return
     setCounts((prev) => ({ ...prev, [activePid]: count }))
@@ -236,37 +233,46 @@ export function ParagraphCommentsLayer({ postId, isAdmin = false, containerSelec
 
   return (
     <div ref={layerRef} className="absolute inset-0 pointer-events-none">
-      {canUseDom && !isTouch && buttonPid && buttonPosition && createPortal(
-        <div
-          className="pointer-events-auto fixed z-[70] flex items-center"
-          style={{
-            top: buttonPosition.top - 2,
-            left: Math.min(buttonPosition.right + 10, viewportWidth - 44),
-          }}
-          onPointerEnter={clearHideButtonTimer}
-          onPointerLeave={() => scheduleHideButton()}
-        >
-          <button
-            type="button"
-            onClick={() => {
-              clearHideButtonTimer()
-              setHoveredPid(buttonPid)
-              setActivePid(buttonPid)
-            }}
-            className="relative inline-flex h-8 w-8 items-center justify-center rounded-full border border-neutral-950/15 bg-[#f4f4f4] text-neutral-800 shadow-[0_2px_8px_rgb(0_0_0_/_0.12)] transition-colors hover:border-[#E00070]/70 hover:bg-[#E00070] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E00070]/70 dark:border-white/15 dark:bg-[#040404] dark:text-[#f1f1f1] dark:shadow-none dark:hover:border-[#E00070]/70 dark:hover:bg-[#E00070]"
-            aria-label="Abrir comentários deste parágrafo"
-            title="Comentar neste parágrafo"
+      {!isTouch && paragraphPositions.map(({ pid, top, left }) => {
+        const count = counts[pid] ?? 0
+        const active = activePid === pid
+        const visible = hoveredPid === pid || active || count > 0
+        return (
+          <div
+            key={pid}
+            className="absolute"
+            style={{ top, left }}
           >
-            <ChatBubbleLeftRightIcon className="h-4 w-4" aria-hidden="true" />
-            {counts[buttonPid] ? (
-              <span className="absolute -right-1 -top-1 grid min-h-4 min-w-4 place-items-center rounded-full bg-[#E00070] px-1 text-[10px] font-semibold leading-none text-white">
-                {counts[buttonPid]}
-              </span>
-            ) : null}
-          </button>
-        </div>,
-        document.body
-      )}
+            <button
+              type="button"
+              onPointerEnter={clearHideButtonTimer}
+              onPointerLeave={() => scheduleHideButton(250)}
+              onFocus={() => {
+                clearHideButtonTimer()
+                setHoveredPid(pid)
+              }}
+              onBlur={() => scheduleHideButton(250)}
+              onClick={() => {
+                clearHideButtonTimer()
+                setHoveredPid(pid)
+                setActivePid((current) => current === pid ? null : pid)
+              }}
+              className={[
+                "group relative flex min-h-8 w-9 items-center justify-center gap-0.5 py-2 text-neutral-500 transition-[opacity,color] duration-150 hover:text-neutral-950 focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 motion-reduce:transition-none dark:text-[#8f8981] dark:hover:text-[#f1f1f1]",
+                visible ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
+                active ? "text-neutral-950 dark:text-[#f1f1f1]" : "",
+              ].join(" ")}
+              aria-label={count > 0 ? `${count} ${count === 1 ? "comentário neste parágrafo" : "comentários neste parágrafo"}` : "Comentar neste parágrafo"}
+              aria-expanded={active}
+              title={active ? "Fechar comentários deste parágrafo" : "Comentar neste parágrafo"}
+            >
+              <span aria-hidden className="absolute -left-1 top-1.5 h-5 w-px bg-current opacity-25 group-hover:opacity-50" />
+              <ChatBubbleLeftRightIcon className="size-3.5 shrink-0" aria-hidden="true" />
+              {count > 0 && <span className="text-[10px] leading-none tabular-nums" aria-hidden>{count > 99 ? "99+" : count}</span>}
+            </button>
+          </div>
+        )
+      })}
 
       {canUseDom && activePid && createPortal(
         <div
@@ -274,8 +280,9 @@ export function ParagraphCommentsLayer({ postId, isAdmin = false, containerSelec
             "pointer-events-auto fixed right-4 bottom-4 left-4 z-[70] sm:left-auto sm:w-80 xl:bottom-4",
             variant === "editorial"
               ? "xl:left-auto xl:right-4 xl:top-[8rem] xl:w-72"
-              : `xl:right-auto xl:left-[calc(50%+20rem)] xl:w-64 ${compactTopicsExpanded ? "xl:top-[17rem]" : "xl:top-[14rem]"}`,
+              : "xl:right-auto xl:left-[var(--post-sidebar-left)] xl:w-[var(--post-sidebar-width)] xl:top-[calc(6rem+var(--post-topics-height))]",
           ].join(" ")}
+          style={{ "--post-topics-height": `${topicsHeight}px` } as CSSProperties}
         >
           <ParagraphThread
             postId={postId}

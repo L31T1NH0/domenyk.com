@@ -21,15 +21,15 @@ export default async function PublicLayout({ children }: { children: React.React
   return (
     <ReadingPreferencesProvider>
       <PublicMenuProvider>
+        <header className="mx-auto flex w-full max-w-[36rem] items-center justify-end px-4 py-1 sm:w-[min(100%,34.5rem)] sm:max-w-[100vw]">
+          <PublicMenu />
+        </header>
         <ReadingPreferencesScope data-public-shell data-scroll-progress-root className="mx-auto mb-4 flex w-full max-w-[36rem] flex-col overflow-x-visible px-4 sm:w-[min(100%,34.5rem)] sm:max-w-[100vw]">
           <div aria-hidden data-scroll-progress-bar />
           <ScrollProgressEffect />
           <FlowImageAlphaOffset />
           <ViewReferrerTracker />
           {(siteVisitSettings.pushEnabled || siteVisitSettings.storeInHistory) && <SiteVisitTracker />}
-          <header className="flex items-center justify-end py-1">
-            <PublicMenu />
-          </header>
           <main className="flex min-w-0 flex-1 flex-col">
             {children}
           </main>

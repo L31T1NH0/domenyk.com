@@ -27,6 +27,7 @@ import { revokePrivatePushForCurrentDevice } from "@/lib/client-push"
 
 const navItems = [
   { href: "/admin", label: "Visão geral", icon: ChartBarSquareIcon },
+  { href: "/admin/escrevendo", label: "O que estou escrevendo", icon: PencilSquareIcon },
   { href: "/admin/posts", label: "Posts", icon: DocumentTextIcon },
   { href: "/admin/notes", label: "Notas", icon: PencilSquareIcon },
   { href: "/admin/temas", label: "Temas", icon: TagIcon },

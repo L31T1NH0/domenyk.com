@@ -783,14 +783,6 @@
   background-clip: padding-box;
 }
 
-/* The home menu trigger sits at the right edge of its current layout. Keep its
-   panel anchored there so wider menu views always expand into the viewport. */
-.home-tablet-landscape-menu-panel {
-  right: 0 !important;
-  left: auto !important;
-  transform-origin: top right;
-}
-
 @media (max-width: 83.999rem) {
   .home-timeline-utility-rail {
     display: none !important;
@@ -860,12 +852,17 @@
     flex-direction: row;
   }
 
-  .home-tablet-landscape-menu {
+  .public-menu-position {
     translate: calc(50vw - 17.25rem) 0;
   }
 }
 
 @media (min-width: 84rem) {
+  :root {
+    --timeline-primary-offset: calc(-17.5vw + 6.0375rem);
+    --timeline-primary-left: calc(50% - 16.25rem + var(--timeline-primary-offset));
+  }
+
   .home-timeline-dual-grid .home-timeline-primary-column {
     position: relative;
     padding-top: 0.75rem;
@@ -977,6 +974,7 @@ img:hover {
 }
 
 .post-content {
+  --paragraph-hover-background: rgb(255 255 255 / 3%);
   font-family: var(--font-reading), "Times New Roman", Times, serif;
   font-kerning: normal;
   font-optical-sizing: auto;
@@ -1015,37 +1013,47 @@ img:hover {
 .post-content h2,
 .post-content h3,
 .post-content h4,
-.post-content h5 {
+.post-content h5,
+.post-content h6 {
   font-family: var(--font-display), Arial, system-ui, sans-serif;
+  font-weight: 600;
+  line-height: 1.3;
+  text-wrap: pretty;
   @apply m-0 text-[#f1f1f1];
 }
 
-.post-content h1,
-.post-content h4 {
-  @apply text-2xl font-bold leading-tight;
+.post-content h1 {
+  font-size: 1.75em;
+  font-weight: 700;
 }
 
 .post-content h2 {
-  @apply text-xl font-semibold leading-snug;
+  font-size: 1.625em;
+  font-weight: 700;
 }
 
 .post-content h3 {
-  @apply text-lg font-semibold leading-snug;
+  font-size: 1.5em;
+}
+
+.post-content h4 {
+  font-size: 1.375em;
 }
 
 .post-content h5 {
-  @apply text-base font-semibold leading-relaxed;
+  font-size: 1.3125em;
 }
 
 .post-content h6 {
-  @apply m-0 text-sm font-extralight bg-zinc-950 px-2 py-1 rounded-md max-w-fit;
+  font-size: 1.25em;
 }
 
 html.light-mode [data-public-shell] .post-content h1,
 html.light-mode [data-public-shell] .post-content h2,
 html.light-mode [data-public-shell] .post-content h3,
 html.light-mode [data-public-shell] .post-content h4,
-html.light-mode [data-public-shell] .post-content h5 {
+html.light-mode [data-public-shell] .post-content h5,
+html.light-mode [data-public-shell] .post-content h6 {
   color: #171717;
 }
 
@@ -1054,7 +1062,11 @@ html.light-mode [data-public-shell] .post-content h5 {
 }
 
 .post-content p:hover {
-  @apply bg-zinc-100/90 dark:bg-zinc-800/60;
+  background-color: var(--paragraph-hover-background);
+}
+
+html.light-mode [data-public-shell] .post-content {
+  --paragraph-hover-background: rgb(0 0 0 / 2.5%);
 }
 
 .post-content img {
@@ -1192,11 +1204,42 @@ html.light-mode [data-public-shell] .post-content h5 {
   }
 }
 
+body:has(.post-reading-page) {
+  --post-reading-width: 39.875rem;
+  --post-sidebar-width: 16rem;
+  --post-column-gap: 3rem;
+  --post-content-left: max(1rem, calc(50% - var(--post-reading-width) / 2));
+  --post-sidebar-left: calc(var(--post-content-left) + var(--post-reading-width) + var(--post-column-gap));
+}
+
+[data-public-shell]:has(.post-reading-page) {
+  width: min(100%, calc(var(--post-reading-width) + 2rem));
+  max-width: 100%;
+}
+
+.post-reading-page {
+  position: relative;
+  width: min(100%, var(--post-reading-width));
+}
+
+@media (min-width: 80rem) {
+  body:has(.post-reading-page) {
+    --post-content-left: calc(50% - (var(--post-reading-width) + var(--post-column-gap) + var(--post-sidebar-width)) / 2);
+  }
+
+  [data-public-shell]:has(.post-reading-page) {
+    width: min(100%, calc(var(--post-reading-width) + var(--post-column-gap) + var(--post-sidebar-width) + 2rem));
+  }
+}
+
 @media (min-width: 84rem) {
-  .post-reading-page {
-    position: relative;
-    left: calc(-17.5vw + 9.0375rem);
-    width: 36.5rem;
+  body:has(.post-reading-page) {
+    --post-content-left: var(--timeline-primary-left);
+  }
+
+  [data-public-shell]:has(.post-reading-page) {
+    margin-left: calc(var(--post-content-left) - 1rem);
+    margin-right: 0;
   }
 }
 
@@ -1451,8 +1494,12 @@ html.light-mode [data-public-shell] .post-content h5 {
   line-height: 0.78;
 }
 
+.post-content-editorial h1,
 .post-content-editorial h2,
-.post-content-editorial h3 {
+.post-content-editorial h3,
+.post-content-editorial h4,
+.post-content-editorial h5,
+.post-content-editorial h6 {
   scroll-margin-top: 2rem;
   color: var(--editorial-ink);
   font-family: var(--font-display), Arial, sans-serif;
@@ -1463,16 +1510,10 @@ html.light-mode [data-public-shell] .post-content h5 {
   margin-top: 2.8rem;
   padding-top: 2.4rem;
   border-top: 1px solid var(--editorial-rule-strong);
-  font-size: clamp(2.3rem, 5vw, 3.65rem);
-  font-weight: 700;
-  line-height: 0.98;
 }
 
 .post-content-editorial h3 {
   margin-top: 1.5rem;
-  font-size: clamp(1.5rem, 3vw, 2.1rem);
-  font-weight: 600;
-  line-height: 1.08;
 }
 
 .post-content-editorial blockquote {
@@ -1561,10 +1602,6 @@ html.light-mode [data-public-shell] .post-content h5 {
   padding: 0.85rem 1rem;
   background: rgb(224 0 112 / 9%);
   color: #ffe8f3;
-}
-
-.post-content-opinion p:hover {
-  background: rgb(224 0 112 / 10%);
 }
 
 .post-content-opinion strong {
@@ -2038,13 +2075,6 @@ html.light-mode [data-public-shell] .note-content a:hover {
   z-index: 9999;
   opacity: var(--scroll-progress-visible);
   transition: width 0.12s ease-out, opacity 0.12s ease-out;
-}
-
-@media (min-width: 88rem) {
-  .editorial-back-home {
-    left: calc(50% - 39rem);
-    margin-left: -1rem;
-  }
 }
 
 @media (max-width: 70rem) {
