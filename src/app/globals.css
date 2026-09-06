@@ -1220,6 +1220,10 @@ body:has(.post-reading-page) {
   max-width: 100%;
 }
 
+[data-public-shell]:has(.post-reading-page) > header {
+  width: min(100%, var(--post-reading-width));
+}
+
 .post-reading-page {
   position: relative;
   width: min(100%, var(--post-reading-width));
