@@ -18,6 +18,7 @@ import { NoteCard } from "@/components/notes/NoteCard"
 import { NoteComposer } from "@/components/notes/NoteComposer"
 import { NoteTimelineGroup } from "@/components/notes/NoteTimelineGroup"
 import { ContentActionMenu } from "@/components/actions/ContentActionMenu"
+import { AutoFitText } from "@/components/text/AutoFitText"
 import type { SerializedNote } from "@/lib/db/notes"
 import type { SerializedPostSummary } from "@/lib/db/posts"
 import { groupNotesByThread, mergeNotesById } from "@/lib/note-thread"
@@ -131,30 +132,43 @@ function PostTimelineItem({
               />
             </span>
             <span className="flex min-w-0 flex-col gap-2">
-              <h2 className="font-editorial-mono text-lg font-semibold uppercase leading-snug [overflow-wrap:anywhere] text-neutral-950 dark:text-[#f1f1f1]">
-                {post.title.toLocaleUpperCase("pt-BR")}
-              </h2>
-              <span className="flex flex-wrap items-center gap-3 font-editorial-mono text-xs text-neutral-600 dark:text-[#A8A095]">
+              <AutoFitText
+                as="h2"
+                text={post.title.toLocaleUpperCase("pt-BR")}
+                minSize={14}
+                maxSize={17}
+                maxLines={3}
+                className="font-editorial-mono font-semibold uppercase leading-[1.2] tracking-[-0.025em] text-neutral-950 dark:text-[#f1f1f1]"
+              />
+              <span className="flex flex-wrap items-center gap-3 font-editorial-mono text-[11px] text-neutral-600 dark:text-[#A8A095]">
                 <span>{post.views ?? 0} views</span>
                 {!post.published && <span className="text-amber-400">rascunho</span>}
               </span>
             </span>
           </span>
         ) : showCover ? (
-          <span className="relative grid aspect-video w-full items-end overflow-hidden rounded-xl bg-neutral-200 dark:bg-white/5">
+          <span className="relative block aspect-video w-full overflow-hidden rounded-xl bg-neutral-200 dark:bg-white/5">
             <Image
               src={post.cover!.url}
               alt={post.cover!.alt ?? post.title}
               width={1920}
               height={1080}
               sizes="(max-width: 640px) calc(100vw - 2.5rem), 32.5rem"
-              className="absolute inset-0 h-full w-full rounded-xl object-cover !grayscale-0"
+              className="h-full w-full rounded-xl object-cover !grayscale-0"
             />
-            <span className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-t from-[#040404]/95 via-[#040404]/55 to-[#040404]/10" />
-            <span className="relative flex min-w-0 flex-col gap-2 p-3 sm:p-4">
-              <h2 className="text-xl font-semibold leading-snug [overflow-wrap:anywhere] text-white sm:text-[22px]">
-                {post.title}
-              </h2>
+            <span className="pointer-events-none absolute inset-0 rounded-xl">
+              <span className="absolute left-0 top-0 h-2/5 w-full bg-gradient-to-b from-[#040404]/85 via-[#040404]/55 to-transparent" />
+              <span className="absolute bottom-0 left-0 h-3/5 w-full bg-gradient-to-t from-[#040404]/90 via-[#040404]/58 to-transparent" />
+            </span>
+            <span className="absolute bottom-2 left-3 right-3 flex flex-col gap-2 sm:bottom-3">
+              <AutoFitText
+                as="h2"
+                text={post.title}
+                minSize={15}
+                maxSize={19}
+                maxLines={2}
+                className="font-normal leading-snug text-white"
+              />
               <span className="flex flex-wrap items-center gap-3">
                 <span className="text-xs text-zinc-300 drop-shadow">{postDateLabel(post)}</span>
                 <span aria-hidden className="text-zinc-300/50">·</span>
@@ -165,15 +179,19 @@ function PostTimelineItem({
           </span>
         ) : (
           <span className="flex min-w-0 flex-col gap-2">
-            <h2 className={isEditorial
-              ? "font-editorial-mono text-lg font-semibold uppercase leading-snug [overflow-wrap:anywhere] text-neutral-950 dark:text-[#f1f1f1]"
-              : "text-xl font-semibold leading-snug [overflow-wrap:anywhere] text-neutral-950 dark:text-[#f1f1f1] sm:text-[22px]"}
-            >
-              {isEditorial ? post.title.toLocaleUpperCase("pt-BR") : post.title}
-            </h2>
+            <AutoFitText
+              as="h2"
+              text={isEditorial ? post.title.toLocaleUpperCase("pt-BR") : post.title}
+              minSize={14}
+              maxSize={17}
+              maxLines={2}
+              className={isEditorial
+                ? "font-editorial-mono font-semibold uppercase leading-[1.2] tracking-[-0.025em] text-neutral-950 dark:text-[#f1f1f1]"
+                : "font-normal leading-snug text-neutral-950 dark:text-[#f1f1f1]"}
+            />
             <span className="flex flex-wrap items-center gap-3">
               {isEditorial ? (
-                <span className="font-editorial-mono text-xs text-neutral-600 tabular-nums dark:text-[#A8A095]">{post.views ?? 0} views</span>
+                <span className="font-editorial-mono text-[11px] text-neutral-600 tabular-nums dark:text-[#A8A095]">{post.views ?? 0} views</span>
               ) : (
                 <>
                   <span className="text-xs text-neutral-600 dark:text-[#A8A095]">{postDateLabel(post)}</span>
