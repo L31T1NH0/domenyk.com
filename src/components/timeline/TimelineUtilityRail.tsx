@@ -1,9 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import Image from "next/image"
 import { useId, useState } from "react"
 import { ChevronDownIcon } from "@heroicons/react/20/solid"
+import { DocumentTextIcon } from "@heroicons/react/24/outline"
 import type { TimelineUtilityRailData } from "@/lib/public-content-cache"
 import type { TimelineArchiveItem } from "@/lib/db/timeline"
 
@@ -50,18 +50,12 @@ function ArchiveItemResults({
               <Link
                 href={item.href}
                 prefetch={false}
-                title={item.title}
+                title={`${item.type === "post" ? "Artigo" : "Nota"}: ${item.title}`}
+                aria-label={`${item.type === "post" ? "Artigo" : "Nota"}: ${item.title}`}
                 className="flex min-w-0 items-center gap-1.5 rounded-sm text-[9px] leading-4 text-neutral-500 outline-none hover:text-neutral-950 focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#8f8981] dark:hover:text-[#f1f1f1] dark:focus-visible:ring-neutral-300"
               >
-                {item.cover && (
-                  <Image
-                    src={item.cover.url}
-                    alt=""
-                    width={36}
-                    height={24}
-                    sizes="36px"
-                    className="h-6 w-9 shrink-0 rounded-[3px] object-cover !grayscale-0"
-                  />
+                {item.type === "post" && (
+                  <DocumentTextIcon aria-hidden="true" className="size-3 shrink-0" />
                 )}
                 <span className="min-w-0 flex-1 truncate whitespace-nowrap">{item.title}</span>
               </Link>
@@ -328,23 +322,65 @@ function ArchiveYear({
 export function TimelineUtilityRail({
   archives,
   categories,
+  writingProgress = [],
+  standalone = false,
+  isAdmin = false,
   searchQuery,
   feedMode,
 }: TimelineUtilityRailData & {
+  standalone?: boolean
+  isAdmin?: boolean
   searchQuery: string
   feedMode: "all" | "posts" | "notes"
 }) {
-  if (archives.length === 0 && categories.length === 0 && !searchQuery) return null
+  if (archives.length === 0 && categories.length === 0 && writingProgress.length === 0 && !searchQuery && !isAdmin) return null
 
   return (
     <aside
       aria-label="Navegação complementar da timeline"
-      className="home-timeline-utility-rail hidden min-w-0 min-[84rem]:absolute min-[84rem]:bottom-0 min-[84rem]:left-[calc(100%+1rem)] min-[84rem]:right-[calc(100%-67.5vw-9.2125rem)] min-[84rem]:top-0 min-[84rem]:block"
+      className={`home-timeline-utility-rail hidden min-w-0 min-[84rem]:absolute min-[84rem]:bottom-0 min-[84rem]:left-[calc(100%+1rem)] min-[84rem]:top-0 min-[84rem]:block ${standalone ? "min-[84rem]:w-48" : "min-[84rem]:right-[calc(100%-67.5vw-9.2125rem)]"}`}
     >
       <div
         className="timeline-thread-scroll sticky top-4 max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-y-contain pr-1"
       >
         <div className="flex flex-col gap-9">
+          {(writingProgress.length > 0 || isAdmin) && (
+            <section aria-labelledby="timeline-writing-title">
+              <h2 id="timeline-writing-title" className="border-b border-neutral-200 pb-2.5 text-[11px] font-semibold text-neutral-700 dark:border-white/10 dark:text-[#d8d4ce]">
+                O que estou escrevendo
+              </h2>
+              {isAdmin && (
+                <Link href="/admin/escrevendo" className="mt-2 inline-block rounded-sm text-[10px] leading-4 text-neutral-600 underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:text-[#9d968d]">
+                  {writingProgress.length > 0 ? "Atualizar progresso" : "Adicionar título e progresso"}
+                </Link>
+              )}
+              <ul className="mt-3 flex min-w-0 flex-col gap-4">
+                {writingProgress.map((item) => (
+                  <li key={item.id} className="min-w-0">
+                    <div className="flex items-baseline gap-2 text-[10px] leading-4 text-neutral-600 dark:text-[#9d968d]">
+                      <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{item.title}</span>
+                      <span className="shrink-0 font-editorial-mono text-[9px] tabular-nums">{item.progress}%</span>
+                    </div>
+                    <div
+                      role="progressbar"
+                      aria-label={`Escrita de ${item.title}`}
+                      aria-valuemin={0} aria-valuemax={100} aria-valuenow={item.progress}
+                      className="mt-2 h-0.5 overflow-hidden rounded-full bg-neutral-200 dark:bg-white/10"
+                    >
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${item.progress}%`,
+                          backgroundColor: `hsl(${220 + item.progress * 1.1} 85% 60%)`,
+                        }}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           <section aria-labelledby="timeline-archives-title">
             <h2
               id="timeline-archives-title"
@@ -372,7 +408,7 @@ export function TimelineUtilityRail({
           </section>
 
           {categories.length > 0 && (
-            <nav aria-labelledby="timeline-categories-title">
+            <nav aria-labelledby="timeline-categories-title" className="-mt-5">
               <h2
                 id="timeline-categories-title"
                 className="border-b border-neutral-200 pb-2.5 text-[11px] font-semibold text-neutral-700 dark:border-white/10 dark:text-[#d8d4ce]"

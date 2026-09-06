@@ -10,6 +10,7 @@ import {
   getStandaloneTimelinePage,
   getTimelinePage,
 } from "@/lib/db/timeline"
+import { getWritingProgress, type WritingProgressItem } from "@/lib/db/writing-progress"
 import { getThemes } from "@/lib/db/themes"
 
 export const PUBLIC_CONTENT_CACHE_TAG = "public-content"
@@ -40,6 +41,7 @@ export type HomeTimelinePage = CachedHomeFeed & {
 }
 
 export type TimelineUtilityRailData = {
+  writingProgress: WritingProgressItem[]
   archives: Array<{
     year: number
     count: number
@@ -50,9 +52,10 @@ export type TimelineUtilityRailData = {
 
 export const getCachedTimelineUtilityRail = unstable_cache(
   async (search = "", mode: PublicFeedMode = "all"): Promise<TimelineUtilityRailData> => {
-    const [archiveMonths, themes] = await Promise.all([
+    const [archiveMonths, themes, writingProgress] = await Promise.all([
       getTimelineArchiveMonths({ search: search || undefined, mode }),
       getThemes({ activeOnly: true }),
+      getWritingProgress(),
     ])
     const archiveByYear = new Map<number, TimelineUtilityRailData["archives"][number]>()
 
@@ -71,13 +74,14 @@ export const getCachedTimelineUtilityRail = unstable_cache(
     }
 
     return {
+      writingProgress,
       archives: [...archiveByYear.values()],
       categories: themes
         .filter((theme) => theme.postIds.length > 0)
         .map((theme) => ({ name: theme.name, slug: theme.slug, count: theme.postIds.length })),
     }
   },
-  ["timeline-utility-rail"],
+  ["timeline-utility-rail-v3"],
   { tags: [PUBLIC_CONTENT_CACHE_TAG], revalidate: PUBLIC_CONTENT_REVALIDATE_SECONDS }
 )
 

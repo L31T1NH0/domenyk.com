@@ -1544,9 +1544,11 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
           </aside>
         )}
 
-        {hasDesktopThreads && (
+        {(hasDesktopThreads || utilityRail.writingProgress.length > 0 || isAdmin) && (
           <TimelineUtilityRail
             {...utilityRail}
+            standalone={!hasDesktopThreads}
+            isAdmin={isAdmin}
             searchQuery={searchError ? "" : searchQuery}
             feedMode={feedMode}
           />
