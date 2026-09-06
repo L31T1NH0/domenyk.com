@@ -73,6 +73,8 @@ export function PostTopics({ containerSelector = "[data-post-content]" }: Props)
   const [paragraphCommentsOpen, setParagraphCommentsOpen] = useState(false)
   const [compactExpanded, setCompactExpanded] = useState(false)
   const navRef = useRef<HTMLElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
+  const indicatorRef = useRef<HTMLSpanElement>(null)
 
   useEffect(() => {
     const container = document.querySelector<HTMLElement>(containerSelector)
@@ -166,21 +168,35 @@ export function PostTopics({ containerSelector = "[data-post-content]" }: Props)
   const displayedHeadings = paragraphCommentsOpen
     ? headings.slice(Math.max(activeIndex, 0), Math.max(activeIndex, 0) + (compactExpanded ? 3 : 1))
     : headings
-  const displayedActiveIndex = displayedHeadings.findIndex((heading) => heading.id === activeId)
-
   useEffect(() => {
     const nav = navRef.current
-    const active = nav?.querySelector<HTMLElement>('[aria-current="location"]')
-    if (!nav || !active || paragraphCommentsOpen) return
+    const list = listRef.current
+    const indicator = indicatorRef.current
+    if (!nav || !list || !indicator) return
 
-    const navBounds = nav.getBoundingClientRect()
-    const activeBounds = active.getBoundingClientRect()
-    if (activeBounds.top < navBounds.top) {
-      nav.scrollTop -= navBounds.top - activeBounds.top
-    } else if (activeBounds.bottom > navBounds.bottom) {
-      nav.scrollTop += activeBounds.bottom - navBounds.bottom
+    const update = () => {
+      const active = nav.querySelector<HTMLElement>('[aria-current="location"]')
+      indicator.style.opacity = active ? "1" : "0"
+      if (!active) return
+
+      indicator.style.transform = `translateY(${active.offsetTop}px)`
+      indicator.style.height = `${active.offsetHeight}px`
+
+      const navBounds = nav.getBoundingClientRect()
+      const activeBounds = active.getBoundingClientRect()
+      if (activeBounds.top < navBounds.top || active.offsetHeight > nav.clientHeight) {
+        nav.scrollTop += activeBounds.top - navBounds.top
+      } else if (activeBounds.bottom > navBounds.bottom) {
+        nav.scrollTop += activeBounds.bottom - navBounds.bottom
+      }
     }
-  }, [activeId, paragraphCommentsOpen])
+
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(list)
+    observer.observe(nav)
+    return () => observer.disconnect()
+  }, [activeId, headings, paragraphCommentsOpen, compactExpanded])
 
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("paragraph-topics-compact-change", {
@@ -217,9 +233,9 @@ export function PostTopics({ containerSelector = "[data-post-content]" }: Props)
         <nav
           ref={navRef}
           aria-label="Tópicos do artigo"
-          className={paragraphCommentsOpen ? "overflow-hidden" : "min-h-0 overflow-y-auto overscroll-y-contain"}
+          className="min-h-0 overflow-y-auto overscroll-y-contain"
         >
-          <div className="relative flex flex-col gap-1.5">
+          <div ref={listRef} className="relative flex flex-col gap-1.5">
             {displayedHeadings.map((heading) => (
               <a
                 key={heading.id}
@@ -237,21 +253,18 @@ export function PostTopics({ containerSelector = "[data-post-content]" }: Props)
                   })
                 }}
                 className={[
-                  "flex h-6 shrink-0 items-center pr-3 transition-colors hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#E00070] motion-reduce:transition-none dark:hover:text-[#f1f1f1]",
+                  "flex min-h-6 shrink-0 items-start py-0.5 pr-3 leading-5 transition-colors hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#E00070] motion-reduce:transition-none dark:hover:text-[#f1f1f1]",
                   heading.id === activeId ? "text-neutral-950 dark:text-[#f1f1f1]" : "",
                 ].join(" ")}
                 style={{ paddingLeft: `${1.5 + Math.max(0, heading.level - 2)}rem` }}
               >
-                <span className="truncate">{heading.text}</span>
+                <span className="min-w-0 whitespace-normal [overflow-wrap:anywhere]">{heading.text}</span>
               </a>
             ))}
             <span
+              ref={indicatorRef}
               aria-hidden
-              className="pointer-events-none absolute top-0 left-0 h-6 w-px bg-[#E00070] transition-[transform,opacity] duration-300 ease-out motion-reduce:transition-none"
-              style={{
-                transform: `translateY(${Math.max(0, displayedActiveIndex) * 1.875}rem)`,
-                opacity: displayedActiveIndex < 0 ? 0 : 1,
-              }}
+              className="pointer-events-none absolute top-0 left-0 w-px bg-[#E00070] opacity-0 transition-[transform,height,opacity] duration-300 ease-out motion-reduce:transition-none"
             />
           </div>
         </nav>
