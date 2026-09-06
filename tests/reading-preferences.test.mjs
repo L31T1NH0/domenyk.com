@@ -38,10 +38,10 @@ test("starts granular adjustments from the current automatic metrics", () => {
   preferences = adjustReadingPreference(preferences, DEFAULT_READING_METRICS, "blockSpacing", 1)
 
   assert.deepEqual(preferences, {
-    fontSize: 17,
-    lineHeight: 1.55,
+    fontSize: 19,
+    lineHeight: 1.7,
     letterSpacing: 0.01,
-    blockSpacing: 0.625,
+    blockSpacing: 0.875,
   })
   assert.equal(hasCustomReadingPreferences(preferences), true)
   assert.equal(resetReadingPreference(preferences, "letterSpacing").letterSpacing, null)
@@ -97,11 +97,11 @@ test("uses the compact automatic metrics for notes", () => {
   })
 })
 
-test("uses 16px, 1.500 line height, and 0.500rem block spacing for posts", () => {
+test("uses 18px, 1.650 line height, and 0.750rem block spacing for posts", () => {
   assert.deepEqual(effectiveReadingMetrics(DEFAULT_READING_PREFERENCES, DEFAULT_READING_METRICS), {
-    fontSize: 16,
-    lineHeight: 1.5,
+    fontSize: 18,
+    lineHeight: 1.65,
     letterSpacing: 0.005,
-    blockSpacing: 0.5,
+    blockSpacing: 0.75,
   })
 })
