@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { adminOnly } from "@/lib/auth"
 import { themeInputFromBody } from "@/lib/api/theme-input"
 import { deleteTheme, serializeTheme, updateTheme } from "@/lib/db/themes"
+import { invalidatePublicContentCache } from "@/lib/public-content-cache"
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const unauthorized = await adminOnly()
@@ -11,6 +12,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const body = await req.json().catch(() => null) as Record<string, unknown> | null
     const theme = await updateTheme(id, themeInputFromBody(body))
     if (!theme) return NextResponse.json({ error: "Tema não encontrado." }, { status: 404 })
+    invalidatePublicContentCache()
     return NextResponse.json(serializeTheme(theme))
   } catch (error) {
     const duplicate = typeof error === "object" && error && "code" in error && error.code === 11000
@@ -26,5 +28,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if (unauthorized) return unauthorized
   const { id } = await params
   if (!(await deleteTheme(id))) return NextResponse.json({ error: "Tema não encontrado." }, { status: 404 })
+  invalidatePublicContentCache()
   return NextResponse.json({ ok: true })
 }

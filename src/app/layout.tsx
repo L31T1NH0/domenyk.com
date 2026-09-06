@@ -98,6 +98,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={documentLanguage} className={`${polySans.variable} ${geist.variable} ${geistMono.variable} ${sourceSerif.variable} h-full antialiased ${darkMode ? "dark-mode" : "light-mode"}`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        <div
+          aria-hidden
+          className="pointer-events-none fixed inset-x-0 top-0 z-[5] h-8 bg-gradient-to-b from-[#f4f4f4] via-[#f4f4f4]/90 to-transparent dark:from-[#040404] dark:via-[#040404]/90"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none fixed inset-x-0 bottom-0 z-[5] h-8 bg-gradient-to-t from-[#f4f4f4] via-[#f4f4f4]/90 to-transparent dark:from-[#040404] dark:via-[#040404]/90"
+        />
         <Script
           id="theme-bootstrap"
           nonce={nonce}

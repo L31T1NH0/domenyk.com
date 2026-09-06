@@ -5,10 +5,12 @@ import { countNotes, getNotes, serializeNote, type SerializedNote } from "@/lib/
 import { countPosts, getPosts, serializePostSummary, type SerializedPostSummary } from "@/lib/db/posts"
 import {
   countStandaloneNotes,
+  getTimelineArchiveMonths,
   getNoteThreadPage,
   getStandaloneTimelinePage,
   getTimelinePage,
 } from "@/lib/db/timeline"
+import { getThemes } from "@/lib/db/themes"
 
 export const PUBLIC_CONTENT_CACHE_TAG = "public-content"
 const PUBLIC_CONTENT_REVALIDATE_SECONDS = 60
@@ -36,6 +38,48 @@ export type HomeTimelinePage = CachedHomeFeed & {
   desktopLooseNoteCount: number
   desktopThreadCount: number
 }
+
+export type TimelineUtilityRailData = {
+  archives: Array<{
+    year: number
+    count: number
+    months: Array<{ month: number; count: number }>
+  }>
+  categories: Array<{ name: string; slug: string; count: number }>
+}
+
+export const getCachedTimelineUtilityRail = unstable_cache(
+  async (search = "", mode: PublicFeedMode = "all"): Promise<TimelineUtilityRailData> => {
+    const [archiveMonths, themes] = await Promise.all([
+      getTimelineArchiveMonths({ search: search || undefined, mode }),
+      getThemes({ activeOnly: true }),
+    ])
+    const archiveByYear = new Map<number, TimelineUtilityRailData["archives"][number]>()
+
+    for (const archiveMonth of archiveMonths) {
+      const existing = archiveByYear.get(archiveMonth.year)
+      if (existing) {
+        existing.count += archiveMonth.count
+        existing.months.push({ month: archiveMonth.month, count: archiveMonth.count })
+      } else {
+        archiveByYear.set(archiveMonth.year, {
+          year: archiveMonth.year,
+          count: archiveMonth.count,
+          months: [{ month: archiveMonth.month, count: archiveMonth.count }],
+        })
+      }
+    }
+
+    return {
+      archives: [...archiveByYear.values()],
+      categories: themes
+        .filter((theme) => theme.postIds.length > 0)
+        .map((theme) => ({ name: theme.name, slug: theme.slug, count: theme.postIds.length })),
+    }
+  },
+  ["timeline-utility-rail"],
+  { tags: [PUBLIC_CONTENT_CACHE_TAG], revalidate: PUBLIC_CONTENT_REVALIDATE_SECONDS }
+)
 
 export const getCachedPublicContentCounts = unstable_cache(
   async () => {

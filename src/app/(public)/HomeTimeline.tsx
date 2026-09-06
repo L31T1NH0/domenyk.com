@@ -23,6 +23,8 @@ import type { SerializedNote } from "@/lib/db/notes"
 import type { SerializedPostSummary } from "@/lib/db/posts"
 import { groupNotesByThread, mergeNotesById } from "@/lib/note-thread"
 import { formatSiteDate } from "@/lib/datetime"
+import { TimelineUtilityRail } from "@/components/timeline/TimelineUtilityRail"
+import type { TimelineUtilityRailData } from "@/lib/public-content-cache"
 
 type Props = {
   posts: SerializedPostSummary[]
@@ -40,6 +42,7 @@ type Props = {
   searchError?: string
   pageSize: number
   isAdmin: boolean
+  utilityRail: TimelineUtilityRailData
 }
 
 type TimelineItem =
@@ -565,7 +568,7 @@ function TimelineModeDock({
   )
 }
 
-export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desktopPosts, desktopNotes, desktopThreadNotes, desktopPostCount, desktopLooseNoteCount, desktopThreadCount, feedMode, searchQuery, searchError = "", pageSize, isAdmin }: Props) {
+export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desktopPosts, desktopNotes, desktopThreadNotes, desktopPostCount, desktopLooseNoteCount, desktopThreadCount, feedMode, searchQuery, searchError = "", pageSize, isAdmin, utilityRail }: Props) {
   const router = useRouter()
   const sectionRef = useRef<HTMLElement>(null)
   const primaryFeedRef = useRef<HTMLDivElement>(null)
@@ -1319,9 +1322,9 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
       />
 
       <div className={[
-        "flex min-w-0 flex-col gap-5",
+        "relative flex min-w-0 flex-col gap-5",
         hasDesktopThreads
-          ? "home-timeline-dual-grid min-[84rem]:grid min-[84rem]:translate-x-[calc(-17.5vw+6.0375rem)] min-[84rem]:grid-cols-[34.5rem_minmax(0,1fr)] min-[84rem]:items-start min-[84rem]:gap-8 min-[96rem]:gap-12"
+          ? "home-timeline-dual-grid min-[84rem]:left-[calc(-17.5vw+6.0375rem)] min-[84rem]:grid min-[84rem]:grid-cols-[34.5rem_minmax(0,1fr)] min-[84rem]:items-start min-[84rem]:gap-8 min-[96rem]:gap-12"
           : "",
       ].join(" ")}>
         <div className="home-timeline-primary-column flex min-w-0 flex-col gap-5">
@@ -1537,6 +1540,14 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
               </div>
             )}
           </aside>
+        )}
+
+        {hasDesktopThreads && (
+          <TimelineUtilityRail
+            {...utilityRail}
+            searchQuery={searchError ? "" : searchQuery}
+            feedMode={feedMode}
+          />
         )}
       </div>
     </section>

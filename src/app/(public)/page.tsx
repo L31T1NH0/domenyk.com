@@ -15,6 +15,7 @@ import {
   getHomeTimelinePage,
   getCachedPublicContentCounts,
   getCachedPublicSearchContentCounts,
+  getCachedTimelineUtilityRail,
 } from "@/lib/public-content-cache"
 
 const HOME_TIMELINE_PAGE_SIZE = 10
@@ -79,7 +80,7 @@ export default async function HomePage({
   const countsPromise = effectiveSearch
     ? getCachedPublicSearchContentCounts(effectiveSearch)
     : getCachedPublicContentCounts()
-  const [counts, initialPage, admin] = await Promise.all([
+  const [counts, initialPage, admin, utilityRail] = await Promise.all([
     countsPromise,
     getHomeTimelinePage({
       page: 1,
@@ -88,6 +89,7 @@ export default async function HomePage({
       search: effectiveSearch || undefined,
     }),
     adminPromise,
+    getCachedTimelineUtilityRail(effectiveSearch, feedMode),
   ])
   const { totalPosts, totalNotes } = counts
   const structuredPosts = initialPage.desktopPosts.length > 0
@@ -130,6 +132,7 @@ export default async function HomePage({
         searchError={searchError}
         pageSize={HOME_TIMELINE_PAGE_SIZE}
         isAdmin={admin}
+        utilityRail={utilityRail}
       />
     </>
   )

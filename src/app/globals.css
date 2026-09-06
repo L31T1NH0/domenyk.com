@@ -791,6 +791,12 @@
   transform-origin: top right;
 }
 
+@media (max-width: 83.999rem) {
+  .home-timeline-utility-rail {
+    display: none !important;
+  }
+}
+
 /* Tablets in landscape use the two-timeline desktop structure, while keeping
    the compact 1rem viewport gutters used by the mobile public shell. Physical
    tablet resolution can map to a smaller CSS viewport because of pixel ratio,
@@ -802,10 +808,9 @@
 
   .home-timeline-dual {
     position: relative;
-    left: 50%;
+    left: calc(50% - 50vw + 1rem);
     width: calc(100vw - 2rem);
     align-self: flex-start;
-    transform: translateX(calc(-50vw + 1rem));
   }
 
   .home-timeline-dual-grid {
