@@ -802,41 +802,6 @@ figure[data-editor-image] > figcaption:empty { display: none; }
   overflow-anchor: none;
 }
 
-@supports not selector(::-webkit-scrollbar) {
-  .timeline-thread-scroll {
-    scrollbar-width: thin;
-    scrollbar-color: rgb(115 115 115 / 55%) transparent;
-  }
-}
-
-.timeline-thread-scroll::-webkit-scrollbar {
-  width: 8px;
-}
-
-.timeline-thread-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.timeline-thread-scroll::-webkit-scrollbar-button,
-.timeline-thread-scroll::-webkit-scrollbar-button:single-button,
-.timeline-thread-scroll::-webkit-scrollbar-button:vertical:decrement,
-.timeline-thread-scroll::-webkit-scrollbar-button:vertical:increment {
-  appearance: none;
-  -webkit-appearance: none;
-  display: none;
-  width: 0;
-  height: 0;
-  border: 0;
-  background: transparent;
-}
-
-.timeline-thread-scroll::-webkit-scrollbar-thumb {
-  border: 2px solid transparent;
-  border-radius: 999px;
-  background: rgb(115 115 115 / 55%);
-  background-clip: padding-box;
-}
-
 @media (max-width: 83.999rem) {
   .home-timeline-utility-rail {
     display: none !important;
@@ -1020,22 +985,15 @@ body.dark-mode {
   transition: background-color 0.1s, color 0.1s;
 }
 
-::-webkit-scrollbar {
-  width: 12px;
+/* Keep every scroll surface operable while removing browser scrollbar chrome. */
+* {
+  scrollbar-width: none;
 }
 
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
-}
-
-::-webkit-scrollbar-thumb {
-  background-color: #888;
-  border-radius: 10px;
-  border: 3px solid #f1f1f1;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #555;
+*::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 a {
