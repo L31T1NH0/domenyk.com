@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext"
 import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection"
@@ -59,7 +59,9 @@ function decodeHtmlAttribute(value: string): string {
 
 function ImageComponent({ nodeKey, data }: { nodeKey: NodeKey; data: SerializedImageNode }) {
   const [editor] = useLexicalComposerContext()
-  const [selected, setSelected, clearSelection] = useLexicalNodeSelection(nodeKey)
+  const [nodeSelected, setNodeSelected, clearSelection] = useLexicalNodeSelection(nodeKey)
+  const [controlsOpen, setControlsOpen] = useState(false)
+  const selected = nodeSelected || controlsOpen
   const panel = useRef<HTMLDivElement>(null)
   const f = data.formatting ?? {}
   const width = f.width ?? (data.layout === "block" ? data.blockWidth : data.flowWidth) ?? 100
@@ -70,8 +72,22 @@ function ImageComponent({ nodeKey, data }: { nodeKey: NodeKey; data: SerializedI
     }, { tag: [HISTORY_PUSH_TAG, SKIP_DOM_SELECTION_TAG] })
   }
   function close() {
-    setSelected(false)
-    editor.getElementByKey(nodeKey)?.focus()
+    setControlsOpen(false)
+    setNodeSelected(false)
+    editor.getElementByKey(nodeKey)?.querySelector<HTMLImageElement>(":scope > img")?.focus()
+  }
+  function selectImage() {
+    clearSelection()
+    setNodeSelected(true)
+    setControlsOpen(true)
+    requestAnimationFrame(() => panel.current?.querySelector<HTMLButtonElement>("button")?.focus())
+  }
+  function removeImage() {
+    editor.update(() => {
+      const node = $getNodeByKey(nodeKey)
+      node?.selectNext()
+      node?.remove()
+    }, { tag: HISTORY_PUSH_TAG })
   }
   function move(direction: "up" | "down") {
     updateImage(node => {
@@ -82,38 +98,36 @@ function ImageComponent({ nodeKey, data }: { nodeKey: NodeKey; data: SerializedI
     })
   }
   useEffect(() => {
-    const figure = editor.getElementByKey(nodeKey)
-    if (!figure) return
-    const select = () => {
-      clearSelection()
-      setSelected(true)
-      requestAnimationFrame(() => panel.current?.querySelector<HTMLButtonElement>("button")?.focus())
-    }
-    const keydown = (event: KeyboardEvent) => {
-      if (event.key === "Enter" || event.key === " ") { event.preventDefault(); select() }
-      if (event.key === "Delete" || event.key === "Backspace") {
-        event.preventDefault()
-        editor.update(() => { const node = $getNodeByKey(nodeKey); node?.selectNext(); node?.remove() }, { tag: HISTORY_PUSH_TAG })
-      }
-    }
-    figure.addEventListener("click", select)
-    figure.addEventListener("keydown", keydown)
-    return () => { figure.removeEventListener("click", select); figure.removeEventListener("keydown", keydown) }
-  }, [editor, nodeKey, clearSelection, setSelected])
-  useEffect(() => {
     editor.getElementByKey(nodeKey)?.toggleAttribute("data-image-selected", selected)
     if (!selected) return
     const dismiss = (event: PointerEvent) => {
-      if (!panel.current?.contains(event.target as Node) && !editor.getElementByKey(nodeKey)?.contains(event.target as Node)) setSelected(false)
+      if (!panel.current?.contains(event.target as Node) && !editor.getElementByKey(nodeKey)?.contains(event.target as Node)) {
+        setControlsOpen(false)
+        setNodeSelected(false)
+      }
     }
     document.addEventListener("pointerdown", dismiss)
     return () => document.removeEventListener("pointerdown", dismiss)
-  }, [editor, nodeKey, selected, setSelected])
+  }, [editor, nodeKey, selected, setNodeSelected])
 
   return <>
-    <img src={data.src} alt={data.alt ?? ""} className={f.imageClass || undefined} style={undefined} ref={element => { if (element) element.setAttribute("style", f.imageStyle ?? "") }} />
+    <img
+      src={data.src}
+      alt={data.alt ?? ""}
+      className={f.imageClass || undefined}
+      style={undefined}
+      ref={element => { if (element) element.setAttribute("style", f.imageStyle ?? "") }}
+      role="button"
+      tabIndex={0}
+      aria-label={data.alt ? `Editar imagem: ${data.alt}` : "Editar imagem"}
+      onClick={selectImage}
+      onKeyDown={event => {
+        if (event.key === "Enter" || event.key === " ") { event.preventDefault(); selectImage() }
+        if (event.key === "Delete" || event.key === "Backspace") { event.preventDefault(); removeImage() }
+      }}
+    />
     {data.caption && <figcaption className={f.captionClass || undefined} ref={element => { if (element) element.setAttribute("style", f.captionStyle ?? "") }}>{data.caption}</figcaption>}
-    {selected && createPortal(<div ref={panel} className="image-properties-panel" role="dialog" aria-label="Composição da imagem" onKeyDown={event => {
+    {controlsOpen && createPortal(<div ref={panel} className="image-properties-panel" role="dialog" aria-label="Composição da imagem" onKeyDown={event => {
       if (event.key === "Escape") { event.preventDefault(); close() }
     }}>
       <div className="image-properties-heading"><strong>Imagem</strong><button type="button" onClick={close}>Fechar</button></div>
@@ -132,7 +146,7 @@ function ImageComponent({ nodeKey, data }: { nodeKey: NodeKey; data: SerializedI
       <div className="image-properties-actions">
         <button type="button" onClick={() => move("up")}>Mover acima</button><button type="button" onClick={() => move("down")}>Mover abaixo</button>
         <button type="button" onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)}>Desfazer</button><button type="button" onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)}>Refazer</button>
-        <button type="button" onClick={() => { updateImage(node => { node.selectNext(); node.remove() }); editor.focus() }}>Excluir imagem</button>
+        <button type="button" onClick={() => { removeImage(); editor.focus() }}>Excluir imagem</button>
       </div>
     </div>, document.body)}
   </>
@@ -206,11 +220,9 @@ export class ImageNode extends DecoratorNode<React.ReactNode> {
     figure.dataset.imageGap = String(f.gap ?? 16)
     figure.className = f.figureClass ?? ""
     figure.setAttribute("style", `${editing ? imageDefaults(this.__src, width, f.unit, f.gap) + ";" : ""}${f.figureStyle ?? ""}`)
-    if (editing) {
-      figure.tabIndex = 0
-      figure.setAttribute("aria-label", this.__alt ? `Editar imagem: ${this.__alt}` : "Editar imagem")
-      figure.contentEditable = "false"
-    }
+    figure.removeAttribute("tabindex")
+    figure.removeAttribute("aria-label")
+    if (editing) figure.contentEditable = "false"
   }
   createDOM() {
     const figure = document.createElement("figure")

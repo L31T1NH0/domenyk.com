@@ -53,6 +53,8 @@ const EDITOR_NODES = [HeadingNode, QuoteNode, ListNode, ListItemNode, CodeNode, 
 const MARKDOWN_PASTE_PATTERN =
   /(^|\n)\s{0,3}(#{1,6}\s|[-*+]\s|\d+\.\s|>\s|```|\|.+\|)|!\[[^\]]*]\([^)]+\)|\[[^\]]+]\([^)]+\)|(\*\*|__)[\s\S]+?\3|(^|[^`])`[^`\n]+`/m
 
+export type ContentFormat = "markdown" | "html"
+
 type SerializedClipboardNode = SerializedLexicalNode & {
   children?: SerializedClipboardNode[]
 }
@@ -95,7 +97,8 @@ const theme = {
 }
 
 type Props = {
-  outputFormat?: "html" | "markdown"
+  /** Locks the stored format for embedded editors such as comments. */
+  outputFormat?: ContentFormat
   initialMarkdown?: string
   onChange: (content: string) => void
   namespace?: string
@@ -122,6 +125,10 @@ export function readMarkdownFromEditor(editor: LexicalEditorInstance) {
     ).trim()
   })
   return markdown
+}
+
+function serializeEditor(editor: LexicalEditorInstance, format: ContentFormat) {
+  return format === "html" ? readHtmlFromEditor(editor) : readMarkdownFromEditor(editor)
 }
 
 function EditorRefPlugin({ editorRef }: { editorRef?: MutableRefObject<LexicalEditorInstance | null> }) {
@@ -351,7 +358,7 @@ function FloatingSelectionToolbarPlugin() {
 }
 
 export function LexicalEditor({
-  outputFormat = "html",
+  outputFormat,
   initialMarkdown,
   onChange,
   namespace = "PostEditor",
@@ -370,6 +377,9 @@ export function LexicalEditor({
   editorRef,
 }: Props) {
   const changeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [contentFormat, setContentFormat] = useState<ContentFormat>(() => (
+    outputFormat ?? (initialMarkdown && isHtmlContent(initialMarkdown) ? "html" : "markdown")
+  ))
   const [htmlSourceMode, setHtmlSourceMode] = useState(() => Boolean(initialMarkdown && isHtmlContent(initialMarkdown)))
 
   useEffect(() => {
@@ -399,15 +409,10 @@ export function LexicalEditor({
       if (changeTimerRef.current) clearTimeout(changeTimerRef.current)
 
       const emitChange = () => {
-        if (outputFormat === "html") {
-          onChange(readHtmlFromEditor(editor))
-          return
-        }
-        state.read(() => {
-          onChange(restoreLatexAfterLexicalExport(
-            $convertToMarkdownString(MARKDOWN_TRANSFORMERS)
-          ).trim())
-        })
+        if (contentFormat === "html") onChange(readHtmlFromEditor(editor))
+        else state.read(() => onChange(restoreLatexAfterLexicalExport(
+          $convertToMarkdownString(MARKDOWN_TRANSFORMERS)
+        ).trim()))
       }
 
       if (onChangeDelayMs > 0) {
@@ -420,8 +425,18 @@ export function LexicalEditor({
 
       emitChange()
     },
-    [onChange, onChangeDelayMs, outputFormat]
+    [contentFormat, onChange, onChangeDelayMs]
   )
+
+  const handleContentFormatChange = useCallback((format: ContentFormat, editor: LexicalEditorInstance) => {
+    if (format === contentFormat) return
+    if (changeTimerRef.current) {
+      clearTimeout(changeTimerRef.current)
+      changeTimerRef.current = null
+    }
+    setContentFormat(format)
+    onChange(serializeEditor(editor, format))
+  }, [contentFormat, onChange])
 
   return (
     <LexicalComposer initialConfig={initialConfig}>
@@ -429,8 +444,11 @@ export function LexicalEditor({
       <PublicationStylePlugin />
       {toolbarPlacement === "top" && (
         <ToolbarPlugin
-          allowDocumentCss={outputFormat === "html"}
+          allowContentFormatChoice={!outputFormat}
+          allowDocumentCss={contentFormat === "html"}
+          contentFormat={contentFormat}
           htmlSourceMode={htmlSourceMode}
+          onContentFormatChange={handleContentFormatChange}
           onHtmlSourceModeChange={setHtmlSourceMode}
           variant={toolbarVariant}
           placement="top"
@@ -463,8 +481,11 @@ export function LexicalEditor({
       </div>
       {toolbarPlacement === "bottom" && (
         <ToolbarPlugin
-          allowDocumentCss={outputFormat === "html"}
+          allowContentFormatChoice={!outputFormat}
+          allowDocumentCss={contentFormat === "html"}
+          contentFormat={contentFormat}
           htmlSourceMode={htmlSourceMode}
+          onContentFormatChange={handleContentFormatChange}
           onHtmlSourceModeChange={setHtmlSourceMode}
           variant={toolbarVariant}
           placement="bottom"

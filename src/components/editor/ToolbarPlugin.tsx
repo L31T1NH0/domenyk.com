@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext"
-import { FORMAT_TEXT_COMMAND, $getRoot, $getSelection, $isRangeSelection, type LexicalNode } from "lexical"
+import { FORMAT_TEXT_COMMAND, $getRoot, $getSelection, $isRangeSelection, type LexicalEditor as LexicalEditorInstance, type LexicalNode } from "lexical"
 import { $setBlocksType } from "@lexical/selection"
 import { $createHeadingNode, $createQuoteNode } from "@lexical/rich-text"
 import { $isMarkNode, $unwrapMarkNode, $wrapSelectionInMarkNode } from "@lexical/mark"
@@ -14,6 +14,7 @@ import { applyHtmlSourceToVisualEditor, beginHtmlSourceMode } from "./html-conte
 
 import { ToolbarButton } from "./ToolbarButton"
 import { cssHookSlug } from "@/lib/inline-css-hooks"
+import type { ContentFormat } from "./LexicalEditor"
 
 function markAncestor(node: LexicalNode) {
   let current: LexicalNode | null = node
@@ -25,8 +26,11 @@ function markAncestor(node: LexicalNode) {
 }
 
 type Props = {
+  allowContentFormatChoice?: boolean
   allowDocumentCss?: boolean
+  contentFormat?: ContentFormat
   htmlSourceMode?: boolean
+  onContentFormatChange?: (format: ContentFormat, editor: LexicalEditorInstance) => void
   onHtmlSourceModeChange?: (active: boolean) => void
   variant?: "default" | "compact" | "comment"
   placement?: "top" | "bottom"
@@ -38,8 +42,11 @@ type Props = {
 }
 
 export function ToolbarPlugin({
+  allowContentFormatChoice = false,
   allowDocumentCss = false,
+  contentFormat = "markdown",
   htmlSourceMode = false,
+  onContentFormatChange,
   onHtmlSourceModeChange,
   variant = "default",
   placement = "top",
@@ -113,6 +120,19 @@ export function ToolbarPlugin({
     onHtmlSourceModeChange?.(true)
   }
 
+  function changeContentFormat(format: ContentFormat) {
+    setSourceError("")
+    if (format === contentFormat) return
+    if (htmlSourceMode) {
+      try { applyHtmlSourceToVisualEditor(editor) } catch (error) {
+        setSourceError(error instanceof Error ? error.message : "Este HTML precisa continuar no modo código.")
+        return
+      }
+      onHtmlSourceModeChange?.(false)
+    }
+    onContentFormatChange?.(format, editor)
+  }
+
   return (
     <div
       className={
@@ -123,7 +143,23 @@ export function ToolbarPlugin({
           : "flex items-center gap-1 px-3 py-2 border-b border-neutral-200 dark:border-neutral-800 flex-wrap"
       }
     >
-      {allowDocumentCss && <ToolbarButton variant={variant} title={htmlSourceMode ? "Voltar ao editor visual" : "Editar o código HTML"} expanded={htmlSourceMode} onClick={toggleHtmlSource}><span className="text-[9px] font-bold tracking-tight">HTML</span></ToolbarButton>}
+      {allowContentFormatChoice && (
+        <div className="editor-content-format" role="group" aria-label="Formato do conteúdo">
+          {(["markdown", "html"] as const).map(format => (
+            <button
+              key={format}
+              type="button"
+              aria-pressed={contentFormat === format}
+              title={format === "markdown" ? "Salvar este texto como Markdown" : "Salvar este texto como HTML"}
+              onMouseDown={event => event.preventDefault()}
+              onClick={() => changeContentFormat(format)}
+            >
+              {format === "markdown" ? "MD" : "HTML"}
+            </button>
+          ))}
+        </div>
+      )}
+      {allowDocumentCss && <ToolbarButton variant={variant} title={htmlSourceMode ? "Voltar ao editor visual" : "Editar o código HTML"} expanded={htmlSourceMode} onClick={toggleHtmlSource}><span className="text-[9px] font-bold tracking-tight">&lt;/&gt;</span></ToolbarButton>}
       {sourceError && <p role="alert" className="publication-css-error">{sourceError}</p>}
       {!htmlSourceMode && <>
       <ToolbarButton variant={variant} onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold")} title="Negrito">
