@@ -9,7 +9,7 @@ const cache = new Map()
 function load(filename) {
   const absolute = path.resolve(filename)
   if (cache.has(absolute)) return cache.get(absolute).exports
-  const module = { exports: {} }; cache.set(absolute, module)
+  const loadedModule = { exports: {} }; cache.set(absolute, loadedModule)
   const source = ts.transpileModule(fs.readFileSync(absolute, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText
   const resolve = name => {
     // Node serialization tests do not mount the React decorator.
@@ -20,8 +20,8 @@ function load(filename) {
     if (!file) throw Error(name)
     return load(file)
   }
-  new Function('require', 'module', 'exports', source)(resolve, module, module.exports)
-  return module.exports
+  new Function('require', 'module', 'exports', source)(resolve, loadedModule, loadedModule.exports)
+  return loadedModule.exports
 }
 const lexical = require('lexical')
 const md = require('@lexical/markdown')
