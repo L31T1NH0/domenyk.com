@@ -15,14 +15,6 @@ import { lineSlotForAlphaBand, stabilizePaintedLine, type FlowSide } from "./flo
 type InlineSource = { node: Text; text: string }
 type ParagraphTemplate = { element: HTMLParagraphElement; nodes: Node[] }
 type PositionedFragment = { gapBefore: number; left: number; lineIndex: number; text: string; top: number }
-type FlowFigure = {
-  figure: HTMLElement
-  geometry: FlowImageAlphaGeometry | null
-  image: HTMLImageElement
-  paragraphs: ParagraphTemplate[]
-  root: HTMLElement
-  side: FlowSide
-}
 
 const MIN_LINE_WIDTH = 24
 const LINE_WIDTH_GUARD = 4
@@ -218,133 +210,109 @@ function layoutParagraph({
   return true
 }
 
-function styleSignature(container: HTMLElement, figures: FlowFigure[]) {
+function styleSignature(container: HTMLElement, figure: HTMLElement, paragraphs: HTMLParagraphElement[]) {
   const style = window.getComputedStyle(container)
   return [
     container.clientWidth,
+    figure.getBoundingClientRect().width,
     style.fontSize,
     style.lineHeight,
     style.letterSpacing,
+    style.getPropertyValue("--reading-block-spacing"),
     document.documentElement.className,
-    ...figures.flatMap(item => [
-      item.figure.getBoundingClientRect().width,
-      item.figure.dataset.imageGap,
-      item.figure.dataset.imageWidth,
-      item.figure.dataset.imageUnit,
-      ...item.paragraphs.map(({ element }) => window.getComputedStyle(element).font),
-    ]),
+    ...paragraphs.flatMap(paragraph => {
+      const paragraphStyle = window.getComputedStyle(paragraph)
+      return [paragraphStyle.font, paragraphStyle.fontFamily, paragraphStyle.fontSize, paragraphStyle.fontWeight, paragraphStyle.lineHeight, paragraphStyle.letterSpacing]
+    }),
   ].join("\u0000")
 }
 
-/** Recreates Pretext's variable-width line layout around transparent image pixels. */
 export function usePretextImageFlow(containerRef: RefObject<HTMLElement | null>, contentKey: string) {
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
-    const abortController = new AbortController()
-    const figures: FlowFigure[] = Array.from(container.querySelectorAll<HTMLElement>("figure[data-flow-image]"))
-      .flatMap(figure => {
-        const image = figure.querySelector<HTMLImageElement>(":scope > img")
-        const side = figure.dataset.flowImage
-        const root = figure.parentElement
-        const paragraphs = directFlowParagraphs(figure)
-        if (!image || !root || (side !== "left" && side !== "right") || figure.querySelector("figcaption") || !paragraphs.length || paragraphs.some(paragraph => !isSupportedParagraph(paragraph))) return []
-        return [{ figure, image, root, side, geometry: null, paragraphs: paragraphs.map(element => ({ element, nodes: cloneNodes(Array.from(element.childNodes)) })) }]
-      })
-    if (!figures.length) return
 
+    const figures = Array.from(container.querySelectorAll<HTMLElement>(":scope > figure[data-flow-image]"))
+    const figure = figures[0]
+    const image = figure?.querySelector<HTMLImageElement>(":scope > img")
+    const sideValue = figure?.dataset.flowImage
+    const side: FlowSide | null = sideValue === "left" || sideValue === "right" ? sideValue : null
+    if (!figure || !image || !side || figures.length !== 1 || figure.querySelector("figcaption")) return
+    const paragraphs = directFlowParagraphs(figure)
+    if (!paragraphs.length || paragraphs.some(paragraph => !isSupportedParagraph(paragraph))) return
+    const templates = paragraphs.map(element => ({ element, nodes: cloneNodes(Array.from(element.childNodes)) }))
+    const abortController = new AbortController()
     let disposed = false
+    let geometry: FlowImageAlphaGeometry | null = null
     let scheduledFrame = 0
     let lastSignature = ""
-    const roots = [...new Set(figures.map(item => item.root))]
     const restore = () => {
-      for (const item of figures) {
-        for (const paragraph of item.paragraphs) restoreParagraph(paragraph)
-        item.figure.removeAttribute("data-pretext-flow-active")
-        item.figure.style.removeProperty("--pretext-flow-image-top")
-        item.figure.style.removeProperty("--flow-image-outer-alpha-offset")
-      }
-      for (const root of roots) {
-        root.removeAttribute("data-pretext-flow-root")
-        root.style.removeProperty("--pretext-flow-min-height")
-      }
+      for (const template of templates) restoreParagraph(template)
+      delete container.dataset.pretextFlowActive
+      container.style.removeProperty("--pretext-flow-min-height")
+      figure.style.removeProperty("--pretext-flow-image-top")
     }
 
     const render = (force = false) => {
-      const signature = styleSignature(container, figures)
+      if (disposed || !geometry) {
+        restore()
+        return
+      }
+      const signature = styleSignature(container, figure, paragraphs)
       if (!force && signature === lastSignature) return
       lastSignature = signature
       restore()
-      const measurements = figures.flatMap(item => {
-        if (!item.geometry || item.root.clientWidth < 480 || window.getComputedStyle(item.figure).float === "none") return []
-        const rootRect = item.root.getBoundingClientRect()
-        const figureRect = item.figure.getBoundingClientRect()
-        const imageWidth = figureRect.width
-        const imageHeight = imageWidth * (item.geometry.height / item.geometry.width)
-        if (!imageWidth || !imageHeight) return []
-        return [{ item, imageWidth, imageHeight, imageTop: figureRect.top - rootRect.top }]
-      })
-      if (!measurements.length) return
-      for (const root of roots) root.dataset.pretextFlowRoot = "true"
-      for (const measurement of measurements) {
-        const { item, imageWidth, imageHeight, imageTop } = measurement
-        const geometry = item.geometry!
-        const containerWidth = item.root.clientWidth
-        const outerOffset = imageWidth * geometry[item.side]
-        const imageLeft = item.side === "left" ? -outerOffset : containerWidth + outerOffset - imageWidth
-        const shapeMargin = parsePixelValue(window.getComputedStyle(item.figure).getPropertyValue("--image-gap"), 16)
-        item.figure.dataset.pretextFlowActive = "true"
-        item.figure.style.setProperty("--pretext-flow-image-top", `${imageTop.toFixed(2)}px`)
-        item.figure.style.setProperty("--flow-image-outer-alpha-offset", `${outerOffset.toFixed(2)}px`)
-        let valid = true
-        for (const template of item.paragraphs) {
-          if (!layoutParagraph({
-            paragraph: template.element,
-            geometry,
-            side: item.side,
-            containerWidth,
-            imageTop,
-            imageHeight,
-            imageLeft,
-            imageWidth,
-            shapeMargin,
-          })) {
-            valid = false
-            break
-          }
+
+      const containerWidth = container.clientWidth
+      const imageWidth = figure.getBoundingClientRect().width
+      const imageHeight = imageWidth * (geometry.height / geometry.width)
+      if (!containerWidth || !imageWidth || !imageHeight) return restore()
+      const outerOffset = imageWidth * geometry[side]
+      figure.style.setProperty("--flow-image-outer-alpha-offset", `${outerOffset.toFixed(2)}px`)
+      const imageTop = figure.getBoundingClientRect().top - container.getBoundingClientRect().top
+      const imageLeft = side === "left" ? -outerOffset : containerWidth + outerOffset - imageWidth
+      const shapeMargin = parsePixelValue(window.getComputedStyle(figure).shapeMargin, 12)
+      container.dataset.pretextFlowActive = "true"
+      figure.style.setProperty("--pretext-flow-image-top", `${imageTop.toFixed(2)}px`)
+      for (const template of templates) {
+        if (!layoutParagraph({
+          paragraph: template.element,
+          geometry,
+          side,
+          containerWidth,
+          imageTop,
+          imageHeight,
+          imageLeft,
+          imageWidth,
+          shapeMargin,
+        })) {
+          restore()
+          return
         }
-        if (!valid) {
-          for (const paragraph of item.paragraphs) restoreParagraph(paragraph)
-          item.figure.removeAttribute("data-pretext-flow-active")
-          continue
-        }
-        const currentMin = parsePixelValue(item.root.style.getPropertyValue("--pretext-flow-min-height"))
-        item.root.style.setProperty("--pretext-flow-min-height", `${Math.ceil(Math.max(currentMin, imageTop + imageHeight))}px`)
       }
+      container.style.setProperty("--pretext-flow-min-height", `${Math.ceil(imageTop + imageHeight)}px`)
     }
 
-    const schedule = (force = false) => {
+    const scheduleRender = (force = false) => {
       if (scheduledFrame) cancelAnimationFrame(scheduledFrame)
       scheduledFrame = requestAnimationFrame(() => {
         scheduledFrame = 0
         render(force)
       })
     }
-    const resizeObserver = new ResizeObserver(() => schedule())
+    const onFontsLoaded = () => scheduleRender(true)
+    const onPreferencesChange = () => scheduleRender(true)
+    const resizeObserver = new ResizeObserver(() => scheduleRender())
     resizeObserver.observe(container)
-    figures.forEach(item => resizeObserver.observe(item.figure))
-    const themeObserver = new MutationObserver(() => schedule(true))
-    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] })
-    const refresh = () => schedule(true)
-    document.fonts.addEventListener("loadingdone", refresh)
-    window.addEventListener("readingpreferenceschange", refresh)
-    figures.forEach(item => {
-      const source = item.image.currentSrc || item.image.src
-      void measureFlowImageAlpha(source, abortController.signal).then(geometry => {
-        if (disposed || !geometry) return
-        item.geometry = geometry
-        schedule(true)
-      })
+    resizeObserver.observe(figure)
+    const themeObserver = new MutationObserver(() => scheduleRender(true))
+    themeObserver.observe(document.documentElement, { attributeFilter: ["class"], attributes: true })
+    document.fonts.addEventListener("loadingdone", onFontsLoaded)
+    window.addEventListener("readingpreferenceschange", onPreferencesChange)
+    void measureFlowImageAlpha(image.currentSrc || image.src, abortController.signal).then(measuredGeometry => {
+      if (disposed || !measuredGeometry) return
+      geometry = measuredGeometry
+      scheduleRender(true)
     })
     return () => {
       disposed = true
@@ -352,8 +320,8 @@ export function usePretextImageFlow(containerRef: RefObject<HTMLElement | null>,
       if (scheduledFrame) cancelAnimationFrame(scheduledFrame)
       resizeObserver.disconnect()
       themeObserver.disconnect()
-      document.fonts.removeEventListener("loadingdone", refresh)
-      window.removeEventListener("readingpreferenceschange", refresh)
+      document.fonts.removeEventListener("loadingdone", onFontsLoaded)
+      window.removeEventListener("readingpreferenceschange", onPreferencesChange)
       restore()
     }
   }, [containerRef, contentKey])

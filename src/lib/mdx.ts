@@ -134,14 +134,29 @@ function directImageChild(node: Element): Element | null {
 
 function rehypeNormalizeFlowImages() {
   return (tree: Root) => {
+    let firstFlowFigure: Element | null = null
     visit(tree, "element", (node: Element) => {
       if (node.tagName !== "figure") return
       const side = stringProperty(node.properties.dataFlowImage)
       if (side && (!FLOW_IMAGE_SIDES.has(side) || !directImageChild(node))) {
         delete node.properties.dataFlowImage
         delete node.properties.dataFlowWidth
+        return
       }
+      if (side && !firstFlowFigure) firstFlowFigure = node
     })
+
+    // Older editors appended a contour image after the final paragraph when
+    // the image picker took focus. Restore the former reading behavior for
+    // those documents by placing that terminal figure before the first text.
+    if (!firstFlowFigure) return
+    const meaningfulChildren = tree.children.filter(child => child.type !== "text" || child.value.trim().length > 0)
+    if (meaningfulChildren.at(-1) !== firstFlowFigure) return
+    const firstParagraph = tree.children.find((child): child is Element => child.type === "element" && child.tagName === "p")
+    const figureIndex = tree.children.indexOf(firstFlowFigure)
+    if (!firstParagraph || figureIndex < 0) return
+    tree.children.splice(figureIndex, 1)
+    tree.children.splice(tree.children.indexOf(firstParagraph), 0, firstFlowFigure)
   }
 }
 

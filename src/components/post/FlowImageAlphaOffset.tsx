@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect } from "react"
 import {
   geometryFromAlphaPixels,
   MAX_FLOW_ALPHA_SAMPLE_DIMENSION,
@@ -8,6 +9,14 @@ import {
 
 export type { FlowImageAlphaGeometry } from "./flow-image-alpha"
 
+type FlowSide = "left" | "right"
+type TrackedImage = {
+  abortController: AbortController
+  alphaInsets: FlowImageAlphaGeometry | null
+  resizeObserver: ResizeObserver
+  side: FlowSide
+  source: string
+}
 type CacheHost = typeof globalThis & {
   __domenykFlowImageAlphaCache?: Map<string, Promise<FlowImageAlphaGeometry | null>>
 }
@@ -131,4 +140,81 @@ export function measureFlowImageAlpha(source: string, signal?: AbortSignal) {
       if (!signal.aborted) resolve(geometry)
     })
   })
+}
+
+function flowSideForImage(image: HTMLImageElement): FlowSide | null {
+  const side = image.closest<HTMLElement>("figure[data-flow-image]")?.dataset.flowImage
+  return side === "left" || side === "right" ? side : null
+}
+
+function applyOuterOffset(image: HTMLImageElement, side: FlowSide, alphaInsets: FlowImageAlphaGeometry | null) {
+  const offset = Math.max(0, image.getBoundingClientRect().width * (alphaInsets?.[side] ?? 0))
+  const figure = image.closest<HTMLElement>("figure[data-flow-image]")
+  image.style.setProperty("--flow-image-outer-alpha-offset", `${offset.toFixed(2)}px`)
+  figure?.style.setProperty("--flow-image-outer-alpha-offset", `${offset.toFixed(2)}px`)
+  image.dataset.flowAlphaMeasured = alphaInsets ? "true" : "unavailable"
+}
+
+/** Keeps the original alpha-edge offset working even when Pretext cannot own a paragraph. */
+export function FlowImageAlphaOffset() {
+  useEffect(() => {
+    const root = document.querySelector<HTMLElement>("[data-public-shell]")
+    if (!root) return
+    const trackedImages = new Map<HTMLImageElement, TrackedImage>()
+    let disposed = false
+
+    const untrack = (image: HTMLImageElement) => {
+      const tracked = trackedImages.get(image)
+      if (!tracked) return
+      tracked.abortController.abort()
+      tracked.resizeObserver.disconnect()
+      image.style.removeProperty("--flow-image-outer-alpha-offset")
+      image.closest<HTMLElement>("figure[data-flow-image]")?.style.removeProperty("--flow-image-outer-alpha-offset")
+      delete image.dataset.flowAlphaMeasured
+      trackedImages.delete(image)
+    }
+    const track = (image: HTMLImageElement) => {
+      const side = flowSideForImage(image)
+      const source = image.currentSrc || image.src
+      const current = trackedImages.get(image)
+      if (!side || !source) return untrack(image)
+      if (current?.side === side && current.source === source) return
+      untrack(image)
+      const tracked: TrackedImage = {
+        abortController: new AbortController(),
+        alphaInsets: null,
+        side,
+        source,
+        resizeObserver: new ResizeObserver(() => applyOuterOffset(image, tracked.side, tracked.alphaInsets)),
+      }
+      trackedImages.set(image, tracked)
+      tracked.resizeObserver.observe(image)
+      void measureFlowImageAlpha(source, tracked.abortController.signal).then(alphaInsets => {
+        if (disposed || trackedImages.get(image) !== tracked) return
+        tracked.alphaInsets = alphaInsets
+        applyOuterOffset(image, side, alphaInsets)
+      })
+    }
+    const scan = () => {
+      for (const image of root.querySelectorAll<HTMLImageElement>("figure[data-flow-image] > img")) track(image)
+      for (const image of trackedImages.keys()) {
+        if (!image.isConnected || !root.contains(image)) untrack(image)
+      }
+    }
+    const mutationObserver = new MutationObserver(scan)
+    mutationObserver.observe(root, {
+      attributeFilter: ["data-flow-image", "src", "srcset"],
+      attributes: true,
+      childList: true,
+      subtree: true,
+    })
+    scan()
+    return () => {
+      disposed = true
+      mutationObserver.disconnect()
+      for (const image of [...trackedImages.keys()]) untrack(image)
+    }
+  }, [])
+
+  return null
 }

@@ -257,13 +257,11 @@ export function ImagePlugin({
     }
   }
 
-  const buttonClassName = compact
-    ? "grid size-11 place-items-center rounded-full text-[#A8A095] transition-colors hover:bg-white/10 hover:text-[#f1f1f1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A8A095]/35 disabled:opacity-40"
-    : "grid size-11 place-items-center rounded-md text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400/35 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100 disabled:opacity-40"
+  const buttonClassName = "editor-toolbar-button"
   const panelClassName = "fixed z-40 w-[min(23rem,calc(100vw-1.5rem))] overscroll-contain overflow-y-auto rounded-xl border border-neutral-200/80 bg-white/95 p-3 shadow-lg shadow-black/10 backdrop-blur dark:border-white/10 dark:bg-neutral-950/95 dark:shadow-black/40"
 
   return (
-    <div className="relative z-20 ml-auto">
+    <div className="editor-toolbar-media">
       <button
         ref={triggerRef}
         type="button"
@@ -275,6 +273,7 @@ export function ImagePlugin({
           }
         }}
         className={buttonClassName}
+        data-editor-variant={compact ? "compact" : "default"}
         aria-label="Adicionar imagem"
         aria-controls={panelId}
         aria-expanded={open}
@@ -384,7 +383,7 @@ export function ImagePlugin({
 
           {layout !== "block" && (
             <p className="mt-2 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
-              A figura entra no início. Use SVG, PNG ou WebP com transparência para o texto acompanhar a silhueta.
+              A figura entra na posição do cursor. Use SVG, PNG ou WebP com transparência para o texto acompanhar a silhueta.
             </p>
           )}
 
@@ -397,8 +396,9 @@ export function ImagePlugin({
               type="checkbox"
               checked={themeMode === "adaptive-monochrome"}
               onChange={(event) => setThemeMode(event.target.checked ? "adaptive-monochrome" : "original")}
-              className="size-4 shrink-0 accent-neutral-900 dark:accent-white"
+              className="peer sr-only"
             />
+            <span className="editor-toggle" aria-hidden><span /></span>
           </label>
 
           <div className={allowAssetLibrary ? "mt-3 grid grid-cols-2 gap-2" : "mt-3 grid gap-2"}>

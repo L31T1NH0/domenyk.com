@@ -6,15 +6,52 @@
 .editorial-control-trigger:hover { background: rgb(115 115 115 / 14%); }
 .editorial-control-trigger:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 .editorial-control-trigger:disabled { cursor:not-allowed; opacity:.45; }
-.editor-content-format { display:inline-flex; align-items:center; gap:2px; padding:2px; border:1px solid rgb(115 115 115 / 28%); border-radius:6px; }
-.editor-content-format button { min-width:34px; min-height:28px; border-radius:4px; padding:4px 6px; color:#737373; font-size:9px; font-weight:700; letter-spacing:.02em; }
-.editor-content-format button:hover { color:#262626; background:rgb(115 115 115 / 10%); }
-.editor-content-format button[aria-pressed="true"] { color:#fff; background:#262626; }
-.editor-content-format button:focus-visible { outline:2px solid currentColor; outline-offset:2px; }
-.dark-mode .editor-content-format { border-color:rgb(255 255 255 / 14%); }
-.dark-mode .editor-content-format button { color:#a3a3a3; }
-.dark-mode .editor-content-format button:hover { color:#f5f5f5; background:rgb(255 255 255 / 8%); }
-.dark-mode .editor-content-format button[aria-pressed="true"] { color:#171717; background:#f5f5f5; }
+.editor-toolbar { position:relative; display:flex; min-width:0; flex-wrap:wrap; align-items:center; gap:4px; padding:8px 10px; border-color:rgb(115 115 115 / 22%); background:rgb(250 250 249 / 72%); color:#525252; }
+.editor-toolbar[data-editor-placement="top"] { border-bottom-width:1px; }
+.editor-toolbar[data-editor-placement="bottom"] { border-top-width:1px; }
+.dark-mode .editor-toolbar { border-color:rgb(255 255 255 / 10%); background:rgb(23 23 23 / 72%); color:#d4d4d4; }
+.editor-toolbar[data-editor-variant="compact"] { border-color:rgb(255 255 255 / 10%); background:transparent; color:#a8a095; padding:6px; }
+.editor-toolbar[data-editor-variant="comment"] { min-height:44px; background:transparent; padding:4px 6px; }
+.editor-toolbar-section,.editorial-toolbar-group { display:inline-flex; min-width:0; max-width:100%; flex-wrap:wrap; align-items:center; gap:2px; }
+.editor-toolbar-section { padding-inline:3px; border-inline-end:1px solid rgb(115 115 115 / 18%); }
+.dark-mode .editor-toolbar-section { border-color:rgb(255 255 255 / 10%); }
+.editor-toolbar-button,.editor-toolbar-menu-trigger { display:inline-flex; min-width:34px; height:34px; flex:0 0 auto; align-items:center; justify-content:center; border:1px solid transparent; border-radius:6px; color:inherit; font-size:12px; font-weight:650; line-height:1; transition:background-color 120ms ease,color 120ms ease,border-color 120ms ease; }
+.editor-toolbar-button:hover,.editor-toolbar-menu-trigger:hover,.editor-toolbar-button[data-expanded="true"],.editor-toolbar-menu-trigger[aria-expanded="true"] { border-color:rgb(115 115 115 / 16%); background:rgb(115 115 115 / 10%); color:#171717; }
+.dark-mode :is(.editor-toolbar-button:hover,.editor-toolbar-menu-trigger:hover,.editor-toolbar-button[data-expanded="true"],.editor-toolbar-menu-trigger[aria-expanded="true"]) { border-color:rgb(255 255 255 / 10%); background:rgb(255 255 255 / 8%); color:#fafafa; }
+.editor-toolbar-button:focus-visible,.editor-toolbar-menu-trigger:focus-visible { outline:2px solid currentColor; outline-offset:2px; }
+.editor-toolbar-button:disabled,.editor-toolbar-menu-trigger:disabled { cursor:not-allowed; opacity:.4; }
+.editor-toolbar-menu-trigger { gap:6px; padding-inline:8px 6px; white-space:nowrap; }
+.editor-toolbar-menu-icon { display:grid; width:16px; flex:0 0 16px; place-items:center; }
+.editor-toolbar-menu-chevron { width:12px; flex:0 0 12px; color:#8a8a8a; transition:transform 120ms ease; }
+.editor-toolbar-menu-trigger[aria-expanded="true"] .editor-toolbar-menu-chevron { transform:rotate(180deg); }
+.editor-toolbar-menu { position:fixed; z-index:90; display:grid; width:min(17rem,calc(100vw - 20px)); gap:2px; padding:5px; border:1px solid #dededb; border-radius:10px; background:#fff; color:#262626; box-shadow:0 12px 30px rgb(0 0 0 / 14%); }
+.dark-mode .editor-toolbar-menu { border-color:#363636; background:#1b1b1b; color:#f1f1f1; box-shadow:0 14px 34px rgb(0 0 0 / 42%); }
+.editor-toolbar-menu > button { display:grid; min-height:44px; grid-template-columns:24px minmax(0,1fr) 16px; align-items:center; gap:9px; border-radius:6px; padding:7px 8px; text-align:left; }
+.editor-toolbar-menu > button:hover,.editor-toolbar-menu > button:focus-visible { background:#f1f1ef; outline:none; }
+.dark-mode .editor-toolbar-menu > button:hover,.dark-mode .editor-toolbar-menu > button:focus-visible { background:#292929; }
+.editor-toolbar-menu-option-icon { display:grid; min-width:0; place-items:center; color:#737373; font-size:10px; font-weight:750; }
+.dark-mode .editor-toolbar-menu-option-icon { color:#a3a3a3; }
+.editor-toolbar-menu > button > span:nth-child(2) { min-width:0; }
+.editor-toolbar-menu strong,.editor-toolbar-menu small { display:block; overflow-wrap:anywhere; }
+.editor-toolbar-menu strong { font-size:12px; font-weight:650; }
+.editor-toolbar-menu small { margin-top:2px; color:#737373; font-size:10px; line-height:1.35; }
+.dark-mode .editor-toolbar-menu small { color:#a3a3a3; }
+.editor-toolbar-menu-check { width:14px; opacity:0; }
+.editor-toolbar-menu > button[aria-checked="true"] .editor-toolbar-menu-check { opacity:1; }
+.editor-toolbar-media { position:relative; z-index:20; display:inline-flex; }
+.editor-toolbar-trailing { margin-inline-start:auto; flex:0 0 auto; }
+.editor-toggle { position:relative; width:34px; height:20px; flex:0 0 auto; border:1px solid #a3a3a3; border-radius:999px; background:#e5e5e5; transition:background-color 120ms ease,border-color 120ms ease; }
+.editor-toggle > span { position:absolute; top:3px; left:3px; width:12px; height:12px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgb(0 0 0 / 22%); transition:transform 120ms ease; }
+.peer:checked + .editor-toggle { border-color:#262626; background:#262626; }
+.peer:checked + .editor-toggle > span { transform:translateX(14px); }
+.dark-mode .editor-toggle { border-color:#525252; background:#303030; }
+.dark-mode .peer:checked + .editor-toggle { border-color:#e5e5e5; background:#e5e5e5; }
+@media (max-width: 40rem) {
+  .editor-toolbar { gap:5px; padding:7px; }
+  .editor-toolbar-button,.editor-toolbar-menu-trigger { min-width:42px; height:42px; }
+  .editorial-toolbar-group .editor-toolbar-menu-label { display:none; }
+  .editorial-toolbar-group .editor-toolbar-menu-trigger { gap:3px; padding-inline:8px 5px; }
+}
 .editorial-image-control { display: flex; min-width: 0; flex-direction: column; gap: 4px; font-size: 12px; }
 .editorial-image-control :where(input,select) { min-height: 36px; max-width: 100%; border: 1px solid rgb(115 115 115 / 40%); border-radius: 4px; background: transparent; padding: 6px; color: inherit; }
 .editorial-image-control :where(input,select):focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
@@ -2191,6 +2228,92 @@ html.light-mode [data-public-shell] .note-content a:hover {
 [data-pretext-flow-rendered] a:focus-visible .pretext-flow-fragment {
   outline: 2px solid currentColor;
   outline-offset: 2px;
+}
+
+/* Original single-figure Pretext composition used by published posts and notes. */
+.post-content:has(>figure[data-flow-image]),
+.note-content:not(.comment-content):has(>figure[data-flow-image]) {
+  display: block;
+}
+.post-content:has(>figure[data-flow-image]) > *,
+.note-content:not(.comment-content):has(>figure[data-flow-image]) > * {
+  margin-block: 0;
+}
+.post-content:has(>figure[data-flow-image]) > * + * {
+  margin-top: var(--reading-block-spacing, .875rem);
+}
+.note-content:not(.comment-content):has(>figure[data-flow-image]) > * + * {
+  margin-top: var(--reading-block-spacing, var(--note-reading-base-gap, .5rem));
+}
+.post-content:has(>figure[data-flow-image]) > figure[data-flow-image] + p,
+.note-content:not(.comment-content):has(>figure[data-flow-image]) > figure[data-flow-image] + p {
+  margin-top: 0;
+}
+.post-content > figure[data-flow-image] {
+  width: min(var(--image-width, var(--flow-image-width, 42%)), 20rem);
+  max-width: 52%;
+  margin-top: .15rem;
+  margin-bottom: .75rem;
+  shape-margin: clamp(.65rem, 1.8vw, 1rem);
+}
+.note-content:not(.comment-content) > figure[data-flow-image] {
+  width: min(var(--image-width, var(--flow-image-width, 42%)), 14rem);
+  max-width: 52%;
+  margin-top: .1rem;
+  margin-bottom: .55rem;
+  shape-margin: clamp(.5rem, 1.8vw, .8rem);
+}
+.post-content > figure[data-flow-image="left"] {
+  margin-left: calc(-1 * var(--flow-image-outer-alpha-offset, 0px));
+  margin-right: clamp(.85rem, 2.2vw, 1.35rem);
+}
+.post-content > figure[data-flow-image="right"] {
+  margin-left: clamp(.85rem, 2.2vw, 1.35rem);
+  margin-right: calc(-1 * var(--flow-image-outer-alpha-offset, 0px));
+}
+.note-content:not(.comment-content) > figure[data-flow-image="left"] {
+  margin-left: calc(-1 * var(--flow-image-outer-alpha-offset, 0px));
+  margin-right: clamp(.65rem, 2.2vw, 1rem);
+}
+.note-content:not(.comment-content) > figure[data-flow-image="right"] {
+  margin-left: clamp(.65rem, 2.2vw, 1rem);
+  margin-right: calc(-1 * var(--flow-image-outer-alpha-offset, 0px));
+}
+.post-content[data-pretext-flow-active],
+.note-content:not(.comment-content)[data-pretext-flow-active] {
+  position: relative;
+  min-height: var(--pretext-flow-min-height, 0);
+}
+.post-content[data-pretext-flow-active] > figure[data-flow-image],
+.note-content:not(.comment-content)[data-pretext-flow-active] > figure[data-flow-image] {
+  position: absolute;
+  top: var(--pretext-flow-image-top, 0);
+  float: none;
+  margin: 0;
+  shape-outside: none;
+}
+.post-content[data-pretext-flow-active] > figure[data-flow-image="left"],
+.note-content:not(.comment-content)[data-pretext-flow-active] > figure[data-flow-image="left"] {
+  right: auto;
+  left: calc(-1 * var(--flow-image-outer-alpha-offset, 0px));
+}
+.post-content[data-pretext-flow-active] > figure[data-flow-image="right"],
+.note-content:not(.comment-content)[data-pretext-flow-active] > figure[data-flow-image="right"] {
+  right: calc(-1 * var(--flow-image-outer-alpha-offset, 0px));
+  left: auto;
+}
+.post-content[data-pretext-flow-active] > figure[data-flow-image] > img,
+.note-content:not(.comment-content)[data-pretext-flow-active] > figure[data-flow-image] > img {
+  max-height: none;
+  object-fit: fill;
+}
+@media (max-width: 40rem) {
+  .post-content > figure[data-flow-image] {
+    width: min(var(--image-width, var(--flow-image-width, 42%)), 16rem);
+  }
+  .note-content:not(.comment-content) > figure[data-flow-image] {
+    width: min(var(--image-width, var(--flow-image-width, 42%)), 13rem);
+  }
 }
 .image-flow-editor figure { cursor: pointer; }
 .image-flow-editor figure:focus-visible,
