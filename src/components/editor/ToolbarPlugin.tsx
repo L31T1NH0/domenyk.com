@@ -159,7 +159,7 @@ export function ToolbarPlugin({
           <ToolbarButton variant={variant} onClick={formatQuote} title="Citação">&quot;</ToolbarButton>
         </>
       )}
-      <EditorialControls variant={variant} />
+      {(!comment || showAdvanced) && <EditorialControls variant={variant} />}
       {allowImages && (
         <ImagePlugin
           compact={compact}

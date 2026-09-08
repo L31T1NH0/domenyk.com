@@ -1299,9 +1299,9 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
           ? "home-timeline-dual-grid min-[84rem]:left-[calc(-17.5vw+6.0375rem)] min-[84rem]:grid min-[84rem]:grid-cols-[34.5rem_minmax(0,1fr)] min-[84rem]:items-start min-[84rem]:gap-8 min-[96rem]:gap-12"
           : "",
       ].join(" ")}>
-        <TimelinePersonalRail isAdmin={isAdmin} />
-        <div className="home-timeline-primary-column flex min-w-0 flex-col gap-5">
-          <div className="home-timeline-dual-search-row relative z-10 flex flex-col gap-3">
+        <div className={`home-timeline-primary-column relative flex min-w-0 flex-col gap-5 ${hasDesktopThreads ? "min-[84rem]:pt-3" : ""}`}>
+          <TimelinePersonalRail isAdmin={isAdmin} hasDesktopThreads={hasDesktopThreads} />
+          <div className={`home-timeline-dual-search-row relative z-10 flex flex-col gap-3 ${hasDesktopThreads ? "min-[84rem]:absolute min-[84rem]:inset-x-0 min-[84rem]:-top-[2.375rem]" : ""}`}>
             <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
               <form
                 action="/"

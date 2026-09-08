@@ -87,14 +87,14 @@ export function PersonalTimeline({ isAdmin, compact = false }: { isAdmin: boolea
   }
 
   return (
-    <div className={compact ? "personal-timeline personal-timeline-compact" : "personal-timeline"}>
+    <div className={`personal-timeline w-full min-w-0 ${compact ? "personal-timeline-compact" : ""}`}>
       {!compact && isAdmin && !loading && <div id="publicar" className="mb-6"><Composer onSaved={saved} /></div>}
       <p className="sr-only" role="status">{status}</p>
       {!compact && loading && items.length === 0 && <p role="status" className="personal-timeline-muted py-4">Carregando…</p>}
       {!compact && !loading && !error && items.length === 0 && <p className="personal-timeline-muted py-4">{isAdmin ? "Seu mural está pronto para a primeira publicação." : "Ainda não há publicações."}</p>}
-      <div aria-busy={loading} className="personal-timeline-items">
+      <div aria-busy={loading} className="personal-timeline-items w-full min-w-0">
         {items.map(item => (
-          <article key={item._id} id={`publicacao-${item._id}`} className="personal-timeline-item">
+          <article key={item._id} id={`publicacao-${item._id}`} className="personal-timeline-item w-full min-w-0">
             {!compact && <div className="mb-3 flex flex-wrap items-center justify-between gap-1">
               <span className="personal-timeline-date">
                 <time dateTime={item.createdAt}>{formatSiteDate(item.createdAt, { day: "numeric", month: "short", year: "numeric" })}</time>
@@ -106,7 +106,7 @@ export function PersonalTimeline({ isAdmin, compact = false }: { isAdmin: boolea
             </div>}
             {editing === item._id && !compact
               ? <Composer item={item} onSaved={saved} onCancel={() => setEditing(null)} />
-              : <div className="personal-timeline-content" dangerouslySetInnerHTML={{ __html: item.contentHtml }} />}
+              : <div className="personal-timeline-content w-full min-w-0" dangerouslySetInnerHTML={{ __html: item.contentHtml }} />}
           </article>
         ))}
       </div>

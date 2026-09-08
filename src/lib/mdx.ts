@@ -714,12 +714,11 @@ function withPublicationCss(renderedHtml: string, source: string, html: boolean)
     .update(source)
     .digest("hex")
     .slice(0, 16)
-  const marker = `style[data-publication-css="${id}"]`
-  const surface = `:where(.post-content, .note-content:not(.comment-content), .personal-timeline-content):has(> ${marker})`
+  const surface = `[data-publication-surface="${id}"]`
 
   try {
     const stylesheet = compilePublicationCss(css, surface)
-    return `${renderedHtml}<style data-publication-css="${id}">${stylesheet}</style>`
+    return `<div data-publication-surface="${id}">${renderedHtml}</div><style data-publication-css="${id}">${stylesheet}</style>`
   } catch {
     // Keep an unfinished stylesheet in the editor draft without allowing it to
     // break public rendering. It becomes active as soon as it parses cleanly.

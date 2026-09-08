@@ -44,12 +44,20 @@ export function compilePublicationCss(source, selector) {
   })
   sheet.walkRules(rule => {
     rule.selectors = rule.selectors.map(authoredSelector => {
-      if (authoredSelector.includes("&")) {
+      const authored = authoredSelector.trim()
+      if (authored.includes("&")) {
         throw new Error("Use seletores completos; o aninhamento com & não está disponível.")
       }
-      return authoredSelector.includes(":scope")
-        ? authoredSelector.replace(/:scope\b/g, selector)
-        : `${selector} ${authoredSelector}`
+      if (authored === ":scope") return selector
+      if (authored.startsWith(":scope")) {
+        const descendant = authored.slice(6)
+        if (/^(?:\s+|>)/.test(descendant)) return `${selector}${descendant}`
+        throw new Error("Depois de :scope, use um espaço ou > para selecionar apenas conteúdo interno.")
+      }
+      if (authored.includes(":scope")) {
+        throw new Error("Use :scope somente no início do seletor.")
+      }
+      return `${selector} ${authored}`
     })
   })
   // The impossible double-id inside :not() gives the boundary enough cascade
@@ -59,11 +67,10 @@ export function compilePublicationCss(source, selector) {
   return `${sheet.toString()}\n${boundaryRule}`.replace(/<\/style/gi, "\\3c /style")
 }
 
-// These belong to the existing reading surface, not to the authored stylesheet.
-// Keep its typography and display mode intact while preventing authored layout
-// from covering or repositioning the rest of the page.
+// These belong to the publication boundary, not to the authored stylesheet.
+// Keep the boundary inside its column and clip authored layout to that box.
 export const PUBLICATION_BOUNDARY_STYLE = [
-  "contain: paint style", "isolation: isolate", "overflow: clip",
+  "contain: paint style", "isolation: isolate", "overflow: hidden", "overflow: clip",
   "position: relative", "float: none", "box-sizing: border-box",
   "max-width: 100%", "min-width: 0",
   "margin: 0",
