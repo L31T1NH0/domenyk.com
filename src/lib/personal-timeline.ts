@@ -1,4 +1,4 @@
-import { MAX_RICH_CONTENT_LENGTH } from "@/lib/content-format"
+import { MAX_RICH_CONTENT_LENGTH } from "./content-format.js"
 
 export type PersonalUpdate = {
   _id: string

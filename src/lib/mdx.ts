@@ -18,7 +18,7 @@ import { createHash } from "crypto"
 import { fromHtml } from "hast-util-from-html"
 import { isHtmlContent, looksLikePublicationHtml, safeEditorialStyle } from "./content-format.js"
 import { editorialTextStyle, normalizeEditorialText } from "./editorial-text.js"
-import { compilePublicationCss, extractPublicationCss } from "./publication-css"
+import { compilePublicationCss, extractPublicationCss } from "./publication-css.js"
 import { splitInlineCssHooks } from "./inline-css-hooks.js"
 
 type MarkdownImagePolicy =

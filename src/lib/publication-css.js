@@ -3,7 +3,8 @@ import postcss from "postcss"
 export const MAX_PUBLICATION_CSS = 12_000
 const PUBLICATION_CSS_TEMPLATE = /<template\s+data-editor-css=(?:"([^"]*)"|'([^']*)')\s*>\s*<\/template>/i
 
-export function extractPublicationCss(content: string): string {
+/** @param {string} content */
+export function extractPublicationCss(content) {
   const match = content.match(PUBLICATION_CSS_TEMPLATE)
   const encoded = match?.[1] ?? match?.[2] ?? ""
   if (!encoded) return ""
@@ -18,7 +19,8 @@ export function extractPublicationCss(content: string): string {
 /** Keep stylesheet rules local: global registries and external imports are not
  * part of a publication stylesheet. Every authored selector receives the
  * publication surface prefix before the stylesheet reaches the browser. */
-export function compilePublicationCss(source: string, selector: string): string {
+/** @param {string} source @param {string} selector */
+export function compilePublicationCss(source, selector) {
   if (!source.trim()) return ""
   if (source.length > MAX_PUBLICATION_CSS) throw new Error("O CSS deve ter até 12.000 caracteres.")
   let sheet
