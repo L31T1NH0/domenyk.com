@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { stripInlineCssHookSyntax } from "./inline-css-hooks.js"
 
 export const siteConfig = {
   name: "domenyk",
@@ -40,16 +41,36 @@ export function absoluteUrl(path = "/") {
   return `${siteConfig.url}${path.startsWith("/") ? path : `/${path}`}`
 }
 
+function decodeHtmlEntities(value: string): string {
+  const codePoint = (raw: string, radix: number) => {
+    const parsed = Number.parseInt(raw, radix)
+    return Number.isInteger(parsed) && parsed >= 0 && parsed <= 0x10ffff
+      ? String.fromCodePoint(parsed)
+      : " "
+  }
+
+  return value
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#(?:0*39|x0*27);/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&#(\d+);/g, (_match, code) => codePoint(code, 10))
+    .replace(/&#x([a-f\d]+);/gi, (_match, code) => codePoint(code, 16))
+}
+
 export function descriptionFromMarkdown(markdown: string, maxLength = 155): string {
-  const text = markdown
+  const text = decodeHtmlEntities(stripInlineCssHookSyntax(markdown)
     .replace(/```[\s\S]*?```/g, " ")
+    .replace(/^:::editor [^\n]+$|^:::$/gm, " ")
     .replace(/`[^`]*`/g, " ")
     .replace(/!\[[^\]]*]\([^)]*\)/g, " ")
     .replace(/\[([^\]]+)]\([^)]*\)/g, "$1")
     .replace(/<[^>]+>/g, " ")
     .replace(/[#>*_~\-]+/g, " ")
     .replace(/\s+/g, " ")
-    .trim()
+    .trim())
 
   if (text.length <= maxLength) return text
   const truncated = text.slice(0, maxLength + 1)
@@ -78,10 +99,16 @@ export function noteDisplayTitle(note: { title?: string; content: string }): str
 export function imageUrlsFromMarkdown(markdown: string): string[] {
   const urls = new Set<string>()
   const imagePattern = /!\[[^\]]*]\(([^)\s]+)(?:\s+"[^"]*")?\)/g
+  const htmlImagePattern = /<img\b[^>]*\bsrc=(?:"([^"]+)"|'([^']+)')[^>]*>/gi
   let match: RegExpExecArray | null
 
   while ((match = imagePattern.exec(markdown)) !== null) {
     urls.add(match[1])
+  }
+
+  while ((match = htmlImagePattern.exec(markdown)) !== null) {
+    const url = decodeHtmlEntities(match[1] ?? match[2] ?? "")
+    if (url) urls.add(url)
   }
 
   return [...urls]

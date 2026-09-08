@@ -3,7 +3,7 @@
 import { LinkIcon, PaperAirplaneIcon, XMarkIcon } from "@heroicons/react/24/outline"
 import { useCallback, useRef, useState } from "react"
 import type { LexicalEditor as LexicalEditorInstance } from "lexical"
-import { LexicalEditor, readMarkdownFromEditor } from "@/components/editor/LexicalEditor"
+import { assertPublicationCssIsValid, LexicalEditor, readHtmlFromEditor } from "@/components/editor/LexicalEditor"
 import {
   RICH_COMPOSER_DEFAULT_BORDER_CLASS_NAME,
   RICH_COMPOSER_FRAME_CLASS_NAME,
@@ -32,19 +32,20 @@ export function NoteComposer({
   const [error, setError] = useState("")
   const lexicalEditorRef = useRef<LexicalEditorInstance | null>(null)
 
-  const handleContentChange = useCallback((markdown: string) => {
-    setContent(markdown)
+  const handleContentChange = useCallback((nextContent: string) => {
+    setContent(nextContent)
   }, [])
 
   async function submit() {
-    const currentContent = lexicalEditorRef.current
-      ? readMarkdownFromEditor(lexicalEditorRef.current)
-      : content.trim()
-
-    if (!currentContent || submitting) return
-    setSubmitting(true)
+    if (submitting) return
     setError("")
     try {
+      if (lexicalEditorRef.current) assertPublicationCssIsValid(lexicalEditorRef.current)
+      const currentContent = lexicalEditorRef.current
+        ? readHtmlFromEditor(lexicalEditorRef.current)
+        : content.trim()
+      if (!currentContent) return
+      setSubmitting(true)
       const res = await fetch(submitEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

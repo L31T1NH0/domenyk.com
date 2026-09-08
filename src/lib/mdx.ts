@@ -13,8 +13,13 @@ import rehypeRaw from "rehype-raw"
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize"
 import type { Options as SanitizeSchema } from "rehype-sanitize"
 import { SKIP, visit } from "unist-util-visit"
-import type { Element, Root } from "hast"
+import type { Element, Root, RootContent, Text } from "hast"
 import { createHash } from "crypto"
+import { fromHtml } from "hast-util-from-html"
+import { isHtmlContent, looksLikePublicationHtml, safeEditorialStyle } from "./content-format.js"
+import { editorialTextStyle, normalizeEditorialText } from "./editorial-text.js"
+import { compilePublicationCss, extractPublicationCss } from "./publication-css"
+import { splitInlineCssHooks } from "./inline-css-hooks.js"
 
 type MarkdownImagePolicy =
   | { mode: "none" }
@@ -45,7 +50,7 @@ const paragraphIdCache = new Map<string, ReadonlySet<string>>()
 const markdownSanitizeSchema: SanitizeSchema = {
   ...defaultSchema,
   clobberPrefix: "user-content-",
-  tagNames: [...(defaultSchema.tagNames ?? []), "figure"],
+  tagNames: [...new Set([...(defaultSchema.tagNames ?? []), "article", "aside", "figure", "figcaption", "footer", "header", "main", "mark", "nav", "small", "time"])],
   protocols: {
     ...defaultSchema.protocols,
     href: ["http", "https", "mailto"],
@@ -54,6 +59,20 @@ const markdownSanitizeSchema: SanitizeSchema = {
   },
   attributes: {
     ...defaultSchema.attributes,
+    "*": [
+      ...(defaultSchema.attributes?.["*"] ?? []),
+      "className",
+      "dataEditorSafeStyle",
+      ["dataCssHook", /^[a-z0-9](?:[a-z0-9-]{0,47})$/],
+    ],
+    div: [
+      ...(defaultSchema.attributes?.div ?? []),
+      ["dataEditorAlign", "left", "center", "right", "justify"],
+      ["dataEditorSize", "auto", "14", "16", "18", "20", "24", "28", "32", "40"],
+      ["dataEditorLeading", "auto", "1.2", "1.4", "1.6", "1.8", "2"],
+      ["dataEditorSpacing", "auto", "0", "8", "16", "24", "32"],
+      ["dataEditorTone", "none", "neutral", "sand", "rose", "blue"],
+    ],
     a: [
       ...(defaultSchema.attributes?.a ?? []),
       ["rel", "ugc", "nofollow", "noopener", "noreferrer"],
@@ -66,6 +85,8 @@ const markdownSanitizeSchema: SanitizeSchema = {
       "decoding",
     ],
     figure: [
+      ["dataEditorImage", "left", "center", "right"],
+      ["dataEditorWidth", ...Array.from({ length: 17 }, (_, i) => String(20 + i * 5))],
       ["dataFlowImage", "left", "right"],
       ["dataFlowWidth", "32", "42", "52"],
       ["dataImageTheme", "adaptive"],
@@ -78,6 +99,7 @@ const markdownSanitizeSchema: SanitizeSchema = {
       ...(defaultSchema.attributes?.span ?? []),
       ["dataRole", "author-reference"],
       ["dataKind", "author", "co-author"],
+      ["dataCssHook", /^[a-z0-9](?:[a-z0-9-]{0,47})$/],
     ],
     code: [
       ...(defaultSchema.attributes?.code ?? []),
@@ -111,6 +133,7 @@ function rehypeNormalizeFlowImages() {
       if (node.tagName !== "figure") return
 
       const side = stringProperty(node.properties?.dataFlowImage)
+      if (["left", "center", "right"].includes(String(node.properties?.dataEditorImage))) return
       const width = stringProperty(node.properties?.dataFlowWidth)
       const theme = stringProperty(node.properties?.dataImageTheme)
       const image = directImageChild(node)
@@ -514,28 +537,161 @@ function rehypeMarkNoteSourceLinks() {
   }
 }
 
+function remarkEditorialText() {
+  return (tree: MdastNode) => {
+    function process(node: MdastNode) {
+      if (!node.children) return
+      const line = (child: MdastNode) => child.type === "paragraph" && child.children?.length === 1 && child.children[0].type === "text" ? child.children[0].value ?? "" : ""
+      for (let i = 0; i < node.children.length; i++) {
+        const match = line(node.children[i]).match(/^:::editor (left|center|right|justify) ([\w.]+) ([\w.]+) ([\w.]+) (\w+)$/)
+        if (!match) { process(node.children[i]); continue }
+        let end = i + 1
+        while (end < node.children.length && line(node.children[end]) !== ":::") end++
+        if (end === node.children.length) continue
+        const [, align, size, leading, spacing, tone] = match
+        const p = normalizeEditorialText({ align, size, leading, spacing, tone })
+        const wrapper = {
+          type: "editorialText",
+          data: { hName: "div", hProperties: { dataEditorAlign: p.align, dataEditorSize: p.size, dataEditorLeading: p.leading, dataEditorSpacing: p.spacing, dataEditorTone: p.tone } },
+          children: node.children.slice(i + 1, end),
+        }
+        node.children.splice(i, end - i + 1, wrapper)
+      }
+    }
+    process(tree)
+  }
+}
+
+// Generate only validated styles after sanitization; authored style attributes
+// remain forbidden for all other content.
+function rehypeEditorialTextStyles() {
+  return (tree: Root) => {
+    visit(tree, "element", (node: Element) => {
+      if (node.tagName === "figure" && node.properties.dataEditorImage) {
+        const width = Number(node.properties.dataEditorWidth)
+        if (!Number.isFinite(width) || width < 20 || width > 100) return
+        const alignment = String(node.properties.dataEditorImage)
+        const margin = alignment === "left" ? "0 auto 0 0" : alignment === "right" ? "0 0 0 auto" : "0 auto"
+        node.properties.style = `width: ${width}%; max-width: 100%; margin: ${margin}`
+        return
+      }
+      if (node.tagName !== "div" || !node.properties.dataEditorAlign) return
+      const p = normalizeEditorialText({
+        align: String(node.properties.dataEditorAlign), size: String(node.properties.dataEditorSize),
+        leading: String(node.properties.dataEditorLeading), spacing: String(node.properties.dataEditorSpacing), tone: String(node.properties.dataEditorTone),
+      })
+      node.properties.style = `${editorialTextStyle(p)}; text-align: ${p.align}`
+      for (const child of node.children) {
+        if (child.type !== "element") continue
+        child.properties.style = `${editorialTextStyle({ ...p, tone: "none", spacing: "auto" })}; text-align: ${p.align}`
+      }
+    })
+  }
+}
+
+function rehypeSafeEditorialStyles(html: boolean, restore: boolean) {
+  return (tree: Root) => {
+    visit(tree, "element", (node: Element) => {
+      if (restore) {
+        const style = html ? safeEditorialStyle(String(node.properties.dataEditorSafeStyle ?? "")) : ""
+        delete node.properties.dataEditorSafeStyle
+        if (style) node.properties.style = style
+      } else {
+        delete node.properties.dataEditorSafeStyle
+        const style = html ? safeEditorialStyle(String(node.properties.style ?? "")) : ""
+        if (style) node.properties.dataEditorSafeStyle = style
+      }
+    })
+  }
+}
+
+function rehypeInlineCssHooks() {
+  return (tree: Root) => {
+    const occurrences = new Map<string, number>()
+    visit(tree, "text", (node: Text, index, parent) => {
+      if (index === undefined || !parent) return
+      if (parent.type === "element" && ["code", "pre", "style"].includes(parent.tagName)) return
+
+      const parts = splitInlineCssHooks(node.value, occurrences)
+      if (!parts.some(part => part.type === "hook")) return
+      const children = parts.map(part => part.type === "text"
+        ? { type: "text" as const, value: part.value }
+        : {
+            type: "element" as const,
+            tagName: "span",
+            properties: { dataCssHook: part.id },
+            children: [{ type: "text" as const, value: part.text }],
+          })
+      parent.children.splice(index, 1, ...children)
+      return [SKIP, index + children.length]
+    })
+  }
+}
+
+const EDITOR_SOURCE_BREAK_TAGS = new Set([
+  "address", "article", "aside", "blockquote", "div", "dl", "figure", "footer",
+  "h1", "h2", "h3", "h4", "h5", "h6", "header", "hr", "li", "main", "nav",
+  "ol", "p", "pre", "section", "table", "ul",
+])
+
+function textFromEscapedEditorNode(node: RootContent): string {
+  if (node.type === "text") return node.value
+  if (node.type !== "element") return ""
+  if (node.tagName === "br") return "\n"
+  const text = node.children.map(textFromEscapedEditorNode).join("")
+  return EDITOR_SOURCE_BREAK_TAGS.has(node.tagName) ? `${text}\n\n` : text
+}
+
+function escapedHtmlSource(document: Element): string | null {
+  if (document.properties.dataEditorSource === "raw") return null
+  const source = document.children.map(textFromEscapedEditorNode).join("").trim()
+  return looksLikePublicationHtml(source) ? source : null
+}
+
 function createProcessor(
   options: MarkdownRenderOptions = {},
-  onParagraphId?: (paragraphId: string) => void
+  onParagraphId?: (paragraphId: string) => void,
+  html = false,
 ) {
-  return unified()
+  const processor = unified()
+  if (html) {
+    processor.use(function () {
+      this.parser = value => {
+        const tree = fromHtml(value, { fragment: true })
+        const document = tree.children.find((node): node is Element => node.type === "element" && node.properties.dataEditorDocument === "html")
+        if (!document) return tree
+        const escapedSource = escapedHtmlSource(document)
+        return escapedSource
+          ? fromHtml(escapedSource, { fragment: true })
+          : { type: "root", children: document.children }
+      }
+    })
+  } else {
+    processor
     .use(remarkParse)
     .use(remarkGfm)
     .use(remarkMath)
+    .use(remarkEditorialText)
     .use(remarkAuthorReferences, options)
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeRaw)
+  }
+  if (html) processor.use(rehypeInlineCssHooks)
+  processor
+    .use(function () { return rehypeSafeEditorialStyles(html, false) })
     .use(rehypeNormalizeFlowImages)
     .use(rehypeRestrictImages, options.imagePolicy)
     .use(rehypeImageAltFallback, options.defaultImageAlt)
     .use(rehypeParagraphIds, onParagraphId)
-    .use(rehypeDemoteBodyH1)
+  if (!html) processor.use(rehypeDemoteBodyH1)
+  return processor
     .use(rehypeSlug)
     .use(rehypeAutolinkHeadings, { behavior: "wrap" })
     .use(rehypePrefixFragmentLinks)
     .use(rehypeHardenExternalLinks, options.externalLinkRel)
     .use(rehypeMarkNoteSourceLinks)
     .use(rehypeSanitize, markdownSanitizeSchema)
+    .use(function () { return rehypeSafeEditorialStyles(html, true) })
     // KaTeX runs after untrusted HTML is sanitized. It emits complete HTML and
     // MathML on the server, so formulas need no JavaScript in the browser.
     .use(rehypeKatex, {
@@ -544,22 +700,48 @@ function createProcessor(
       strict: "error",
     })
     .use(rehypeFlowImageStyles)
+    .use(rehypeEditorialTextStyles)
     .use(rehypeStringify)
 }
 
+function withPublicationCss(renderedHtml: string, source: string, html: boolean): string {
+  if (!html) return renderedHtml
+
+  const css = extractPublicationCss(source)
+  if (!css.trim()) return renderedHtml
+
+  const id = createHash("sha256")
+    .update(source)
+    .digest("hex")
+    .slice(0, 16)
+  const marker = `style[data-publication-css="${id}"]`
+  const surface = `:where(.post-content, .note-content:not(.comment-content), .personal-timeline-content):has(> ${marker})`
+
+  try {
+    const stylesheet = compilePublicationCss(css, surface)
+    return `${renderedHtml}<style data-publication-css="${id}">${stylesheet}</style>`
+  } catch {
+    // Keep an unfinished stylesheet in the editor draft without allowing it to
+    // break public rendering. It becomes active as soon as it parses cleanly.
+    return renderedHtml
+  }
+}
+
 export async function renderMarkdown(content: string, options: MarkdownRenderOptions = {}): Promise<string> {
-  const result = await createProcessor(options).process(content)
-  return String(result)
+  const html = isHtmlContent(content)
+  const result = await createProcessor(options, undefined, html).process(content)
+  return withPublicationCss(String(result), content, html)
 }
 
 export function renderMarkdownSync(content: string, options: MarkdownRenderOptions = {}): string {
-  const result = createProcessor(options).processSync(content)
-  return String(result)
+  const html = isHtmlContent(content)
+  const result = createProcessor(options, undefined, html).processSync(content)
+  return withPublicationCss(String(result), content, html)
 }
 
 export function extractParagraphIds(content: string, options: MarkdownRenderOptions = {}): string[] {
   const paragraphIds: string[] = []
-  createProcessor(options, (paragraphId) => paragraphIds.push(paragraphId)).processSync(content)
+  createProcessor(options, (paragraphId) => paragraphIds.push(paragraphId), isHtmlContent(content)).processSync(content)
   return paragraphIds
 }
 

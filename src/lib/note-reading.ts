@@ -1,3 +1,5 @@
+import { stripInlineCssHookSyntax } from "./inline-css-hooks.js"
+
 export type NoteReadingEstimate = {
   wordCount: number
   sentenceCount: number
@@ -13,7 +15,7 @@ function clamp(value: number, minimum: number, maximum: number) {
 }
 
 function plainText(markdown: string) {
-  return markdown
+  return stripInlineCssHookSyntax(markdown)
     .replace(/```[\s\S]*?```/g, " ")
     .replace(/!\[[^\]]*]\([^)]*\)/g, " ")
     .replace(/\[([^\]]+)]\([^)]*\)/g, "$1")
@@ -31,8 +33,10 @@ export function estimateNoteReading(markdown: string, galleryImages = 0): NoteRe
   const averageSentenceWords = wordCount / Math.max(1, sentenceCount)
   const longWordRatio = words.filter((word) => word.replace(/[^\p{L}]/gu, "").length >= 9).length / Math.max(1, wordCount)
   const structuralMarkers = (markdown.match(/^(?:\s*[-*+]\s+|\s*\d+\.\s+|\s*>\s+|#{1,6}\s+)/gm) ?? []).length
+    + (markdown.match(/<(?:h[1-6]|blockquote|li)\b/gi) ?? []).length
   const markdownImages = (markdown.match(/!\[[^\]]*]\([^)]*\)/g) ?? []).length
-  const imageCount = markdownImages + Math.max(0, galleryImages)
+  const htmlImages = (markdown.match(/<img\b/gi) ?? []).length
+  const imageCount = markdownImages + htmlImages + Math.max(0, galleryImages)
 
   const sentencePenalty = clamp((averageSentenceWords - 14) * 0.012, 0, 0.22)
   const lexicalPenalty = clamp((longWordRatio - 0.1) * 1.5, 0, 0.22)

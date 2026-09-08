@@ -1,3 +1,4 @@
+import { isHtmlContent } from "../content-format.js"
 import { ObjectId } from "mongodb"
 import { getDb } from "./client"
 import { renderMarkdownSync } from "../mdx"
@@ -74,6 +75,7 @@ function shouldPreserveLineBreaks(block: string): boolean {
 }
 
 export function normalizeNoteContent(content: string): string {
+  if (isHtmlContent(content)) return content.trim()
   const { protected: protected_, images } = protectImages(content)
   const result = protected_
     .replace(/\r\n?/g, "\n")

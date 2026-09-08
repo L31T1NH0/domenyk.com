@@ -1,14 +1,17 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { assertPublicationCssIsValid, LexicalEditor, readHtmlFromEditor } from "@/components/editor/LexicalEditor"
+import type { LexicalEditor as EditorInstance } from "lexical"
 import { DeleteActionMenu } from "@/components/actions/DeleteActionMenu"
 import type { SerializedNote } from "@/lib/db/notes"
 import type { NoteMetrics } from "@/lib/db/note-metrics"
 
 export function AdminNoteEditor({ note, metrics }: { note: SerializedNote; metrics: Omit<NoteMetrics, "updatedAt"> }) {
   const router = useRouter()
+  const editorRef = useRef<EditorInstance | null>(null)
   const [title, setTitle] = useState(note.title ?? "")
   const [content, setContent] = useState(note.content)
   const [seoTitle, setSeoTitle] = useState(note.seoTitle ?? "")
@@ -18,13 +21,21 @@ export function AdminNoteEditor({ note, metrics }: { note: SerializedNote; metri
   const indexable = Boolean(seoTitle.trim() && seoDescription.trim())
 
   async function save() {
-    setSaving(true); setMessage("")
-    const response = await fetch(`/api/admin/notes/${note._id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title, content, seoTitle, seoDescription }) })
-    const data = await response.json().catch(() => null) as { error?: string } | null
-    setSaving(false)
-    if (!response.ok) return setMessage(data?.error ?? "Não foi possível salvar a nota.")
-    setMessage("Alterações salvas.")
-    router.refresh()
+    if (saving) return
+    setMessage("")
+    try {
+      if (editorRef.current) assertPublicationCssIsValid(editorRef.current)
+      setSaving(true)
+      const response = await fetch(`/api/admin/notes/${note._id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title, content: editorRef.current ? readHtmlFromEditor(editorRef.current) : content, seoTitle, seoDescription }) })
+      const data = await response.json().catch(() => null) as { error?: string } | null
+      if (!response.ok) return setMessage(data?.error ?? "Não foi possível salvar a nota.")
+      setMessage("Alterações salvas.")
+      router.refresh()
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Não foi possível salvar a nota.")
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function remove() {
@@ -42,7 +53,7 @@ export function AdminNoteEditor({ note, metrics }: { note: SerializedNote; metri
       <header className="admin-workspace-header"><div><h2>Conteúdo</h2><p>O título editorial é opcional. O texto aparece no site exatamente como escrito aqui.</p></div></header>
       <div className="admin-note-fields">
         <label className="admin-field"><span>Título editorial <small>opcional</small></span><input value={title} maxLength={120} onChange={(event) => setTitle(event.target.value)} /></label>
-        <label className="admin-field"><span>Texto da nota</span><textarea className="admin-note-content" value={content} maxLength={20000} rows={20} onChange={(event) => setContent(event.target.value)} /></label>
+        <div className="admin-field"><span>Texto da nota</span><LexicalEditor initialMarkdown={note.content} onChange={setContent} editorRef={editorRef} namespace="AdminNoteEditor" imageUploadEndpoint="/api/notes/media" /></div>
       </div>
     </main>
 

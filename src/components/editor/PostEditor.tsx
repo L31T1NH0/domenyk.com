@@ -11,7 +11,7 @@ import {
   type PostLocale,
   type TranslationLocale,
 } from "@/lib/post-locales"
-import { LexicalEditor, readMarkdownFromEditor } from "./LexicalEditor"
+import { assertPublicationCssIsValid, LexicalEditor, readHtmlFromEditor } from "./LexicalEditor"
 
 type CoAuthorOption = {
   id: string
@@ -293,17 +293,17 @@ export function PostEditor({ post }: Props) {
     updateActiveDraft(patch)
   }
 
-  const handleContentChange = useCallback((markdown: string) => {
+  const handleContentChange = useCallback((nextContent: string) => {
     setDrafts((current) => ({
       ...current,
-      [activeLocale]: { ...current[activeLocale], content: markdown },
+      [activeLocale]: { ...current[activeLocale], content: nextContent },
     }))
     setNotice("")
   }, [activeLocale])
 
   function readCurrentDraft(): LocalizedDraft {
     const content = editorRef.current
-      ? readMarkdownFromEditor(editorRef.current)
+      ? readHtmlFromEditor(editorRef.current)
       : drafts[activeLocale].content
     const next = { ...drafts[activeLocale], content }
     setDrafts((current) => ({ ...current, [activeLocale]: next }))
@@ -424,6 +424,14 @@ export function PostEditor({ post }: Props) {
       return
     }
     const willBePublished = published ?? activeVersion.published
+    if (willBePublished && editorRef.current) {
+      try {
+        assertPublicationCssIsValid(editorRef.current)
+      } catch (error) {
+        setError(error instanceof Error ? error.message : "Confira o CSS da publicação.")
+        return
+      }
+    }
     if (willBePublished && coverUrl.trim() && (
       !draft.coverAlt.trim()
       || draft.coverAlt.trim().toLocaleLowerCase() === draft.title.trim().toLocaleLowerCase()

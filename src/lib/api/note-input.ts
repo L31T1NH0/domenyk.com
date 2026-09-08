@@ -1,5 +1,6 @@
 import { createNote, normalizeNoteContent, serializeNote } from "@/lib/db/notes"
 import { asString, asTrustedImageUrlArray, toObjectId } from "@/lib/validation"
+import { MAX_RICH_CONTENT_LENGTH } from "@/lib/content-format"
 
 export class NoteInputError extends Error {
   constructor(message: string, readonly status = 400) {
@@ -16,7 +17,7 @@ export type NoteInputBody = {
 
 export async function createSerializedNoteFromBody(body: NoteInputBody | null) {
   const title = asString(body?.title, 120)?.trim() || undefined
-  const content = asString(body?.content, 20_000) ?? ""
+  const content = asString(body?.content, MAX_RICH_CONTENT_LENGTH) ?? ""
   const normalizedContent = normalizeNoteContent(content)
 
   if (!normalizedContent) {

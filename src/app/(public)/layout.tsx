@@ -9,6 +9,8 @@ import { ReadingPreferencesProvider, ReadingPreferencesScope } from "@/component
 import { FlowImageAlphaOffset } from "@/components/post/FlowImageAlphaOffset"
 import { SiteVisitTracker } from "@/components/notifications/SiteVisitTracker"
 import { getSiteVisitNotificationSettings } from "@/lib/db/notification-settings"
+import { NoiseBackground } from "@/components/noise/NoiseBackground"
+import { NoisePreferenceProvider } from "@/components/noise/NoisePreferenceContext"
 
 export default async function PublicLayout({ children }: { children: React.ReactNode }) {
   const currentYear = siteCalendarYear()
@@ -19,27 +21,30 @@ export default async function PublicLayout({ children }: { children: React.React
   const nonce = requestHeaders.get("x-nonce") ?? undefined
 
   return (
-    <ReadingPreferencesProvider>
-      <PublicMenuProvider>
-        <header className="mx-auto flex w-full max-w-[36rem] items-center justify-end px-4 py-1 sm:w-[min(100%,34.5rem)] sm:max-w-[100vw]">
-          <PublicMenu />
-        </header>
-        <ReadingPreferencesScope data-public-shell data-scroll-progress-root className="mx-auto mb-4 flex w-full max-w-[36rem] flex-col overflow-x-visible px-4 sm:w-[min(100%,34.5rem)] sm:max-w-[100vw]">
-          <div aria-hidden data-scroll-progress-bar />
-          <ScrollProgressEffect />
-          <FlowImageAlphaOffset />
-          <ViewReferrerTracker />
-          {(siteVisitSettings.pushEnabled || siteVisitSettings.storeInHistory) && <SiteVisitTracker />}
-          <main className="flex min-w-0 flex-1 flex-col">
-            {children}
-          </main>
-          <footer className="mb-4 mt-12 text-center text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
-            <p>© {currentYear} domenyk.com</p>
-            <p className="mt-1 break-all">bc1qfv788krszr8xz3uxvvzy33pp8jph0hw53557d4</p>
-          </footer>
-        </ReadingPreferencesScope>
-        <PublicAnalytics nonce={nonce} />
-      </PublicMenuProvider>
-    </ReadingPreferencesProvider>
+    <NoisePreferenceProvider>
+      <NoiseBackground />
+      <ReadingPreferencesProvider>
+        <PublicMenuProvider>
+          <header className="mx-auto flex w-full max-w-[36rem] items-center justify-end px-4 py-1 sm:w-[min(100%,34.5rem)] sm:max-w-[100vw]">
+            <PublicMenu />
+          </header>
+          <ReadingPreferencesScope data-public-shell data-scroll-progress-root className="mx-auto mb-4 flex w-full max-w-[36rem] flex-col overflow-x-visible px-4 sm:w-[min(100%,34.5rem)] sm:max-w-[100vw]">
+            <div aria-hidden data-scroll-progress-bar />
+            <ScrollProgressEffect />
+            <FlowImageAlphaOffset />
+            <ViewReferrerTracker />
+            {(siteVisitSettings.pushEnabled || siteVisitSettings.storeInHistory) && <SiteVisitTracker />}
+            <main className="flex min-w-0 flex-1 flex-col">
+              {children}
+            </main>
+            <footer className="mb-4 mt-12 text-center text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
+              <p>© {currentYear} domenyk.com</p>
+              <p className="mt-1 break-all">bc1qfv788krszr8xz3uxvvzy33pp8jph0hw53557d4</p>
+            </footer>
+          </ReadingPreferencesScope>
+          <PublicAnalytics nonce={nonce} />
+        </PublicMenuProvider>
+      </ReadingPreferencesProvider>
+    </NoisePreferenceProvider>
   )
 }

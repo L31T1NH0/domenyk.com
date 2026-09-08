@@ -1,0 +1,118 @@
+"use client"
+
+import { useCallback, useEffect, useRef, useState } from "react"
+import dynamic from "next/dynamic"
+import { DeleteActionMenu } from "@/components/actions/DeleteActionMenu"
+import type { PersonalTimelinePage, PersonalUpdate } from "@/lib/personal-timeline"
+import { formatSiteDate } from "@/lib/datetime"
+
+const Composer = dynamic(() => import("./PersonalUpdateComposer"), {
+  loading: () => <p role="status" className="text-sm text-neutral-600 dark:text-neutral-400">Carregando editor…</p>,
+})
+
+async function fetchPage(signal: AbortSignal, cursor?: string): Promise<PersonalTimelinePage> {
+  const response = await fetch(`/api/mural${cursor ? `?cursor=${cursor}` : ""}`, { signal, cache: "no-store" })
+  if (!response.ok) throw new Error("Não foi possível carregar o mural.")
+  return response.json()
+}
+
+export function PersonalTimeline({ isAdmin, compact = false }: { isAdmin: boolean; compact?: boolean }) {
+  const [items, setItems] = useState<PersonalUpdate[]>([])
+  const [cursor, setCursor] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+  const [editing, setEditing] = useState<string | null>(null)
+  const [status, setStatus] = useState("")
+  const requestRef = useRef<AbortController | null>(null)
+  const moreRef = useRef<HTMLDivElement | null>(null)
+
+  const load = useCallback(async (nextCursor?: string) => {
+    requestRef.current?.abort()
+    const controller = new AbortController()
+    requestRef.current = controller
+    setLoading(true)
+    setError("")
+    try {
+      const data = await fetchPage(controller.signal, nextCursor)
+      if (controller.signal.aborted) return
+      setItems(previous => nextCursor
+        ? [...previous, ...data.items.filter(item => !previous.some(existing => existing._id === item._id))]
+        : data.items)
+      setCursor(data.nextCursor)
+    } catch {
+      if (!controller.signal.aborted) setError("Não foi possível carregar o mural.")
+    } finally {
+      if (!controller.signal.aborted) setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    requestRef.current = controller
+    void fetchPage(controller.signal).then(data => {
+      if (controller.signal.aborted) return
+      setItems(data.items)
+      setCursor(data.nextCursor)
+    }).catch(() => {
+      if (!controller.signal.aborted) setError("Não foi possível carregar o mural.")
+    }).finally(() => {
+      if (!controller.signal.aborted) setLoading(false)
+    })
+    return () => requestRef.current?.abort()
+  }, [])
+
+  useEffect(() => {
+    const target = moreRef.current
+    if (!compact || !cursor || loading || error || !target) return
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) void load(cursor)
+    }, { rootMargin: "120px" })
+    observer.observe(target)
+    return () => observer.disconnect()
+  }, [compact, cursor, loading, error, load])
+
+  function saved(item: PersonalUpdate) {
+    setItems(previous => previous.some(existing => existing._id === item._id)
+      ? previous.map(existing => existing._id === item._id ? item : existing)
+      : [item, ...previous])
+    setEditing(null)
+    setStatus("Publicação salva.")
+  }
+
+  async function remove(id: string) {
+    const response = await fetch(`/api/mural/${id}`, { method: "DELETE" })
+    if (!response.ok) throw new Error("Não foi possível excluir a publicação.")
+    setItems(previous => previous.filter(item => item._id !== id))
+    setStatus("Publicação excluída.")
+  }
+
+  return (
+    <div className={compact ? "personal-timeline personal-timeline-compact" : "personal-timeline"}>
+      {!compact && isAdmin && !loading && <div id="publicar" className="mb-6"><Composer onSaved={saved} /></div>}
+      <p className="sr-only" role="status">{status}</p>
+      {!compact && loading && items.length === 0 && <p role="status" className="personal-timeline-muted py-4">Carregando…</p>}
+      {!compact && !loading && !error && items.length === 0 && <p className="personal-timeline-muted py-4">{isAdmin ? "Seu mural está pronto para a primeira publicação." : "Ainda não há publicações."}</p>}
+      <div aria-busy={loading} className="personal-timeline-items">
+        {items.map(item => (
+          <article key={item._id} id={`publicacao-${item._id}`} className="personal-timeline-item">
+            {!compact && <div className="mb-3 flex flex-wrap items-center justify-between gap-1">
+              <span className="personal-timeline-date">
+                <time dateTime={item.createdAt}>{formatSiteDate(item.createdAt, { day: "numeric", month: "short", year: "numeric" })}</time>
+              </span>
+              {!compact && isAdmin && <div className="flex items-center gap-1">
+                <button type="button" className="personal-timeline-action" onClick={() => setEditing(item._id)}>Editar</button>
+                <DeleteActionMenu title="Excluir publicação do mural?" triggerAriaLabel="Excluir publicação do mural" onDelete={() => remove(item._id)} />
+              </div>}
+            </div>}
+            {editing === item._id && !compact
+              ? <Composer item={item} onSaved={saved} onCancel={() => setEditing(null)} />
+              : <div className="personal-timeline-content" dangerouslySetInnerHTML={{ __html: item.contentHtml }} />}
+          </article>
+        ))}
+      </div>
+      {!compact && error && <div role="alert" className="py-3 text-sm"><p>{error}</p><button type="button" className="personal-timeline-action" onClick={() => void load(items.length ? cursor ?? undefined : undefined)}>Tentar novamente</button></div>}
+      {!compact && cursor && !error && <button type="button" disabled={loading} className="personal-timeline-action mt-3" onClick={() => void load(cursor)}>{loading ? "Carregando…" : "Mais publicações"}</button>}
+      {compact && cursor && <div ref={moreRef} aria-hidden="true" className="h-px" />}
+    </div>
+  )
+}

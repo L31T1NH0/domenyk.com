@@ -6,12 +6,9 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition, type 
 import { useRouter } from "next/navigation"
 import {
   ArrowUturnLeftIcon,
-  ChatBubbleBottomCenterTextIcon,
-  DocumentTextIcon,
   EyeSlashIcon,
   MagnifyingGlassIcon,
   PencilSquareIcon,
-  Squares2X2Icon,
   XMarkIcon,
 } from "@heroicons/react/24/outline"
 import { NoteCard } from "@/components/notes/NoteCard"
@@ -24,6 +21,7 @@ import type { SerializedPostSummary } from "@/lib/db/posts"
 import { groupNotesByThread, mergeNotesById } from "@/lib/note-thread"
 import { formatSiteDate } from "@/lib/datetime"
 import { TimelineUtilityRail } from "@/components/timeline/TimelineUtilityRail"
+import { TimelinePersonalRail } from "@/components/timeline/TimelinePersonalRail"
 import type { TimelineUtilityRailData } from "@/lib/public-content-cache"
 
 type Props = {
@@ -502,13 +500,7 @@ type ModeOption = {
   count: number
 }
 
-const modeIcons = {
-  all: Squares2X2Icon,
-  posts: DocumentTextIcon,
-  notes: ChatBubbleBottomCenterTextIcon,
-} satisfies Record<FeedMode, typeof Squares2X2Icon>
-
-function TimelineModeDock({
+function TimelineModeNav({
   options,
   activeMode,
   searchQuery,
@@ -521,13 +513,11 @@ function TimelineModeDock({
 }) {
   return (
     <nav
-      data-timeline-mode-dock
-      className="home-timeline-mode-dock fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-1/2 z-50 flex -translate-x-1/2 flex-row items-center gap-0.5 rounded-full border border-neutral-200 bg-white p-0.5 shadow-[0_3px_8px_rgb(0_0_0_/_0.12)] dark:border-white/10 dark:bg-[#0b0b0b] dark:shadow-[0_3px_8px_rgb(0_0_0_/_0.35)] md:bottom-auto md:left-[calc(50%-18rem)] md:top-1/2 md:-ml-4 md:-translate-x-full md:-translate-y-1/2 md:flex-col min-[84rem]:left-[calc(32.5vw-11.9625rem)]"
+      className="flex h-8 shrink-0 items-stretch gap-2"
       aria-label="Filtros da timeline"
     >
       {options.map((option) => {
         const active = activeMode === option.mode
-        const Icon = modeIcons[option.mode]
 
         return (
           <a
@@ -541,26 +531,13 @@ function TimelineModeDock({
             aria-current={active ? "page" : undefined}
             aria-label={`${option.label}, ${option.count}`}
             className={[
-              "group relative grid size-10 place-items-center rounded-full transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 motion-reduce:transition-none dark:focus-visible:ring-neutral-300 md:size-8",
+              "relative flex min-h-8 items-center px-0.5 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 motion-reduce:transition-none dark:focus-visible:ring-neutral-300",
               active
-                ? "bg-neutral-950/[0.07] text-neutral-950 dark:bg-white/[0.10] dark:text-white"
-                : "text-neutral-500 hover:bg-neutral-950/[0.05] hover:text-neutral-950 dark:text-neutral-500 dark:hover:bg-white/[0.07] dark:hover:text-neutral-100",
+                ? "text-neutral-950 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-[#E00070] dark:text-white"
+                : "text-neutral-500 hover:text-neutral-950 dark:text-neutral-500 dark:hover:text-neutral-100",
             ].join(" ")}
           >
-            <Icon className="size-[17px] md:size-4" strokeWidth={active ? 1.9 : 1.6} aria-hidden />
-            {active && (
-              <span
-                aria-hidden
-                className="absolute right-0.5 top-0.5 size-1.5 rounded-full bg-[#E00070] ring-2 ring-white dark:ring-[#0b0b0b] md:right-0 md:top-0"
-              />
-            )}
-            <span
-              role="tooltip"
-              className="pointer-events-none absolute left-full top-1/2 ml-2 hidden -translate-y-1/2 translate-x-1 whitespace-nowrap rounded-md border border-white/10 bg-neutral-950 px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-[0_3px_8px_rgb(0_0_0_/_0.22)] transition-[opacity,transform] duration-150 group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100 motion-reduce:transition-none md:block"
-            >
-              {option.label}
-              <span className="ml-1.5 tabular-nums text-neutral-400">{option.count}</span>
-            </span>
+            {option.label}
           </a>
         )
       })}
@@ -1228,19 +1205,19 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
 
   const modeOptions = [
     { mode: "all" as const, label: "Tudo", count: timelineCount },
-    { mode: "posts" as const, label: "Posts", count: postCount },
+    { mode: "posts" as const, label: "Artigos", count: postCount },
     { mode: "notes" as const, label: "Notas", count: noteCount },
   ]
   const searchPlaceholder = optimisticFeedMode === "posts"
-    ? "Pesquisar posts..."
+    ? "Pesquisar artigos..."
     : optimisticFeedMode === "notes"
       ? "Pesquisar notas..."
       : "Pesquisar..."
   const searchLabel = optimisticFeedMode === "posts"
-    ? "Pesquisar posts"
+    ? "Pesquisar artigos"
     : optimisticFeedMode === "notes"
       ? "Pesquisar notas"
-      : "Pesquisar posts e notas"
+      : "Pesquisar artigos e notas"
   const hasDesktopThreads = desktopThreadItems.length > 0
   const hasDesktopStandaloneItems = desktopVisibleItems.length > 0
 
@@ -1316,25 +1293,19 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
       onPointerCancelCapture={swipeNavigation.handlePointerCancel}
       onClickCapture={swipeNavigation.handleClickCapture}
     >
-      <TimelineModeDock
-        options={modeOptions}
-        activeMode={optimisticFeedMode}
-        searchQuery={normalizeSearchQuery(searchInput)}
-        onModeChange={switchMode}
-      />
-
       <div className={[
         "relative flex min-w-0 flex-col gap-5",
         hasDesktopThreads
           ? "home-timeline-dual-grid min-[84rem]:left-[calc(-17.5vw+6.0375rem)] min-[84rem]:grid min-[84rem]:grid-cols-[34.5rem_minmax(0,1fr)] min-[84rem]:items-start min-[84rem]:gap-8 min-[96rem]:gap-12"
           : "",
       ].join(" ")}>
+        <TimelinePersonalRail isAdmin={isAdmin} />
         <div className="home-timeline-primary-column flex min-w-0 flex-col gap-5">
           <div className="home-timeline-dual-search-row relative z-10 flex flex-col gap-3">
-            <div className="flex min-w-0 flex-col items-start gap-3">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
               <form
                 action="/"
-                className="home-timeline-dual-search w-[min(100%,14rem)] min-w-0 sm:w-56"
+                className="home-timeline-dual-search min-w-36 flex-1 sm:max-w-56"
                 onSubmit={(event) => {
                   event.preventDefault()
                   if (searchDebounceRef.current) {
@@ -1392,6 +1363,12 @@ export function HomeTimeline({ posts, totalPosts, totalNotes, initialNotes, desk
                   )}
                 </div>
               </form>
+              <TimelineModeNav
+                options={modeOptions}
+                activeMode={optimisticFeedMode}
+                searchQuery={normalizeSearchQuery(searchInput)}
+                onModeChange={switchMode}
+              />
             </div>
           </div>
 

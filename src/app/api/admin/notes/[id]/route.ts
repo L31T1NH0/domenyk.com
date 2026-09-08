@@ -6,6 +6,7 @@ import { deleteCommentsForParent, getCommentsForParent } from "@/lib/db/comments
 import { deleteCommentImagesFromContents, queueCommentImagesForCleanup } from "@/lib/db/comment-uploads"
 import { notifyIndexNow } from "@/lib/indexnow"
 import { invalidatePublicContentCache } from "@/lib/public-content-cache"
+import { MAX_RICH_CONTENT_LENGTH } from "@/lib/content-format"
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const unauthorized = await adminOnly()
@@ -18,7 +19,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const title = body && "title" in body ? asString(body.title, 120)?.trim() || null : undefined
   const seoTitle = body && "seoTitle" in body ? asString(body.seoTitle, 120)?.trim() || null : undefined
   const seoDescription = body && "seoDescription" in body ? asString(body.seoDescription, 300)?.trim() || null : undefined
-  const content = asString(body?.content, 20_000) ?? ""
+  const content = asString(body?.content, MAX_RICH_CONTENT_LENGTH) ?? ""
   const normalizedContent = normalizeNoteContent(content)
 
   if (!normalizedContent) {

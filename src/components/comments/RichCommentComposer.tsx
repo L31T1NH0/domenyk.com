@@ -84,6 +84,7 @@ export function RichCommentComposer({
       }}
     >
       <LexicalEditor
+        outputFormat="markdown"
         key={editorKey}
         namespace={`CommentEditor-${editorKey}-${size}`}
         initialMarkdown=""

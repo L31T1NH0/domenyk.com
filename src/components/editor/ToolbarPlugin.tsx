@@ -2,45 +2,32 @@
 
 import { useState } from "react"
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext"
-import { FORMAT_TEXT_COMMAND, $getSelection, $isRangeSelection } from "lexical"
+import { FORMAT_TEXT_COMMAND, $getRoot, $getSelection, $isRangeSelection, type LexicalNode } from "lexical"
 import { $setBlocksType } from "@lexical/selection"
 import { $createHeadingNode, $createQuoteNode } from "@lexical/rich-text"
+import { $isMarkNode, $unwrapMarkNode, $wrapSelectionInMarkNode } from "@lexical/mark"
 import { EllipsisHorizontalIcon } from "@heroicons/react/24/outline"
 import { ImagePlugin } from "./ImagePlugin"
+import { EditorialControls } from "./EditorialControls"
+import { PublicationCssControls } from "./PublicationCssControls"
+import { applyHtmlSourceToVisualEditor, beginHtmlSourceMode } from "./html-content"
 
-type ToolbarButtonProps = {
-  onClick: () => void
-  title: string
-  variant?: "default" | "compact" | "comment"
-  expanded?: boolean
-  children: React.ReactNode
-}
+import { ToolbarButton } from "./ToolbarButton"
+import { cssHookSlug } from "@/lib/inline-css-hooks"
 
-function ToolbarButton({ onClick, title, variant = "default", expanded, children }: ToolbarButtonProps) {
-  const compact = variant === "compact"
-  const comment = variant === "comment"
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={title}
-      aria-label={title}
-      aria-expanded={expanded}
-      className={
-        compact
-          ? "grid size-8 place-items-center rounded-full text-xs font-semibold text-[#A8A095] transition-colors hover:bg-white/10 hover:text-[#f1f1f1] disabled:opacity-40"
-          : comment
-            ? "grid size-11 place-items-center rounded-md text-xs font-semibold text-neutral-500 transition-colors hover:bg-neutral-950/[0.06] hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400/60 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-neutral-100 sm:size-8"
-          : "px-2 py-1 text-xs rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 transition-colors"
-      }
-    >
-      {children}
-    </button>
-  )
+function markAncestor(node: LexicalNode) {
+  let current: LexicalNode | null = node
+  while (current) {
+    if ($isMarkNode(current)) return current
+    current = current.getParent()
+  }
+  return null
 }
 
 type Props = {
+  allowDocumentCss?: boolean
+  htmlSourceMode?: boolean
+  onHtmlSourceModeChange?: (active: boolean) => void
   variant?: "default" | "compact" | "comment"
   placement?: "top" | "bottom"
   imageUploadEndpoint?: string
@@ -51,6 +38,9 @@ type Props = {
 }
 
 export function ToolbarPlugin({
+  allowDocumentCss = false,
+  htmlSourceMode = false,
+  onHtmlSourceModeChange,
   variant = "default",
   placement = "top",
   imageUploadEndpoint,
@@ -84,16 +74,52 @@ export function ToolbarPlugin({
     if (comment) setShowAdvanced(false)
   }
 
+  function markCssHook() {
+    editor.update(() => {
+      const selection = $getSelection()
+      if (!$isRangeSelection(selection)) return
+      const anchorMark = markAncestor(selection.anchor.getNode())
+      const focusMark = markAncestor(selection.focus.getNode())
+      if (anchorMark && focusMark?.is(anchorMark)) {
+        $unwrapMarkNode(anchorMark)
+        return
+      }
+      if (selection.isCollapsed()) return
+
+      const used = new Set<string>()
+      for (const text of $getRoot().getAllTextNodes()) {
+        markAncestor(text)?.getIDs().forEach(id => used.add(id))
+      }
+      const base = cssHookSlug(selection.getTextContent())
+      let id = base
+      let suffix = 2
+      while (used.has(id)) id = `${base}-${suffix++}`
+      $wrapSelectionInMarkNode(selection, selection.isBackward(), id)
+    })
+  }
+
+  function toggleHtmlSource() {
+    if (htmlSourceMode) {
+      applyHtmlSourceToVisualEditor(editor)
+      onHtmlSourceModeChange?.(false)
+      return
+    }
+    beginHtmlSourceMode(editor)
+    onHtmlSourceModeChange?.(true)
+  }
+
   return (
     <div
       className={
         compact
-          ? "flex items-center gap-0.5 border-t border-white/10 px-1.5 py-1.5"
+          ? "flex flex-wrap items-center gap-0.5 border-t border-white/10 px-1.5 py-1.5"
           : comment
             ? "relative flex min-h-13 flex-wrap items-center gap-0.5 border-t border-neutral-950/[0.08] px-1.5 py-1 dark:border-white/10 sm:min-h-11"
           : "flex items-center gap-1 px-3 py-2 border-b border-neutral-200 dark:border-neutral-800 flex-wrap"
       }
     >
+      {allowDocumentCss && <ToolbarButton variant={variant} title={htmlSourceMode ? "Voltar ao editor visual" : "Editar o código HTML"} expanded={htmlSourceMode} onClick={toggleHtmlSource}><span className="text-[9px] font-bold tracking-tight">HTML</span></ToolbarButton>}
+      {!htmlSourceMode && <>
       <ToolbarButton variant={variant} onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold")} title="Negrito">
         <b>B</b>
       </ToolbarButton>
@@ -133,6 +159,7 @@ export function ToolbarPlugin({
           <ToolbarButton variant={variant} onClick={formatQuote} title="Citação">&quot;</ToolbarButton>
         </>
       )}
+      <EditorialControls variant={variant} />
       {allowImages && (
         <ImagePlugin
           compact={compact}
@@ -142,8 +169,11 @@ export function ToolbarPlugin({
           allowAssetLibrary={allowImageAssetLibrary}
         />
       )}
+      {allowDocumentCss && <ToolbarButton variant={variant} title="Criar ou remover seletor CSS no trecho selecionado" onClick={markCssHook}><span className="text-xs font-semibold">::</span></ToolbarButton>}
+      </>}
+      {allowDocumentCss && <PublicationCssControls variant={variant} />}
       {trailingContent && (
-        <div className={allowImages ? "shrink-0" : "ml-auto shrink-0"}>{trailingContent}</div>
+        <div className="ml-auto shrink-0">{trailingContent}</div>
       )}
     </div>
   )

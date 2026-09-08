@@ -19,7 +19,7 @@ import { ChatBubbleLeftEllipsisIcon, LinkIcon, PencilIcon, XMarkIcon } from "@he
 import { formatDistance, formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import type { LexicalEditor as LexicalEditorInstance } from "lexical"
-import { LexicalEditor, readMarkdownFromEditor } from "@/components/editor/LexicalEditor"
+import { assertPublicationCssIsValid, LexicalEditor, readHtmlFromEditor } from "@/components/editor/LexicalEditor"
 import { CommentContent } from "@/components/comments/CommentContent"
 import { RichCommentComposer } from "@/components/comments/RichCommentComposer"
 import { useComments, type Comment } from "@/components/comments/useComments"
@@ -383,15 +383,16 @@ export function NoteCard({ note, showMetadata = false, viewContext, isAdmin, onD
   }
 
   async function saveEdit() {
-    const currentContent = editEditorRef.current
-      ? readMarkdownFromEditor(editEditorRef.current)
-      : editContent.trim()
-
-    if (!currentContent || savingEdit) return
-    setSavingEdit(true)
+    if (savingEdit) return
     setEditError("")
 
     try {
+      if (editEditorRef.current) assertPublicationCssIsValid(editEditorRef.current)
+      const currentContent = editEditorRef.current
+        ? readHtmlFromEditor(editEditorRef.current)
+        : editContent.trim()
+      if (!currentContent) return
+      setSavingEdit(true)
       const response = await fetch(`/api/admin/notes/${note._id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },

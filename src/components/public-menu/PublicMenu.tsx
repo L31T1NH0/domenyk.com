@@ -22,6 +22,7 @@ import {
   MinusIcon,
   PencilSquareIcon,
   PlusIcon,
+  Squares2X2Icon,
   SunIcon,
   UserCircleIcon,
 } from "@heroicons/react/24/outline"
@@ -37,10 +38,19 @@ import {
   type ReadingPreferenceKey,
 } from "@/lib/reading-preferences"
 import { useReadingPreferences } from "@/components/post/ReadingPreferencesContext"
+import {
+  useNoisePreference,
+  type NoisePreference,
+} from "@/components/noise/NoisePreferenceContext"
 import { usePublicMenu } from "./PublicMenuContext"
 
 const ITEM_CLASS_NAME = "group flex min-h-9 w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-[13px] text-zinc-700 outline-none transition-colors hover:bg-zinc-100 focus-visible:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-white/[0.07] dark:focus-visible:bg-white/[0.07]"
 const READING_STEPPER_BUTTON_CLASS_NAME = "grid size-9 shrink-0 place-items-center text-zinc-600 outline-none transition-colors hover:bg-zinc-100 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zinc-500 disabled:cursor-not-allowed disabled:text-zinc-300 disabled:hover:bg-transparent dark:text-zinc-300 dark:hover:bg-white/[0.07] dark:focus-visible:ring-zinc-300 dark:disabled:text-zinc-600"
+const NOISE_OPTIONS: ReadonlyArray<{ value: NoisePreference; label: string }> = [
+  { value: "animated", label: "Animado" },
+  { value: "static", label: "Estático" },
+  { value: "off", label: "Desligado" },
+]
 
 type ReadingStepperProps = {
   label: string
@@ -147,13 +157,17 @@ export function PublicMenu() {
     resetPreference,
     resetPreferences,
   } = useReadingPreferences()
+  const {
+    preference: noisePreference,
+    setPreference: setNoisePreference,
+  } = useNoisePreference()
   const { currentLocale, options } = usePublicMenu()
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const [verifiedAdminUserId, setVerifiedAdminUserId] = useState<string | null>(null)
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [unreadNotifications, setUnreadNotifications] = useState(0)
-  const [view, setView] = useState<"main" | "account" | "language" | "notifications" | "reading">("main")
+  const [view, setView] = useState<"main" | "account" | "language" | "noise" | "notifications" | "reading">("main")
   const menuId = useId()
   const rootRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -164,6 +178,8 @@ export function PublicMenu() {
   const notificationsTriggerRef = useRef<HTMLButtonElement>(null)
   const readingBackRef = useRef<HTMLButtonElement>(null)
   const readingTriggerRef = useRef<HTMLButtonElement>(null)
+  const noiseBackRef = useRef<HTMLButtonElement>(null)
+  const noiseTriggerRef = useRef<HTMLButtonElement>(null)
   const focusFirstOnOpenRef = useRef(false)
   useEffect(() => {
     if (!isLoaded || !isSignedIn || !user?.id) return
@@ -276,6 +292,16 @@ export function PublicMenu() {
     requestAnimationFrame(() => readingTriggerRef.current?.focus())
   }
 
+  function openNoiseView() {
+    setView("noise")
+    requestAnimationFrame(() => noiseBackRef.current?.focus())
+  }
+
+  function closeNoiseView() {
+    setView("main")
+    requestAnimationFrame(() => noiseTriggerRef.current?.focus())
+  }
+
   useEffect(() => {
     if (!open) return
     if (focusFirstOnOpenRef.current) {
@@ -297,6 +323,8 @@ export function PublicMenu() {
         closeNotificationsView()
       } else if (view === "reading") {
         closeReadingView()
+      } else if (view === "noise") {
+        closeNoiseView()
       } else {
         closeMenu({ restoreFocus: true })
       }
@@ -358,6 +386,7 @@ export function PublicMenu() {
     : options
   const readingMetrics = effectiveReadingMetrics(readingPreferences, readingBaseMetrics)
   const hasCustomReading = hasCustomReadingPreferences(readingPreferences)
+  const currentNoiseLabel = NOISE_OPTIONS.find(({ value }) => value === noisePreference)?.label
   const readingValues: Record<ReadingPreferenceKey, string> = {
     fontSize: readingPreferences.fontSize === null
       ? "Automática"
@@ -404,7 +433,7 @@ export function PublicMenu() {
         <div
           id={menuId}
           role={view === "notifications" || view === "reading" ? "dialog" : "menu"}
-          aria-label={view === "account" ? "Menu da conta" : view === "language" ? "Menu de idiomas" : view === "notifications" ? "Configurar notificações" : view === "reading" ? "Configurar leitura" : "Menu do site"}
+          aria-label={view === "account" ? "Menu da conta" : view === "language" ? "Menu de idiomas" : view === "noise" ? "Configurar ruído" : view === "notifications" ? "Configurar notificações" : view === "reading" ? "Configurar leitura" : "Menu do site"}
           onKeyDown={handleMenuKeyDown}
           className={[
             view === "notifications" || view === "reading"
@@ -489,6 +518,41 @@ export function PublicMenu() {
                 Restaurar tudo
               </button>
             </div>
+          ) : view === "noise" ? (
+            <>
+              <button
+                ref={noiseBackRef}
+                type="button"
+                role="menuitem"
+                onClick={closeNoiseView}
+                className={ITEM_CLASS_NAME}
+              >
+                <ArrowLeftIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
+                <span className="font-medium">Ruído</span>
+              </button>
+
+              <div className="mt-1 border-t border-zinc-200 pt-1.5 dark:border-white/10">
+                {NOISE_OPTIONS.map(({ value, label }) => {
+                  const selected = noisePreference === value
+
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={selected}
+                      onClick={() => setNoisePreference(value)}
+                      className={ITEM_CLASS_NAME}
+                    >
+                      {selected
+                        ? <CheckIcon className="size-3.5 shrink-0 text-zinc-700 dark:text-zinc-200" aria-hidden />
+                        : <span className="size-3.5 shrink-0" aria-hidden />}
+                      <span className="flex-1">{label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </>
           ) : view === "language" ? (
             <>
               <button
@@ -663,6 +727,20 @@ export function PublicMenu() {
                     <span className="flex-1">Tema</span>
                     <span className="text-[11px] text-zinc-500 dark:text-zinc-400">{darkMode ? "Escuro" : "Claro"}</span>
                   </button>
+                  <button
+                    ref={noiseTriggerRef}
+                    type="button"
+                    role="menuitem"
+                    onClick={openNoiseView}
+                    className={ITEM_CLASS_NAME}
+                  >
+                    <Squares2X2Icon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
+                    <span className="flex-1">Ruído</span>
+                    <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                      {currentNoiseLabel}
+                    </span>
+                    <ChevronRightIcon className="size-3.5 text-zinc-400" aria-hidden />
+                  </button>
                 </div>
                 <div className="mt-1 border-t border-zinc-200 pt-1.5 dark:border-white/10">
                   <Link href="/fale-comigo" role="menuitem" onClick={() => closeMenu()} className={ITEM_CLASS_NAME}>
@@ -698,6 +776,10 @@ export function PublicMenu() {
                   )}
                 </div>
                 <div className="mt-1 border-t border-zinc-200 pt-1.5 dark:border-white/10">
+                  <Link href="/mural" role="menuitem" onClick={() => closeMenu()} className={ITEM_CLASS_NAME}>
+                    <PencilSquareIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
+                    Mural
+                  </Link>
                   <Link href="/sobre" role="menuitem" onClick={() => closeMenu()} className={ITEM_CLASS_NAME}>
                     <InformationCircleIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
                     Sobre

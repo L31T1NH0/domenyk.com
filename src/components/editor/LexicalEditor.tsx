@@ -16,6 +16,7 @@ import { $createHeadingNode, $createQuoteNode } from "@lexical/rich-text"
 import { ListNode, ListItemNode } from "@lexical/list"
 import { CodeNode, CodeHighlightNode } from "@lexical/code"
 import { LinkNode } from "@lexical/link"
+import { MarkNode } from "@lexical/mark"
 import { $convertFromMarkdownString, $convertToMarkdownString } from "@lexical/markdown"
 import {
   $getSelection,
@@ -34,14 +35,20 @@ import {
   type TextFormatType,
 } from "lexical"
 import { ToolbarPlugin } from "./ToolbarPlugin"
-import { FLOW_IMAGE_TRANSFORMER, IMAGE_TRANSFORMER, ImageNode } from "./ImageNode"
+import { createEditorialTextTransformer } from "./editorial-transformer"
+import { editorialHtmlConfig, importHtmlIntoEditor, readHtmlFromEditor } from "./html-content"
+import { HtmlSourceEditor } from "./HtmlSourceEditor"
+import { isHtmlContent } from "@/lib/content-format"
+export { assertPublicationCssIsValid, readHtmlFromEditor } from "./html-content"
+import { FLOW_IMAGE_TRANSFORMER, IMAGE_TRANSFORMER, POSITIONED_IMAGE_TRANSFORMER, ImageNode } from "./ImageNode"
 import {
   prepareLatexForLexicalImport,
   restoreLatexAfterLexicalExport,
 } from "./latex-markdown"
 
-const MARKDOWN_TRANSFORMERS = [FLOW_IMAGE_TRANSFORMER, IMAGE_TRANSFORMER, ...TRANSFORMERS]
-const EDITOR_NODES = [HeadingNode, QuoteNode, ListNode, ListItemNode, CodeNode, CodeHighlightNode, LinkNode, ImageNode]
+const BASE_TRANSFORMERS = [POSITIONED_IMAGE_TRANSFORMER, FLOW_IMAGE_TRANSFORMER, IMAGE_TRANSFORMER, ...TRANSFORMERS]
+const MARKDOWN_TRANSFORMERS = [createEditorialTextTransformer(BASE_TRANSFORMERS), ...BASE_TRANSFORMERS]
+const EDITOR_NODES = [HeadingNode, QuoteNode, ListNode, ListItemNode, CodeNode, CodeHighlightNode, LinkNode, MarkNode, ImageNode]
 const MARKDOWN_PASTE_PATTERN =
   /(^|\n)\s{0,3}(#{1,6}\s|[-*+]\s|\d+\.\s|>\s|```|\|.+\|)|!\[[^\]]*]\([^)]+\)|\[[^\]]+]\([^)]+\)|(\*\*|__)[\s\S]+?\3|(^|[^`])`[^`\n]+`/m
 
@@ -83,11 +90,13 @@ const theme = {
     listitem: "my-0.5",
   },
   link: "underline text-blue-600 dark:text-blue-400",
+  mark: "css-hook-editor",
 }
 
 type Props = {
+  outputFormat?: "html" | "markdown"
   initialMarkdown?: string
-  onChange: (markdown: string) => void
+  onChange: (content: string) => void
   namespace?: string
   placeholder?: string
   editorClassName?: string
@@ -341,6 +350,7 @@ function FloatingSelectionToolbarPlugin() {
 }
 
 export function LexicalEditor({
+  outputFormat = "html",
   initialMarkdown,
   onChange,
   namespace = "PostEditor",
@@ -359,6 +369,7 @@ export function LexicalEditor({
   editorRef,
 }: Props) {
   const changeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [htmlSourceMode, setHtmlSourceMode] = useState(() => Boolean(initialMarkdown && isHtmlContent(initialMarkdown)))
 
   useEffect(() => {
     return () => {
@@ -370,9 +381,12 @@ export function LexicalEditor({
     namespace,
     theme,
     nodes: EDITOR_NODES,
+    html: editorialHtmlConfig,
     onError: (error: Error) => console.error(error),
     editorState: initialMarkdown
-      ? () => $convertFromMarkdownString(
+      ? (editor: LexicalEditorInstance) => isHtmlContent(initialMarkdown)
+        ? importHtmlIntoEditor(editor, initialMarkdown)
+        : $convertFromMarkdownString(
           prepareLatexForLexicalImport(initialMarkdown),
           MARKDOWN_TRANSFORMERS
         )
@@ -380,10 +394,14 @@ export function LexicalEditor({
   }), [initialMarkdown, namespace])
 
   const handleChange = useCallback(
-    (state: EditorState) => {
+    (state: EditorState, editor: LexicalEditorInstance) => {
       if (changeTimerRef.current) clearTimeout(changeTimerRef.current)
 
       const emitChange = () => {
+        if (outputFormat === "html") {
+          onChange(readHtmlFromEditor(editor))
+          return
+        }
         state.read(() => {
           onChange(restoreLatexAfterLexicalExport(
             $convertToMarkdownString(MARKDOWN_TRANSFORMERS)
@@ -401,7 +419,7 @@ export function LexicalEditor({
 
       emitChange()
     },
-    [onChange, onChangeDelayMs]
+    [onChange, onChangeDelayMs, outputFormat]
   )
 
   return (
@@ -409,6 +427,9 @@ export function LexicalEditor({
       <EditorRefPlugin editorRef={editorRef} />
       {toolbarPlacement === "top" && (
         <ToolbarPlugin
+          allowDocumentCss={outputFormat === "html"}
+          htmlSourceMode={htmlSourceMode}
+          onHtmlSourceModeChange={setHtmlSourceMode}
           variant={toolbarVariant}
           placement="top"
           imageUploadEndpoint={imageUploadEndpoint}
@@ -419,17 +440,19 @@ export function LexicalEditor({
         />
       )}
       <div className={`relative ${shellClassName}`}>
-        <RichTextPlugin
-          contentEditable={
-            <ContentEditable className={`outline-none text-sm leading-relaxed focus:outline-none ${editorClassName}`} />
-          }
-          placeholder={
-            <div className={`pointer-events-none absolute select-none text-neutral-500 dark:text-neutral-400 ${placeholderClassName}`}>
-              {placeholder}
-            </div>
-          }
-          ErrorBoundary={({ children }) => <>{children}</>}
-        />
+        {htmlSourceMode
+          ? <HtmlSourceEditor className={editorClassName} />
+          : <RichTextPlugin
+              contentEditable={
+                <ContentEditable className={`outline-none text-sm leading-relaxed focus:outline-none ${editorClassName}`} />
+              }
+              placeholder={
+                <div className={`pointer-events-none absolute select-none text-neutral-500 dark:text-neutral-400 ${placeholderClassName}`}>
+                  {placeholder}
+                </div>
+              }
+              ErrorBoundary={({ children }) => <>{children}</>}
+            />}
         <HistoryPlugin />
         <MarkdownShortcutPlugin transformers={MARKDOWN_TRANSFORMERS} />
         <MarkdownPastePlugin />
@@ -438,6 +461,9 @@ export function LexicalEditor({
       </div>
       {toolbarPlacement === "bottom" && (
         <ToolbarPlugin
+          allowDocumentCss={outputFormat === "html"}
+          htmlSourceMode={htmlSourceMode}
+          onHtmlSourceModeChange={setHtmlSourceMode}
           variant={toolbarVariant}
           placement="bottom"
           imageUploadEndpoint={imageUploadEndpoint}
