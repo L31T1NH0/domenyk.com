@@ -1,5 +1,7 @@
 import "server-only"
 
+import { imageDefaults, imageNumber, safeImageStyle } from "./content-images.js"
+
 import { unified } from "unified"
 import remarkParse from "remark-parse"
 import remarkGfm from "remark-gfm"
@@ -20,6 +22,7 @@ import { isHtmlContent, looksLikePublicationHtml, safeEditorialStyle } from "./c
 import { editorialTextStyle, normalizeEditorialText } from "./editorial-text.js"
 import { compilePublicationCss, extractPublicationCss } from "./publication-css.js"
 import { splitInlineCssHooks } from "./inline-css-hooks.js"
+import rehypeHtmlMath from "./rehype-html-math.js"
 
 type MarkdownImagePolicy =
   | { mode: "none" }
@@ -86,9 +89,12 @@ const markdownSanitizeSchema: SanitizeSchema = {
     ],
     figure: [
       ["dataEditorImage", "left", "center", "right"],
-      ["dataEditorWidth", ...Array.from({ length: 17 }, (_, i) => String(20 + i * 5))],
+      "dataEditorWidth",
       ["dataFlowImage", "left", "right"],
-      ["dataFlowWidth", "32", "42", "52"],
+      "dataFlowWidth",
+      "dataImageWidth",
+      ["dataImageUnit", "%", "px"],
+      "dataImageGap",
       ["dataImageTheme", "adaptive"],
     ],
     p: [
@@ -102,15 +108,17 @@ const markdownSanitizeSchema: SanitizeSchema = {
       ["dataCssHook", /^[a-z0-9](?:[a-z0-9-]{0,47})$/],
     ],
     code: [
-      ...(defaultSchema.attributes?.code ?? []),
+      // The sanitizer uses the first matching attribute rule. Replace the
+      // default language-only rule so HTML formulas keep their math classes.
+      ...(defaultSchema.attributes?.code ?? []).filter(attribute => (
+        Array.isArray(attribute) ? attribute[0] !== "className" : attribute !== "className"
+      )),
       ["className", /^language-./, "math-inline", "math-display"],
     ],
   },
 }
 
 const FLOW_IMAGE_SIDES = new Set(["left", "right"])
-const FLOW_IMAGE_WIDTHS = new Set(["32", "42", "52"])
-
 function stringProperty(value: unknown): string | null {
   if (typeof value === "string" || typeof value === "number") return String(value)
   if (Array.isArray(value) && value.length > 0) return String(value[0])
@@ -126,88 +134,28 @@ function directImageChild(node: Element): Element | null {
 
 function rehypeNormalizeFlowImages() {
   return (tree: Root) => {
-    let acceptedFlowImage = false
-    let acceptedFlowFigure: Element | null = null
-
     visit(tree, "element", (node: Element) => {
       if (node.tagName !== "figure") return
-
-      const side = stringProperty(node.properties?.dataFlowImage)
-      if (["left", "center", "right"].includes(String(node.properties?.dataEditorImage))) return
-      const width = stringProperty(node.properties?.dataFlowWidth)
-      const theme = stringProperty(node.properties?.dataImageTheme)
-      const image = directImageChild(node)
-      const valid = Boolean(
-        side &&
-        width &&
-        FLOW_IMAGE_SIDES.has(side) &&
-        FLOW_IMAGE_WIDTHS.has(width) &&
-        image &&
-        !acceptedFlowImage
-      )
-
-      node.properties = node.properties ?? {}
-      if (!valid) {
+      const side = stringProperty(node.properties.dataFlowImage)
+      if (side && (!FLOW_IMAGE_SIDES.has(side) || !directImageChild(node))) {
         delete node.properties.dataFlowImage
         delete node.properties.dataFlowWidth
-        delete node.properties.dataImageTheme
-        return
       }
-
-      acceptedFlowImage = true
-      acceptedFlowFigure = node
-      node.properties.dataFlowImage = side
-      node.properties.dataFlowWidth = width
-      if (theme === "adaptive") node.properties.dataImageTheme = "adaptive"
-      else delete node.properties.dataImageTheme
     })
-
-    // Earlier editor versions could append a contour figure after the last
-    // paragraph when the image menu stole focus. A terminal float has no text
-    // to affect, so render that legacy shape at the start of the reading flow.
-    if (!acceptedFlowFigure) return
-    const meaningfulChildren = tree.children.filter((child) => (
-      child.type !== "text" || child.value.trim().length > 0
-    ))
-    if (meaningfulChildren.at(-1) !== acceptedFlowFigure) return
-
-    const firstParagraph = tree.children.find((child): child is Element => (
-      child.type === "element" && child.tagName === "p"
-    ))
-    const figureIndex = tree.children.indexOf(acceptedFlowFigure)
-    if (!firstParagraph || figureIndex < 0) return
-
-    tree.children.splice(figureIndex, 1)
-    tree.children.splice(tree.children.indexOf(firstParagraph), 0, acceptedFlowFigure)
   }
-}
-
-function safeCssUrl(value: string): string {
-  return value
-    .replace(/\\/g, "%5C")
-    .replace(/"/g, "%22")
-    .replace(/[\n\r\f]/g, "")
 }
 
 function rehypeFlowImageStyles() {
   return (tree: Root) => {
     visit(tree, "element", (node: Element) => {
       if (node.tagName !== "figure") return
-
-      const side = stringProperty(node.properties?.dataFlowImage)
-      const width = stringProperty(node.properties?.dataFlowWidth)
       const image = directImageChild(node)
-      const source = stringProperty(image?.properties?.src)
-      if (
-        !side ||
-        !width ||
-        !source ||
-        !FLOW_IMAGE_SIDES.has(side) ||
-        !FLOW_IMAGE_WIDTHS.has(width)
-      ) return
-
-      node.properties = node.properties ?? {}
-      node.properties.style = `--flow-image-width:${width}%;--flow-image-shape:url("${safeCssUrl(source)}")`
+      if (!image) return
+      const p = node.properties
+      const flow = FLOW_IMAGE_SIDES.has(String(p.dataFlowImage))
+      const unit = p.dataImageUnit === "px" ? "px" : "%"
+      const width = imageNumber(p.dataImageWidth ?? (flow ? p.dataFlowWidth : p.dataEditorWidth), flow ? 42 : 100, unit === "%" ? 100 : 4000)
+      p.style = `${imageDefaults(String(image.properties.src ?? ""), width, unit, p.dataImageGap)};${p.style ?? ""}`
     })
   }
 }
@@ -567,14 +515,6 @@ function remarkEditorialText() {
 function rehypeEditorialTextStyles() {
   return (tree: Root) => {
     visit(tree, "element", (node: Element) => {
-      if (node.tagName === "figure" && node.properties.dataEditorImage) {
-        const width = Number(node.properties.dataEditorWidth)
-        if (!Number.isFinite(width) || width < 20 || width > 100) return
-        const alignment = String(node.properties.dataEditorImage)
-        const margin = alignment === "left" ? "0 auto 0 0" : alignment === "right" ? "0 0 0 auto" : "0 auto"
-        node.properties.style = `width: ${width}%; max-width: 100%; margin: ${margin}`
-        return
-      }
       if (node.tagName !== "div" || !node.properties.dataEditorAlign) return
       const p = normalizeEditorialText({
         align: String(node.properties.dataEditorAlign), size: String(node.properties.dataEditorSize),
@@ -582,7 +522,7 @@ function rehypeEditorialTextStyles() {
       })
       node.properties.style = `${editorialTextStyle(p)}; text-align: ${p.align}`
       for (const child of node.children) {
-        if (child.type !== "element") continue
+        if (child.type !== "element" || child.tagName === "figure") continue
         child.properties.style = `${editorialTextStyle({ ...p, tone: "none", spacing: "auto" })}; text-align: ${p.align}`
       }
     })
@@ -592,13 +532,15 @@ function rehypeEditorialTextStyles() {
 function rehypeSafeEditorialStyles(html: boolean, restore: boolean) {
   return (tree: Root) => {
     visit(tree, "element", (node: Element) => {
+      const sanitizeStyle = ["figure", "img", "figcaption"].includes(node.tagName) ? safeImageStyle : safeEditorialStyle
+      const allowStyle = html || ["figure", "img", "figcaption"].includes(node.tagName)
       if (restore) {
-        const style = html ? safeEditorialStyle(String(node.properties.dataEditorSafeStyle ?? "")) : ""
+        const style = allowStyle ? sanitizeStyle(String(node.properties.dataEditorSafeStyle ?? "")) : ""
         delete node.properties.dataEditorSafeStyle
         if (style) node.properties.style = style
       } else {
         delete node.properties.dataEditorSafeStyle
-        const style = html ? safeEditorialStyle(String(node.properties.style ?? "")) : ""
+        const style = allowStyle ? sanitizeStyle(String(node.properties.style ?? "")) : ""
         if (style) node.properties.dataEditorSafeStyle = style
       }
     })
@@ -683,6 +625,8 @@ function createProcessor(
     .use(rehypeRestrictImages, options.imagePolicy)
     .use(rehypeImageAltFallback, options.defaultImageAlt)
     .use(rehypeParagraphIds, onParagraphId)
+  // Keep existing HTML paragraph anchors stable when formulas become markup.
+  if (html) processor.use(rehypeHtmlMath)
   if (!html) processor.use(rehypeDemoteBodyH1)
   return processor
     .use(rehypeSlug)

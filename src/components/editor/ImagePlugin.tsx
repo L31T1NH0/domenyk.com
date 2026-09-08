@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext"
-import { $createParagraphNode, $nodesOfType } from "lexical"
+import { $getSelection, $setSelection, HISTORY_PUSH_TAG, type BaseSelection } from "lexical"
 import {
   Bars3BottomLeftIcon,
   Bars3BottomRightIcon,
@@ -14,12 +14,11 @@ import {
 } from "@heroicons/react/24/outline"
 import {
   $createImageNode,
-  ImageNode,
   type ImageFlowWidth,
   type ImageLayout,
   type ImageThemeMode,
 } from "./ImageNode"
-import { $insertEditorBlock, $insertEditorFlowBlock } from "./insert-editor-block"
+import { $insertEditorBlock } from "./insert-editor-block"
 
 type MediaAsset = {
   url: string
@@ -78,7 +77,7 @@ export function ImagePlugin({
   const [layout, setLayout] = useState<ImageLayout>("block")
   const [flowWidth, setFlowWidth] = useState<ImageFlowWidth>(42)
   const [themeMode, setThemeMode] = useState<ImageThemeMode>("original")
-  const [hasFlowImage, setHasFlowImage] = useState(false)
+  const savedSelection = useRef<BaseSelection | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
@@ -86,15 +85,12 @@ export function ImagePlugin({
   const panelId = useId()
   const [menuPosition, setMenuPosition] = useState<MenuPosition | null>(null)
 
-  useEffect(() => {
-    const refresh = () => {
-      editor.getEditorState().read(() => {
-        setHasFlowImage($nodesOfType(ImageNode).some((node) => node.getLayout() !== "block"))
-      })
-    }
-    refresh()
-    return editor.registerUpdateListener(refresh)
-  }, [editor])
+  useEffect(() => editor.registerUpdateListener(({ editorState }) => {
+    if (!open) editorState.read(() => {
+      const selection = $getSelection()
+      if (selection) savedSelection.current = selection.clone()
+    })
+  }), [editor, open])
 
   const closeMenu = useCallback((restoreFocus = false) => {
     setOpen(false)
@@ -203,16 +199,10 @@ export function ImagePlugin({
   }, [closeMenu, open, updateMenuPosition])
 
   function insertImage(url: string) {
-    if (layout !== "block" && hasFlowImage) {
-      setError("Este conteúdo já possui uma figura de contorno. Insira esta imagem no layout normal.")
-      return
-    }
     editor.update(() => {
-      const paragraph = $createParagraphNode()
-      paragraph.append($createImageNode(url, alt.trim(), layout, flowWidth, themeMode))
-      if (layout === "block") $insertEditorBlock(paragraph)
-      else $insertEditorFlowBlock(paragraph)
-    })
+      if (savedSelection.current) $setSelection(savedSelection.current.clone())
+      $insertEditorBlock($createImageNode(url, alt.trim(), layout, flowWidth, themeMode))
+    }, { tag: HISTORY_PUSH_TAG })
     closeMenu()
     setError("")
     setAlt("")
@@ -221,10 +211,6 @@ export function ImagePlugin({
   }
 
   async function uploadAndInsert(file: File) {
-    if (layout !== "block" && hasFlowImage) {
-      setError("Este conteúdo já possui uma figura de contorno. Selecione “Normal” antes do upload.")
-      return
-    }
     setUploading(true)
     setError("")
     try {
@@ -340,13 +326,11 @@ export function ImagePlugin({
               ] as const).map((option) => {
                 const Icon = option.icon
                 const active = layout === option.value
-                const disabled = option.value !== "block" && hasFlowImage
                 return (
                   <button
                     key={option.value}
                     type="button"
                     onClick={() => setLayout(option.value)}
-                    disabled={disabled}
                     aria-pressed={active}
                     className={[
                       "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md px-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500/60 disabled:cursor-not-allowed disabled:opacity-35",

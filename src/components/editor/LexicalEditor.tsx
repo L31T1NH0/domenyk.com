@@ -36,17 +36,18 @@ import {
 } from "lexical"
 import { ToolbarPlugin } from "./ToolbarPlugin"
 import { createEditorialTextTransformer } from "./editorial-transformer"
-import { editorialHtmlConfig, importHtmlIntoEditor, readHtmlFromEditor } from "./html-content"
+import { canEditHtmlVisually, editorialHtmlConfig, importHtmlIntoEditor, readHtmlFromEditor } from "./html-content"
+import { PublicationStylePlugin } from "./PublicationStylePlugin"
 import { HtmlSourceEditor } from "./HtmlSourceEditor"
 import { isHtmlContent } from "@/lib/content-format"
 export { assertPublicationCssIsValid, readHtmlFromEditor } from "./html-content"
-import { FLOW_IMAGE_TRANSFORMER, IMAGE_TRANSFORMER, POSITIONED_IMAGE_TRANSFORMER, ImageNode } from "./ImageNode"
+import { HTML_IMAGE_TRANSFORMER, FLOW_IMAGE_TRANSFORMER, IMAGE_TRANSFORMER, POSITIONED_IMAGE_TRANSFORMER, ImageNode } from "./ImageNode"
 import {
   prepareLatexForLexicalImport,
   restoreLatexAfterLexicalExport,
 } from "./latex-markdown"
 
-const BASE_TRANSFORMERS = [POSITIONED_IMAGE_TRANSFORMER, FLOW_IMAGE_TRANSFORMER, IMAGE_TRANSFORMER, ...TRANSFORMERS]
+const BASE_TRANSFORMERS = [POSITIONED_IMAGE_TRANSFORMER, FLOW_IMAGE_TRANSFORMER, HTML_IMAGE_TRANSFORMER, IMAGE_TRANSFORMER, ...TRANSFORMERS]
 const MARKDOWN_TRANSFORMERS = [createEditorialTextTransformer(BASE_TRANSFORMERS), ...BASE_TRANSFORMERS]
 const EDITOR_NODES = [HeadingNode, QuoteNode, ListNode, ListItemNode, CodeNode, CodeHighlightNode, LinkNode, MarkNode, ImageNode]
 const MARKDOWN_PASTE_PATTERN =
@@ -370,6 +371,13 @@ export function LexicalEditor({
 }: Props) {
   const changeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [htmlSourceMode, setHtmlSourceMode] = useState(() => Boolean(initialMarkdown && isHtmlContent(initialMarkdown)))
+  useEffect(() => {
+    if (!initialMarkdown || !isHtmlContent(initialMarkdown)) return
+    const document = new DOMParser().parseFromString(initialMarkdown, "text/html")
+    const wrapper = document.querySelector<HTMLElement>('[data-editor-document="html"]')
+    document.querySelectorAll("template[data-editor-css]").forEach(node => node.remove())
+    setHtmlSourceMode(wrapper?.dataset.editorSource === "raw" || !canEditHtmlVisually(wrapper?.innerHTML ?? ""))
+  }, [initialMarkdown])
 
   useEffect(() => {
     return () => {
@@ -425,6 +433,7 @@ export function LexicalEditor({
   return (
     <LexicalComposer initialConfig={initialConfig}>
       <EditorRefPlugin editorRef={editorRef} />
+      <PublicationStylePlugin />
       {toolbarPlacement === "top" && (
         <ToolbarPlugin
           allowDocumentCss={outputFormat === "html"}
@@ -444,7 +453,7 @@ export function LexicalEditor({
           ? <HtmlSourceEditor className={editorClassName} />
           : <RichTextPlugin
               contentEditable={
-                <ContentEditable className={`outline-none text-sm leading-relaxed focus:outline-none ${editorClassName}`} />
+                <ContentEditable className={`image-flow-editor outline-none text-sm leading-relaxed focus:outline-none ${editorClassName}`} />
               }
               placeholder={
                 <div className={`pointer-events-none absolute select-none text-neutral-500 dark:text-neutral-400 ${placeholderClassName}`}>

@@ -98,9 +98,14 @@ export function ToolbarPlugin({
     })
   }
 
+  const [sourceError, setSourceError] = useState("")
   function toggleHtmlSource() {
+    setSourceError("")
     if (htmlSourceMode) {
-      applyHtmlSourceToVisualEditor(editor)
+      try { applyHtmlSourceToVisualEditor(editor) } catch (error) {
+        setSourceError(error instanceof Error ? error.message : "Continue no modo código.")
+        return
+      }
       onHtmlSourceModeChange?.(false)
       return
     }
@@ -119,6 +124,7 @@ export function ToolbarPlugin({
       }
     >
       {allowDocumentCss && <ToolbarButton variant={variant} title={htmlSourceMode ? "Voltar ao editor visual" : "Editar o código HTML"} expanded={htmlSourceMode} onClick={toggleHtmlSource}><span className="text-[9px] font-bold tracking-tight">HTML</span></ToolbarButton>}
+      {sourceError && <p role="alert" className="publication-css-error">{sourceError}</p>}
       {!htmlSourceMode && <>
       <ToolbarButton variant={variant} onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold")} title="Negrito">
         <b>B</b>

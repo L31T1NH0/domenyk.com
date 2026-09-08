@@ -5,7 +5,8 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { $getRoot, $getState, $setState, type LexicalEditor } from "lexical"
 import { ToolbarButton } from "./ToolbarButton"
 import { publicationCssState, readHtmlFromEditor } from "./html-content"
-import { compilePublicationCss, MAX_PUBLICATION_CSS, PUBLICATION_BOUNDARY_STYLE } from "@/lib/publication-css"
+import { compilePublicationCss, MAX_PUBLICATION_CSS } from "@/lib/publication-css"
+import { PublicationPreview } from "./PublicationPreview"
 import { splitInlineCssHooks } from "@/lib/inline-css-hooks"
 import { SAFE_PUBLICATION_HTML_TAGS } from "@/lib/content-format"
 
@@ -79,25 +80,6 @@ function cssHookTextNodes(root: HTMLElement) {
   return textNodes
 }
 
-function materializeInlineHooks(root: HTMLElement) {
-  const occurrences = new Map<string, number>()
-  for (const node of cssHookTextNodes(root)) {
-    const parts = splitInlineCssHooks(node.data, occurrences)
-    if (!parts.some(part => part.type === "hook")) continue
-    const fragment = root.ownerDocument.createDocumentFragment()
-    for (const part of parts) {
-      if (part.type === "text") fragment.append(root.ownerDocument.createTextNode(part.value))
-      else {
-        const span = root.ownerDocument.createElement("span")
-        span.dataset.cssHook = part.id
-        span.textContent = part.text
-        fragment.append(span)
-      }
-    }
-    node.replaceWith(fragment)
-  }
-}
-
 export function PublicationCssControls({ variant }: { variant?: "default" | "compact" | "comment" }) {
   const [editor] = useLexicalComposerContext()
   const [open, setOpen] = useState(false)
@@ -146,13 +128,8 @@ export function PublicationCssControls({ variant }: { variant?: "default" | "com
 
   function showPreview() {
     try {
-      const stylesheet = compilePublicationCss(css, "[data-publication-preview]")
-      const doc = new DOMParser().parseFromString(readHtmlFromEditor(editor), "text/html")
-      doc.querySelectorAll("template[data-editor-css]").forEach(node => node.remove())
-      const root = doc.querySelector<HTMLElement>('[data-editor-document="html"]')
-      if (root) materializeInlineHooks(root)
-      const content = root?.innerHTML ?? ""
-      setPreview(`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data:; style-src 'unsafe-inline'"><style>body{margin:16px;font:16px/1.6 system-ui;color:#171717;background:#fff}img{max-width:100%;height:auto}:root{--editorial-tone-neutral:#ececec;--editorial-tone-sand:#f2ebdc;--editorial-tone-rose:#f5e4e9;--editorial-tone-blue:#e3edf5}${stylesheet}</style></head><body><div data-publication-preview style="${PUBLICATION_BOUNDARY_STYLE}">${content}</div></body></html>`)
+      compilePublicationCss(css, "[data-publication-preview]")
+      setPreview(readHtmlFromEditor(editor))
       setError("")
     } catch (error) {
       setError(error instanceof Error ? error.message : "Confira o CSS.")
@@ -198,7 +175,7 @@ export function PublicationCssControls({ variant }: { variant?: "default" | "com
         <span className="ml-auto text-xs text-neutral-500 dark:text-neutral-400">{css.length.toLocaleString("pt-BR")} / 12.000</span>
       </div>
       {error && <p role="alert" className="publication-css-error">{error}</p>}
-      {preview && <iframe title="Prévia do CSS da publicação" sandbox="" srcDoc={preview} className="h-80 w-full border border-neutral-200 dark:border-white/10" />}
+      {preview && <PublicationPreview content={preview} />}
     </div>}
   </>
 }

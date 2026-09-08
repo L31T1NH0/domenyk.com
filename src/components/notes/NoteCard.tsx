@@ -29,7 +29,6 @@ import type { SerializedNote } from "@/lib/db/notes"
 import { noteDisplayTitle } from "@/lib/seo"
 import { NOTE_VIEW_TTL_MS, type NoteViewSource } from "@/lib/note-views"
 import type { NoteTimelinePlacement } from "@/components/notes/NoteTimelineGroup"
-import { usePretextImageFlow } from "@/components/post/usePretextImageFlow"
 
 type Props = {
   note: SerializedNote
@@ -239,7 +238,6 @@ export function NoteCard({ note, showMetadata = false, viewContext, isAdmin, onD
     () => ({ __html: note.contentHtml }),
     [note.contentHtml]
   )
-  usePretextImageFlow(contentRef, `${note._id}:${note.contentHtml}:${editing}`)
 
   useEffect(() => {
     const refreshRelativeTime = () => setRelativeTimeNow(Date.now())
@@ -323,7 +321,7 @@ export function NoteCard({ note, showMetadata = false, viewContext, isAdmin, onD
 
     const images = Array.from(content.querySelectorAll("img"))
     for (const image of images) {
-      if (image.closest("figure[data-flow-image]")) {
+      if (image.closest("figure")) {
         image.dataset.timelineCropped = "false"
         image.parentElement?.removeAttribute("data-timeline-crop-frame")
         continue

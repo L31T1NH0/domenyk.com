@@ -33,7 +33,7 @@ test("keeps an inserted media block separate from the paragraph at the selection
   assert.equal(root.children[2].children.length, 0)
 })
 
-test("places a contour image block before existing text", () => {
+test("places a contour image at the cursor after existing text", () => {
   const editor = createEditor({
     namespace: "editor-flow-block-insertion-test",
     onError: (error) => { throw error },
@@ -51,6 +51,6 @@ test("places a contour image block before existing text", () => {
   const root = editor.getEditorState().toJSON().root
   assert.deepEqual(
     root.children.map((child) => child.children[0]?.text),
-    ["FLOW_IMAGE", "Primeiro parágrafo.", "Último parágrafo."],
+    ["Primeiro parágrafo.", "Último parágrafo.", "FLOW_IMAGE", undefined],
   )
 })

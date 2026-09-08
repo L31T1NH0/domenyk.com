@@ -1,12 +1,20 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext"
-import { readHtmlBodyFromEditor, updateHtmlSource } from "./html-content"
+import { readHtmlBodyFromEditor, readHtmlFromEditor, updateHtmlSource } from "./html-content"
+
+import { PublicationPreview } from "./PublicationPreview"
 
 export function HtmlSourceEditor({ className }: { className?: string }) {
   const [editor] = useLexicalComposerContext()
   const [source, setSource] = useState(() => readHtmlBodyFromEditor(editor))
+
+  const [content, setContent] = useState(() => readHtmlFromEditor(editor))
+  useEffect(() => editor.registerUpdateListener(() => {
+    setSource(readHtmlBodyFromEditor(editor))
+    setContent(readHtmlFromEditor(editor))
+  }), [editor])
 
   return (
     <div className="html-source-workspace">
@@ -27,6 +35,7 @@ export function HtmlSourceEditor({ className }: { className?: string }) {
         autoCapitalize="off"
         autoCorrect="off"
       />
+      <PublicationPreview content={content} />
     </div>
   )
 }

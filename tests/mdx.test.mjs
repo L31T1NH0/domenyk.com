@@ -84,18 +84,18 @@ test("renders a sanitized flow image with server-generated shape styles", () => 
     '<figure data-flow-image="left" data-flow-width="42"><img src="https://images.example/cutout.webp" alt="Pessoa em pé"></figure>'
   )
 
-  assert.match(html, /<figure data-flow-image="left" data-flow-width="42" style="--flow-image-width:42%;--flow-image-shape:url\(&#x22;https:\/\/images\.example\/cutout\.webp&#x22;\)">/)
+  assert.match(html, /<figure data-flow-image="left" data-flow-width="42" style="--image-width:42%;--image-gap:16px;--image-shape:url\(&#x22;https:\/\/images\.example\/cutout\.webp&#x22;\);">/)
   assert.match(html, /<img src="https:\/\/images\.example\/cutout\.webp" alt="Pessoa em pé">/)
 })
 
-test("moves a legacy terminal flow figure before the text it must affect", () => {
+test("keeps a legacy terminal flow figure at its stored position", () => {
   const html = renderMarkdownSync([
     "Primeiro parágrafo.",
     "Segundo parágrafo.",
     '<figure data-flow-image="left" data-flow-width="32"><img src="https://images.example/cutout.webp" alt="Recorte"></figure>',
   ].join("\n\n"))
 
-  assert.ok(html.indexOf("<figure") < html.indexOf("<p"))
+  assert.ok(html.indexOf("<figure") > html.lastIndexOf("<p"))
   assert.equal((html.match(/data-flow-image=/g) ?? []).length, 1)
 })
 
@@ -108,15 +108,15 @@ test("preserves an explicit adaptive theme marker on a flow image", () => {
   assert.match(html, /data-flow-image="right" data-flow-width="32"/)
 })
 
-test("keeps only the first flow figure and degrades later figures to ordinary content", () => {
+test("keeps multiple flow figures and their theme in document order", () => {
   const html = renderMarkdownSync([
     '<figure data-flow-image="left" data-flow-width="42"><img src="https://images.example/one.webp" alt="Primeira"></figure>',
     '<figure data-flow-image="right" data-flow-width="52" data-image-theme="adaptive"><img src="https://images.example/two.webp" alt="Segunda"></figure>',
   ].join("\n\n"))
 
-  assert.equal((html.match(/data-flow-image=/g) ?? []).length, 1)
-  assert.equal((html.match(/data-image-theme=/g) ?? []).length, 0)
-  assert.match(html, /<figure><img src="https:\/\/images\.example\/two\.webp" alt="Segunda"><\/figure>/)
+  assert.equal((html.match(/data-flow-image=/g) ?? []).length, 2)
+  assert.equal((html.match(/data-image-theme=/g) ?? []).length, 1)
+  assert.match(html, /<figure[^>]*><img src="https:\/\/images\.example\/two\.webp" alt="Segunda"><\/figure>/)
 })
 
 test("drops invalid flow metadata and never preserves authored inline styles", () => {
@@ -124,7 +124,7 @@ test("drops invalid flow metadata and never preserves authored inline styles", (
     '<figure data-flow-image="outside" data-flow-width="999" style="position:fixed"><img src="https://images.example/cutout.webp" alt="Recorte"></figure>'
   )
 
-  assert.match(html, /<figure><img src="https:\/\/images\.example\/cutout\.webp" alt="Recorte"><\/figure>/)
+  assert.match(html, /<figure[^>]*><img src="https:\/\/images\.example\/cutout\.webp" alt="Recorte"><\/figure>/)
   assert.doesNotMatch(html, /data-flow|position:fixed|--flow-image/)
 })
 

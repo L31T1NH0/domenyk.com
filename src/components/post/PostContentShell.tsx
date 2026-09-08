@@ -5,7 +5,6 @@ import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, MouseEvent } f
 import { XMarkIcon } from "@heroicons/react/24/solid"
 import { DEFAULT_READING_METRICS, effectiveReadingMetrics } from "@/lib/reading-preferences"
 import { useReadingPreferences } from "./ReadingPreferencesContext"
-import { usePretextImageFlow } from "./usePretextImageFlow"
 
 type Props = {
   html: string
@@ -28,7 +27,6 @@ type ReadingContentStyle = CSSProperties & {
 export function PostContentShell({ html, className }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const contentMarkup = useMemo(() => ({ __html: html }), [html])
-  usePretextImageFlow(ref, html)
   const autoFontSize = DEFAULT_READING_METRICS.autoFontSize
   const { preferences, setMetrics } = useReadingPreferences()
   const baseLineHeight = DEFAULT_READING_METRICS.baseLineHeight

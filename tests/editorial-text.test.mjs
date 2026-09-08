@@ -26,11 +26,11 @@ test("editorial formatting never permits arbitrary styles or unsafe HTML", () =>
 
 test("positioned images retain width, alignment, safe caption and theme", () => {
   const html = renderMarkdownSync('<figure data-editor-image="right" data-editor-width="60" data-image-theme="adaptive"><img src="https://example.com/p.png" alt="Foto"><figcaption>Uma legenda</figcaption></figure>')
-  assert.match(html, /width: 60%/)
+  assert.match(html, /--image-width:60%/)
   assert.match(html, /data-image-theme="adaptive"/)
   assert.match(html, /<figcaption>Uma legenda<\/figcaption>/)
   const invalid = renderMarkdownSync('<figure data-editor-image="right" data-editor-width="999" style="position:fixed"><img src="https://example.com/p.png"></figure>')
-  assert.doesNotMatch(invalid, /999|position:fixed/)
+  assert.doesNotMatch(invalid, /--image-width:999|position:fixed/)
 })
 
 test("HTML documents preserve literal text and sanitized inline formatting", () => {
@@ -45,7 +45,7 @@ test("HTML documents preserve literal text and sanitized inline formatting", () 
 test("HTML paragraphs, images and blank lines retain structure", () => {
   const html = renderMarkdownSync('<div data-editor-document="html"><p>Primeiro</p><p><br></p><figure data-editor-image="right" data-editor-width="60"><img src="https://example.com/a.png" alt="Foto"><figcaption>Legenda</figcaption></figure><p>Segundo</p></div>')
   assert.match(html, /<p[^>]*>Primeiro<\/p><p[^>]*><br><\/p>/)
-  assert.match(html, /width: 60%/)
+  assert.match(html, /--image-width:60%/)
   assert.match(html, /<figcaption>Legenda<\/figcaption>/)
   assert.doesNotMatch(html, /:::editor/)
 })
