@@ -36,7 +36,7 @@ import {
 } from "lexical"
 import { ToolbarPlugin } from "./ToolbarPlugin"
 import { createEditorialTextTransformer } from "./editorial-transformer"
-import { canEditHtmlVisually, editorialHtmlConfig, importHtmlIntoEditor, readHtmlFromEditor } from "./html-content"
+import { editorialHtmlConfig, importHtmlIntoEditor, readHtmlFromEditor } from "./html-content"
 import { PublicationStylePlugin } from "./PublicationStylePlugin"
 import { HtmlSourceEditor } from "./HtmlSourceEditor"
 import { isHtmlContent } from "@/lib/content-format"
@@ -371,13 +371,6 @@ export function LexicalEditor({
 }: Props) {
   const changeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [htmlSourceMode, setHtmlSourceMode] = useState(() => Boolean(initialMarkdown && isHtmlContent(initialMarkdown)))
-  useEffect(() => {
-    if (!initialMarkdown || !isHtmlContent(initialMarkdown)) return
-    const document = new DOMParser().parseFromString(initialMarkdown, "text/html")
-    const wrapper = document.querySelector<HTMLElement>('[data-editor-document="html"]')
-    document.querySelectorAll("template[data-editor-css]").forEach(node => node.remove())
-    setHtmlSourceMode(wrapper?.dataset.editorSource === "raw" || !canEditHtmlVisually(wrapper?.innerHTML ?? ""))
-  }, [initialMarkdown])
 
   useEffect(() => {
     return () => {
