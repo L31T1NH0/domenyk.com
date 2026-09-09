@@ -23,7 +23,7 @@ import { editorialTextStyle, normalizeEditorialText } from "./editorial-text.js"
 import { compilePublicationCss, extractPublicationCss } from "./publication-css.js"
 import { splitInlineCssHooks } from "./inline-css-hooks.js"
 import rehypeHtmlMath from "./rehype-html-math.js"
-import { YOUTUBE_EMBED_HOSTNAMES, YOUTUBE_EMBED_ORIGIN } from "./youtube-embed.ts"
+import { YOUTUBE_EMBED_HOSTNAMES, YOUTUBE_EMBED_ORIGIN } from "./youtube-embed.js"
 
 type MarkdownImagePolicy =
   | { mode: "none" }

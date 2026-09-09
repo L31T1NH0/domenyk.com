@@ -5,4 +5,4 @@ export const YOUTUBE_EMBED_HOSTNAMES = [
   "www.youtube.com",
   "youtube-nocookie.com",
   "www.youtube-nocookie.com",
-] as const
+]
