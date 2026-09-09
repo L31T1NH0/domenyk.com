@@ -2,6 +2,7 @@ import { clerkMiddleware } from "@clerk/nextjs/server"
 import { NextResponse } from "next/server"
 import { shouldBlockApiMutation } from "@/lib/csrf"
 import { BLOB_PUBLIC_HOSTNAME } from "@/lib/blob-host"
+import { YOUTUBE_EMBED_ORIGIN } from "@/lib/youtube-embed"
 
 function isAdminRoute(pathname: string): boolean {
   return pathname === "/admin" || pathname.startsWith("/admin/") ||
@@ -87,6 +88,7 @@ export default clerkMiddleware(async (auth, req) => {
       ],
       "font-src": ["self"],
       "frame-ancestors": ["none"],
+      "frame-src": [YOUTUBE_EMBED_ORIGIN],
       "img-src": [
         "data:",
         "blob:",

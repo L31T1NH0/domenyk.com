@@ -23,6 +23,7 @@ import { editorialTextStyle, normalizeEditorialText } from "./editorial-text.js"
 import { compilePublicationCss, extractPublicationCss } from "./publication-css.js"
 import { splitInlineCssHooks } from "./inline-css-hooks.js"
 import rehypeHtmlMath from "./rehype-html-math.js"
+import { YOUTUBE_EMBED_HOSTNAMES, YOUTUBE_EMBED_ORIGIN } from "./youtube-embed.ts"
 
 type MarkdownImagePolicy =
   | { mode: "none" }
@@ -133,16 +134,11 @@ function normalizedYouTubeEmbedSource(source: unknown): string | null {
 
   try {
     const sourceUrl = new URL(source)
-    const allowedHost = [
-      "youtube.com",
-      "www.youtube.com",
-      "youtube-nocookie.com",
-      "www.youtube-nocookie.com",
-    ].includes(sourceUrl.hostname)
+    const allowedHost = YOUTUBE_EMBED_HOSTNAMES.includes(sourceUrl.hostname as typeof YOUTUBE_EMBED_HOSTNAMES[number])
     const match = sourceUrl.pathname.match(/^\/embed\/([A-Za-z0-9_-]{11})$/)
     if (!allowedHost || !match || sourceUrl.username || sourceUrl.password || sourceUrl.port || sourceUrl.hash) return null
 
-    const embedUrl = new URL(`https://www.youtube-nocookie.com/embed/${match[1]}`)
+    const embedUrl = new URL(`${YOUTUBE_EMBED_ORIGIN}/embed/${match[1]}`)
     embedUrl.searchParams.set("controls", "0")
     embedUrl.searchParams.set("iv_load_policy", "3")
     embedUrl.searchParams.set("rel", "0")
