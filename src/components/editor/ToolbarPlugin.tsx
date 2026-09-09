@@ -128,7 +128,14 @@ export function ToolbarPlugin({
     onContentFormatChange?.(format, editor)
   }
 
-  return <div className="editor-toolbar" data-editor-variant={variant} data-editor-placement={placement}>
+  const toolbarSurface = variant === "compact"
+    ? "bg-transparent px-1.5 py-1.5 text-stone-400"
+    : variant === "comment"
+      ? "min-h-11 bg-transparent px-1.5 py-1"
+      : "bg-stone-50/70 px-2.5 py-2 text-neutral-600 dark:bg-neutral-900/70 dark:text-neutral-300"
+  const toolbarBorder = placement === "top" ? "border-b" : "border-t"
+
+  return <div className={`editor-toolbar relative flex min-w-0 flex-wrap items-center gap-1 border-neutral-300/50 dark:border-white/10 ${toolbarSurface} ${toolbarBorder}`} data-editor-variant={variant} data-editor-placement={placement}>
     {allowContentFormatChoice && <EditorToolbarMenu
       accessibleLabel="Formato do conteúdo"
       icon={contentFormat === "markdown" ? <DocumentTextIcon className="size-4" /> : <CodeBracketSquareIcon className="size-4" />}
@@ -144,14 +151,14 @@ export function ToolbarPlugin({
     {allowDocumentCss && <ToolbarButton variant={variant} title={htmlSourceMode ? "Voltar ao editor visual" : "Editar código HTML"} expanded={htmlSourceMode} onClick={toggleHtmlSource}><CodeBracketSquareIcon className="size-4" aria-hidden /></ToolbarButton>}
     {sourceError && <p role="alert" className="publication-css-error">{sourceError}</p>}
     {!htmlSourceMode && <>
-      <div className="editor-toolbar-section" role="group" aria-label="Formatação de texto">
+      <div className="editor-toolbar-section inline-flex min-w-0 max-w-full flex-wrap items-center gap-0.5 border-r border-neutral-500/15 px-0.5 dark:border-white/10" role="group" aria-label="Formatação de texto">
         <ToolbarButton variant={variant} onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold")} title="Negrito"><b>B</b></ToolbarButton>
         <ToolbarButton variant={variant} onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic")} title="Itálico"><i>I</i></ToolbarButton>
         <ToolbarButton variant={variant} onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "code")} title="Código inline"><CodeBracketIcon className="size-4" aria-hidden /></ToolbarButton>
       </div>
       {comment ? <>
         <ToolbarButton variant="comment" onClick={() => setShowAdvanced(visible => !visible)} title={showAdvanced ? "Ocultar formatação avançada" : "Mais opções de formatação"} expanded={showAdvanced}><EllipsisHorizontalIcon className="size-4" aria-hidden /></ToolbarButton>
-        {showAdvanced && <div className="editor-toolbar-section" role="group" aria-label="Formatação avançada">
+        {showAdvanced && <div className="editor-toolbar-section inline-flex min-w-0 max-w-full flex-wrap items-center gap-0.5 border-r border-neutral-500/15 px-0.5 dark:border-white/10" role="group" aria-label="Formatação avançada">
           <ToolbarButton variant="comment" onClick={() => formatBlock("h1")} title="Título 1">H1</ToolbarButton>
           <ToolbarButton variant="comment" onClick={() => formatBlock("h2")} title="Título 2">H2</ToolbarButton>
           <ToolbarButton variant="comment" onClick={() => formatBlock("h3")} title="Título 3">H3</ToolbarButton>
@@ -173,11 +180,11 @@ export function ToolbarPlugin({
       />}
       {(!comment || showAdvanced) && <EditorialControls variant={variant} />}
       {allowImages && <ImagePlugin compact={compact} menuPlacement={placement === "bottom" ? "above" : "below"} uploadEndpoint={imageUploadEndpoint} assetsEndpoint={imageAssetsEndpoint} allowAssetLibrary={allowImageAssetLibrary} />}
-      {allowDocumentCss && <div className="editor-toolbar-section" role="group" aria-label="Ferramentas de CSS">
+      {allowDocumentCss && <div className="editor-toolbar-section inline-flex min-w-0 max-w-full flex-wrap items-center gap-0.5 border-r border-neutral-500/15 px-0.5 dark:border-white/10" role="group" aria-label="Ferramentas de CSS">
         <ToolbarButton variant={variant} title="Criar ou remover seletor CSS no trecho selecionado" onClick={markCssHook}><span className="text-xs font-semibold">::</span></ToolbarButton>
       </div>}
     </>}
     {allowDocumentCss && <PublicationCssControls variant={variant} />}
-    {trailingContent && <div className="editor-toolbar-trailing">{trailingContent}</div>}
+    {trailingContent && <div className="editor-toolbar-trailing ml-auto shrink-0">{trailingContent}</div>}
   </div>
 }

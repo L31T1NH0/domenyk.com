@@ -257,11 +257,11 @@ export function ImagePlugin({
     }
   }
 
-  const buttonClassName = "editor-toolbar-button"
+  const buttonClassName = "editor-toolbar-button inline-flex size-10 shrink-0 items-center justify-center rounded-md border border-transparent text-inherit transition-colors hover:border-neutral-500/15 hover:bg-neutral-500/10 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current/50 dark:hover:border-white/10 dark:hover:bg-white/[0.08] dark:hover:text-neutral-50 sm:size-9"
   const panelClassName = "fixed z-40 w-[min(23rem,calc(100vw-1.5rem))] overscroll-contain overflow-y-auto rounded-xl border border-neutral-200/80 bg-white/95 p-3 shadow-lg shadow-black/10 backdrop-blur dark:border-white/10 dark:bg-neutral-950/95 dark:shadow-black/40"
 
   return (
-    <div className="editor-toolbar-media">
+    <div className="editor-toolbar-media relative z-20 inline-flex">
       <button
         ref={triggerRef}
         type="button"

@@ -264,16 +264,28 @@ export function usePretextImageFlow(containerRef: RefObject<HTMLElement | null>,
       restore()
 
       const containerWidth = container.clientWidth
-      const imageWidth = figure.getBoundingClientRect().width
-      const imageHeight = imageWidth * (geometry.height / geometry.width)
-      if (!containerWidth || !imageWidth || !imageHeight) return restore()
-      const outerOffset = imageWidth * geometry[side]
+      const containerRect = container.getBoundingClientRect()
+      const authoredImageRect = image.getBoundingClientRect()
+      const authoredImageWidth = authoredImageRect.width
+      if (!containerWidth || !authoredImageWidth) return restore()
+      const outerOffset = authoredImageWidth * geometry[side]
       figure.style.setProperty("--flow-image-outer-alpha-offset", `${outerOffset.toFixed(2)}px`)
-      const imageTop = figure.getBoundingClientRect().top - container.getBoundingClientRect().top
-      const imageLeft = side === "left" ? -outerOffset : containerWidth + outerOffset - imageWidth
+      const authoredImageTop = authoredImageRect.top - containerRect.top
       const shapeMargin = parsePixelValue(window.getComputedStyle(figure).shapeMargin, 12)
       container.dataset.pretextFlowActive = "true"
-      figure.style.setProperty("--pretext-flow-image-top", `${imageTop.toFixed(2)}px`)
+      figure.style.setProperty("--pretext-flow-image-top", `${authoredImageTop.toFixed(2)}px`)
+
+      // The active CSS can move the figure beyond the reading column to hide
+      // transparent outer pixels. Measure the image again after that CSS has
+      // taken effect so Pretext reserves the pixels where the image is
+      // actually painted instead of relying on a duplicated position formula.
+      const activeContainerRect = container.getBoundingClientRect()
+      const activeImageRect = image.getBoundingClientRect()
+      const imageTop = activeImageRect.top - activeContainerRect.top
+      const imageLeft = activeImageRect.left - activeContainerRect.left
+      const imageWidth = activeImageRect.width
+      const imageHeight = activeImageRect.height || imageWidth * (geometry.height / geometry.width)
+      if (!imageWidth || !imageHeight) return restore()
       for (const template of templates) {
         if (!layoutParagraph({
           paragraph: template.element,

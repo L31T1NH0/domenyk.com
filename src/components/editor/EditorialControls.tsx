@@ -52,7 +52,7 @@ export function EditorialControls({ variant = "default" }: { variant?: "default"
   const AlignmentIcon = value.align === "right" ? Bars3BottomRightIcon : value.align === "center" ? Bars2Icon : value.align === "justify" ? Bars3Icon : Bars3BottomLeftIcon
   const choices = (values: readonly string[], unit: string) => values.map(n => ({ value: n, label: n === "auto" ? "Padrão" : `${n}${unit}` }))
 
-  return <div className="editorial-toolbar-group editor-toolbar-section" role="group" aria-label="Formatação de parágrafo">
+  return <div className="editorial-toolbar-group editor-toolbar-section inline-flex min-w-0 max-w-full flex-wrap items-center gap-0.5 border-r border-neutral-500/15 px-0.5 dark:border-white/10" role="group" aria-label="Formatação de parágrafo">
     <EditorToolbarMenu accessibleLabel="Tamanho do texto" label={value.size === "auto" ? "Tamanho" : `${value.size}px`} value={value.size} onChange={size => update({ size })} options={choices(TEXT_SIZES, " px")} variant={variant} />
     <EditorToolbarMenu accessibleLabel="Alinhamento do texto" icon={<AlignmentIcon className="size-4" />} label="Alinhar" value={value.align} onChange={align => update({ align })} options={[
       { value: "left", label: "Esquerda", icon: <Bars3BottomLeftIcon className="size-4" /> },

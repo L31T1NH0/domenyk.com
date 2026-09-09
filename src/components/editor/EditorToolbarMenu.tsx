@@ -36,6 +36,7 @@ export function EditorToolbarMenu<T extends string>({
   const menuRef = useRef<HTMLDivElement>(null)
   const focusOnOpen = useRef(false)
   const id = useId()
+  const triggerSize = variant === "comment" ? "h-10 min-w-10" : "h-10 min-w-10 sm:h-9 sm:min-w-9"
 
   const close = (restoreFocus = false) => {
     setOpen(false)
@@ -99,7 +100,7 @@ export function EditorToolbarMenu<T extends string>({
     <button
       ref={triggerRef}
       type="button"
-      className="editor-toolbar-menu-trigger"
+      className={`editor-toolbar-menu-trigger inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-transparent px-2 text-xs font-semibold leading-none text-inherit transition-colors hover:border-neutral-500/15 hover:bg-neutral-500/10 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current/50 dark:hover:border-white/10 dark:hover:bg-white/[0.08] dark:hover:text-neutral-50 ${triggerSize}`}
       data-editor-variant={variant}
       aria-controls={id}
       aria-expanded={open}
@@ -113,9 +114,9 @@ export function EditorToolbarMenu<T extends string>({
         setOpen(true)
       }}
     >
-      {icon && <span className="editor-toolbar-menu-icon" aria-hidden>{icon}</span>}
+      {icon && <span className="editor-toolbar-menu-icon grid size-4 shrink-0 place-items-center" aria-hidden>{icon}</span>}
       <span className="editor-toolbar-menu-label">{label}</span>
-      <ChevronDownIcon className="editor-toolbar-menu-chevron" aria-hidden />
+      <ChevronDownIcon className="editor-toolbar-menu-chevron size-3 shrink-0 text-neutral-500" aria-hidden />
     </button>
     {open && createPortal(
       <div
@@ -123,7 +124,7 @@ export function EditorToolbarMenu<T extends string>({
         id={id}
         role="menu"
         aria-label={accessibleLabel}
-        className="editor-toolbar-menu"
+        className="editor-toolbar-menu fixed z-[90] grid w-[min(17rem,calc(100vw-20px))] gap-0.5 rounded-xl border border-neutral-200 bg-white p-1.5 text-neutral-800 shadow-xl shadow-black/15 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 dark:shadow-black/40"
         onKeyDown={menuKeyDown}
         style={{ left: position?.left ?? 0, top: position?.top ?? 0, visibility: position ? "visible" : "hidden" }}
       >
@@ -132,12 +133,13 @@ export function EditorToolbarMenu<T extends string>({
           type="button"
           role="menuitemradio"
           aria-checked={value === option.value}
+          className="grid min-h-11 grid-cols-[1.5rem_minmax(0,1fr)_1rem] items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-neutral-100 focus-visible:bg-neutral-100 focus-visible:outline-none dark:hover:bg-white/[0.07] dark:focus-visible:bg-white/[0.07]"
           onMouseDown={event => event.preventDefault()}
           onClick={() => { onChange(option.value); close(true) }}
         >
-          <span className="editor-toolbar-menu-option-icon" aria-hidden>{option.icon}</span>
-          <span><strong>{option.label}</strong>{option.description && <small>{option.description}</small>}</span>
-          <CheckIcon className="editor-toolbar-menu-check" aria-hidden />
+          <span className="editor-toolbar-menu-option-icon grid min-w-0 place-items-center text-[10px] font-bold text-neutral-500" aria-hidden>{option.icon}</span>
+          <span className="min-w-0"><strong className="block text-xs font-semibold">{option.label}</strong>{option.description && <small className="mt-0.5 block text-[10px] leading-snug text-neutral-500 dark:text-neutral-400">{option.description}</small>}</span>
+          <CheckIcon className={`editor-toolbar-menu-check size-3.5 ${value === option.value ? "opacity-100" : "opacity-0"}`} aria-hidden />
         </button>)}
       </div>,
       document.body,
