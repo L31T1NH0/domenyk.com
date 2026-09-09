@@ -71,6 +71,10 @@ const validators = {
     ["_id", "noteId", "visitorKey", "source", "day", "createdAt"],
     { noteId: objectId, visitorKey: string, source: string, day: string, createdAt: date }
   ),
+  personal_updates: schema(
+    ["_id", "content", "createdAt", "updatedAt"],
+    { content: string, sortOrder: number, createdAt: date, updatedAt: date }
+  ),
   notes: schema(
     ["_id", "content", "publishedAt", "createdAt"],
     {

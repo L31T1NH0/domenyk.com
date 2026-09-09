@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import dynamic from "next/dynamic"
+import { ArrowDownIcon, ArrowUpIcon } from "@heroicons/react/24/outline"
 import { DeleteActionMenu } from "@/components/actions/DeleteActionMenu"
-import type { PersonalTimelinePage, PersonalUpdate } from "@/lib/personal-timeline"
+import type { PersonalTimelinePage, PersonalUpdate, PersonalUpdateOrderDirection } from "@/lib/personal-timeline"
 import { formatSiteDate } from "@/lib/datetime"
 
 const Composer = dynamic(() => import("./PersonalUpdateComposer"), {
@@ -22,7 +23,9 @@ export function PersonalTimeline({ isAdmin, compact = false }: { isAdmin: boolea
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [editing, setEditing] = useState<string | null>(null)
+  const [ordering, setOrdering] = useState<string | null>(null)
   const [status, setStatus] = useState("")
+  const [actionError, setActionError] = useState("")
   const requestRef = useRef<AbortController | null>(null)
   const moreRef = useRef<HTMLDivElement | null>(null)
 
@@ -76,32 +79,67 @@ export function PersonalTimeline({ isAdmin, compact = false }: { isAdmin: boolea
       ? previous.map(existing => existing._id === item._id ? item : existing)
       : [item, ...previous])
     setEditing(null)
+    setActionError("")
     setStatus("Publicação salva.")
   }
 
   async function remove(id: string) {
+    setActionError("")
     const response = await fetch(`/api/mural/${id}`, { method: "DELETE" })
     if (!response.ok) throw new Error("Não foi possível excluir a publicação.")
     setItems(previous => previous.filter(item => item._id !== id))
     setStatus("Publicação excluída.")
   }
 
+  async function reorder(id: string, direction: PersonalUpdateOrderDirection) {
+    if (ordering) return
+    setOrdering(id)
+    setStatus("")
+    setActionError("")
+    try {
+      const response = await fetch(`/api/mural/${id}/order`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ direction }),
+      })
+      const data = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(data?.error ?? "Não foi possível alterar a ordem.")
+      const page = data as PersonalTimelinePage
+      setItems(page.items)
+      setCursor(page.nextCursor)
+      setStatus("Ordem do mural atualizada.")
+    } catch (caughtError) {
+      setActionError(caughtError instanceof Error ? caughtError.message : "Não foi possível alterar a ordem.")
+    } finally {
+      setOrdering(null)
+    }
+  }
+
   return (
     <div className={`personal-timeline w-full min-w-0 ${compact ? "personal-timeline-compact" : ""}`}>
       {!compact && isAdmin && !loading && <div id="publicar" className="mb-6"><Composer onSaved={saved} /></div>}
       <p className="sr-only" role="status">{status}</p>
+      {actionError && <p role="alert" className="personal-timeline-order-error">{actionError}</p>}
       {!compact && loading && items.length === 0 && <p role="status" className="personal-timeline-muted py-4">Carregando…</p>}
       {!compact && !loading && !error && items.length === 0 && <p className="personal-timeline-muted py-4">{isAdmin ? "Seu mural está pronto para a primeira publicação." : "Ainda não há publicações."}</p>}
       <div aria-busy={loading} className="personal-timeline-items w-full min-w-0">
-        {items.map(item => (
+        {items.map((item, index) => (
           <article key={item._id} id={`publicacao-${item._id}`} className="personal-timeline-item w-full min-w-0">
             {!compact && <div className="mb-3 flex flex-wrap items-center justify-between gap-1">
               <span className="personal-timeline-date">
                 <time dateTime={item.createdAt}>{formatSiteDate(item.createdAt, { day: "numeric", month: "short", year: "numeric" })}</time>
               </span>
               {!compact && isAdmin && <div className="flex items-center gap-1">
-                <button type="button" className="personal-timeline-action" onClick={() => setEditing(item._id)}>Editar</button>
-                <DeleteActionMenu title="Excluir publicação do mural?" triggerAriaLabel="Excluir publicação do mural" onDelete={() => remove(item._id)} />
+                <div className="flex items-center" role="group" aria-label="Ordenar publicação" aria-busy={ordering === item._id}>
+                  <button type="button" className="personal-timeline-order-control" disabled={Boolean(ordering) || Boolean(editing) || index === 0} aria-label="Mover publicação para cima" title="Mover para cima" onClick={() => void reorder(item._id, "up")}>
+                    <ArrowUpIcon aria-hidden className="size-4" />
+                  </button>
+                  <button type="button" className="personal-timeline-order-control" disabled={Boolean(ordering) || Boolean(editing) || (index === items.length - 1 && !cursor)} aria-label="Mover publicação para baixo" title="Mover para baixo" onClick={() => void reorder(item._id, "down")}>
+                    <ArrowDownIcon aria-hidden className="size-4" />
+                  </button>
+                </div>
+                <button type="button" disabled={Boolean(ordering)} className="personal-timeline-action" onClick={() => setEditing(item._id)}>Editar</button>
+                <DeleteActionMenu disabled={Boolean(ordering) || Boolean(editing)} title="Excluir publicação do mural?" triggerAriaLabel="Excluir publicação do mural" onDelete={() => remove(item._id)} />
               </div>}
             </div>}
             {editing === item._id && !compact
