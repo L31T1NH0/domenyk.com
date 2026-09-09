@@ -88,14 +88,14 @@ test("renders a sanitized flow image with server-generated shape styles", () => 
   assert.match(html, /<img src="https:\/\/images\.example\/cutout\.webp" alt="Pessoa em pé">/)
 })
 
-test("keeps a legacy terminal flow figure at its stored position", () => {
+test("restores a legacy terminal flow figure before the first paragraph", () => {
   const html = renderMarkdownSync([
     "Primeiro parágrafo.",
     "Segundo parágrafo.",
     '<figure data-flow-image="left" data-flow-width="32"><img src="https://images.example/cutout.webp" alt="Recorte"></figure>',
   ].join("\n\n"))
 
-  assert.ok(html.indexOf("<figure") > html.lastIndexOf("<p"))
+  assert.ok(html.indexOf("<figure") < html.indexOf("<p"))
   assert.equal((html.match(/data-flow-image=/g) ?? []).length, 1)
 })
 
