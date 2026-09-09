@@ -10,7 +10,7 @@ import { safeImageStyle } from "@/lib/content-images"
 import { compilePublicationCss } from "@/lib/publication-css"
 
 export const publicationCssState = createState("publicationCss", {
-  parse: value => typeof value === "string" ? value.slice(0, 12_000) : "",
+  parse: value => typeof value === "string" ? value : "",
 })
 export const publicationHtmlSourceState = createState("publicationHtmlSource", {
   parse: (value): string | null => typeof value === "string" ? value.slice(0, MAX_RICH_CONTENT_LENGTH) : null,

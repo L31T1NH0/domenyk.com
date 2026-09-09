@@ -5,7 +5,7 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { $getRoot, $getState, $setState, type LexicalEditor } from "lexical"
 import { ToolbarButton } from "./ToolbarButton"
 import { publicationCssState, readHtmlFromEditor } from "./html-content"
-import { compilePublicationCss, MAX_PUBLICATION_CSS } from "@/lib/publication-css"
+import { compilePublicationCss } from "@/lib/publication-css"
 import { PublicationPreview } from "./PublicationPreview"
 import { splitInlineCssHooks } from "@/lib/inline-css-hooks"
 import { SAFE_PUBLICATION_HTML_TAGS } from "@/lib/content-format"
@@ -146,10 +146,6 @@ export function PublicationCssControls({ variant }: { variant?: "default" | "com
 
     const rule = `${selector} {\n  \n}`
     const next = css.trim() ? `${css.trimEnd()}\n\n${rule}` : rule
-    if (next.length > MAX_PUBLICATION_CSS) {
-      setError("O CSS deve ter até 12.000 caracteres.")
-      return
-    }
     change(next)
     requestAnimationFrame(() => {
       const cursor = next.length - 2
@@ -168,11 +164,11 @@ export function PublicationCssControls({ variant }: { variant?: "default" | "com
         <div>{selectors.map(item => <button key={item.selector} type="button" data-css-selector-kind={item.kind} title={`Inserir ${item.selector}`} onClick={() => insertSelector(item.selector)}><code>{item.label}</code>{item.kind !== "hook" && item.kind !== "root" && <small>{item.count}</small>}</button>)}</div>
       </div>
       <p className="publication-css-help">Para um trecho individual, escreva <code>::trecho::</code> ou selecione palavras e use o botão <code>::</code>; use o mesmo botão para remover a marca. Para um nome explícito: <code>::nome|trecho::</code>.</p>
-      <textarea ref={textareaRef} id={id} aria-describedby={`${id}-help`} aria-invalid={Boolean(error)} value={css} onChange={event => change(event.target.value)} maxLength={MAX_PUBLICATION_CSS} spellCheck={false} rows={9} placeholder={"p { line-height: 1.8; }\n\n[data-css-hook=\"destaque\"] {\n  color: #e00070;\n}\n\n@media (max-width: 600px) {\n  p { font-size: 16px; }\n}"} />
+      <textarea ref={textareaRef} id={id} aria-describedby={`${id}-help`} aria-invalid={Boolean(error)} value={css} onChange={event => change(event.target.value)} spellCheck={false} rows={9} placeholder={"p { line-height: 1.8; }\n\n[data-css-hook=\"destaque\"] {\n  color: #e00070;\n}\n\n@media (max-width: 600px) {\n  p { font-size: 16px; }\n}"} />
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" onClick={showPreview} className="editorial-control-trigger">Pré-visualizar</button>
         <button type="button" onClick={() => change("")} className="editorial-control-trigger">Limpar CSS</button>
-        <span className="ml-auto text-xs text-neutral-500 dark:text-neutral-400">{css.length.toLocaleString("pt-BR")} / 12.000</span>
+        <span className="ml-auto text-xs text-neutral-500 dark:text-neutral-400">{css.length.toLocaleString("pt-BR")} caracteres</span>
       </div>
       {error && <p role="alert" className="publication-css-error">{error}</p>}
       {preview && <PublicationPreview content={preview} />}

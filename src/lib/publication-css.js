@@ -1,6 +1,5 @@
 import postcss from "postcss"
 
-export const MAX_PUBLICATION_CSS = 12_000
 const PUBLICATION_CSS_TEMPLATE = /<template\s+data-editor-css=(?:"([^"]*)"|'([^']*)')\s*>\s*<\/template>/i
 
 /** @param {string} content */
@@ -10,7 +9,7 @@ export function extractPublicationCss(content) {
   if (!encoded) return ""
 
   try {
-    return decodeURIComponent(encoded).slice(0, MAX_PUBLICATION_CSS)
+    return decodeURIComponent(encoded)
   } catch {
     return ""
   }
@@ -22,7 +21,6 @@ export function extractPublicationCss(content) {
 /** @param {string} source @param {string} selector */
 export function compilePublicationCss(source, selector) {
   if (!source.trim()) return ""
-  if (source.length > MAX_PUBLICATION_CSS) throw new Error("O CSS deve ter até 12.000 caracteres.")
   let sheet
   try { sheet = postcss.parse(source) } catch {
     throw new Error("O CSS está incompleto. Confira as chaves e os valores.")

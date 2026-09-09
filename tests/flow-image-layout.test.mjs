@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { renderMarkdownSync } from '../src/lib/mdx.ts'
 import { imageDefaults, safeImageStyle, imageShape } from '../src/lib/content-images.js'
-import { compilePublicationCss } from '../src/lib/publication-css.js'
+import { compilePublicationCss, extractPublicationCss } from '../src/lib/publication-css.js'
 import { geometryFromAlphaPixels } from '../src/components/post/flow-image-alpha.ts'
 import { lineSlotForAlphaBand, stabilizePaintedLine } from '../src/components/post/flow-image-layout.ts'
 
@@ -25,6 +25,14 @@ test('figures retain classes, formatting, captions and order without overwriting
   assert.match(html, /class="cutout"/)
   assert.match(html, /class="credit" style="text-align: right"/)
   assert.match(compilePublicationCss('.portrait { width: 30%; shape-outside: margin-box; }', '[data-publication-surface="a"]'), /\.portrait \{ width: 30%/)
+})
+
+test('publication CSS is preserved and compiled beyond 12,000 characters', () => {
+  const css = `/* ${'x'.repeat(12_500)} */\np { color: rebeccapurple; }`
+  const content = `<div data-editor-document="html"><template data-editor-css="${encodeURIComponent(css)}"></template><p>Texto</p></div>`
+
+  assert.equal(extractPublicationCss(content), css)
+  assert.match(compilePublicationCss(css, '[data-publication-surface="long"]'), /color: rebeccapurple/)
 })
 
 test('image formatting rejects unsafe declarations and retains the image policy', () => {

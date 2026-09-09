@@ -79,6 +79,30 @@ test("omitting imagePolicy preserves trusted post and note image behavior", () =
   assert.match(html, /<img src="https:\/\/images\.example\/post\.webp"/)
 })
 
+test("keeps a minimal responsive YouTube iframe and normalizes its player variables", () => {
+  const html = renderMarkdownSync(
+    '<div data-editor-document="html" data-editor-source="raw"><iframe width="560" height="315" src="https://www.youtube.com/embed/M7lc1UVf-VE?start=12&autoplay=1&modestbranding=1" title="Demonstração" frameborder="0" allow="autoplay"></iframe></div>'
+  )
+
+  assert.match(html, /<iframe src="https:\/\/www\.youtube-nocookie\.com\/embed\/M7lc1UVf-VE\?controls=0&#x26;iv_load_policy=3&#x26;rel=0&#x26;playsinline=1&#x26;start=12"/)
+  assert.match(html, /title="Demonstração"/)
+  assert.match(html, /loading="lazy"/)
+  assert.match(html, /referrerpolicy="strict-origin-when-cross-origin"/)
+  assert.match(html, /allow="encrypted-media; picture-in-picture" allowfullscreen data-youtube-embed=""/)
+  assert.doesNotMatch(html, /width=|height=|frameborder=|autoplay=1|modestbranding/)
+})
+
+test("drops non-YouTube and disguised YouTube iframes", () => {
+  const html = renderMarkdownSync([
+    '<iframe src="https://example.com/embed/M7lc1UVf-VE"></iframe>',
+    '<iframe src="https://www.youtube.com.evil.test/embed/M7lc1UVf-VE"></iframe>',
+    '<iframe src="https://www.youtube.com/watch?v=M7lc1UVf-VE"></iframe>',
+    '<iframe src="https://www.youtube.com/embed/M7lc1UVf-VE"></iframe>',
+  ].join(""))
+
+  assert.doesNotMatch(html, /<iframe|example\.com|evil\.test/)
+})
+
 test("renders a sanitized flow image with server-generated shape styles", () => {
   const html = renderMarkdownSync(
     '<figure data-flow-image="left" data-flow-width="42"><img src="https://images.example/cutout.webp" alt="Pessoa em pé"></figure>'

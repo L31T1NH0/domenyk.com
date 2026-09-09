@@ -4,7 +4,7 @@ export const SAFE_PUBLICATION_HTML_TAGS = [
   'a', 'abbr', 'article', 'aside', 'b', 'blockquote', 'br', 'cite', 'code',
   'dd', 'del', 'details', 'div', 'dl', 'dt', 'em', 'figcaption', 'figure',
   'footer', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'header', 'hr', 'i', 'img',
-  'ins', 'kbd', 'li', 'main', 'mark', 'nav', 'ol', 'p', 'picture', 'pre', 'q',
+  'iframe', 'ins', 'kbd', 'li', 'main', 'mark', 'nav', 'ol', 'p', 'picture', 'pre', 'q',
   'rp', 'rt', 'ruby', 's', 'samp', 'section', 'small', 'source', 'span',
   'strike', 'strong', 'sub', 'summary', 'sup', 'table', 'tbody', 'td', 'tfoot',
   'th', 'thead', 'time', 'tr', 'tt', 'ul', 'var',

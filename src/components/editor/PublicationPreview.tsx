@@ -34,6 +34,6 @@ export function PublicationPreview({ content }: { content: string }) {
   return <div className="publication-preview">
     {error && <p role="alert" className="publication-css-error">{error}</p>}
     {!preview && !error && <p role="status">Preparando prévia…</p>}
-    {preview && <iframe title="Prévia da publicação" sandbox="" srcDoc={preview} className="h-96 w-full border border-neutral-200 dark:border-white/10" />}
+    {preview && <iframe title="Prévia da publicação" sandbox="allow-scripts allow-same-origin allow-presentation" srcDoc={preview} className="h-96 w-full border border-neutral-200 dark:border-white/10" />}
   </div>
 }

@@ -49,11 +49,12 @@ type MdastNode = {
 const AUTHOR_TOKEN_PATTERN = /@autor|@co-autor/g
 const DEFAULT_AUTHOR_IMAGE = "/images/profile.jpg"
 const MAX_PARAGRAPH_ID_CACHE_ENTRIES = 128
+const YOUTUBE_EMBED_SOURCE = /^https:\/\/www\.youtube-nocookie\.com\/embed\/[A-Za-z0-9_-]{11}\?controls=0&iv_load_policy=3&rel=0&playsinline=1(?:&start=\d+)?(?:&end=\d+)?$/
 const paragraphIdCache = new Map<string, ReadonlySet<string>>()
 const markdownSanitizeSchema: SanitizeSchema = {
   ...defaultSchema,
   clobberPrefix: "user-content-",
-  tagNames: [...new Set([...(defaultSchema.tagNames ?? []), "article", "aside", "figure", "figcaption", "footer", "header", "main", "mark", "nav", "small", "time"])],
+  tagNames: [...new Set([...(defaultSchema.tagNames ?? []), "article", "aside", "figure", "figcaption", "footer", "header", "iframe", "main", "mark", "nav", "small", "time"])],
   protocols: {
     ...defaultSchema.protocols,
     href: ["http", "https", "mailto"],
@@ -87,6 +88,15 @@ const markdownSanitizeSchema: SanitizeSchema = {
       "loading",
       "decoding",
     ],
+    iframe: [
+      ["src", YOUTUBE_EMBED_SOURCE],
+      "title",
+      ["loading", "lazy"],
+      ["referrerPolicy", "strict-origin-when-cross-origin"],
+      ["allow", "encrypted-media; picture-in-picture"],
+      "allowFullScreen",
+      ["dataYoutubeEmbed", ""],
+    ],
     figure: [
       ["dataEditorImage", "left", "center", "right"],
       "dataEditorWidth",
@@ -116,6 +126,63 @@ const markdownSanitizeSchema: SanitizeSchema = {
       ["className", /^language-./, "math-inline", "math-display"],
     ],
   },
+}
+
+function normalizedYouTubeEmbedSource(source: unknown): string | null {
+  if (typeof source !== "string") return null
+
+  try {
+    const sourceUrl = new URL(source)
+    const allowedHost = [
+      "youtube.com",
+      "www.youtube.com",
+      "youtube-nocookie.com",
+      "www.youtube-nocookie.com",
+    ].includes(sourceUrl.hostname)
+    const match = sourceUrl.pathname.match(/^\/embed\/([A-Za-z0-9_-]{11})$/)
+    if (!allowedHost || !match || sourceUrl.username || sourceUrl.password || sourceUrl.port || sourceUrl.hash) return null
+
+    const embedUrl = new URL(`https://www.youtube-nocookie.com/embed/${match[1]}`)
+    embedUrl.searchParams.set("controls", "0")
+    embedUrl.searchParams.set("iv_load_policy", "3")
+    embedUrl.searchParams.set("rel", "0")
+    embedUrl.searchParams.set("playsinline", "1")
+    for (const key of ["start", "end"]) {
+      const value = sourceUrl.searchParams.get(key)
+      if (!value || !/^\d+$/.test(value)) continue
+      const seconds = Number(value)
+      if (Number.isSafeInteger(seconds) && seconds >= 0) embedUrl.searchParams.set(key, String(seconds))
+    }
+    return embedUrl.toString()
+  } catch {
+    return null
+  }
+}
+
+function rehypeYouTubeEmbeds(allow: boolean) {
+  return (tree: Root) => {
+    visit(tree, "element", (node, index, parent) => {
+      if (node.tagName !== "iframe") return
+      const src = allow ? normalizedYouTubeEmbedSource(node.properties?.src) : null
+      if (!src || index === undefined || !parent) {
+        if (index === undefined || !parent) return SKIP
+        parent.children.splice(index, 1)
+        return [SKIP, index]
+      }
+
+      const authoredTitle = stringProperty(node.properties?.title)?.trim()
+      node.properties = {
+        src,
+        title: authoredTitle || "Vídeo do YouTube",
+        loading: "lazy",
+        referrerPolicy: "strict-origin-when-cross-origin",
+        allow: "encrypted-media; picture-in-picture",
+        allowFullScreen: true,
+        dataYoutubeEmbed: "",
+      }
+      node.children = []
+    })
+  }
 }
 
 const FLOW_IMAGE_SIDES = new Set(["left", "right"])
@@ -636,6 +703,7 @@ function createProcessor(
   if (html) processor.use(rehypeInlineCssHooks)
   processor
     .use(function () { return rehypeSafeEditorialStyles(html, false) })
+    .use(function () { return rehypeYouTubeEmbeds(html) })
     .use(rehypeNormalizeFlowImages)
     .use(rehypeRestrictImages, options.imagePolicy)
     .use(rehypeImageAltFallback, options.defaultImageAlt)

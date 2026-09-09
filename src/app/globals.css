@@ -931,6 +931,18 @@
 .personal-timeline-content :where(img,video) { max-width: 100%; height: auto; }
 .personal-timeline-content figure:not([data-editor-image]) { float: none !important; width: 100% !important; margin-inline: 0 !important; }
 .personal-timeline-content figcaption { font-size: .85em; }
+
+:where(.post-content, .note-content:not(.comment-content), .personal-timeline-content, .image-flow-editor) iframe[data-youtube-embed] {
+  display: block;
+  width: var(--youtube-embed-width, 100%);
+  max-width: 100%;
+  aspect-ratio: var(--youtube-embed-ratio, 16 / 9);
+  height: auto;
+  margin: var(--reading-block-spacing, var(--note-reading-base-gap, .875rem)) auto;
+  border: 0;
+  border-radius: var(--youtube-embed-radius, .375rem);
+  background: #000;
+}
 .dark-mode .personal-timeline-action,.dark-mode .personal-timeline-muted,.dark-mode .personal-timeline-date { color: #a3a3a3; }
 .dark-mode .personal-timeline-action:hover { color: #f1f1f1; }
 
