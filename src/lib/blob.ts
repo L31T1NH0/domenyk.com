@@ -22,10 +22,10 @@ import { loadSharp, loadSharpForSvg } from "@/lib/sharp"
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/svg+xml"])
 const MAX_IMAGE_INPUT_PIXELS = 16_000_000
 const MAX_IMAGE_INPUT_DIMENSION = 12_000
-const MAX_IMAGE_OUTPUT_DIMENSION = 2_400
+const MAX_IMAGE_OUTPUT_DIMENSION = 3_840
 const IMAGE_PROCESSING_TIMEOUT_SECONDS = 8
-const IMAGE_WEBP_QUALITY = 80
-const IMAGE_WEBP_FALLBACK_QUALITY = 64
+const IMAGE_WEBP_QUALITY = 92
+const IMAGE_WEBP_FALLBACK_QUALITY = 85
 
 export const MAX_IMAGE_UPLOAD_BYTES = 4 * 1024 * 1024
 const MAX_SANITIZED_IMAGE_BYTES = 4 * 1024 * 1024
@@ -196,9 +196,15 @@ export async function sanitizeImageUpload(
       height: MAX_IMAGE_OUTPUT_DIMENSION,
       fit: "inside",
       withoutEnlargement: true,
-      fastShrinkOnLoad: true,
+      fastShrinkOnLoad: false,
     })
-    .webp({ quality, alphaQuality: quality, effort: 2, smartSubsample: true })
+    .webp({
+      quality,
+      alphaQuality: 100,
+      effort: 4,
+      smartSubsample: true,
+      smartDeblock: true,
+    })
     .timeout({ seconds: IMAGE_PROCESSING_TIMEOUT_SECONDS })
     .toBuffer()
 

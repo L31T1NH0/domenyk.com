@@ -126,6 +126,7 @@ function PostTimelineItem({
                 width={1920}
                 height={1080}
                 sizes="(max-width: 640px) calc(100vw - 2.5rem), 32.5rem"
+                quality={90}
                 className="h-full w-full rounded-xl object-cover !grayscale-0"
               />
             </span>
@@ -152,6 +153,7 @@ function PostTimelineItem({
               width={1920}
               height={1080}
               sizes="(max-width: 640px) calc(100vw - 2.5rem), 32.5rem"
+              quality={90}
               className="h-full w-full rounded-xl object-cover !grayscale-0"
             />
             <span className="pointer-events-none absolute inset-0 rounded-xl">

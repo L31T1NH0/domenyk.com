@@ -63,6 +63,7 @@ export function PostHeader({
               alt={cover.alt ?? title}
               fill
               sizes="(max-width: 767px) calc(100vw - 2rem), 75rem"
+              quality={90}
               className="object-cover"
               style={{ filter: "none" }}
               priority
@@ -94,6 +95,7 @@ export function PostHeader({
           alt={cover.alt ?? title}
           width={1920}
           height={1080}
+          quality={90}
           className="banner h-auto w-full rounded-xl object-cover"
           style={{ filter: "none" }}
           priority
