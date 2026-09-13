@@ -25,6 +25,12 @@ type ThemeOption = {
   active: boolean
 }
 
+type SeriesOption = {
+  publicId: string
+  title: string
+  published: boolean
+}
+
 type LocalizedDraft = {
   title: string
   seoTitle: string
@@ -73,10 +79,12 @@ type PostData = {
   originalContentUpdatedAt?: string
   translations?: Partial<Record<TranslationLocale, StoredTranslation>>
   themeIds?: string[]
+  series?: { id: string; slug: string; title: string; position: number; published: boolean }
 }
 
 type Props = {
   post?: PostData
+  initialSeriesPublicId?: string
 }
 
 type VersionState = {
@@ -193,7 +201,7 @@ const FIELD_CLASS_NAME = "min-h-10 rounded border border-neutral-300 bg-transpar
 const LABEL_CLASS_NAME = "text-xs font-medium text-neutral-600 dark:text-neutral-400"
 const ACCEPTED_COVER_TYPES = new Set(["image/jpeg", "image/png", "image/webp"])
 
-export function PostEditor({ post }: Props) {
+export function PostEditor({ post, initialSeriesPublicId = "" }: Props) {
   const [postId, setPostId] = useState(post?.id)
   const [activeLocale, setActiveLocale] = useState<PostLocale>("pt")
   const [drafts, setDrafts] = useState<Record<PostLocale, LocalizedDraft>>(() => initialDrafts(post))
@@ -219,6 +227,9 @@ export function PostEditor({ post }: Props) {
   const [coAuthorsError, setCoAuthorsError] = useState("")
   const [themes, setThemes] = useState<ThemeOption[]>([])
   const [selectedThemeIds, setSelectedThemeIds] = useState<string[]>(post?.themeIds ?? [])
+  const [seriesOptions, setSeriesOptions] = useState<SeriesOption[]>([])
+  const [selectedSeriesPublicId, setSelectedSeriesPublicId] = useState(post?.series?.id ?? initialSeriesPublicId)
+  const [loadingSeries, setLoadingSeries] = useState(true)
   const [audioUrl, setAudioUrl] = useState(post?.audioUrl ?? "")
   const [saving, setSaving] = useState(false)
   const [uploadingCover, setUploadingCover] = useState(false)
@@ -235,7 +246,8 @@ export function PostEditor({ post }: Props) {
     coAuthorUserId: post?.coAuthorUserId ?? "",
     audioUrl: post?.audioUrl ?? "",
     themeIds: [...(post?.themeIds ?? [])].sort(),
-  }), [post])
+    seriesPublicId: post?.series?.id ?? initialSeriesPublicId,
+  }), [initialSeriesPublicId, post])
   const [savedSharedSignature, setSavedSharedSignature] = useState(initialSharedSignature)
 
   const fieldId = useId()
@@ -255,6 +267,7 @@ export function PostEditor({ post }: Props) {
     coAuthorUserId,
     audioUrl,
     themeIds: [...selectedThemeIds].sort(),
+    seriesPublicId: selectedSeriesPublicId,
   })
 
   const dirtyLocales = useMemo(() => new Set(POST_LOCALES.filter((locale) => (
@@ -351,6 +364,19 @@ export function PostEditor({ post }: Props) {
     }
 
     void loadCoAuthors()
+    return () => controller.abort()
+  }, [])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    fetch("/api/admin/series", { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error()
+        return response.json() as Promise<SeriesOption[]>
+      })
+      .then((items) => { if (!controller.signal.aborted) setSeriesOptions(items) })
+      .catch(() => { if (!controller.signal.aborted) setSeriesOptions([]) })
+      .finally(() => { if (!controller.signal.aborted) setLoadingSeries(false) })
     return () => controller.abort()
   }, [])
 
@@ -466,6 +492,7 @@ export function PostEditor({ post }: Props) {
       friendImage: friendImage.trim() || undefined,
       coAuthorUserId: coAuthorUserId.trim() || null,
       audioUrl: audioUrl.trim() || undefined,
+      seriesPublicId: selectedSeriesPublicId || null,
     } : {
       ...localizedBody,
       ...(draft.localizedSlug.trim() ? { slug: draft.localizedSlug.trim() } : {}),
@@ -830,6 +857,26 @@ export function PostEditor({ post }: Props) {
                   <span className="text-xs text-neutral-500">Ao desmarcar, o post recebe noindex e sai do sitemap, temas e relacionados.</span>
                 </span>
               </label>
+            </div>
+
+            <div className="grid gap-3 rounded-xl border border-neutral-200 p-3 dark:border-neutral-800">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <label htmlFor={`${fieldId}-series`} className={LABEL_CLASS_NAME}>Série editorial</label>
+                  <p className="mt-1 text-xs text-neutral-500">Ao publicar, este post entra na timeline como um novo capítulo.</p>
+                </div>
+                <Link href="/admin/series/new" className="text-xs text-neutral-600 underline underline-offset-4 hover:text-neutral-950 dark:text-neutral-400 dark:hover:text-neutral-100">Nova série</Link>
+              </div>
+              <select
+                id={`${fieldId}-series`}
+                value={selectedSeriesPublicId}
+                onChange={(event) => { setSelectedSeriesPublicId(event.target.value); setNotice("") }}
+                disabled={loadingSeries}
+                className={`${FIELD_CLASS_NAME} disabled:cursor-wait disabled:opacity-60`}
+              >
+                <option value="">Post independente</option>
+                {seriesOptions.map((item) => <option key={item.publicId} value={item.publicId}>{item.title}{item.published ? "" : " (rascunho)"}</option>)}
+              </select>
             </div>
 
             <fieldset className="border-t border-neutral-200 pt-4 dark:border-neutral-800">

@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next"
 import { getLatestPublishedPostUpdate, getPostsWithPublishedVersions } from "@/lib/db/posts"
 import { getIndexableNotes } from "@/lib/db/notes"
 import { getActiveThemeUpdates } from "@/lib/db/themes"
+import { getPublishedSeriesUpdates } from "@/lib/db/series"
 import { absoluteUrl, preferredContentImages } from "@/lib/seo"
 import { getSitemapDescriptors, SITEMAP_PAGE_SIZE } from "@/lib/sitemaps"
 import { localizedPostPath, POST_LOCALE_DETAILS, POST_LOCALES } from "@/lib/post-locales"
@@ -67,6 +68,16 @@ async function topicsSitemap(): Promise<MetadataRoute.Sitemap> {
   }))
 }
 
+async function seriesSitemap(): Promise<MetadataRoute.Sitemap> {
+  const series = await getPublishedSeriesUpdates()
+  return series.map(({ slug, updatedAt }) => ({
+    url: absoluteUrl(`/series/${encodeURIComponent(slug)}`),
+    lastModified: updatedAt,
+    changeFrequency: "monthly" as const,
+    priority: 0.75,
+  }))
+}
+
 async function postsSitemap(page: number): Promise<MetadataRoute.Sitemap> {
   const posts = await getPostsWithPublishedVersions({ page: page + 1, limit: SITEMAP_PAGE_SIZE })
   return posts.flatMap((post) => {
@@ -114,6 +125,7 @@ export default async function sitemap({ id }: { id: Promise<string> }): Promise<
   const sitemapId = await id
   if (sitemapId === "index") return indexSitemap()
   if (sitemapId === "topics") return topicsSitemap()
+  if (sitemapId === "series") return seriesSitemap()
 
   const match = /^(posts|notes)-(\d+)$/.exec(sitemapId)
   if (!match) return []

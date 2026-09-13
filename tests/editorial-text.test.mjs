@@ -49,3 +49,40 @@ test("HTML paragraphs, images and blank lines retain structure", () => {
   assert.match(html, /<figcaption>Legenda<\/figcaption>/)
   assert.doesNotMatch(html, /:::editor/)
 })
+
+test("HTML editorial classes, CSS hooks and ARIA ID references survive sanitization", () => {
+  const html = renderMarkdownSync([
+    '<div data-editor-document="html" data-editor-source="raw">',
+    '<section class="bloco painel_2" data-css-hook="hlog-02" aria-labelledby="titulo apoio" aria-describedby="descricao">',
+    '<h2 id="titulo" class="comando">Resultado</h2>',
+    '<p id="apoio" class="resultado">Base funcional</p>',
+    '<p id="descricao">Descrição</p>',
+    '<ul class="checks"><li class="check-item">Pronto</li></ul>',
+    '<pre><code class="language-c++ code-sample">int main()</code></pre>',
+    '</section>',
+    '</div>',
+  ].join(''))
+
+  assert.match(html, /<section(?=[^>]*class="bloco painel_2")(?=[^>]*data-css-hook="hlog-02")(?=[^>]*aria-labelledby="user-content-titulo user-content-apoio")(?=[^>]*aria-describedby="user-content-descricao")[^>]*>/)
+  assert.match(html, /<h2 id="user-content-titulo" class="comando">/)
+  assert.match(html, /<p id="user-content-apoio" class="resultado"/)
+  assert.match(html, /<ul class="checks"><li class="check-item">Pronto<\/li><\/ul>/)
+  assert.match(html, /<code class="language-c\+\+ code-sample">int main\(\)<\/code>/)
+})
+
+test("HTML editorial attributes do not weaken dangerous-content sanitization", () => {
+  const html = renderMarkdownSync([
+    '<div data-editor-document="html" data-editor-source="raw">',
+    '<section class="bloco utility:hover" data-css-hook="INVALID HOOK" onclick="alert(1)" style="padding: 1em; position: fixed; background-image: url(javascript:alert(1))">',
+    '<h2 class="comando" onmouseover="alert(1)">Seguro</h2>',
+    '<a href="javascript:alert(1)">link</a>',
+    '<script>alert(1)</script>',
+    '</section>',
+    '</div>',
+  ].join(''))
+
+  assert.match(html, /<section class="bloco" style="padding: 1em">/)
+  assert.match(html, /<h2 class="comando"[^>]*>/)
+  assert.match(html, />Seguro<\/a><\/h2>/)
+  assert.doesNotMatch(html, /utility:hover|data-css-hook|onclick|onmouseover|position: fixed|background-image|javascript:|<script/i)
+})

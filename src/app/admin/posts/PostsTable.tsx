@@ -91,6 +91,7 @@ function PostFlags({ post }: { post: SerializedPostSummary }) {
     <>
       {post.pinned && <span className="admin-record-flag is-pinned">Fixado</span>}
       {post.hiddenFromTimeline && <span className="admin-record-flag">Oculto</span>}
+      {post.series && <span className="admin-record-flag">Série · cap. {post.series.position}</span>}
     </>
   )
 }

@@ -34,6 +34,8 @@ import { PostHeader } from "@/components/PostHeader"
 import { AudioPlayer } from "@/components/AudioPlayer"
 import { DocumentLanguage } from "@/components/DocumentLanguage"
 import { PostLanguageMenuRegistration } from "@/components/public-menu/PublicMenuContext"
+import { getSeriesByPublicId, getSeriesChapters } from "@/lib/db/series"
+import { PostSeriesContext } from "@/components/series/PostSeriesContext"
 
 const pageCopy: Record<PostLocale, {
   back: string
@@ -211,9 +213,14 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
   const selectorLocales = version.published
     ? publishedLocales
     : [locale, ...publishedLocales.filter((availableLocale) => availableLocale !== locale)]
-  const [relatedPosts, themes] = await Promise.all([
+  const [relatedPosts, themes, seriesContext] = await Promise.all([
     isPostVersionIndexable(version) ? getRelatedPosts(post) : [],
     getThemesForPost(post._id, { activeOnly: true }),
+    locale === "pt" && post.series
+      ? getSeriesByPublicId(post.series.id, { publishedOnly: !admin }).then(async (series) => (
+          series ? { series, chapters: await getSeriesChapters(series, { includeUnpublished: admin }) } : null
+        ))
+      : Promise.resolve(null),
   ])
   const localizedRelatedPosts = relatedPosts
     .filter((relatedPost) => locale === "pt" ? relatedPost.published : relatedPost.translations?.[locale]?.published === true)
@@ -256,6 +263,7 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
                 isPartOf: [
                   { "@id": `${siteConfig.url}/#blog` },
                   { "@id": `${absoluteUrl(ARTICLE_COLLECTION_PATH)}#collection` },
+                  ...(seriesContext ? [{ "@id": `${absoluteUrl(`/series/${seriesContext.series.slug}`)}#series` }] : []),
                 ],
                 inLanguage: details.htmlLang,
                 keywords: version.tags,
@@ -283,6 +291,14 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
           }),
         }}
       />
+      {seriesContext && (
+        <PostSeriesContext
+          series={seriesContext.series}
+          chapters={seriesContext.chapters}
+          currentPostId={postId}
+          placement="before"
+        />
+      )}
       <PostHeader
         title={version.title}
         cover={version.cover}
@@ -354,6 +370,15 @@ export async function LocalizedPostPage({ slug, locale }: { slug: string; locale
           hideLabel={copy.hideDetails}
         />
       </div>
+
+      {seriesContext && (
+        <PostSeriesContext
+          series={seriesContext.series}
+          chapters={seriesContext.chapters}
+          currentPostId={postId}
+          placement="after"
+        />
+      )}
 
       {localizedRelatedPosts.length > 0 && (
         <aside aria-labelledby="related-posts-title" className={["mt-7 border-t border-zinc-200/80 pt-5 dark:border-zinc-700/80", style === "editorial" ? "editorial-post-footer" : ""].join(" ")}>

@@ -17,6 +17,14 @@ export type PostSource = {
   url: string
 }
 
+export type PostSeriesMembership = {
+  id: string
+  slug: string
+  title: string
+  position: number
+  published: boolean
+}
+
 export type PostTranslation = {
   slug?: string
   slugAliases?: string[]
@@ -61,6 +69,7 @@ export type Post = {
   pinned: boolean
   published: boolean
   hiddenFromTimeline?: boolean
+  series?: PostSeriesMembership
   publishedAt?: Date
   readingTimeMinutes: number
   views?: number
@@ -226,6 +235,7 @@ export function serializePostSummary(
     pinned: post.pinned,
     published: post.published,
     hiddenFromTimeline: post.hiddenFromTimeline,
+    series: post.series,
     publishedAt: post.publishedAt?.toISOString(),
     readingTimeMinutes: post.readingTimeMinutes,
     views: post.views,

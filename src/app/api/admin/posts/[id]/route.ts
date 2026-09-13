@@ -11,7 +11,7 @@ import {
   updatePostTranslation,
 } from "@/lib/db/posts"
 import { adminOnly } from "@/lib/auth"
-import { toObjectId } from "@/lib/validation"
+import { asOptionalString, toObjectId } from "@/lib/validation"
 import { parsePostPatch, parsePostTranslation } from "@/lib/api/post-input"
 import { deleteCommentsForParent, getCommentsForParent } from "@/lib/db/comments"
 import { deleteCommentImagesFromContents, queueCommentImagesForCleanup } from "@/lib/db/comment-uploads"
@@ -22,6 +22,7 @@ import { descriptionFromMarkdown } from "@/lib/seo"
 import { notifyIndexNow } from "@/lib/indexnow"
 import { preservedSlugAliases } from "@/lib/post-seo"
 import { invalidatePublicContentCache } from "@/lib/public-content-cache"
+import { getSeriesByPublicId, removePostFromSeries, setSeriesForPost } from "@/lib/db/series"
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -82,6 +83,11 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
     const data = parsePostPatch(body)
     if (body.cover === null) data.showCoverInTimeline = false
+    const seriesSelectionChanged = "seriesPublicId" in body
+    const seriesPublicId = seriesSelectionChanged ? asOptionalString(body.seriesPublicId, 80) ?? null : null
+    if (seriesPublicId && !(await getSeriesByPublicId(seriesPublicId))) {
+      return NextResponse.json({ error: "Série inválida." }, { status: 400 })
+    }
 
     if (data.slug && data.slug !== existingPost.slug) {
       const conflictingPost = await getPostBySlug(data.slug)
@@ -111,6 +117,10 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       await updatePost(id, data)
       invalidatePublicContentCache()
     }
+    const seriesMembership = seriesSelectionChanged
+      ? await setSeriesForPost(existingPost._id, seriesPublicId)
+      : existingPost.series ?? null
+    if (seriesSelectionChanged) invalidatePublicContentCache()
 
     if (existingPost.published || data.published === true) {
       const paths = [
@@ -131,7 +141,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         topic: "posts",
         contentType: "post",
         contentId: id,
-        title: `Novo post: ${title}`,
+        title: seriesMembership?.published ? `Novo capítulo de ${seriesMembership.title}: ${title}` : `Novo post: ${title}`,
         body: excerpt?.trim() || descriptionFromMarkdown(content, 180),
         url: `/posts/${slug}`,
       }).catch(() => undefined))
@@ -147,6 +157,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       originalContentUpdatedAt: (
         data.originalContentUpdatedAt ?? getOriginalContentUpdatedAt(existingPost)
       ).toISOString(),
+      series: seriesMembership,
     })
   } catch (err) {
     if (err instanceof Error && err.message.includes("inválido")) {
@@ -176,6 +187,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   const contents = comments.map((comment) => comment.content)
   await queueCommentImagesForCleanup(contents)
   await deleteCommentsForParent(id)
+  await removePostFromSeries(existingPost._id)
   await deletePost(id)
   await deleteCommentImagesFromContents(contents)
   invalidatePublicContentCache()

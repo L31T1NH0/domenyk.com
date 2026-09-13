@@ -116,6 +116,17 @@ function PostTimelineItem({
           Fixado
         </span>
       )}
+      {post.series?.published && (
+        <Link
+          href={`/series/${encodeURIComponent(post.series.slug)}`}
+          className="timeline-series-label"
+          aria-label={`Capítulo ${post.series.position} da série ${post.series.title}`}
+        >
+          <span>Capítulo {String(post.series.position).padStart(2, "0")}</span>
+          <span aria-hidden>·</span>
+          <strong>{post.series.title}</strong>
+        </Link>
+      )}
       <Link href={`/posts/${post.slug}`} prefetch={false} className="block rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 focus-visible:ring-offset-2 dark:focus-visible:ring-neutral-300 dark:focus-visible:ring-offset-[#040404]">
         {showCover && isEditorial ? (
           <span className="flex min-w-0 flex-col gap-3">

@@ -2,12 +2,13 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { BellAlertIcon, ChartBarSquareIcon, ChatBubbleLeftRightIcon, DocumentTextIcon, FolderIcon, NewspaperIcon, PencilSquareIcon, TagIcon, UsersIcon } from "@heroicons/react/24/outline"
+import { BellAlertIcon, ChartBarSquareIcon, ChatBubbleLeftRightIcon, DocumentTextIcon, FolderIcon, NewspaperIcon, PencilSquareIcon, RectangleStackIcon, TagIcon, UsersIcon } from "@heroicons/react/24/outline"
 
 const navItems = [
   { href: "/admin", label: "Visão geral", icon: ChartBarSquareIcon },
   { href: "/admin/escrevendo", label: "O que estou escrevendo", icon: PencilSquareIcon },
   { href: "/admin/posts", label: "Posts", icon: DocumentTextIcon },
+  { href: "/admin/series", label: "Séries", icon: RectangleStackIcon },
   { href: "/admin/notes", label: "Notas", icon: PencilSquareIcon },
   { href: "/admin/temas", label: "Temas", icon: TagIcon },
   { href: "/admin/comments", label: "Comentários", icon: ChatBubbleLeftRightIcon },

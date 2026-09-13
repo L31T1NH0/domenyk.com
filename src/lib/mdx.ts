@@ -47,11 +47,40 @@ type MdastNode = {
   children?: MdastNode[]
 }
 
+type SanitizeAttribute = NonNullable<SanitizeSchema["attributes"]>[string][number]
+
 const AUTHOR_TOKEN_PATTERN = /@autor|@co-autor/g
 const DEFAULT_AUTHOR_IMAGE = "/images/profile.jpg"
 const MAX_PARAGRAPH_ID_CACHE_ENTRIES = 128
 const YOUTUBE_EMBED_SOURCE = /^https:\/\/www\.youtube-nocookie\.com\/embed\/[A-Za-z0-9_-]{11}\?controls=0&iv_load_policy=3&rel=0&playsinline=1(?:&start=\d+)?(?:&end=\d+)?$/
+const SAFE_EDITORIAL_CLASS_NAME = /^(?=.{1,64}$)[A-Za-z_][A-Za-z0-9_-]*$/
+const SAFE_ARIA_ID_REFERENCE_LIST = /^(?=.{1,512}$)[\p{L}\p{N}_][\p{L}\p{N}_.:-]*(?:\s+[\p{L}\p{N}_][\p{L}\p{N}_.:-]*)*$/u
+const ARIA_ID_REFERENCE_PROPERTIES = ["ariaDescribedBy", "ariaLabelledBy"] as const
 const paragraphIdCache = new Map<string, ReadonlySet<string>>()
+
+function sanitizeAttributeName(attribute: SanitizeAttribute): string {
+  return Array.isArray(attribute) ? attribute[0] : attribute
+}
+
+function editorialAttributes(tagName: string, additions: SanitizeAttribute[] = []): SanitizeAttribute[] {
+  const replaced = new Set<string>(["className", ...ARIA_ID_REFERENCE_PROPERTIES])
+  const defaults = defaultSchema.attributes?.[tagName] ?? []
+  const existingClassValues = defaults.flatMap(attribute => (
+    Array.isArray(attribute) && attribute[0] === "className" ? attribute.slice(1) : []
+  ))
+  return [
+    ...defaults.filter(attribute => !replaced.has(sanitizeAttributeName(attribute))),
+    ["className", SAFE_EDITORIAL_CLASS_NAME, ...existingClassValues],
+    ["ariaDescribedBy", SAFE_ARIA_ID_REFERENCE_LIST],
+    ["ariaLabelledBy", SAFE_ARIA_ID_REFERENCE_LIST],
+    ...additions,
+  ]
+}
+
+const editorialDefaultAttributes = Object.fromEntries(
+  Object.keys(defaultSchema.attributes ?? {}).map(tagName => [tagName, editorialAttributes(tagName)])
+) as NonNullable<SanitizeSchema["attributes"]>
+
 const markdownSanitizeSchema: SanitizeSchema = {
   ...defaultSchema,
   clobberPrefix: "user-content-",
@@ -63,33 +92,28 @@ const markdownSanitizeSchema: SanitizeSchema = {
     src: ["http", "https"],
   },
   attributes: {
-    ...defaultSchema.attributes,
-    "*": [
-      ...(defaultSchema.attributes?.["*"] ?? []),
-      "className",
+    ...editorialDefaultAttributes,
+    "*": editorialAttributes("*", [
       "dataEditorSafeStyle",
       ["dataCssHook", /^[a-z0-9](?:[a-z0-9-]{0,47})$/],
-    ],
-    div: [
-      ...(defaultSchema.attributes?.div ?? []),
+    ]),
+    div: editorialAttributes("div", [
       ["dataEditorAlign", "left", "center", "right", "justify"],
       ["dataEditorSize", "auto", "14", "16", "18", "20", "24", "28", "32", "40"],
       ["dataEditorLeading", "auto", "1.2", "1.4", "1.6", "1.8", "2"],
       ["dataEditorSpacing", "auto", "0", "8", "16", "24", "32"],
       ["dataEditorTone", "none", "neutral", "sand", "rose", "blue"],
-    ],
-    a: [
-      ...(defaultSchema.attributes?.a ?? []),
+    ]),
+    a: editorialAttributes("a", [
       ["rel", "ugc", "nofollow", "noopener", "noreferrer"],
       ["target", "_blank"],
       ["dataNoteSourceLink", "post"],
-    ],
-    img: [
-      ...(defaultSchema.attributes?.img ?? []),
+    ]),
+    img: editorialAttributes("img", [
       "loading",
       "decoding",
-    ],
-    iframe: [
+    ]),
+    iframe: editorialAttributes("iframe", [
       ["src", YOUTUBE_EMBED_SOURCE],
       "title",
       ["loading", "lazy"],
@@ -97,8 +121,8 @@ const markdownSanitizeSchema: SanitizeSchema = {
       ["allow", "encrypted-media; picture-in-picture"],
       "allowFullScreen",
       ["dataYoutubeEmbed", ""],
-    ],
-    figure: [
+    ]),
+    figure: editorialAttributes("figure", [
       ["dataEditorImage", "left", "center", "right"],
       "dataEditorWidth",
       ["dataFlowImage", "left", "right"],
@@ -107,25 +131,15 @@ const markdownSanitizeSchema: SanitizeSchema = {
       ["dataImageUnit", "%", "px"],
       "dataImageGap",
       ["dataImageTheme", "adaptive"],
-    ],
-    p: [
-      ...(defaultSchema.attributes?.p ?? []),
+    ]),
+    p: editorialAttributes("p", [
       "dataPid",
-    ],
-    span: [
-      ...(defaultSchema.attributes?.span ?? []),
+    ]),
+    span: editorialAttributes("span", [
       ["dataRole", "author-reference"],
       ["dataKind", "author", "co-author"],
       ["dataCssHook", /^[a-z0-9](?:[a-z0-9-]{0,47})$/],
-    ],
-    code: [
-      // The sanitizer uses the first matching attribute rule. Replace the
-      // default language-only rule so HTML formulas keep their math classes.
-      ...(defaultSchema.attributes?.code ?? []).filter(attribute => (
-        Array.isArray(attribute) ? attribute[0] !== "className" : attribute !== "className"
-      )),
-      ["className", /^language-./, "math-inline", "math-display"],
-    ],
+    ]),
   },
 }
 

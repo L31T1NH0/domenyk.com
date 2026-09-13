@@ -142,6 +142,13 @@ const validators = {
     ["_id", "value", "updatedAt"],
     { _id: string, value: bool, updatedAt: date }
   ),
+  series: schema(
+    ["_id", "publicId", "title", "slug", "description", "published", "postIds", "createdAt", "updatedAt"],
+    {
+      publicId: string, title: string, slug: string, description: string,
+      published: bool, postIds: array, createdAt: date, updatedAt: date,
+    }
+  ),
   themes: schema(
     ["_id", "name", "slug", "description", "active", "postIds", "createdAt", "updatedAt"],
     {

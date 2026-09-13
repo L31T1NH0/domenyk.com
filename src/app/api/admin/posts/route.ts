@@ -7,6 +7,7 @@ import { sendReaderPush } from "@/lib/push"
 import { descriptionFromMarkdown } from "@/lib/seo"
 import { notifyIndexNow } from "@/lib/indexnow"
 import { invalidatePublicContentCache } from "@/lib/public-content-cache"
+import { getSeriesByPublicId, setSeriesForPost } from "@/lib/db/series"
 
 export async function POST(req: NextRequest) {
   const unauthorized = await adminOnly()
@@ -27,6 +28,10 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const seriesPublicId = asOptionalString(body.seriesPublicId, 80) ?? null
+    if (seriesPublicId && !(await getSeriesByPublicId(seriesPublicId))) {
+      return NextResponse.json({ error: "Série inválida." }, { status: 400 })
+    }
     const cover = parsePostCover(body.cover)
     const post = await createPost({
       title,
@@ -48,6 +53,7 @@ export async function POST(req: NextRequest) {
       hiddenFromTimeline: body.hiddenFromTimeline === true,
       published: body.published === true,
     })
+    post.series = (await setSeriesForPost(post._id, seriesPublicId)) ?? undefined
     invalidatePublicContentCache()
 
     if (post.published) {
@@ -58,7 +64,7 @@ export async function POST(req: NextRequest) {
         topic: "posts",
         contentType: "post",
         contentId: post._id.toString(),
-        title: `Novo post: ${post.title}`,
+        title: post.series?.published ? `Novo capítulo de ${post.series.title}: ${post.title}` : `Novo post: ${post.title}`,
         body: post.excerpt?.trim() || descriptionFromMarkdown(post.content, 180),
         url: `/posts/${post.slug}`,
       }).catch(() => undefined))

@@ -67,6 +67,7 @@ export default async function EditPostPage({ params }: Props) {
           originalContentUpdatedAt: getOriginalContentUpdatedAt(post).toISOString(),
           translations,
           themeIds: themes.map((theme) => theme._id.toString()),
+          series: post.series,
         }}
       />
     </div>
