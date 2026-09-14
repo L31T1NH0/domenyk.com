@@ -15,6 +15,15 @@ const mathParser = unified().use(remarkParse).use(remarkMath)
 const literalElements = new Set(["code", "pre", "kbd", "samp", "script", "style", "textarea", "math", "svg"])
 const inlineElements = new Set(["a", "abbr", "b", "cite", "del", "em", "i", "ins", "mark", "q", "s", "small", "span", "strong", "sub", "sup", "time", "u"])
 
+// HTML entities have already been decoded by the time this plugin runs, so
+// writing R&#36; does not protect a currency sign from remark-math. Hide dollar
+// signs that belong to ISO-style currency prefixes while locating formulas;
+// the replacement has the same length, keeping parser offsets aligned with
+// the original source used below.
+function maskCurrencyDollars(source) {
+  return source.replace(/\b([A-Z]{1,3})\$(?=\s*\d)/g, "$1\uFF04")
+}
+
 /** Recognize LaTeX in HTML text while preserving authored markup and styles. */
 export default function rehypeHtmlMath() {
   /** @param {Root} tree */
@@ -32,7 +41,7 @@ export default function rehypeHtmlMath() {
         if (source.includes("$")) {
           /** @type {Formula[]} */
           const formulas = []
-          visit(mathParser.parse(source), (node) => {
+          visit(mathParser.parse(maskCurrencyDollars(source)), (node) => {
             if (node.type !== "math" && node.type !== "inlineMath") return
             const math = /** @type {import('mdast-util-math').Math | import('mdast-util-math').InlineMath} */ (node)
             const start = math.position?.start.offset

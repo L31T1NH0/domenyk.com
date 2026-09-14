@@ -54,6 +54,18 @@ test("leaves code, escaped delimiters, attributes and incomplete formulas litera
   assert.match(html, /title="\$atributo\$"/)
 })
 
+test("does not interpret currency amounts split across inline HTML as math", () => {
+  const content = document("<p>Mendonça afirmou que a aeronave foi avaliada em aproximadamente <strong>R&#36; 538 milhões</strong>, oferecida por <strong>US&#36; 80 milhões</strong>. O valor correspondia a <strong>R$ 415 milhões</strong>, com deságio superior a <strong>R$ 100 milhões</strong>. A fórmula <em>$x_1$</em> continua válida.</p>")
+  const html = renderMarkdownSync(content)
+
+  assert.equal(formulaCount(html), 1)
+  assert.match(html, /<strong>R\$ 538 milhões<\/strong>/)
+  assert.match(html, /<strong>US\$ 80 milhões<\/strong>/)
+  assert.match(html, /<strong>R\$ 415 milhões<\/strong>/)
+  assert.match(html, /<strong>R\$ 100 milhões<\/strong>/)
+  assert.ok(html.includes('<annotation encoding="application/x-tex">x_1</annotation>'))
+})
+
 test("does not join math across paragraphs, code or images", () => {
   const html = renderMarkdownSync(document('<p>$T</p><p>G$</p><p>$M<code>literal</code>G$</p><p>$x<img src="/test.png" alt="Foto">y$</p>'))
   assert.equal(formulaCount(html), 0)
