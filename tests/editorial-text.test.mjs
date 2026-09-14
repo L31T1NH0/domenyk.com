@@ -50,6 +50,37 @@ test("HTML paragraphs, images and blank lines retain structure", () => {
   assert.doesNotMatch(html, /:::editor/)
 })
 
+test("equivalent Markdown and unstyled HTML render the same semantic text structure", () => {
+  const markdown = [
+    "# Título",
+    "",
+    "Texto com **força**, *ênfase*, ~~revisão~~ e [referência](https://example.com).",
+    "",
+    "> Uma citação.",
+    "",
+    "- Primeiro item",
+    "- Segundo item",
+    "",
+    "1. Primeiro passo",
+    "2. Segundo passo",
+    "",
+    "`trecho de código`",
+  ].join("\n")
+  const authoredHtml = [
+    '<div data-editor-document="html" data-editor-source="raw">',
+    "<h1>Título</h1>",
+    '<p>Texto com <strong>força</strong>, <em>ênfase</em>, <del>revisão</del> e <a href="https://example.com">referência</a>.</p>',
+    "<blockquote><p>Uma citação.</p></blockquote>",
+    "<ul><li>Primeiro item</li><li>Segundo item</li></ul>",
+    "<ol><li>Primeiro passo</li><li>Segundo passo</li></ol>",
+    "<p><code>trecho de código</code></p>",
+    "</div>",
+  ].join("")
+  const compact = value => value.replace(/>\s+</g, "><").trim()
+
+  assert.equal(compact(renderMarkdownSync(authoredHtml)), compact(renderMarkdownSync(markdown)))
+})
+
 test("HTML editorial classes, CSS hooks and ARIA ID references survive sanitization", () => {
   const html = renderMarkdownSync([
     '<div data-editor-document="html" data-editor-source="raw">',

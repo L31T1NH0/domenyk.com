@@ -720,7 +720,9 @@ function createProcessor(
     .use(rehypeParagraphIds, onParagraphId)
   // Keep existing HTML paragraph anchors stable when formulas become markup.
   if (html) processor.use(rehypeHtmlMath)
-  if (!html) processor.use(rehypeDemoteBodyH1)
+  // The page title already owns h1. Keep authored HTML on the same heading
+  // scale and outline as the equivalent Markdown body (`#` also becomes h2).
+  processor.use(rehypeDemoteBodyH1)
   return processor
     .use(rehypeSlug)
     .use(rehypeAutolinkHeadings, { behavior: "wrap" })

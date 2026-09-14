@@ -1029,10 +1029,20 @@
 .personal-timeline-order-control:disabled { cursor:not-allowed; opacity:.3; }
 .personal-timeline-order-error { margin-bottom:.75rem; color:#b91c1c; font-size:12px; }
 /* Semantic reading defaults apply to Markdown output and authored HTML alike. */
-:where(.post-content, .note-content, .personal-timeline-content) { overflow-wrap: anywhere; }
+:where(.post-content, .note-content, .personal-timeline-content) {
+  --content-block-spacing: var(--reading-block-spacing, var(--note-reading-base-gap, .75em));
+  overflow-wrap: anywhere;
+}
 :where(.post-content, .note-content, .personal-timeline-content) :where(p,h1,h2,h3,h4,h5,h6,ul,ol,li,blockquote,a) { font-family: inherit; }
 :where(.post-content, .note-content, .personal-timeline-content) :where(p,h1,h2,h3,h4,h5,h6,ul,ol,blockquote) { margin-block: 0; }
 :where(.post-content, .note-content, .personal-timeline-content) :where(h1,h2,h3,h4,h5,h6) { font-family: var(--font-display),Arial,system-ui,sans-serif; font-weight:600; text-wrap:pretty; }
+
+/* HTML may use semantic grouping without opting into a custom layout. Preserve
+   the same block rhythm that flat Markdown receives from its root flex gap. */
+:where(.post-content, .note-content:not(.comment-content), .personal-timeline-content)
+  :where(article,aside,section,main,header,footer,nav,div) > :where(* + *) {
+  margin-top: var(--content-block-spacing);
+}
 
 .personal-timeline-content { --content-block-spacing: .75em; }
 :where(.personal-timeline-content, .personal-timeline-content > div[data-publication-surface]) > :where(* + *) { margin-top: var(--content-block-spacing); }
@@ -1146,6 +1156,11 @@ select,
   font-family: var(--font-text), system-ui, sans-serif;
 }
 
+/* Structural HTML must not switch a paragraph away from the reading face. */
+:where(.post-content, .note-content:not(.comment-content), .personal-timeline-content) :is(header,footer,nav) {
+  font-family: inherit;
+}
+
 .font-editorial-mono {
   font-family: var(--font-mono), ui-monospace, "SFMono-Regular", Consolas, monospace;
 }
@@ -1194,6 +1209,9 @@ img:hover {
 
 .post-content {
   --paragraph-hover-background: rgb(255 255 255 / 3%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--content-block-spacing);
   font-family: var(--font-reading), "Times New Roman", Times, serif;
   font-kerning: normal;
   font-optical-sizing: auto;
