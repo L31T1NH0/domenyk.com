@@ -365,6 +365,16 @@ export async function updateNote(id: string, data: { title?: string | null; seoT
   )
 }
 
+export async function updateNoteSeo(id: string, data: { seoTitle: string; seoDescription: string }): Promise<Note | null> {
+  const objectId = toObjectId(id)
+  if (!objectId) return null
+  return (await collection()).findOneAndUpdate(
+    { _id: objectId, deleting: { $ne: true } },
+    { $set: { seoTitle: data.seoTitle, seoDescription: data.seoDescription, updatedAt: new Date() } },
+    { returnDocument: "after" }
+  )
+}
+
 export async function deleteNote(id: string): Promise<{ deleted: boolean; thread: Note[] }> {
   const objectId = toObjectId(id)
   if (!objectId) return { deleted: false, thread: [] }
