@@ -107,29 +107,14 @@ async function postsSitemap(page: number): Promise<MetadataRoute.Sitemap> {
   })
 }
 
-async function notesSitemap(page: number): Promise<MetadataRoute.Sitemap> {
-  const notes = await getIndexableNotes({ page: page + 1, limit: SITEMAP_PAGE_SIZE })
-  return notes.map((note) => ({
-    url: absoluteUrl(`/notes/${note._id.toString()}`),
-    lastModified: note.updatedAt ?? note.createdAt,
-    changeFrequency: "monthly" as const,
-    priority: 0.5,
-    images: preferredContentImages({
-      images: note.images,
-      markdown: note.content,
-    }).map(absoluteUrl),
-  }))
-}
-
 export default async function sitemap({ id }: { id: Promise<string> }): Promise<MetadataRoute.Sitemap> {
   const sitemapId = await id
   if (sitemapId === "index") return indexSitemap()
   if (sitemapId === "topics") return topicsSitemap()
   if (sitemapId === "series") return seriesSitemap()
 
-  const match = /^(posts|notes)-(\d+)$/.exec(sitemapId)
+  const match = /^posts-(\d+)$/.exec(sitemapId)
   if (!match) return []
 
-  const page = Number(match[2])
-  return match[1] === "posts" ? postsSitemap(page) : notesSitemap(page)
+  return postsSitemap(Number(match[1]))
 }

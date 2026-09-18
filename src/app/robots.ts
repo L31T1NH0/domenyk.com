@@ -19,7 +19,10 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
         disallow: protectedPaths,
       },
     ],
-    sitemap: sitemaps.map(({ id }) => absoluteUrl(`/sitemap/${id}.xml`)),
+    sitemap: [
+      ...sitemaps.map(({ id }) => absoluteUrl(`/sitemap/${id}.xml`)),
+      absoluteUrl("/sitemap/notes.xml"),
+    ],
     host: siteConfig.url,
   }
 }
