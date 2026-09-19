@@ -1,6 +1,6 @@
 import "server-only"
 
-import { revalidateTag, unstable_cache } from "next/cache"
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache"
 import { countNotes, getNotes, serializeNote, type SerializedNote } from "@/lib/db/notes"
 import { countPosts, getPosts, serializePostSummary, type SerializedPostSummary } from "@/lib/db/posts"
 import {
@@ -286,4 +286,6 @@ export const getCachedInitialNotes = unstable_cache(
 
 export function invalidatePublicContentCache() {
   revalidateTag(PUBLIC_CONTENT_CACHE_TAG, { expire: 0 })
+  revalidatePath("/sitemap/[id].xml", "page")
+  revalidatePath("/robots.txt")
 }
