@@ -1,4 +1,7 @@
-export const QUIZ_VERSION = "v0.1"
+import type { QuestionId } from "./questions"
+
+export const QUIZ_VERSION = "v0.2"
+export const SCHEMA_VERSION = 2
 export const DIMENSIONS = {
   AE: ["Autonomia econômica", "Tutela / regulação", "Liberdade contratual"],
   CP: ["Coordenação econômica", "Administração política", "Preços / concorrência"],
@@ -15,12 +18,16 @@ export const DIMENSIONS = {
 } as const
 export type Dimension = keyof typeof DIMENSIONS
 export type Answer = -3 | -2 | -1 | 0 | 1 | 2 | 3 | "depends" | "unknown"
+export type Answers = Record<QuestionId, Answer>
+export type DraftAnswers = Partial<Answers>
 export type QuizResult = {
   quiz_version: string
-  answers: Answer[]
+  schema_version: number
+  answers: Answers
   x: number | null
   y: number | null
   dimensions: Record<Dimension, number | null>
+  dimensionReliability: Record<Dimension, number>
   consistency: number | null
   symmetry: number | null
   coverage: number

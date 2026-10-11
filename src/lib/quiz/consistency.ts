@@ -1,15 +1,15 @@
-import type { Answer } from "./types"
+import type { Answers } from "./types"
 export const COMPARISONS = [
-  {a:3,b:4,sign:-1,label:"Expressão e criminalização",relationship:"negativa",tolerance:2},
-  {a:5,b:39,sign:-1,label:"Tarifas e importações",relationship:"negativa",tolerance:1},
-  {a:2,b:1,sign:1,label:"Contratos: princípio e salário mínimo",relationship:"parcial / abstrato × concreto",tolerance:3},
-  {a:49,b:50,sign:1,label:"Preços: princípio e desastre",relationship:"condicional / abstrato × concreto",tolerance:3},
-  {a:57,b:58,sign:-1,label:"Limites para aliados e adversários",relationship:"negativa",tolerance:1},
-  {a:57,b:59,sign:1,label:"Simetria de poderes",relationship:"positiva",tolerance:1},
+  {a:"q_offensive_expression",b:"q_racist_opinion_crime",sign:-1,label:"Expressão e criminalização",relationship:"negativa",tolerance:2},
+  {a:"q_import_tariffs",b:"q_free_imports",sign:-1,label:"Tarifas e importações",relationship:"negativa",tolerance:1},
+  {a:"q_voluntary_contracts",b:"q_contract_minimum_wage",sign:1,label:"Contratos: princípio e salário mínimo",relationship:"parcial / abstrato × concreto",tolerance:3},
+  {a:"q_free_prices",b:"q_disaster_prices",sign:1,label:"Preços: princípio e desastre",relationship:"condicional / abstrato × concreto",tolerance:3},
+  {a:"q_symmetric_power_risk",b:"q_allied_rule_bending",sign:-1,label:"Limites para aliados e adversários",relationship:"negativa",tolerance:1},
+  {a:"q_symmetric_power_risk",b:"q_equal_political_powers",sign:1,label:"Simetria de poderes",relationship:"positiva",tolerance:1},
 ] as const
-export function compareAnswers(answers: Answer[]) {
+export function compareAnswers(answers: Answers) {
   const comparisons = COMPARISONS.map(pair => {
-    const a = answers[pair.a - 1], b = answers[pair.b - 1]
+    const a = answers[pair.a], b = answers[pair.b]
     const gap = typeof a === "number" && typeof b === "number" ? Math.abs(a - b * pair.sign) : null
     return {label:pair.label,relationship:pair.relationship,gap,penalty:gap === null ? null : Math.max(0,gap-pair.tolerance)/(6-pair.tolerance)}
   })

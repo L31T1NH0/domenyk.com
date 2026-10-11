@@ -13,3 +13,19 @@ export const IDEOLOGIES: Reference[] = [
   {name:"Conservador nacional",x:0,y:5,dimensions:{AE:1,CP:-1,IG:0,ES:5,LC:-4,TR:9,PU:8,DE:-3,IN:1,AB:-8,PR:5,RR:3}},
   {name:"Estatismo autoritário",x:-7,y:8,dimensions:{AE:-8,CP:-8,IG:6,ES:9,LC:-8,TR:2,PU:8,DE:-8,IN:-7,AB:-6,PR:-7,RR:-3}},
 ]
+
+export function profileDistance(
+  profile: typeof IDEOLOGIES[number],
+  values: Partial<Record<Dimension | "x" | "y", number | null>>,
+  reliability: Partial<Record<Dimension | "x" | "y", number>>,
+) {
+  let sum = 0, total = 0
+  for (const key of Object.keys(values) as (Dimension | "x" | "y")[]) {
+    const value = values[key], weight = reliability[key] ?? 0
+    if (value == null || weight <= 0) continue
+    const reference = key === "x" || key === "y" ? profile[key] : profile.dimensions[key]
+    sum += weight * (value - reference) ** 2
+    total += weight
+  }
+  return total ? Math.sqrt(sum / total) : Infinity
+}

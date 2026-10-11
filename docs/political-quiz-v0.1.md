@@ -33,4 +33,4 @@ Ao alterar perguntas, pesos, perfis ou fórmulas após publicação, crie outra 
 
 Esta versão não é um instrumento psicométrico validado. A linguagem das perguntas, os pesos, perfis e tolerâncias precisam de revisão e calibração com participantes de posições conhecidas. Testar sobretudo perfis socialistas, liberais, conservadores, mistos e pessoas que separam moralidade de criminalização. Verificar equilíbrio temático, redundância, concentração dos pesos, interpretação dos enunciados e sensibilidade aos limiares. A dimensão RR tem uma base pequena de perguntas posicionais; ampliá-la numa próxima versão se a coleta mostrar baixa estabilidade.
 
-Verificação automatizada: `node --conditions=react-server tests/political-quiz.test.mjs`. A suíte cobre completude da matriz, respostas especiais, normalização, separação dos diagnósticos, tolerâncias, validação e API.
+Esta versão foi substituída pela v0.2. Resultados e perguntas antigas são preservados.

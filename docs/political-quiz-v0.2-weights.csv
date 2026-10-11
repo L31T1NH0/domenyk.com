@@ -1,0 +1,61 @@
+id,kind,topic,question,help,x,y,AE,CP,IG,ES,LC,TR,PU,DE,IN,AB,PR,RR
+q_contract_minimum_wage,positional,Contratos,"Uma pessoa deve poder aceitar um emprego que paga menos que o salário mínimo, se ela e o empregador concordarem?",,0.8,0,1,0,-0.4,-0.5,0,0,0,0,0,0,0.3,0
+q_voluntary_contracts,positional,Contratos,"O governo deve deixar adultos livres para combinar os termos de um contrato, quando o acordo não prejudica outras pessoas?",,0.7,0,1,0,0,-0.5,0,0,0,0,0,0,0,0
+q_offensive_expression,positional,Expressão,"Uma pessoa deve poder expressar uma opinião política ofensiva, desde que não ameace ninguém nem incentive violência?",,0,-1,0,0,0,0,1,0,0,0,0.3,0,0,0
+q_racist_opinion_crime,positional,Expressão,"Expressar uma opinião racista deve ser crime, mesmo quando a pessoa não ameaça ninguém, não incentiva violência e não nega um serviço a alguém?",,0,0.8,0,0,0,0,-1,0,0.4,0,0,0,0,0
+q_import_tariffs,positional,Comércio,"O governo deve cobrar impostos sobre produtos importados para proteger empresas nacionais, mesmo que os consumidores paguem mais?",,-0.8,0,0,-0.6,0,0.3,0,0,0,0,0,-1,0,0
+q_immigration,positional,Imigração,"Pessoas de outros países devem poder morar e trabalhar aqui, desde que cumpram as mesmas leis que os demais moradores?",,0,-0.4,0,0,0,0,0.5,0,0,0,0,1,0,0
+q_property_protection,positional,Propriedade,"O dono deve poder manter seu imóvel, mesmo quando o governo acredita que ele seria mais útil nas mãos de outra pessoa?",,0.8,0,0,0,0,-0.4,0,0,0,0,0,0,1,0
+q_property_redistribution,positional,Propriedade,"O governo deve poder tomar um imóvel do dono para entregá-lo a outras pessoas, pagando uma indenização justa?",,-0.6,0,0,0,0.6,0.5,0,0,0,0,0,0,-1,0
+q_rent_control,positional,Moradia,O governo deve limitar os aumentos de aluguel para ajudar quem precisa alugar uma casa?,,-0.8,0,-0.5,-1,0,0.5,0,0,0,0,0,0,0,0
+q_work_hours,positional,Trabalho,"A lei deve proibir jornadas acima de um limite de horas, mesmo quando empregado e empregador concordam com uma jornada maior?",,-0.5,0,-1,0,0,0.5,0,0,0,0,0,0,0,0
+q_voluntary_voting,positional,Participação,"Votar deve ser uma escolha, sem multa para quem decide não votar?",,0,-0.6,0,0,0,0,0.8,0,0,0,0,0,0,0
+q_university_quotas,positional,Igualdade,"Universidades públicas devem reservar vagas para grupos que sofreram discriminação histórica, mesmo quando outros candidatos têm notas maiores?",,0,0,0,0,1,0.4,0,0,0,0,0,0,0,0
+q_profit_limits,positional,Lucros,"O governo deve limitar o lucro de empresas que oferecem serviços essenciais, como água e energia?",,-0.8,0,0,-1,0,0.6,0,0,0,0,0,0,0,0
+q_assisted_dying,positional,Autonomia,"Um adulto com doença sem cura deve poder escolher morrer com ajuda médica, depois de receber informações sobre as alternativas e ser avaliado por outro médico?",,0,-0.8,0,0,0,0,1,0,0,0,0,0,0,0
+q_education_choice,positional,Educação,As famílias devem poder usar o dinheiro público destinado à educação do filho para pagar uma escola privada autorizada a funcionar?,,0.4,0,0.4,0.6,0,0,0,0,0,0.3,0,0,0,0
+q_emergency_powers,positional,Emergências,"Em uma crise grave, o presidente deve poder governar sem respeitar decisões do Congresso e dos tribunais por um período limitado?",,0,1,0,0,0,0.5,0,0,0,0,-1,0,0,0
+q_dismissal,positional,Trabalho,"Uma empresa deve poder demitir um funcionário sem apresentar um motivo, desde que cumpra o contrato e não faça isso por discriminação?",,0.6,0,1,0,0,-0.4,0,0,0,0,0,0,0,0
+q_death_penalty,positional,Segurança,"A pena de morte deve ser permitida para crimes muito graves, mesmo com o risco de uma pessoa inocente ser condenada?",,0,0.9,0,0,0,0,0,0,1,0,-0.4,0,0,0
+q_central_bank_independence,positional,Moeda,O Banco Central deve poder decidir as taxas de juros sem precisar seguir as ordens do presidente?,O Banco Central cuida da moeda e usa a taxa básica de juros para influenciar o crédito e os preços.,0,0,0,0,0,0,0,0,0,0,1,0,0,0.4
+q_adult_gambling,positional,Autonomia,"Apostas com dinheiro devem ser permitidas para adultos, com aviso sobre os riscos e punição para quem cometer fraude?",,0,-0.7,0,0,0,0,1,0,0,0,0,0,0,0
+q_productive_land,positional,Terras,"O governo deve dividir grandes fazendas entre outras pessoas para reduzir a concentração de terras, mesmo quando essas fazendas produzem?",,-0.9,0,0,0,0.8,0.7,0,0,0,0,0,0,-1,0
+q_national_curriculum,positional,Educação,"O governo nacional deve definir a maior parte do que todas as escolas ensinam, inclusive as escolas privadas?",,0,0,0,0,0,0.5,0,0,0,-0.8,0,0,0,0
+q_minimum_income,positional,Redistribuição,"O governo deve garantir uma renda básica, paga com impostos, a quem não consegue cobrir despesas essenciais?",,-0.7,0,0,0,1,0.8,0,0,0,0,0,0,0,0
+q_bargaining_power,positional,Contratos,"O governo deve limitar um acordo quando uma das partes tem poucas alternativas e pouco poder para negociar, mesmo que ela aceite o acordo?",,-0.6,0,-1,0,0.4,0.5,0,0,0,0,0,0,0,0
+q_equal_marriage,positional,Costumes,Casais do mesmo sexo devem ter os mesmos direitos legais de casamento que os demais casais?,,0,-0.6,0,0,0,0,0.8,-0.6,0,0,0,0,0,0
+q_police_home_entry,positional,Segurança,"A polícia deve poder entrar numa casa sem autorização de um juiz só por suspeitar de um crime, mesmo quando ninguém corre perigo imediato?",,0,1,0,0,0,0,-0.7,0,0.7,0,-1,0,0,0
+q_professional_licensing,positional,Concorrência,Uma pessoa deve poder trabalhar numa profissão sem licença do governo quando esse trabalho não oferece risco relevante à segurança de outras pessoas?,,0.7,0,0.8,0.7,0,-0.5,0,0,0,0,0,0,0,0
+q_pollution_repair,positional,Responsabilidade,"Uma empresa deve pagar para reparar os danos que sua poluição causa a outras pessoas, mesmo quando ela cumpre as licenças do governo?",,0,0,0,0,0,0,0,0,0,0,0.4,0,0.3,0
+q_inheritance_tax,positional,Tributação,O governo deve cobrar impostos maiores sobre grandes heranças para reduzir a desigualdade entre famílias?,,-0.6,0,0,0,0.8,0.5,0,0,0,0,0,0,-0.5,0
+q_voluntary_unions,positional,Trabalho,Cada trabalhador deve poder decidir se entra num sindicato e se paga contribuições a ele?,,0.4,-0.3,0.7,0,0,0,0.6,0,0,0,0,0,0,0
+q_freight_floor,positional,Preços,"O governo deve fixar um preço mínimo para transportar mercadorias, mesmo quando o motorista e o cliente aceitam um preço menor?",,-0.8,0,-0.6,-1,0,0.5,0,0,0,0,0,0,0,0
+q_private_encryption,positional,Privacidade,"As pessoas devem poder usar aplicativos com mensagens que nem o governo consiga ler, mesmo que isso dificulte investigações?",,0,-0.9,0,0,0,0,1,0,0,0,0.4,0,0,0
+q_universal_healthcare,positional,Saúde,"O governo deve garantir atendimento de saúde para todos, pago com impostos?",,-0.7,0,0,0,0.7,1,0,0,0,0,0,0,0,0
+q_fetal_rights,positional,Aborto,"Desde o início da gravidez, o feto deve ter a mesma proteção legal de direitos que uma pessoa já nascida?",Aqui a pergunta é sobre quem deve ter direitos protegidos por lei. A decisão sobre permitir o aborto aparece em outra pergunta.,0,0,0,0,0,0,0,0.6,0,0,0,0,0,0
+q_housing_construction,positional,Urbanismo,"O dono de um terreno deve poder construir mais moradias nele, desde que a obra seja segura e não cause danos aos vizinhos?",,0.6,0,0.8,0.4,0,0,0,0,0,0,0,0,0.7,0
+q_constitutional_review,positional,Instituições,Os tribunais devem poder impedir uma medida apoiada pela maioria da população quando ela viola direitos previstos na Constituição?,,0,0,0,0,0,0,0,0,0,0,1,0,0,0.6
+q_local_policies,positional,Federalismo,"Estados e municípios devem poder escolher políticas diferentes das do governo nacional, desde que respeitem os direitos básicos das pessoas?",,0,0,0,0,0,0,0,0,0,1,0.3,0,0,0
+q_life_imprisonment,positional,Segurança,"A prisão pelo resto da vida, sem possibilidade de rever a pena, deve ser permitida para crimes muito graves?",,0,0.7,0,0,0,0,0,0,1,0,-0.3,0,0,0
+q_free_imports,positional,Comércio,As pessoas devem poder comprar produtos de outros países sem restrições criadas apenas para proteger empresas nacionais?,,0.8,0,0,0.7,0,0,0,0,0,0,0,1,0,0
+q_industrial_subsidies,positional,Indústria,"O governo deve escolher alguns setores da economia para receber dinheiro público, mesmo que empresas de outros setores não recebam essa ajuda?",,-0.8,0,0,-0.8,0,0.8,0,0,0,0,0,-0.3,0,0
+q_progressive_tax,positional,Tributação,Quem ganha mais deve pagar uma porcentagem maior da própria renda em impostos para financiar ajuda a quem ganha menos?,,-0.8,0,0,0,1,0.7,0,0,0,0,0,0,0,0
+q_adult_sex_work,positional,Autonomia,"Adultos devem poder oferecer serviços sexuais em troca de dinheiro, quando todos os envolvidos concordam?",,0,-0.8,0,0,0,0,1,-0.4,0,0,0,0,0,0
+q_mass_surveillance,positional,Vigilância,"O governo deve poder vigiar mensagens e ligações de toda a população para prevenir crimes, sem suspeitar de alguém em particular?",,0,1,0,0,0,0,-1,0,0.5,0,-0.7,0,0,0
+q_national_customs,positional,Costumes,"Imigrantes devem ser incentivados a seguir os costumes locais em vez de manter os seus, mesmo quando seus costumes não ferem os direitos de outras pessoas?",,0,0,0,0,0,0,0,1,0,0,0,-0.7,0,0
+q_military_service,positional,Coerção,"O serviço militar deve ser obrigatório para quem tem condições de servir, mesmo quando o país está em paz?",,0,0.9,0,0,0,0.5,-0.9,0,0,0,0,0,0,0
+q_adult_drug_use,positional,Drogas,"Adultos devem poder usar drogas sem punição criminal pelo consumo, quando não causam danos a outras pessoas?",,0,-0.8,0,0,0,0,1,0,-0.4,0,0,0,0,0
+q_local_tax_revenue,positional,Federalismo,"A maior parte do dinheiro arrecadado com impostos deve ficar com estados e municípios, que também assumiriam mais responsabilidades pelos serviços públicos?",,0,0,0,0,0,-0.2,0,0,0,1,0,0,0,0
+q_competition_barriers,positional,Concorrência,"Se uma empresa domina um mercado porque o governo impede concorrentes de entrar, o governo deve considerar retirar essas barreiras antes de impor novas regras à empresa?",,0.6,0,0.6,1,0,0,0,0,0,0,0,0,0,0
+q_free_prices,positional,Preços,"Compradores e vendedores devem poder combinar preços livremente, sem o governo fixar um valor obrigatório?",,0.9,0,0.5,1,0,0,0,0,0,0,0,0,0,0
+q_disaster_prices,positional,Preços,"Depois de um desastre, uma loja deve poder aumentar muito o preço da água, mesmo quando os moradores têm poucos lugares onde comprar?",,0.6,0,0.4,0.8,0,0,0,0,0,0,0,0,0,0
+q_family_traditions,positional,Costumes,"As famílias devem ensinar aos filhos os costumes tradicionais sobre família e sexualidade, mesmo quando a lei permite outros modos de vida?",,0,0,0,0,0,0,0,1,0,0,0,0,0,0
+q_early_abortion,positional,Aborto,"A gestante deve poder escolher um aborto enquanto o feto ainda não consegue sobreviver fora do útero, mesmo que algumas pessoas considerem isso moralmente errado?",Considere um procedimento com atendimento médico e o consentimento da gestante.,0,0,0,0,0,0,0.7,-0.4,0,0,0,0,0,0
+q_policy_incentives,diagnostic,Diagnóstico,"Ao avaliar uma política, devemos considerar como ela muda o comportamento das pessoas, além das intenções de quem a propôs?",,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+q_illegal_markets,diagnostic,Diagnóstico,"Se uma proibição aumenta o comércio ilegal, o governo deve levar esse efeito em conta ao decidir se mantém a proibição?",,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+q_general_rules,diagnostic,Diagnóstico,"É melhor ter uma regra igual para todos, mesmo com falhas, do que deixar autoridades escolherem livremente quem recebe uma exceção?",,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+q_morality_and_law,diagnostic,Diagnóstico,"Um comportamento pode ser moralmente errado e, ainda assim, ser permitido por lei?",,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+q_symmetric_power_risk,diagnostic,Diagnóstico,"Se considero um poder perigoso nas mãos de um político de quem discordo, devo considerar esse mesmo poder perigoso nas mãos de um político que apoio?",,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+q_allied_rule_bending,diagnostic,Diagnóstico,Um governante que apoio deve poder desrespeitar limites legais para realizar medidas que considero necessárias?,,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+q_equal_political_powers,diagnostic,Diagnóstico,Políticos de quem discordo devem ter os mesmos poderes de governo que considero aceitáveis para os políticos que apoio?,,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+q_revise_failed_policy,diagnostic,Diagnóstico,Uma política que apoio deve ser revista se pesquisas confiáveis mostrarem que ela provoca o contrário do que pretendia?,,0,0,0,0,0,0,0,0,0,0,0,0,0,0
