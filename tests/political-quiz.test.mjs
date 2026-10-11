@@ -74,10 +74,18 @@ test("extreme and mixed answers stay bounded, and preserve result version",()=>{
 })
 
 test("API rejects malformed, incomplete, unsupported-version and oversized requests",async()=>{
-  const request=body=>new Request("http://localhost/api/quiz",{method:"POST",body})
+  const request=body=>new Request("http://localhost/api/quiz",{method:"POST",headers:{"Origin":"http://localhost","Content-Type":"application/json"},body})
   for(const body of ["{", "null", JSON.stringify({quiz_version:"v9",answers:Array(60).fill(0)}), JSON.stringify({quiz_version:"v0.1",answers:Array(59).fill(0)})]) assert.equal((await POST(request(body))).status,400)
   assert.equal((await POST(request("x".repeat(4097)))).status,413)
   const response=await POST(request(JSON.stringify({quiz_version:"v0.1",answers:Array(60).fill(0)})))
   assert.equal(response.status,200);assert.equal(response.headers.get("Cache-Control"),"no-store")
   assert.equal((await response.json()).coverage,100)
+})
+
+test("API rejects missing and foreign origins in production", { skip: process.env.NODE_ENV !== "production" }, async()=>{
+  const body = JSON.stringify({quiz_version:"v0.1",answers:Array(60).fill(0)})
+  for (const headers of [{}, {Origin:"https://example.com"}, {Origin:"http://localhost","Sec-Fetch-Site":"cross-site"}]) {
+    const response = await POST(new Request("http://localhost/api/quiz",{method:"POST",headers,body}))
+    assert.equal(response.status,403)
+  }
 })
