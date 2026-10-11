@@ -1,0 +1,61 @@
+id,kind,topic,question,x,y,AE,CP,IG,ES,LC,TR,PU,DE,IN,AB,PR,RR
+1,positional,Contratos,Duas pessoas deveriam poder firmar um contrato de trabalho abaixo do salário mínimo se ambas concordarem livremente.,0.8,-0.1,1,0,-0.4,-0.5,0,0,0,0,0,0,0.3,0
+2,positional,Contratos,"Contratos voluntários entre adultos deveriam sofrer pouca interferência estatal, quando não causam dano a terceiros.",0.7,-0.2,1,0,0,-0.5,0,0,0,0,0,0,0,0
+3,positional,Expressão,"Opiniões políticas ofensivas deveriam poder ser expressas, desde que não ameacem nem incitem diretamente violência.",0,-1,0,0,0,0,1,0,0,0,0.3,0,0,0
+4,positional,Expressão,"Expressar uma opinião racista deveria ser crime, mesmo quando não envolve ameaça, incitação à violência ou discriminação na prestação de um serviço.",0,0.8,0,0,0,0,-1,0,0.4,0,0,0,0,0
+5,positional,Comércio,"Tarifas de importação deveriam proteger produtores nacionais, mesmo que encareçam produtos para os consumidores.",-0.8,0,0,-0.6,0,0.3,0,0,0,0,0,-1,0,0
+6,positional,Imigração,Pessoas estrangeiras deveriam poder morar e trabalhar no país se cumprirem as mesmas leis aplicáveis aos residentes.,0,-0.4,0,0,0,0,0.5,0,0,0,0,1,0,0
+7,positional,Propriedade,A propriedade privada deveria ser protegida mesmo quando uma autoridade acredita que outro uso seria socialmente mais útil.,0.8,0,0,0,0,-0.4,0,0,0,0,0,0,1,0
+8,positional,Propriedade,"O Estado deveria poder desapropriar imóveis para redistribuí-los, pagando uma indenização justa.",-0.6,0,0,0,0.6,0.5,0,0,0,0,0,0,-1,0
+9,positional,Moradia,O governo deveria limitar aumentos de aluguel para tornar a moradia mais acessível.,-0.8,0,-0.5,-1,0,0.5,0,0,0,0,0,0,0,0
+10,positional,Trabalho,A lei deveria limitar a jornada de trabalho mesmo quando empregado e empregador concordam em ultrapassá-la.,-0.5,0,-1,0,0,0.5,0,0,0,0,0,0,0,0
+11,positional,Participação,"Votar deveria ser uma escolha, sem multa ou punição pela abstenção.",0,-0.6,0,0,0,0,0.8,0,0,0,0,0,0,0
+12,positional,Igualdade,"Universidades públicas deveriam reservar vagas para grupos historicamente discriminados, mesmo quando outros candidatos tenham notas maiores.",-0.3,0,0,0,1,0.4,0,0,0,0,0,0,0,0
+13,positional,Lucros,O governo deveria limitar os lucros de empresas em setores essenciais.,-0.8,0,0,-1,0,0.6,0,0,0,0,0,0,0,0
+14,positional,Autonomia,Uma pessoa adulta com doença incurável deveria poder escolher a eutanásia com consentimento informado e avaliação médica independente.,0,-0.8,0,0,0,0,1,0,0,0,0,0,0,0
+15,positional,Educação,O financiamento público da educação deveria acompanhar a escolha das famílias entre escolas públicas e privadas habilitadas.,0.4,0,0.4,0.6,0,0,0,0,0,0.3,0,0,0,0
+16,positional,Emergências,"Em uma crise grave, o Executivo deveria poder suspender temporariamente decisões do Legislativo e dos tribunais.",0,1,0,0,0,0.5,0,0,0,0,-1,0,0,0
+17,positional,Trabalho,"Empregadores deveriam poder demitir sem justificar o motivo, respeitando o contrato e as proibições de discriminação.",0.6,0,1,0,0,-0.4,0,0,0,0,0,0,0,0
+18,positional,Segurança,"A pena de morte deveria ser permitida para crimes extremamente graves, mesmo considerando o risco de erro judicial.",0,0.9,0,0,0,0,0,0,1,0,-0.4,0,0,0
+19,positional,Moeda,O Banco Central deveria ter autonomia para definir juros sem seguir ordens imediatas do governo eleito.,0,0,0,0,0,0,0,0,0,0,1,0,0,0.4
+20,positional,Autonomia,"Apostas entre adultos deveriam ser legais, com informação sobre os riscos e responsabilização por fraude.",0,-0.7,0,0,0,0,1,0,0,0,0,0,0,0
+21,positional,Terras,Grandes propriedades rurais produtivas deveriam ser divididas pelo Estado para reduzir a concentração de terras.,-0.9,0,0,0,0.8,0.7,0,0,0,0,0,0,-1,0
+22,positional,Educação,"Um currículo nacional obrigatório deveria definir a maior parte do conteúdo de todas as escolas, inclusive privadas.",0,0.4,0,0,0,0.5,0,0,0,-0.8,0,0,0,0
+23,positional,Redistribuição,Uma renda mínima financiada por impostos deveria ser garantida a quem não consegue prover suas necessidades básicas.,-0.7,0,0,0,1,0.8,0,0,0,0,0,0,0,0
+24,positional,Contratos,"Quando uma parte tem muito menos poder de negociação, o Estado deveria limitar o contrato mesmo que ambas as partes o aceitem.",-0.6,0,-1,0,0.4,0.5,0,0,0,0,0,0,0,0
+25,positional,Costumes,O casamento entre pessoas do mesmo sexo deveria ter os mesmos direitos legais do casamento entre pessoas de sexos diferentes.,0,-0.6,0,0,0,0,0.8,-0.6,0,0,0,0,0,0
+26,positional,Segurança,"A polícia deveria poder entrar em uma residência sem autorização judicial quando houver suspeita de crime, mesmo sem perigo imediato.",0,1,0,0,0,0,-0.7,0,0.7,0,-1,0,0,0
+27,positional,Concorrência,Profissões sem risco relevante à segurança de terceiros deveriam poder ser exercidas sem licença estatal obrigatória.,0.7,0,0.8,0.7,0,-0.5,0,0,0,0,0,0,0,0
+28,positional,Responsabilidade,"Quem causa poluição que prejudica terceiros deveria pagar pela reparação, ainda que tenha cumprido as licenças existentes.",0,0,0,0,0,0,0,0,0,0,0.4,0,0.3,0
+29,positional,Tributação,Grandes heranças deveriam ser tributadas mais intensamente para reduzir desigualdades entre gerações.,-0.6,0,0,0,0.8,0.5,0,0,0,0,0,0,-0.5,0
+30,positional,Trabalho,Trabalhadores deveriam poder escolher se querem se filiar a um sindicato e contribuir financeiramente para ele.,0.4,-0.3,0.7,0,0,0,0.6,0,0,0,0,0,0,0
+31,positional,Preços,"O governo deveria fixar um preço mínimo para o frete, mesmo quando transportador e cliente aceitam um valor menor.",-0.8,0,-0.6,-1,0,0.5,0,0,0,0,0,0,0,0
+32,positional,Privacidade,"Pessoas deveriam poder usar criptografia que nem o governo consiga quebrar, mesmo que isso dificulte investigações.",0,-0.9,0,0,0,0,1,0,0,0,0.4,0,0,0
+33,positional,Saúde,O Estado deveria garantir atendimento de saúde universal financiado por impostos.,-0.7,0,0,0,0.7,1,0,0,0,0,0,0,0,0
+34,positional,Aborto,"Desde a concepção, o feto deveria ter o mesmo status jurídico de titular de direitos que uma pessoa nascida.",0,0,0,0,0,0,0,0.6,0,0,0,0,0,0
+35,positional,Urbanismo,"Proprietários deveriam poder construir mais moradias em seus terrenos, desde que respeitem segurança e danos comprovados aos vizinhos.",0.6,0,0.8,0.4,0,0,0,0,0,0,0,0,0.7,0
+36,positional,Instituições,Tribunais deveriam poder impedir medidas populares quando elas violam direitos constitucionais.,0,-0.7,0,0,0,0,0,0,0,0,1,0,0,0.6
+37,positional,Federalismo,"Governos locais deveriam poder escolher suas políticas públicas, respeitando direitos fundamentais, mesmo quando diferem da preferência nacional.",0,-0.3,0,0,0,0,0,0,0,1,0.3,0,0,0
+38,positional,Segurança,A prisão perpétua sem possibilidade de revisão deveria ser permitida para crimes muito graves.,0,0.7,0,0,0,0,0,0,1,0,-0.3,0,0,0
+39,positional,Comércio,Consumidores deveriam poder importar produtos sem barreiras destinadas apenas a proteger empresas nacionais.,0.8,0,0,0.7,0,0,0,0,0,0,0,1,0,0
+40,positional,Indústria,"O governo deveria escolher setores estratégicos e financiá-los com subsídios, mesmo que empresas concorrentes não recebam o mesmo apoio.",-0.8,0,0,-0.8,0,0.8,0,0,0,0,0,-0.3,0,0
+41,positional,Tributação,Pessoas com renda maior deveriam pagar uma proporção maior de sua renda em impostos para financiar redistribuição.,-0.8,0,0,0,1,0.7,0,0,0,0,0,0,0,0
+42,positional,Autonomia,A prestação de serviços sexuais por adultos que consentem deveria ser legal.,0,-0.8,0,0,0,0,1,-0.4,0,0,0,0,0,0
+43,positional,Vigilância,"O governo deveria poder monitorar as comunicações de toda a população para prevenir crimes, sem suspeita individual.",0,1,0,0,0,0,-1,0,0.5,0,-0.7,0,0,0
+44,positional,Costumes,"Preservar costumes nacionais deveria ser prioridade, mesmo quando imigrantes desejam manter práticas culturais que não violam direitos de terceiros.",0,0,0,0,0,0,0,1,0,0,0,-0.7,0,0
+45,positional,Coerção,"O serviço militar deveria ser obrigatório para pessoas aptas, mesmo em tempos de paz.",0,0.9,0,0,0,0.5,-0.9,0,0,0,0,0,0,0
+46,positional,Drogas,"Adultos deveriam poder consumir drogas, sem punição criminal pelo consumo, quando não causam dano a terceiros.",0,-0.8,0,0,0,0,1,0,-0.4,0,0,0,0,0
+47,positional,Federalismo,"A maior parte da arrecadação de impostos deveria permanecer com governos locais, junto com suas responsabilidades de gasto.",0,0,0,0,0,-0.2,0,0,0,1,0,0,0,0
+48,positional,Concorrência,"Quando o Estado bloqueia a entrada de concorrentes e uma empresa domina o mercado, remover essas barreiras deveria ser considerado antes de criar novas regulações.",0.6,0,0.6,1,0,0,0,0,0,0,0,0,0,0
+49,positional,Preços,"Preços deveriam ser definidos por compradores e vendedores, sem tabelamento estatal.",0.9,0,0.5,1,0,0,0,0,0,0,0,0,0,0
+50,positional,Preços,"Após um desastre, comerciantes deveriam poder aumentar fortemente o preço da água, mesmo quando moradores têm poucas alternativas.",0.6,0,0.4,0.8,-0.3,0,0,0,0,0,0,0,0,0
+51,positional,Costumes,"Normas tradicionais sobre família e sexualidade deveriam ser preservadas na educação familiar, mesmo quando outros estilos de vida são legais.",0,0,0,0,0,0,0,1,0,0,0,0,0,0
+52,positional,Aborto,"Antes da viabilidade fetal, a gestante deveria poder interromper a gravidez, mesmo quando há desacordo sobre o status moral do feto.",0,0,0,0,0,0,0.7,-0.4,0,0,0,0,0,0
+53,diagnostic,Diagnóstico,"Ao avaliar uma política, efeitos indiretos e incentivos criados deveriam ser considerados separadamente das intenções de quem a propôs.",0,0,0,0,0,0,0,0,0,0,0,0,0,0
+54,diagnostic,Diagnóstico,"Quando uma proibição cria um grande mercado ilegal, esse efeito deveria pesar na decisão de mantê-la.",0,0,0,0,0,0,0,0,0,0,0,0,0,0
+55,diagnostic,Diagnóstico,Uma regra geral imperfeita pode ser preferível a permitir que autoridades escolham arbitrariamente quem merece uma exceção.,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+56,diagnostic,Diagnóstico,Um comportamento pode ser moralmente errado sem que isso seja motivo suficiente para torná-lo ilegal.,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+57,diagnostic,Diagnóstico,Um poder que considero perigoso nas mãos de um adversário político também deveria ser considerado perigoso nas mãos de alguém que apoio.,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+58,diagnostic,Diagnóstico,Um governante que apoio deveria poder contornar limites institucionais para executar medidas que considero necessárias.,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+59,diagnostic,Diagnóstico,Eu aceitaria para meus adversários políticos os mesmos poderes de governo que aceito para meus aliados.,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+60,diagnostic,Diagnóstico,Uma política que defendo deveria ser revista se evidências confiáveis mostrarem efeitos contrários aos seus objetivos.,0,0,0,0,0,0,0,0,0,0,0,0,0,0

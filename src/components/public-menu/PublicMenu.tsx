@@ -780,6 +780,10 @@ export function PublicMenu() {
                     <PencilSquareIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
                     Mural
                   </Link>
+                  <Link href="/quiz" role="menuitem" onClick={() => closeMenu()} className={ITEM_CLASS_NAME}>
+                    <Squares2X2Icon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
+                    Teste político
+                  </Link>
                   <Link href="/sobre" role="menuitem" onClick={() => closeMenu()} className={ITEM_CLASS_NAME}>
                     <InformationCircleIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
                     Sobre
