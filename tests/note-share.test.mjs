@@ -13,7 +13,7 @@ function mount(writeText) {
   const state = [false, '']
   const timers = []
   let index = 0
-  const module = { exports: {} }
+  const loadedModule = { exports: {} }
   const mockRequire = name => {
     if (name === 'react') return { useState: () => {
       const slot = index++
@@ -23,7 +23,7 @@ function mount(writeText) {
     return require(name)
   }
   new Function('require', 'module', 'exports', 'navigator', 'window', source)(
-    mockRequire, module, module.exports,
+    mockRequire, loadedModule, loadedModule.exports,
     { clipboard: { writeText } },
     { location: { origin: 'https://domenyk.com', href: 'https://domenyk.com/?feed=1' }, setTimeout: callback => timers.push(callback) },
   )
@@ -31,7 +31,7 @@ function mount(writeText) {
     state, timers,
     render() {
       index = 0
-      return module.exports.NoteShareButton({ noteId: 'nota-123' })
+      return loadedModule.exports.NoteShareButton({ noteId: 'nota-123' })
     },
   }
 }
