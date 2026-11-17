@@ -7,6 +7,11 @@ import {
   renderMarkdownSync,
 } from "../src/lib/mdx.ts"
 
+test("Leia também keeps its title and escaped text in saved HTML", () => {
+  const html = renderMarkdownSync('<div data-editor-document="html"><p><a href="/posts/teste" title="Leia também">Texto &amp; contexto &lt;3</a></p></div>')
+  assert.match(html, /<a href="\/posts\/teste" title="Leia também">Texto &#x26; contexto &#x3C;3<\/a>/)
+})
+
 test("sanitizes after heading transforms and keeps safe fragment links", () => {
   const html = renderMarkdownSync('# location\n\n[Ir](#location)\n\n<img src="x" onerror="alert(1)"><script>alert(1)</script>')
 

@@ -8,6 +8,7 @@ import { $createHeadingNode, $createQuoteNode } from "@lexical/rich-text"
 import { $isMarkNode, $unwrapMarkNode, $wrapSelectionInMarkNode } from "@lexical/mark"
 import { Bars3BottomLeftIcon, ChatBubbleBottomCenterTextIcon, CodeBracketIcon, CodeBracketSquareIcon, DocumentTextIcon, EllipsisHorizontalIcon } from "@heroicons/react/24/outline"
 import { ImagePlugin } from "./ImagePlugin"
+import { ReadAlsoPlugin } from "./ReadAlsoPlugin"
 import { EditorialControls } from "./EditorialControls"
 import { PublicationCssControls } from "./PublicationCssControls"
 import { applyHtmlSourceToVisualEditor, beginHtmlSourceMode } from "./html-content"
@@ -39,6 +40,7 @@ type Props = {
   imageAssetsEndpoint?: string
   allowImageAssetLibrary?: boolean
   allowImages?: boolean
+  allowReadAlso?: boolean
   trailingContent?: React.ReactNode
 }
 
@@ -55,6 +57,7 @@ export function ToolbarPlugin({
   imageAssetsEndpoint,
   allowImageAssetLibrary,
   allowImages = true,
+  allowReadAlso = false,
   trailingContent,
 }: Props) {
   const [editor] = useLexicalComposerContext()
@@ -180,6 +183,7 @@ export function ToolbarPlugin({
       />}
       {(!comment || showAdvanced) && <EditorialControls variant={variant} />}
       {allowImages && <ImagePlugin compact={compact} menuPlacement={placement === "bottom" ? "above" : "below"} uploadEndpoint={imageUploadEndpoint} assetsEndpoint={imageAssetsEndpoint} allowAssetLibrary={allowImageAssetLibrary} />}
+      {allowReadAlso && <ReadAlsoPlugin variant={variant} />}
       {allowDocumentCss && <div className="editor-toolbar-section inline-flex min-w-0 max-w-full flex-wrap items-center gap-0.5 border-r border-neutral-500/15 px-0.5 dark:border-white/10" role="group" aria-label="Ferramentas de CSS">
         <ToolbarButton variant={variant} title="Criar ou remover seletor CSS no trecho selecionado" onClick={markCssHook}><span className="text-xs font-semibold">::</span></ToolbarButton>
       </div>}

@@ -1915,6 +1915,41 @@ html.light-mode [data-public-shell] .note-content pre {
   color: #171717;
 }
 
+.read-also-dialog::backdrop { background: rgb(0 0 0 / 40%); }
+
+:where(.post-content, .note-content, .personal-timeline-content, .image-flow-editor) a[title="Leia também"] {
+  display: block;
+  clear: both;
+  margin-block: .75em;
+  border-block: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  padding-block: .85em;
+  color: inherit;
+  font-weight: 600;
+  line-height: 1.5;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+:where(.post-content, .note-content, .personal-timeline-content, .image-flow-editor) a[title="Leia também"]::before {
+  content: "Leia também";
+  display: block;
+  margin-bottom: .35em;
+  font-size: .75em;
+  font-weight: 400;
+  letter-spacing: .06em;
+  opacity: .65;
+}
+
+:where(.post-content, .note-content, .personal-timeline-content, .image-flow-editor) a[title="Leia também"]:hover {
+  text-decoration: underline;
+  text-underline-offset: .2em;
+}
+
+:where(.post-content, .note-content, .personal-timeline-content, .image-flow-editor) a[title="Leia também"]:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 4px;
+}
+
 .note-content pre code {
   @apply bg-transparent p-0;
 }

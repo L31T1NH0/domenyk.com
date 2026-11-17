@@ -30,6 +30,7 @@ const lists = require('@lexical/list')
 const { CodeNode } = require('@lexical/code')
 const { LinkNode } = require('@lexical/link')
 const images = load('src/components/editor/ImageNode.tsx')
+const { $createReadAlsoParagraph, readAlsoUrl } = load('src/components/editor/read-also.ts')
 const { createEditorialTextTransformer } = load('src/components/editor/editorial-transformer.ts')
 const base = [images.POSITIONED_IMAGE_TRANSFORMER, images.FLOW_IMAGE_TRANSFORMER, images.HTML_IMAGE_TRANSFORMER, images.IMAGE_TRANSFORMER, ...md.TRANSFORMERS]
 const transformers = [createEditorialTextTransformer(base), ...base]
@@ -38,6 +39,38 @@ function roundtrip(markdown) {
   editor.update(() => md.$convertFromMarkdownString(markdown, transformers), { discrete:true })
   return editor.getEditorState().read(() => md.$convertToMarkdownString(transformers))
 }
+
+test('Leia também inserts at the saved cursor and survives Markdown and JSON reopening', async () => {
+  const { $insertEditorBlock } = load('src/components/editor/insert-editor-block.ts')
+  const { renderMarkdownSync } = await import('../src/lib/mdx.ts')
+  const editor = lexical.createEditor({ namespace: 'read-also', nodes: [LinkNode], onError(error) { throw error } })
+  let selection
+  editor.update(() => {
+    const first = lexical.$createParagraphNode().append(lexical.$createTextNode('Antes'))
+    lexical.$getRoot().append(first, lexical.$createParagraphNode().append(lexical.$createTextNode('Depois')))
+    first.selectEnd()
+    selection = lexical.$getSelection().clone()
+  }, { discrete: true })
+  editor.update(() => {
+    lexical.$setSelection(selection)
+    $insertEditorBlock($createReadAlsoParagraph('/posts/tiananmen', '37 anos de silêncio sobre Tiananmen'))
+  }, { discrete: true })
+  const saved = editor.getEditorState().toJSON()
+  assert.equal(saved.root.children[1].children[0].title, 'Leia também')
+  const markdown = editor.getEditorState().read(() => md.$convertToMarkdownString(md.TRANSFORMERS))
+  assert.equal(roundtrip(roundtrip(markdown)), markdown)
+  assert.match(renderMarkdownSync(markdown), /<a href="\/posts\/tiananmen" title="Leia também">37 anos de silêncio sobre Tiananmen<\/a>/)
+  editor.setEditorState(editor.parseEditorState(saved))
+  assert.deepEqual(editor.getEditorState().toJSON(), saved)
+})
+
+test('Leia também accepts HTTP and site paths and rejects unsafe links', () => {
+  assert.equal(readAlsoUrl(' https://domenyk.com/posts/teste '), 'https://domenyk.com/posts/teste')
+  assert.equal(readAlsoUrl('/notas/teste'), '/notas/teste')
+  for (const href of ['', 'javascript:alert(1)', 'data:text/html,abc', '//outro.site', '/\\outro.site', 'https://user:pass@site.com', 'https://site.com/ a', 'domenyk.com']) {
+    assert.equal(readAlsoUrl(href), null, href)
+  }
+})
 
 test('paragraph composition survives save, reopen and another save', () => {
   for (const body of ['**Texto** com *ênfase*.', '## Um título', '> Uma citação']) {

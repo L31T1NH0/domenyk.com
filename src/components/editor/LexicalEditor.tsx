@@ -445,6 +445,7 @@ export function LexicalEditor({
       {toolbarPlacement === "top" && (
         <ToolbarPlugin
           allowContentFormatChoice={!outputFormat}
+          allowReadAlso={!outputFormat}
           allowDocumentCss={contentFormat === "html"}
           contentFormat={contentFormat}
           htmlSourceMode={htmlSourceMode}
@@ -482,6 +483,7 @@ export function LexicalEditor({
       {toolbarPlacement === "bottom" && (
         <ToolbarPlugin
           allowContentFormatChoice={!outputFormat}
+          allowReadAlso={!outputFormat}
           allowDocumentCss={contentFormat === "html"}
           contentFormat={contentFormat}
           htmlSourceMode={htmlSourceMode}
