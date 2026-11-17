@@ -14,7 +14,6 @@ import { PostDescriptionDisclosure } from "@/components/post/PostDescriptionDisc
 import { formatSiteDate } from "@/lib/datetime"
 import { isAdmin } from "@/lib/auth"
 import { NoteDetailAdminActions } from "@/components/notes/NoteDetailAdminActions"
-import { NoteShareButton } from "@/components/notes/NoteShareButton"
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -129,7 +128,6 @@ export default async function NotePage({ params }: Props) {
                       </time>
                     </Link>
                     {isCurrent && isThread && <span className="text-xs text-neutral-500 dark:text-[#A8A095]/80">nota aberta</span>}
-                    <div className="ml-auto"><NoteShareButton noteId={threadNote._id} /></div>
                   </div>
 
                   {threadNote.title && isThread && index > 0 && (

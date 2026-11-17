@@ -30,7 +30,6 @@ import { noteDisplayTitle } from "@/lib/seo"
 import { NOTE_VIEW_TTL_MS, type NoteViewSource } from "@/lib/note-views"
 import type { NoteTimelinePlacement } from "@/components/notes/NoteTimelineGroup"
 import { usePretextImageFlow } from "@/components/post/usePretextImageFlow"
-import { NoteShareButton } from "./NoteShareButton"
 
 type Props = {
   note: SerializedNote
@@ -704,7 +703,7 @@ export function NoteCard({ note, showMetadata = false, viewContext, isAdmin, onD
         </div>
       )}
 
-      <div className="pointer-events-none absolute -bottom-1 left-0 flex items-center gap-4">
+      <div className="pointer-events-none absolute -bottom-1 left-0">
         <button
           ref={commentsButtonRef}
           type="button"
@@ -716,7 +715,6 @@ export function NoteCard({ note, showMetadata = false, viewContext, isAdmin, onD
           <span>{commentActionLabel}</span>
           {commentsLoaded && commentCount > 0 && <span className="tabular-nums">({commentCount})</span>}
         </button>
-        <NoteShareButton noteId={note._id} />
       </div>
 
       {commentsOpen && (
