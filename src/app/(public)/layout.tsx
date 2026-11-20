@@ -1,5 +1,5 @@
 import { ScrollProgressEffect } from "@/components/ScrollProgressEffect"
-import { PublicMenu } from "@/components/public-menu/PublicMenu"
+import { PublicHeader, PublicFooter } from "@/components/public-menu/PublicChrome"
 import { PublicMenuProvider } from "@/components/public-menu/PublicMenuContext"
 import { ViewReferrerTracker } from "@/components/ViewReferrerTracker"
 import { headers } from "next/headers"
@@ -25,9 +25,7 @@ export default async function PublicLayout({ children }: { children: React.React
       <NoiseBackground />
       <ReadingPreferencesProvider>
         <PublicMenuProvider>
-          <header className="mx-auto flex w-full max-w-[36rem] items-center justify-end px-4 py-1 sm:w-[min(100%,34.5rem)] sm:max-w-[100vw]">
-            <PublicMenu />
-          </header>
+          <PublicHeader />
           <ReadingPreferencesScope data-public-shell data-scroll-progress-root className="mx-auto mb-4 flex w-full max-w-[36rem] flex-col overflow-x-visible px-4 sm:w-[min(100%,34.5rem)] sm:max-w-[100vw]">
             <div aria-hidden data-scroll-progress-bar />
             <ScrollProgressEffect />
@@ -37,10 +35,7 @@ export default async function PublicLayout({ children }: { children: React.React
             <main className="flex min-w-0 flex-1 flex-col">
               {children}
             </main>
-            <footer className="mb-4 mt-12 text-center text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
-              <p>© {currentYear} domenyk.com</p>
-              <p className="mt-1 break-all">bc1qfv788krszr8xz3uxvvzy33pp8jph0hw53557d4</p>
-            </footer>
+            <PublicFooter year={currentYear} />
           </ReadingPreferencesScope>
           <PublicAnalytics nonce={nonce} />
         </PublicMenuProvider>

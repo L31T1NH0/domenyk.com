@@ -6,6 +6,7 @@ import { getThemesForPost } from "@/lib/db/themes"
 import { descriptionFromMarkdown } from "@/lib/seo"
 import { AdminCommandHeader } from "../../AdminCommandHeader"
 import { formatSiteDate } from "@/lib/datetime"
+import { getGoAdminPost, getGoAdminPostThemes, usesGoAdmin } from "@/lib/go-admin-posts"
 
 function date(value: Date) {
   return formatSiteDate(value, { dateStyle: "long", timeStyle: "short", hourCycle: "h23" })
@@ -13,9 +14,9 @@ function date(value: Date) {
 
 export default async function AdminPostPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const post = await getPostById(id)
+  const post = usesGoAdmin() ? await getGoAdminPost(id) : await getPostById(id)
   if (!post) notFound()
-  const themes = await getThemesForPost(post._id)
+  const themes = usesGoAdmin() ? await getGoAdminPostThemes(id) : await getThemesForPost(post._id)
   const summary = post.excerpt || post.subtitle || descriptionFromMarkdown(post.content)
   const seoReady = Boolean(post.seoTitle?.trim() && post.seoDescription?.trim())
   const indexable = post.published && post.hiddenFromTimeline !== true

@@ -49,6 +49,11 @@ async function indexSitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.6,
     },
     {
+      url: absoluteUrl("/links"),
+      changeFrequency: "weekly",
+      priority: 0.5,
+    },
+    {
       url: absoluteUrl("/sobre"),
       lastModified: FALLBACK_DATE,
       changeFrequency: "yearly",

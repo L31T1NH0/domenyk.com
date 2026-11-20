@@ -2,6 +2,7 @@ import "server-only"
 
 import { ObjectId } from "mongodb"
 import { getDb } from "./client"
+import { getAPIWritingProgress } from "../content-api"
 
 type WritingEntry = {
   _id: ObjectId
@@ -27,6 +28,8 @@ export async function getWritingEntries(): Promise<AdminWritingEntry[]> {
 }
 
 export async function getWritingProgress(): Promise<WritingProgressItem[]> {
+  const remote = await getAPIWritingProgress()
+  if (remote) return remote
   const entries = await (await collection()).find({ completed: false }, {
     projection: { _id: 1, title: 1, progress: 1 },
   }).sort({ createdAt: -1, _id: -1 }).toArray()

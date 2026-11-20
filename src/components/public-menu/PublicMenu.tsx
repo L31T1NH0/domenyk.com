@@ -15,6 +15,7 @@ import {
   ChevronRightIcon,
   Cog6ToothIcon,
   LanguageIcon,
+  LinkIcon,
   HomeIcon,
   InformationCircleIcon,
   EnvelopeIcon,
@@ -787,6 +788,10 @@ export function PublicMenu() {
                   <Link href="/sobre" role="menuitem" onClick={() => closeMenu()} className={ITEM_CLASS_NAME}>
                     <InformationCircleIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
                     Sobre
+                  </Link>
+                  <Link href="/links" role="menuitem" onClick={() => closeMenu()} className={ITEM_CLASS_NAME}>
+                    <LinkIcon className="size-[18px] text-zinc-500 dark:text-zinc-400" aria-hidden />
+                    Links
                   </Link>
                 </div>
               </div>

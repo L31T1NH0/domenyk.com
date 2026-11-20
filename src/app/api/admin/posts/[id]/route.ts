@@ -23,6 +23,7 @@ import { notifyIndexNow } from "@/lib/indexnow"
 import { preservedSlugAliases } from "@/lib/post-seo"
 import { invalidatePublicContentCache } from "@/lib/public-content-cache"
 import { getSeriesByPublicId, removePostFromSeries, setSeriesForPost } from "@/lib/db/series"
+import { goAdminErrorResponse, usesGoAdmin, writeGoAdminPost } from "@/lib/go-admin-posts"
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -32,6 +33,11 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
   const { id } = await params
   if (!toObjectId(id)) return NextResponse.json({ error: "ID inválido" }, { status: 400 })
+  if (usesGoAdmin()) {
+    try {
+      return NextResponse.json(await writeGoAdminPost("PATCH", id, await req.json().catch(() => null)), { headers: { "Cache-Control": "private, no-store" } })
+    } catch (error) { return goAdminErrorResponse(error) }
+  }
 
   const body = await req.json().catch(() => null) as Record<string, unknown> | null
   if (!body) return NextResponse.json({ error: "JSON inválido" }, { status: 400 })
@@ -176,6 +182,11 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
 
   const { id } = await params
   if (!toObjectId(id)) return NextResponse.json({ error: "ID inválido" }, { status: 400 })
+  if (usesGoAdmin()) {
+    try {
+      return NextResponse.json(await writeGoAdminPost("DELETE", id), { headers: { "Cache-Control": "private, no-store" } })
+    } catch (error) { return goAdminErrorResponse(error) }
+  }
 
   const existingPost = await getPostById(id)
   if (!existingPost) return NextResponse.json({ error: "Post não encontrado" }, { status: 404 })

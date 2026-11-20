@@ -43,6 +43,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
         <div className="admin-content-wrap">
           <main className="admin-content">
+            {process.env.NODE_ENV === "development" && process.env.ADMIN_LOCAL_PREVIEW === "true" && <p className="mb-5 border border-amber-600/40 px-4 py-3 text-xs text-amber-700 dark:text-amber-300" role="status">Ambiente de teste local. As alterações não são publicadas no domenyk.com.</p>}
             {children}
           </main>
         </div>

@@ -51,7 +51,9 @@ export default clerkMiddleware(async (auth, req) => {
   const continueRequest = () => NextResponse.next({ request: { headers: requestHeaders } })
 
   const clerkWebhook = req.nextUrl.pathname === "/api/webhooks/clerk"
-  if (!clerkWebhook && req.nextUrl.pathname.startsWith("/api/") && shouldBlockApiMutation(req)) {
+  // Service-to-service cache invalidation verifies its own bearer secret.
+  const backendRevalidation = req.nextUrl.pathname === "/api/internal/revalidate"
+  if (!clerkWebhook && !backendRevalidation && req.nextUrl.pathname.startsWith("/api/") && shouldBlockApiMutation(req)) {
     return NextResponse.json({ error: "Origem não permitida." }, { status: 403 })
   }
 
@@ -95,6 +97,8 @@ export default clerkMiddleware(async (auth, req) => {
         `https://${BLOB_PUBLIC_HOSTNAME}`,
         "https://res.cloudinary.com",
         "https://images.clerk.dev",
+        "https://www.google.com",
+        "https://*.gstatic.com",
       ],
       "media-src": ["self", "https:"],
       "object-src": ["none"],

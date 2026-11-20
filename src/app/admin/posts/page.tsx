@@ -2,9 +2,10 @@ import Link from "next/link"
 import { getPosts, serializePostSummary } from "@/lib/db/posts"
 import { PostsTable } from "./PostsTable"
 import { AdminCommandHeader } from "../AdminCommandHeader"
+import { getGoAdminPosts, usesGoAdmin } from "@/lib/go-admin-posts"
 
 export default async function AdminPostsPage() {
-  const { posts } = await getPosts({ includeUnpublished: true, limit: 100 })
+  const posts = usesGoAdmin() ? await getGoAdminPosts() : (await getPosts({ includeUnpublished: true, limit: 100 })).posts
   const serializedPosts = posts.map((post) => (
     serializePostSummary(post, { includeUnpublishedTranslations: true })
   ))

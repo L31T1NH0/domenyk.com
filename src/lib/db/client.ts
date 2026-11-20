@@ -37,5 +37,5 @@ function getClientPromise(): Promise<MongoClient> {
 
 export async function getDb() {
   const client = await getClientPromise()
-  return client.db("blog")
+  return client.db(process.env.MONGODB_DATABASE || "blog")
 }

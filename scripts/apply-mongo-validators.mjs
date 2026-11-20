@@ -138,6 +138,14 @@ const validators = {
     ["_id", "count", "expiresAt"],
     { _id: string, count: number, expiresAt: date }
   ),
+  link_pages: schema(
+    ["_id", "heading", "intro", "sections", "featured", "readings", "includeLatest", "updatedAt"],
+    { _id: string, heading: string, intro: string, metaTitle: string, metaDescription: string, featuredHeading: string, readingsHeading: string, includeLatest: bool, sections: array, featured: array, readings: array, updatedAt: date }
+  ),
+  link_clicks: schema(
+    ["_id", "day", "kind", "targetId", "count"],
+    { _id: string, day: string, kind: string, targetId: string, count: number }
+  ),
   settings: schema(
     ["_id", "value", "updatedAt"],
     { _id: string, value: bool, updatedAt: date }

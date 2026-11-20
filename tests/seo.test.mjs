@@ -4,6 +4,7 @@ import test from "node:test"
 import {
   authorJsonLd,
   buildPageMetadata,
+  descriptionFromMarkdown,
   imageUrlsFromMarkdown,
   isNoteIndexable,
   metadataDescription,
@@ -12,6 +13,10 @@ import {
   titleFromMarkdown,
   wordCountFromMarkdown,
 } from "../src/lib/seo.ts"
+
+test("note excerpts preserve hyphens and negative numbers while removing list markers", () => {
+  assert.equal(descriptionFromMarkdown("- Vale colocá-la em palavras.\n- Custo-benefício: -5.\n---"), "Vale colocá-la em palavras. Custo-benefício: -5.")
+})
 import {
   isPostVersionIndexable,
   postSeoDescription,

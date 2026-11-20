@@ -54,3 +54,8 @@ next-env.d.ts
 /src/app/(public)/economia/
 /src/components/books/
 /src/lib/books.ts
+
+# Local design artifacts and editor recovery files
+/output/
+*.swp
+*.swo

@@ -26,6 +26,76 @@ npm run push:keys
 
 Copy the generated values to `.env.local` and to the corresponding Vercel environment variables. Keep the same pair across deployments; replacing it invalidates existing browser subscriptions.
 
+## API Go externa — integração inicial
+
+A página `/links` e o painel `/admin/links` usam a API Go. O painel permite
+cadastrar, editar, ocultar e excluir links, buscar entre 25 ícones e definir
+seção e ordem. O cadastro aceita domínios sem HTTPS, sugere o título pelo domínio,
+mostra uma prévia e coloca novos links no fim da seção. O ícone padrão é o favicon:
+links internos usam `/favicon.ico`; externos usam o serviço Google S2, enviando
+apenas o hostname, sem caminhos ou parâmetros. Se a imagem falhar, aparece um globo. Os dados são persistidos pelo Go na coleção MongoDB `links`.
+Configure `GO_ADMIN_API_URL` para as operações administrativas e a leitura
+dos links. A leitura pública usa `CONTENT_API_URL` se a primeira estiver ausente.
+Não há fallback de escrita direto no MongoDB para os links.
+Se a API tiver proteção de automação na Vercel, configure no servidor Next
+`GO_API_AUTOMATION_BYPASS_SECRET` com a credencial de bypass do projeto da API.
+Ela segue apenas no cabeçalho das chamadas à API e não substitui a autenticação Clerk.
+Os links já publicados continuam visíveis antes de salvar a configuração inicial da página.
+
+A página pública usa abertura tipográfica sem retrato, links em linha, capas
+opcionais e seções configuráveis. Todo o conteúdo pessoal da página é salvo
+pelo painel; não há slogan, seleção de posts ou títulos de seções fixos na renderização.
+
+O carrossel combina o texto ou nota mais recente com até duas escolhas manuais,
+sem repetir conteúdos. Leituras guarda escolhas fixas de textos, notas ou links.
+O painel também oferece envio de capas e biblioteca via Go, inclusão de conteúdos
+do site, cadastro em lote, ordenação por arraste ou setas, horários opcionais de
+publicação, avisos de duplicação, verificação de endereços e contagem de cliques.
+
+Publique primeiro a versão correspondente de `domenyk-api`, com os endpoints
+`/v1/links/page`, `/v1/links/click` e `/v1/admin/links/{settings,content,order,stats}`,
+além do CRUD e `POST /v1/admin/links/{id}/check`. A configuração usa `link_pages`;
+`link_clicks` mantém contagens agregadas, sem identificação dos visitantes.
+Nenhuma escrita da nova página usa MongoDB diretamente pelo Next.js.
+
+Após publicar, abra `/admin/links`, preencha “Página e seções” e salve. Escolha os
+conteúdos em “Destaques e leituras”. A prévia não publica nem conta cliques.
+Conteúdo removido, despublicado ou fora do período não é exibido publicamente.
+A administração exige a sessão Clerk do `ADMIN_USER_ID` configurado nos dois projetos.
+A API antiga `/api/links/latest-note` permanece disponível por compatibilidade.
+
+O admin de artigos pode usar o Go por `GO_ADMIN_API_URL` (somente servidor).
+A integração cobre listagem, editor, gravação, publicação, exclusão, traduções
+e vínculos com séries/temas. Os tokens são obtidos da sessão Clerk e validados
+novamente pelo Go. Sem essa variável, o painel mantém o caminho anterior;
+falhas da API configurada não acionam fallback de escrita.
+
+Para desenvolvimento local, use `pk_test_...` e `sk_test_...` da mesma instância
+Development, com o `ADMIN_USER_ID` dessa instância. `MONGODB_DATABASE` permite
+usar um banco isolado (`blog` permanece o padrão). `ADMIN_LOCAL_PREVIEW=true`
+mostra o aviso de ambiente de teste, somente em desenvolvimento.
+
+Configure `CONTENT_API_URL` no servidor Next com a origem HTTPS da API Go,
+por exemplo `https://domenyk-api.vercel.app`. A variável não deve usar o prefixo
+`NEXT_PUBLIC_`. O mural e a seção de textos em escrita passam a consultar
+`/v1/mural` e `/v1/writing` pelo servidor. A renderização do conteúdo continua
+usando o editor e o sanitizador existentes do blog.
+
+Sem essa variável, os dois fluxos continuam consultando MongoDB diretamente.
+Com a variável configurada, erros da API são propagados; não há fallback
+silencioso. Para reverter a integração, remova a variável e faça novo deploy.
+Em desenvolvimento, também é permitida uma origem HTTP em localhost.
+
+As consultas públicas de artigos, notas, timeline, temas e séries ainda usam
+a implementação atual do Next. A administração de artigos usa Go somente
+quando `GO_ADMIN_API_URL` está configurada; as outras áreas permanecem no Next.
+O `MONGODB_URI` do blog deve ser mantido durante esta migração.
+
+O callback opcional `POST /api/internal/revalidate` recebe invalidações do Go.
+Defina o mesmo `NEXT_REVALIDATE_SECRET` (ao menos 32 caracteres) nos dois
+projetos, e `NEXT_REVALIDATE_URL=https://domenyk.com/api/internal/revalidate`
+na API. O callback exige Bearer e aceita somente caminhos locais limitados.
+
 Configure a Clerk webhook endpoint at `https://your-domain.example/api/webhooks/clerk`, subscribe it to `user.created`, and store its signing secret in `CLERK_WEBHOOK_SIGNING_SECRET`. Account notifications are deduplicated automatically when Clerk retries a delivery.
 
 When `INDEXNOW_KEY` is configured, the site exposes it at `/indexnow-key.txt` and notifies IndexNow after publishing, updating, hiding, unpublishing, changing a URL, or deleting indexable content. Failed notifications never block an editorial save.

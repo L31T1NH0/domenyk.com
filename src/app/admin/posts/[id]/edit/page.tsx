@@ -6,6 +6,7 @@ import { getOriginalContentUpdatedAt } from "@/lib/db/posts"
 import { TRANSLATION_LOCALES } from "@/lib/post-locales"
 import { toObjectId } from "@/lib/validation"
 import { getThemesForPost } from "@/lib/db/themes"
+import { getGoAdminPost, getGoAdminPostThemes, usesGoAdmin } from "@/lib/go-admin-posts"
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -14,10 +15,9 @@ export default async function EditPostPage({ params }: Props) {
   const objectId = toObjectId(id)
   if (!objectId) notFound()
 
-  const db = await getDb()
-  const post = await db.collection<Post>("posts").findOne({ _id: objectId })
+  const post = usesGoAdmin() ? await getGoAdminPost(id) : await (await getDb()).collection<Post>("posts").findOne({ _id: objectId })
   if (!post) notFound()
-  const themes = await getThemesForPost(post._id)
+  const themes = usesGoAdmin() ? await getGoAdminPostThemes(id) : await getThemesForPost(post._id)
 
   const translations = Object.fromEntries(
     TRANSLATION_LOCALES.flatMap((locale) => {

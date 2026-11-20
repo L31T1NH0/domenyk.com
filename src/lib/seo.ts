@@ -68,7 +68,9 @@ export function descriptionFromMarkdown(markdown: string, maxLength = 155): stri
     .replace(/!\[[^\]]*]\([^)]*\)/g, " ")
     .replace(/\[([^\]]+)]\([^)]*\)/g, "$1")
     .replace(/<[^>]+>/g, " ")
-    .replace(/[#>*_~\-]+/g, " ")
+    .replace(/^\s*[-*_]{3,}\s*$/gm, " ")
+    .replace(/^\s*[-+]\s+/gm, " ")
+    .replace(/[#>*_~]+/g, " ")
     .replace(/\s+/g, " ")
     .trim())
 

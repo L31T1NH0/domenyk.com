@@ -8,10 +8,17 @@ import { descriptionFromMarkdown } from "@/lib/seo"
 import { notifyIndexNow } from "@/lib/indexnow"
 import { invalidatePublicContentCache } from "@/lib/public-content-cache"
 import { getSeriesByPublicId, setSeriesForPost } from "@/lib/db/series"
+import { goAdminErrorResponse, usesGoAdmin, writeGoAdminPost } from "@/lib/go-admin-posts"
 
 export async function POST(req: NextRequest) {
   const unauthorized = await adminOnly()
   if (unauthorized) return unauthorized
+  if (usesGoAdmin()) {
+    try {
+      const result = await writeGoAdminPost("POST", undefined, await req.json().catch(() => null))
+      return NextResponse.json(result, { status: 201, headers: { "Cache-Control": "private, no-store" } })
+    } catch (error) { return goAdminErrorResponse(error) }
+  }
 
   const body = await req.json().catch(() => null) as Record<string, unknown> | null
   if (!body) return NextResponse.json({ error: "JSON inválido" }, { status: 400 })

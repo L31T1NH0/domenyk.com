@@ -4,6 +4,7 @@ import { ObjectId, type Document } from "mongodb"
 import { getDb } from "./client"
 import { renderMarkdownSync } from "../mdx"
 import type { PersonalUpdate, PersonalTimelinePage, PersonalUpdateOrderDirection } from "../personal-timeline"
+import { getAPIMural } from "../content-api"
 
 type PersonalUpdateDocument = {
   _id: ObjectId
@@ -32,6 +33,19 @@ function serialize(item: PersonalUpdateDocument): PersonalUpdate {
 }
 
 export async function getPersonalUpdates(cursor?: string): Promise<PersonalTimelinePage> {
+  const remote = await getAPIMural(cursor)
+  if (remote) {
+    return {
+      items: remote.items.map(item => ({
+        _id: item.id,
+        content: item.content,
+        contentHtml: renderMarkdownSync(item.content),
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+      })),
+      nextCursor: remote.nextCursor,
+    }
+  }
   const updates = await collection()
   const pipeline: Document[] = [
     { $set: { effectiveSortOrder: { $ifNull: ["$sortOrder", { $toLong: "$createdAt" }] } } },
