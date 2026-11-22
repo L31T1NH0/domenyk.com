@@ -1,0 +1,110 @@
+/* Measurements follow the saved 1366 × 768 Photoshop composition. */
+.page {
+  min-width: 0;
+  padding-top: 21px;
+  padding-bottom: 152px;
+  color: #ebebeb;
+}
+
+:global(html):has(.page[data-public-links]) {
+  scrollbar-gutter: auto;
+}
+
+:global(html[class]) :global(body):has(.page[data-public-links]) {
+  background: #050505;
+  background-image: none;
+  animation: none;
+}
+
+:global([data-public-shell]):has(.page[data-public-links]) {
+  width: calc(100% - 32px);
+  max-width: 468px;
+  margin-bottom: 0;
+  padding-inline: 0;
+}
+
+:global(body):has(.page[data-public-links]) > :global(.pointer-events-none.fixed) {
+  display: none;
+}
+
+.hero {
+  position: relative;
+  isolation: isolate;
+}
+
+/* The asset preserves the smart object's crop, Curves and masked gradient. */
+.portrait {
+  position: absolute;
+  z-index: -1;
+  top: -8px;
+  right: 5px;
+  width: 220px;
+  height: 164px;
+  max-width: none;
+  pointer-events: none;
+}
+
+.heading {
+  margin: 0;
+  white-space: pre-line;
+  overflow-wrap: break-word;
+  text-wrap: balance;
+  font-size: clamp(2rem, 6vw, 44.64px);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -.045em;
+  mix-blend-mode: lighten;
+  transform: translateY(-2px);
+}
+
+.intro {
+  position: relative;
+  margin-top: 14.4px;
+  white-space: pre-line;
+  font-size: 13.5px;
+  line-height: 1.625;
+  color: #858585;
+}
+
+.social { margin-top: 12px; }
+.carousel { margin-top: 22.5px; }
+.hero + .carousel { margin-top: 32.4px; }
+.track { padding-bottom: 7.2px; scrollbar-width: none; }
+
+.featuredCard {
+  min-height: 234px;
+  border-radius: 10.8px;
+  border-color: #262626;
+}
+
+.featuredCard:not(:has(> img)) { flex-direction: row; }
+
+.featuredCopy { min-height: 232px; padding: 21.6px; }
+.featuredLabel { margin-bottom: 7.2px; font-size: 9px; line-height: 13.5px; color: #858585; }
+.featuredTitle { font-size: 18px; line-height: 1.375; }
+.featuredDescription { margin-top: 7.2px; font-size: 12.6px; line-height: 1.625; color: #858585; }
+.featuredCard > svg { width: 14.4px; height: 14.4px; margin: 0 18px 0 0; align-self: center; color: #626262; }
+
+.indicators { margin-top: 7.2px; gap: 3.6px; }
+.indicator { width: 28.8px; height: 28.8px; }
+.dot { width: 5.4px; height: 5.4px; border-radius: 999px; background: #484848; transition: width 150ms; }
+.activeDot { width: 18px; background: #fff; }
+.sections { margin-top: 9.3px; }
+.linkSection + .linkSection, .readings { margin-top: 32.4px; }
+.linkSection h2 { margin: 0 0 7.2px; font-size: 10.8px; line-height: 14.4px; letter-spacing: .09em; }
+.linkSection ul { gap: 9px; }
+.linkSection a { border-radius: 7.2px; border-color: #262626; }
+.social a { width: 43.2px; height: 43.2px; }
+.social svg { width: 18px; height: 18px; }
+.sections a { min-height: 43.2px; gap: 10.8px; padding: 10.8px 12.6px; }
+.sections a span { font-size: 12.6px; line-height: 18px; }
+.sections a > :first-child { width: 16.2px; height: 16.2px; }
+.sections a > svg:last-child { width: 12.6px; height: 12.6px; color: #626262; }
+
+@media (max-width: 499px) {
+  .portrait { width: 47%; height: auto; right: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot { transition: none; }
+}

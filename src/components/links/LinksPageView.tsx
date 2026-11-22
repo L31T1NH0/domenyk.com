@@ -2,10 +2,11 @@
 
 import Link from "next/link"
 import { useRef, useState, type ReactNode } from "react"
-import { ArrowUpRightIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline"
+import { ArrowUpRightIcon } from "@heroicons/react/24/outline"
 import type { LinkContent, LinkPageData } from "@/lib/link-page"
 import type { SiteLink } from "@/lib/links"
 import { LinkIcon } from "./LinkIcon"
+import styles from "./LinksPageView.module.css"
 
 function ContentLink({ kind, id, url, track, children, className }: { kind: LinkContent["kind"]; id: string; url: string; track: boolean; children: ReactNode; className?: string }) {
   function clicked() {
@@ -17,12 +18,12 @@ function ContentLink({ kind, id, url, track, children, className }: { kind: Link
 }
 
 export function LinkContentCard({ item, track = true, featured = false }: { item: LinkContent; track?: boolean; featured?: boolean }) {
-  return <ContentLink kind={item.kind} id={item.id} url={item.url} track={track} className={`group flex h-full overflow-hidden rounded-xl border border-neutral-200 transition-colors hover:border-neutral-400 focus-visible:outline-2 focus-visible:outline-offset-4 dark:border-white/15 dark:hover:border-white/40 ${featured ? "flex-col sm:flex-row" : "items-center"}`}>
+  return <ContentLink kind={item.kind} id={item.id} url={item.url} track={track} className={`group flex h-full overflow-hidden rounded-xl border border-neutral-200 transition-colors hover:border-neutral-400 focus-visible:outline-2 focus-visible:outline-offset-4 dark:border-white/15 dark:hover:border-white/40 ${featured ? `flex-col sm:flex-row ${styles.featuredCard}` : "items-center"}`}>
     {item.cover && <img src={item.cover} alt={item.coverAlt} loading="lazy" className={featured ? "aspect-[2/1] w-full shrink-0 object-cover sm:aspect-auto sm:w-2/5" : "aspect-square w-20 shrink-0 self-stretch object-cover"} />}
-    <span className={`flex min-w-0 flex-1 flex-col justify-center ${featured ? "min-h-44 p-5 sm:p-6" : "p-4"}`}>
-      {featured && item.kind !== "link" && <span className="mb-2 text-[10px] font-semibold uppercase tracking-[.12em] text-neutral-500 dark:text-neutral-400">{item.kind === "note" ? "Nota" : "Texto"}</span>}
-      <span className={`break-words font-semibold leading-snug ${featured ? "text-xl tracking-tight" : "text-sm"}`}>{item.title}</span>
-      {item.description && <span className={`mt-2 line-clamp-3 break-words text-neutral-600 dark:text-neutral-400 ${featured ? "text-sm leading-relaxed" : "text-xs leading-relaxed"}`}>{item.description}</span>}
+    <span className={`flex min-w-0 flex-1 flex-col justify-center ${featured ? `min-h-44 p-5 sm:p-6 ${styles.featuredCopy}` : "p-4"}`}>
+      {featured && item.kind !== "link" && <span className={`mb-2 text-[10px] font-semibold uppercase tracking-[.12em] text-neutral-500 dark:text-neutral-400 ${styles.featuredLabel}`}>{item.kind === "note" ? "Nota" : "Texto"}</span>}
+      <span className={`break-words font-semibold leading-snug ${featured ? `text-xl tracking-tight ${styles.featuredTitle}` : "text-sm"}`}>{item.title}</span>
+      {item.description && <span className={`mt-2 line-clamp-3 break-words text-neutral-600 dark:text-neutral-400 ${featured ? `text-sm leading-relaxed ${styles.featuredDescription}` : "text-xs leading-relaxed"}`}>{item.description}</span>}
     </span>
     <ArrowUpRightIcon className={`size-4 shrink-0 self-center text-neutral-500 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 ${featured ? "mb-4 mr-5 self-end sm:mb-0 sm:self-center" : "mr-4"}`} aria-hidden="true" />
   </ContentLink>
@@ -36,16 +37,9 @@ function FeaturedCarousel({ heading, items, track }: { heading: string; items: L
     element?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "nearest", inline: "start" })
   }
   if (!items.length) return null
-  return <section aria-label={heading || "Destaques"} aria-roledescription="carrossel" className="min-w-0">
-    <div className="mb-2 flex items-center justify-between gap-3">
-      {heading && <h2 className="text-xs font-semibold uppercase tracking-[.1em]">{heading}</h2>}
-      {items.length > 1 && <div className="ml-auto flex items-center gap-1">
-        <span className="mr-2 text-xs tabular-nums text-neutral-500" aria-live="polite">{active + 1} / {items.length}</span>
-        <button type="button" onClick={() => go(Math.max(0, active - 1))} disabled={active === 0} aria-label="Destaque anterior" className="grid size-10 place-items-center rounded-full border border-neutral-200 disabled:opacity-30 dark:border-white/15"><ChevronLeftIcon className="size-4" /></button>
-        <button type="button" onClick={() => go(Math.min(items.length - 1, active + 1))} disabled={active === items.length - 1} aria-label="Próximo destaque" className="grid size-10 place-items-center rounded-full border border-neutral-200 disabled:opacity-30 dark:border-white/15"><ChevronRightIcon className="size-4" /></button>
-      </div>}
-    </div>
-    <div ref={container} tabIndex={0} aria-label="Navegue pelos destaques" className="flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:thin] focus-visible:outline-2 focus-visible:outline-offset-4" onKeyDown={event => {
+  return <section aria-label={heading || "Destaques"} aria-roledescription="carrossel" className={`min-w-0 ${styles.carousel}`}>
+    <span className="sr-only" aria-live="polite">{active + 1} de {items.length}</span>
+    <div ref={container} tabIndex={0} aria-label="Navegue pelos destaques" className={`flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain focus-visible:outline-2 focus-visible:outline-offset-4 ${styles.track}`} onKeyDown={event => {
       if (event.target !== event.currentTarget) return
       if (event.key === "ArrowRight") { event.preventDefault(); go(Math.min(items.length - 1, active + 1)) }
       if (event.key === "ArrowLeft") { event.preventDefault(); go(Math.max(0, active - 1)) }
@@ -55,7 +49,7 @@ function FeaturedCarousel({ heading, items, track }: { heading: string; items: L
     }}>
       {items.map((item, index) => <div key={`${item.kind}:${item.id}`} role="group" aria-roledescription="slide" aria-label={`${index + 1} de ${items.length}`} className="min-w-0 basis-full shrink-0 snap-start"><LinkContentCard item={item} featured track={track} /></div>)}
     </div>
-    {items.length > 1 && <div className="mt-2 flex justify-center gap-1">{items.map((item, index) => <button key={`${item.kind}:${item.id}`} type="button" aria-label={`Ver destaque ${index + 1}: ${item.title}`} aria-current={index === active ? "true" : undefined} onClick={() => go(index)} className="grid size-8 place-items-center"><span className={`h-1.5 rounded-full transition-all ${index === active ? "w-5 bg-neutral-950 dark:bg-white" : "w-1.5 bg-neutral-300 dark:bg-neutral-600"}`} /></button>)}</div>}
+    {items.length > 1 && <div className={`flex justify-center ${styles.indicators}`}>{items.map((item, index) => <button key={`${item.kind}:${item.id}`} type="button" aria-label={`Ver destaque ${index + 1}: ${item.title}`} aria-current={index === active ? "true" : undefined} onClick={() => go(index)} className={`grid place-items-center ${styles.indicator}`}><span className={`${styles.dot} ${index === active ? styles.activeDot : ""}`} /></button>)}</div>}
   </section>
 }
 
@@ -65,33 +59,38 @@ export function LinksPageView({ data, links, preview = false }: { data: LinkPage
   if (!settings && !links.length) return <p className="py-8 text-sm text-neutral-500">A página de links ainda não foi configurada.</p>
   const sections = settings?.sections ?? [...new Set(links.map(link => link.section))].map(id => ({ id, title: "", layout: "row" }))
   const visible = links.filter(link => link.published && (!link.startsAt || Date.parse(link.startsAt) <= now) && (!link.endsAt || Date.parse(link.endsAt) > now))
-  return <div className="min-w-0 space-y-9 border-t border-neutral-200 pt-7 text-neutral-950 dark:border-white/10 dark:text-neutral-100">
-    {(settings?.heading || settings?.intro) && <header className="pb-1">
-      {settings.heading && <h1 className="whitespace-pre-line break-words text-balance text-[clamp(2rem,6vw,3.1rem)] font-semibold leading-[1.08] tracking-[-.045em]">{settings.heading}</h1>}
-      {settings.intro && <p className="mt-4 whitespace-pre-line break-words text-pretty text-[15px] leading-relaxed text-neutral-600 dark:text-neutral-400">{settings.intro}</p>}
+  function renderSection(section: (typeof sections)[number]) {
+    const items = visible.filter(link => link.section === section.id).sort((a, b) => a.order - b.order)
+    if (!items.length) return null
+    return <section key={section.id} className={styles.linkSection} aria-labelledby={section.title ? `links-section-${section.id}` : undefined}>
+      {section.title && <h2 id={`links-section-${section.id}`} className="mb-2 text-xs font-semibold uppercase tracking-[.1em]">{section.title}</h2>}
+      <ul className={section.layout === "cards" ? "grid grid-cols-1 gap-3 sm:grid-cols-2" : "flex flex-wrap gap-2.5"}>
+        {items.map(link => <li key={link.id} className={section.layout === "cards" ? "min-w-0" : "shrink-0"}>
+          {section.layout === "row" ? <ContentLink kind="link" id={link.id} url={link.url} track={!preview} className="grid size-12 place-items-center rounded-lg border border-neutral-200 transition-colors hover:border-neutral-400 focus-visible:outline-2 focus-visible:outline-offset-4 dark:border-white/15 dark:hover:border-white/40">
+            <LinkIcon name={link.icon} url={link.url} className="size-5" />
+            <span className="sr-only">{link.title}</span>
+          </ContentLink> : link.appearance === "image" && link.cover ? <LinkContentCard item={{ kind: "link", id: link.id, title: link.title, description: link.description, url: link.url, cover: link.cover, coverAlt: link.coverAlt, publishedAt: "" }} track={!preview} /> :
+            <ContentLink kind="link" id={link.id} url={link.url} track={!preview} className="group flex h-full min-h-12 items-center gap-3 rounded-lg border border-neutral-200 px-3.5 py-3 transition-colors hover:border-neutral-400 focus-visible:outline-2 focus-visible:outline-offset-4 dark:border-white/15 dark:hover:border-white/40">
+              <LinkIcon name={link.icon} url={link.url} className="size-[18px] shrink-0" />
+              <span className="min-w-0 flex-1"><span className="block break-words text-sm font-medium">{link.title}</span>{link.appearance !== "simple" && link.description && <span className="mt-1 block break-words text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">{link.description}</span>}</span>
+              <ArrowUpRightIcon className="size-3.5 shrink-0 text-neutral-500" aria-hidden="true" />
+            </ContentLink>}
+        </li>)}
+      </ul>
+    </section>
+  }
+  const social = sections.filter(section => section.id === "social")
+  const remaining = sections.filter(section => !["social", "contact", "contato"].includes(section.id))
+  return <div className={styles.page} data-public-links={!preview || undefined}>
+    {(settings?.heading || settings?.intro) && <header className={styles.hero}>
+      <img src="/images/links/portrait-photoshop.png" width={220} height={164} alt="Retrato de Domenyk" fetchPriority="high" className={styles.portrait} />
+      {settings.heading && <h1 className={styles.heading}>{settings.heading}</h1>}
+      {settings.intro && <p className={styles.intro}>{settings.intro}</p>}
     </header>}
+    {social.length > 0 && <div className={styles.social}>{social.map(renderSection)}</div>}
     <FeaturedCarousel key={data.featured.map(item => `${item.kind}:${item.id}`).join(",")} heading={settings?.featuredHeading || ""} items={data.featured} track={!preview} />
-    {sections.map(section => {
-      const items = visible.filter(link => link.section === section.id).sort((a, b) => a.order - b.order)
-      if (!items.length) return null
-      return <section key={section.id} aria-labelledby={section.title ? `links-section-${section.id}` : undefined}>
-        {section.title && <h2 id={`links-section-${section.id}`} className="mb-2 text-xs font-semibold uppercase tracking-[.1em]">{section.title}</h2>}
-        <ul className={section.layout === "cards" ? "grid grid-cols-1 gap-3 sm:grid-cols-2" : "flex flex-wrap gap-2.5"}>
-          {items.map(link => <li key={link.id} className={section.layout === "cards" ? "min-w-0" : "shrink-0"}>
-            {section.layout === "row" ? <ContentLink kind="link" id={link.id} url={link.url} track={!preview} className="grid size-12 place-items-center rounded-lg border border-neutral-200 transition-colors hover:border-neutral-400 focus-visible:outline-2 focus-visible:outline-offset-4 dark:border-white/15 dark:hover:border-white/40">
-              <LinkIcon name={link.icon} url={link.url} className="size-5" />
-              <span className="sr-only">{link.title}</span>
-            </ContentLink> : link.appearance === "image" && link.cover ? <LinkContentCard item={{ kind: "link", id: link.id, title: link.title, description: link.description, url: link.url, cover: link.cover, coverAlt: link.coverAlt, publishedAt: "" }} track={!preview} /> :
-              <ContentLink kind="link" id={link.id} url={link.url} track={!preview} className="group flex h-full min-h-12 items-center gap-3 rounded-lg border border-neutral-200 px-3.5 py-3 transition-colors hover:border-neutral-400 focus-visible:outline-2 focus-visible:outline-offset-4 dark:border-white/15 dark:hover:border-white/40">
-                <LinkIcon name={link.icon} url={link.url} className="size-[18px] shrink-0" />
-                <span className="min-w-0 flex-1"><span className="block break-words text-sm font-medium">{link.title}</span>{link.appearance !== "simple" && link.description && <span className="mt-1 block break-words text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">{link.description}</span>}</span>
-                <ArrowUpRightIcon className="size-3.5 shrink-0 text-neutral-500" aria-hidden="true" />
-              </ContentLink>}
-          </li>)}
-        </ul>
-      </section>
-    })}
-    {data.readings.length > 0 && <section aria-label={settings?.readingsHeading || "Leituras"}>
+    <div className={styles.sections}>{remaining.map(renderSection)}</div>
+    {data.readings.length > 0 && <section className={styles.readings} aria-label={settings?.readingsHeading || "Leituras"}>
       {settings?.readingsHeading && <h2 className="mb-2 text-xs font-semibold uppercase tracking-[.1em]">{settings?.readingsHeading}</h2>}
       <ul className="grid gap-3 sm:grid-cols-2">{data.readings.map(item => <li key={`${item.kind}:${item.id}`} className="min-w-0"><LinkContentCard item={item} track={!preview} /></li>)}</ul>
     </section>}
