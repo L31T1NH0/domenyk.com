@@ -1,7 +1,7 @@
-import { PostEditor } from "@/components/editor/PostEditor"
-
-export default async function NewPostPage({ searchParams }: { searchParams: Promise<{ series?: string | string[] }> }) {
-  const value = (await searchParams).series
-  const initialSeriesPublicId = (Array.isArray(value) ? value[0] : value)?.slice(0, 80) ?? ""
-  return <PostEditor initialSeriesPublicId={initialSeriesPublicId} />
+import { PostComposer } from "../PostComposer"
+import { loadNewPostPage } from "./data"
+export const metadata = { title: "Novo post" }
+export default async function NewPostPage(props: Parameters<typeof loadNewPostPage>[0]) {
+  const { initialSeriesPublicId } = await loadNewPostPage(props)
+  return <PostComposer initialSeriesPublicId={initialSeriesPublicId} />
 }

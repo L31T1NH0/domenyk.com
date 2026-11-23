@@ -1,11 +1,7 @@
-import { getWritingEntries } from "@/lib/db/writing-progress"
-import { AdminCommandHeader } from "../AdminCommandHeader"
-import { WritingManager } from "./WritingManager"
-
+import { loadWritingPage } from "./data"
+import { WritingWorkspace } from "./WritingWorkspace"
+export const metadata = { title: "Em escrita" }
 export default async function WritingPage() {
-  const entries = await getWritingEntries()
-  return <>
-    <AdminCommandHeader title="O que estou escrevendo" description="Atualize manualmente os títulos e o progresso que aparecem na home." />
-    <WritingManager initialEntries={entries} />
-  </>
+  const { entries } = await loadWritingPage()
+  return <WritingWorkspace initialEntries={entries} />
 }

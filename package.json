@@ -25,6 +25,9 @@
     "test": "node --conditions=react-server --test tests/*.test.mjs"
   },
   "dependencies": {
+    "@astryxdesign/cli": "^0.7.17",
+    "@astryxdesign/core": "^0.7.17",
+    "@astryxdesign/theme-neutral": "^0.7.17",
     "@chenglou/pretext": "^0.0.9",
     "@clerk/nextjs": "^7.5.17",
     "@heroicons/react": "^2.2.0",
@@ -36,6 +39,7 @@
     "@lexical/markdown": "^0.52.0",
     "@lexical/react": "^0.52.0",
     "@lexical/rich-text": "^0.52.0",
+    "@stylexjs/stylex": "^0.19.2",
     "@vercel/analytics": "^2.0.1",
     "@vercel/blob": "^2.6.1",
     "date-fns": "^4.1.0",

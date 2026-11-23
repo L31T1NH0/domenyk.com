@@ -1,14 +1,7 @@
-import { listMedia, serializeMediaItem } from "@/lib/blob"
-import { MediaLibrary } from "./MediaLibrary"
-
+import { loadAdminMediaPage } from "./data"
+import { MediaWorkspace } from "./MediaWorkspace"
+export const metadata = { title: "Mídia" }
 export default async function AdminMediaPage() {
-  const media = await listMedia()
-  const serializedMedia = media.map(serializeMediaItem)
-
-  return (
-    <>
-      <header className="admin-page-header"><div><h1>Mídia</h1><p>Envie e organize imagens usadas no conteúdo.</p></div></header>
-      <MediaLibrary initialMedia={serializedMedia} />
-    </>
-  )
+  const { initialMedia } = await loadAdminMediaPage()
+  return <MediaWorkspace initialMedia={initialMedia} />
 }

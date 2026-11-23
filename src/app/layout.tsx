@@ -1,3 +1,5 @@
+import "./layers.css"
+import "./globals.css"
 import type { Metadata } from "next"
 import { ClerkProvider } from "@clerk/nextjs"
 import { Source_Serif_4 } from "next/font/google"
@@ -7,7 +9,6 @@ import { cookies, headers } from "next/headers"
 import { absoluteUrl, authorJsonLd, blogJsonLd, jsonLd, siteConfig } from "@/lib/seo"
 import { ARTICLE_COLLECTION_PATH, NOTES_COLLECTION_PATH, editorialVocabularyJsonLd } from "@/lib/content-semantics"
 import "katex/dist/katex.min.css"
-import "./globals.css"
 
 const polySans = localFont({
   src: "./PolySans-Slim.woff2",

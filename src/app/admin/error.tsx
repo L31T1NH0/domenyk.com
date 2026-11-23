@@ -1,20 +1,9 @@
 "use client"
-
-import Link from "next/link"
-import { ArrowPathIcon, HomeIcon } from "@heroicons/react/24/outline"
-
+import { Button, Feedback, HStack, PageHeader, VStack } from "./_components/ui"
 export default function AdminError({ unstable_retry }: { error: Error & { digest?: string }; unstable_retry: () => void }) {
-  return (
-    <section className="admin-error-state" role="alert">
-      <span className="admin-error-icon" aria-hidden>!</span>
-      <div>
-        <h1>Não foi possível abrir esta área</h1>
-        <p>Os dados não foram alterados. Tente carregar novamente ou volte para a visão geral.</p>
-        <div>
-          <button type="button" className="admin-button-primary" onClick={unstable_retry}><ArrowPathIcon aria-hidden /> Tentar novamente</button>
-          <Link href="/admin" className="admin-button-secondary"><HomeIcon aria-hidden /> Visão geral</Link>
-        </div>
-      </div>
-    </section>
-  )
+  return <VStack gap={6}>
+    <PageHeader title="Esta área não carregou" />
+    <Feedback error="Não foi possível carregar os dados. Tente novamente." />
+    <HStack wrap="wrap" gap={2}><Button label="Tentar novamente" variant="primary" onClick={unstable_retry} /><Button label="Voltar ao início" href="/admin" /></HStack>
+  </VStack>
 }
