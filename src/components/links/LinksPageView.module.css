@@ -64,11 +64,15 @@
 }
 
 .social { margin-top: 12px; }
-.carousel { width: 320px; max-width: 100%; margin-top: 22.5px; }
+.carousel { width: 100%; margin-top: 22.5px; }
 .hero + .carousel { margin-top: 32.4px; }
 .track { padding-bottom: 7.2px; scrollbar-width: none; }
 
-.slide { width: 320px; max-width: 100%; }
+.slide { width: 100%; }
+.slide .featuredCard { width: 100%; height: 320px; }
+.slide .contentCover { height: 104px; aspect-ratio: auto; flex-shrink: 0; }
+.slide .featuredCopy { min-height: 0; }
+.slide .featuredTitle { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 
 .featuredCard {
   width: 320px;
