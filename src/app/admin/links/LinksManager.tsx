@@ -58,7 +58,7 @@ export function LinksManager({ links, settings: initial, pageData, catalog, late
         </div>
         <details><summary className="cursor-pointer text-xs text-neutral-500">Personalizar texto e capa</summary><div className="mt-3 space-y-3">
           <label className="admin-field"><span>Título personalizado (opcional)</span><input maxLength={180} value={selection.title} onChange={event => updateSelection(group, index, { title: event.target.value })} placeholder={source?.title || "Usar o título do conteúdo"} /></label>
-          <label className="admin-field"><span>Descrição personalizada (opcional)</span><textarea maxLength={500} rows={3} value={selection.description} onChange={event => updateSelection(group, index, { description: event.target.value })} placeholder="Usar a descrição do conteúdo" /></label>
+          {selection.kind !== "note" && <label className="admin-field"><span>Descrição personalizada (opcional)</span><textarea maxLength={500} rows={3} value={selection.description} onChange={event => updateSelection(group, index, { description: event.target.value })} placeholder="Usar a descrição do conteúdo" /></label>}
           <label className="admin-field"><span>Capa</span><select value={selection.coverMode} onChange={event => updateSelection(group, index, { coverMode: event.target.value as ContentSelection["coverMode"] })}><option value="original">Usar a capa do conteúdo</option><option value="none">Sem capa</option><option value="custom">Escolher outra imagem</option></select></label>
           {selection.coverMode === "custom" && <CoverField onBusyChange={setBusy} url={selection.cover} alt={selection.coverAlt} onChange={(cover, coverAlt) => updateSelection(group, index, { cover, coverAlt })} />}
         </div></details>

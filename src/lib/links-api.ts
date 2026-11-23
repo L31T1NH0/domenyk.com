@@ -1,5 +1,7 @@
 import "server-only"
 
+import { getNote } from "./db/notes"
+import { descriptionFromMarkdown } from "./seo"
 import { auth } from "@clerk/nextjs/server"
 import { cache } from "react"
 import { GoAdminError, goAdminOrigin, goAPIHeaders, requestGoAdmin } from "./go-admin"
@@ -87,10 +89,23 @@ export function parseLinkContent(value: unknown): LinkContent {
   return { kind: result.kind, id: result.id, title: result.title, description: result.description, url: result.url, cover: result.cover, coverAlt: result.coverAlt, publishedAt: result.publishedAt }
 }
 
+const noteCardContent = cache(async (id: string) => {
+  const note = await getNote(id)
+  return note ? descriptionFromMarkdown(note.content, 1000) : ""
+})
+
+export async function getLinkContents(values: unknown[]): Promise<LinkContent[]> {
+  return Promise.all(values.map(async value => {
+    const item = parseLinkContent(value)
+    return item.kind === "note" ? { ...item, content: await noteCardContent(item.id) } : item
+  }))
+}
+
 export const getLinkPage = cache(async (): Promise<LinkPageData> => {
   const data = await publicLinkRequest("/v1/links/page")
   if (!data || !Array.isArray(data.featured) || data.featured.length > 3 || !Array.isArray(data.readings) || data.readings.length > 20) throw new GoAdminError(503)
-  return { settings: data.settings === null ? null : parseLinkPageSettings(data.settings), featured: data.featured.map(parseLinkContent), readings: data.readings.map(parseLinkContent) }
+  const [featured, readings] = await Promise.all([getLinkContents(data.featured), getLinkContents(data.readings)])
+  return { settings: data.settings === null ? null : parseLinkPageSettings(data.settings), featured, readings }
 })
 
 export function linkActionError(error: unknown): Response {

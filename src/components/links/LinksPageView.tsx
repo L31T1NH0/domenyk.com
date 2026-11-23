@@ -19,14 +19,16 @@ function ContentLink({ kind, id, url, track, children, className }: { kind: Link
 }
 
 export function LinkContentCard({ item, track = true, featured = false }: { item: LinkContent; track?: boolean; featured?: boolean }) {
-  return <ContentLink kind={item.kind} id={item.id} url={item.url} track={track} className={`group flex h-full overflow-hidden rounded-xl border border-neutral-200 transition-colors hover:border-neutral-400 focus-visible:outline-2 focus-visible:outline-offset-4 dark:border-white/15 dark:hover:border-white/40 ${featured ? `flex-col sm:flex-row ${styles.featuredCard}` : "items-center"}`}>
-    {item.cover && <img src={item.cover} alt={item.coverAlt} loading="lazy" className={featured ? "aspect-[2/1] w-full shrink-0 object-cover sm:aspect-auto sm:w-2/5" : "aspect-square w-20 shrink-0 self-stretch object-cover"} />}
-    <span className={`flex min-w-0 flex-1 flex-col justify-center ${featured ? `min-h-44 p-5 sm:p-6 ${styles.featuredCopy}` : "p-4"}`}>
-      {featured && item.kind !== "link" && <span className={`mb-2 text-[10px] font-semibold uppercase tracking-[.12em] text-neutral-500 dark:text-neutral-400 ${styles.featuredLabel}`}>{item.kind === "note" ? "Nota" : "Texto"}</span>}
-      <span className={`break-words font-semibold leading-snug ${featured ? `text-xl tracking-tight ${styles.featuredTitle}` : "text-sm"}`}>{item.title}</span>
-      {item.description && <span className={`mt-2 line-clamp-3 break-words text-neutral-600 dark:text-neutral-400 ${featured ? `text-sm leading-relaxed ${styles.featuredDescription}` : "text-xs leading-relaxed"}`}>{item.description}</span>}
+  const reading = item.kind !== "link"
+  const vertical = featured || reading
+  return <ContentLink kind={item.kind} id={item.id} url={item.url} track={track} className={`flex h-full overflow-hidden rounded-xl border border-neutral-200 transition-colors hover:border-neutral-400 focus-visible:outline-2 focus-visible:outline-offset-4 dark:border-white/15 dark:hover:border-white/40 ${vertical ? styles.featuredCard : "items-center"}`}>
+    {item.cover && <img src={item.cover} alt={item.coverAlt} loading="lazy" className={vertical ? styles.contentCover : "aspect-square w-20 shrink-0 self-stretch object-cover grayscale-0"} />}
+    <span className={`flex min-w-0 flex-1 flex-col ${vertical ? styles.featuredCopy : "justify-center p-4"}`}>
+      {reading && <span className={styles.featuredLabel}>{item.kind === "note" ? "Nota" : "Artigo"}</span>}
+      <span className={`break-words font-semibold leading-snug ${vertical ? styles.featuredTitle : "text-sm"}`}>{item.title}</span>
+      {(item.kind === "note" ? item.content : item.description) && <span className={`mt-2 line-clamp-3 break-words text-neutral-600 dark:text-neutral-400 ${vertical ? styles.featuredDescription : "text-xs leading-relaxed"}`}>{item.kind === "note" ? item.content : item.description}</span>}
+      {reading && <span className={styles.continueReading}>Continuar lendo</span>}
     </span>
-    <ArrowUpRightIcon className={`size-4 shrink-0 self-center text-neutral-500 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 ${featured ? "mb-4 mr-5 self-end sm:mb-0 sm:self-center" : "mr-4"}`} aria-hidden="true" />
   </ContentLink>
 }
 
@@ -46,9 +48,9 @@ function FeaturedCarousel({ heading, items, track }: { heading: string; items: L
       if (event.key === "ArrowLeft") { event.preventDefault(); go(Math.max(0, active - 1)) }
     }} onScroll={() => {
       const element = container.current
-      if (element) setActive(Math.max(0, Math.min(items.length - 1, Math.round(element.scrollLeft / (element.clientWidth + 16)))))
+      if (element) setActive(Math.max(0, Math.min(items.length - 1, Math.round(element.scrollLeft / ((element.firstElementChild as HTMLElement).offsetWidth + 16)))))
     }}>
-      {items.map((item, index) => <div key={`${item.kind}:${item.id}`} role="group" aria-roledescription="slide" aria-label={`${index + 1} de ${items.length}`} className="min-w-0 basis-full shrink-0 snap-start"><LinkContentCard item={item} featured track={track} /></div>)}
+      {items.map((item, index) => <div key={`${item.kind}:${item.id}`} role="group" aria-roledescription="slide" aria-label={`${index + 1} de ${items.length}`} className={`min-w-0 shrink-0 snap-start ${styles.slide}`}><LinkContentCard item={item} featured track={track} /></div>)}
     </div>
     {items.length > 1 && <div className={`flex justify-center ${styles.indicators}`}>{items.map((item, index) => <button key={`${item.kind}:${item.id}`} type="button" aria-label={`Ver destaque ${index + 1}: ${item.title}`} aria-current={index === active ? "true" : undefined} onClick={() => go(index)} className={`grid place-items-center ${styles.indicator}`}><span className={`${styles.dot} ${index === active ? styles.activeDot : ""}`} /></button>)}</div>}
   </section>
@@ -94,7 +96,7 @@ export function LinksPageView({ data, links, preview = false }: { data: LinkPage
     <div className={styles.sections}>{remaining.map(renderSection)}</div>
     {data.readings.length > 0 && <section className={styles.readings} aria-label={settings?.readingsHeading || "Leituras"}>
       {settings?.readingsHeading && <h2 className="mb-2 text-xs font-semibold uppercase tracking-[.1em]">{settings?.readingsHeading}</h2>}
-      <ul className="grid gap-3 sm:grid-cols-2">{data.readings.map(item => <li key={`${item.kind}:${item.id}`} className="min-w-0"><LinkContentCard item={item} track={!preview} /></li>)}</ul>
+      <ul className="flex flex-wrap gap-3">{data.readings.map(item => <li key={`${item.kind}:${item.id}`} className="min-w-0 max-w-full"><LinkContentCard item={item} track={!preview} /></li>)}</ul>
     </section>}
   </div>
 }

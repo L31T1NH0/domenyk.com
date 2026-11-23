@@ -1,5 +1,5 @@
 import { adminOnly } from "@/lib/auth"
-import { linkActionError, parseLinkContent, requestLinksAction } from "@/lib/links-api"
+import { linkActionError, getLinkContents, requestLinksAction } from "@/lib/links-api"
 
 export async function GET(request: Request) {
   const denied = await adminOnly(); if (denied) return denied
@@ -8,6 +8,6 @@ export async function GET(request: Request) {
   try {
     const data = await requestLinksAction<{ items: unknown[] }>(`/v1/admin/links/content?${search ? `q=${encodeURIComponent(search)}&` : ""}limit=50`)
     if (!Array.isArray(data.items) || data.items.length > 50) throw new Error("Resposta inválida")
-    return Response.json({ items: data.items.map(parseLinkContent) }, { headers: { "Cache-Control": "private, no-store" } })
+    return Response.json({ items: await getLinkContents(data.items) }, { headers: { "Cache-Control": "private, no-store" } })
   } catch (error) { return linkActionError(error) }
 }

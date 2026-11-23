@@ -23,7 +23,7 @@ export type LinkPageSettings = {
   readings: ContentSelection[]
   sections: LinkSection[]
 }
-export type LinkContent = { kind: ContentKind; id: string; title: string; description: string; url: string; cover: string; coverAlt: string; publishedAt: string }
+export type LinkContent = { content?: string; kind: ContentKind; id: string; title: string; description: string; url: string; cover: string; coverAlt: string; publishedAt: string }
 export type LinkPageData = { settings: LinkPageSettings | null; featured: LinkContent[]; readings: LinkContent[] }
 
 function record(value: unknown): Record<string, unknown> {
