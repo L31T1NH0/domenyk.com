@@ -7,6 +7,7 @@ import { currentMusic, youtubeMusicSearch, parseMusicStatus, type MusicStatus } 
 import styles from "./MusicCard.module.css"
 
 export function MusicCard() {
+  const [loading, setLoading] = useState(true)
   const [status, setStatus] = useState<{ data: MusicStatus; now: number } | null>(null)
 
   useEffect(() => {
@@ -24,7 +25,10 @@ export function MusicCard() {
       } catch {
         if (active) setStatus(previous => previous && { ...previous, now: Date.now() })
       } finally {
-        if (active) timer = setTimeout(refresh, 15_000)
+        if (active) {
+          setLoading(false)
+          timer = setTimeout(refresh, 15_000)
+        }
       }
     }
     void refresh()
@@ -32,17 +36,16 @@ export function MusicCard() {
   }, [])
 
   const track = status ? currentMusic(status.data, status.now) : null
-  if (!track) return null
-  return <section className={styles.card} aria-label="Música que estou ouvindo">
+  return <section className={styles.card} aria-label="Música que estou ouvindo" aria-busy={loading}>
     <div className={styles.cover}>
-      {track.cover && <img key={track.cover} src={track.cover} alt={`Capa de ${track.title}`} width={72} height={72} loading="lazy" onError={event => { event.currentTarget.hidden = true }} />}
+      {track?.cover && <img key={track.cover} src={track.cover} alt={`Capa de ${track.title}`} width={72} height={72} loading="lazy" onError={event => { event.currentTarget.hidden = true }} />}
       <MusicalNoteIcon aria-hidden="true" />
     </div>
     <div className={styles.details} aria-live="polite">
-      <p className={styles.origin}><span className={styles.dot} />Ouvindo agora</p>
-      <p className={styles.title} title={track.title}>{track.title}</p>
-      <p className={styles.artist}>{track.artist || "Artista não informado"}</p>
-      <a className={styles.search} href={youtubeMusicSearch(track.title)} target="_blank" rel="noopener noreferrer">Buscar no YouTube <ArrowUpRightIcon aria-hidden="true" /></a>
+      <p className={styles.origin}>{track && <span className={styles.dot} />}{track ? "Ouvindo agora" : "Música"}</p>
+      <p className={styles.title} title={track?.title}>{track?.title || (loading ? "Carregando música…" : status ? "Nenhuma música tocando agora" : "Música indisponível no momento")}</p>
+      <p className={styles.artist}>{track ? track.artist || "Artista não informado" : "O que estou ouvindo aparece aqui."}</p>
+      {track ? <a className={styles.search} href={youtubeMusicSearch(track.title)} target="_blank" rel="noopener noreferrer">Buscar no YouTube <ArrowUpRightIcon aria-hidden="true" /></a> : <span className={styles.search} aria-hidden="true" />}
     </div>
   </section>
 }

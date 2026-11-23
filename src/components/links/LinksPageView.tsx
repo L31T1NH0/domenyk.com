@@ -36,8 +36,10 @@ function FeaturedCarousel({ heading, items, track }: { heading: string; items: L
   const container = useRef<HTMLDivElement>(null)
   const [active, setActive] = useState(0)
   function go(index: number) {
-    const element = container.current?.children[index] as HTMLElement | undefined
-    element?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "nearest", inline: "start" })
+    const track = container.current
+    const slide = track?.children[index] as HTMLElement | undefined
+    if (!track || !slide) return
+    track.scrollTo({ left: track.scrollLeft + slide.getBoundingClientRect().left - track.getBoundingClientRect().left - track.clientLeft, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" })
   }
   if (!items.length) return null
   return <section aria-label={heading || "Destaques"} aria-roledescription="carrossel" className={`min-w-0 ${styles.carousel}`}>

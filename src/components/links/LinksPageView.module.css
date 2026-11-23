@@ -1,8 +1,8 @@
-/* Measurements follow the saved 1366 × 768 Photoshop composition. */
+/* Portrait and heading preserve the original Photoshop composition. */
 .page {
   min-width: 0;
-  padding-top: 21px;
-  padding-bottom: 152px;
+  padding-top: 24px;
+  padding-bottom: 160px;
   color: #ebebeb;
 }
 
@@ -56,7 +56,7 @@
 
 .intro {
   position: relative;
-  margin-top: 14.4px;
+  margin-top: 16px;
   white-space: pre-line;
   font-size: 13.5px;
   line-height: 1.625;
@@ -64,21 +64,22 @@
 }
 
 .social { margin-top: 12px; }
-.carousel { width: 100%; margin-top: 22.5px; }
-.hero + .carousel { margin-top: 32.4px; }
-.track { padding-bottom: 7.2px; scrollbar-width: none; }
+.carousel { width: 100%; margin-top: 24px; }
+.hero + .carousel { margin-top: 32px; }
+.track { padding-bottom: 8px; scrollbar-width: none; }
 
 .slide { width: 100%; }
 .slide .featuredCard { width: 100%; height: 320px; }
-.slide .contentCover { height: 104px; aspect-ratio: auto; flex-shrink: 0; }
+.slide .contentCover { height: 112px; aspect-ratio: auto; flex-shrink: 0; object-fit: contain; background: #0b0b0b; }
 .slide .featuredCopy { min-height: 0; }
+.slide .featuredCard:focus-visible { outline-offset: -4px; }
 .slide .featuredTitle { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 
 .featuredCard {
   width: 320px;
   max-width: 100%;
   flex-direction: column;
-  border-radius: 10.8px;
+  border-radius: 12px;
   border-color: #262626;
 }
 
@@ -87,24 +88,25 @@
 .featuredCopy { padding: 16px; }
 .featuredLabel { margin-bottom: 8px; font-size: 10px; font-weight: 600; line-height: 1.5; text-transform: uppercase; letter-spacing: .12em; color: #858585; }
 .featuredTitle { font-size: 18px; line-height: 1.375; letter-spacing: -.025em; }
-.featuredDescription { margin-top: 8px; font-size: 12.6px; line-height: 1.625; color: #858585; }
-.continueReading { margin-top: auto; padding-top: 16px; font-size: 12px; font-weight: 500; }
+.featuredDescription { margin-top: 8px; font-size: 14px; line-height: 1.5; color: #858585; }
+.continueReading { margin-top: auto; padding-top: 12px; font-size: 12px; font-weight: 500; }
 
-.indicators { margin-top: 7.2px; gap: 3.6px; }
-.indicator { width: 28.8px; height: 28.8px; }
-.dot { width: 5.4px; height: 5.4px; border-radius: 999px; background: #484848; transition: width 150ms; }
+.indicators { margin-top: 8px; gap: 4px; }
+.indicator { width: 44px; height: 44px; border-radius: 8px; }
+.indicator:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.dot { width: 6px; height: 6px; border-radius: 999px; background: #707070; transition: width 150ms; }
 .activeDot { width: 18px; background: #fff; }
-.sections { margin-top: 9.3px; }
-.linkSection + .linkSection, .readings { margin-top: 32.4px; }
-.linkSection h2 { margin: 0 0 7.2px; font-size: 10.8px; line-height: 14.4px; letter-spacing: .09em; }
-.linkSection ul { gap: 9px; }
-.linkSection a { border-radius: 7.2px; border-color: #262626; }
-.social a { width: 43.2px; height: 43.2px; }
+.sections { margin-top: 8px; }
+.linkSection + .linkSection, .readings { margin-top: 32px; }
+.linkSection h2 { margin: 0 0 8px; font-size: 11px; line-height: 16px; letter-spacing: .09em; }
+.linkSection ul { gap: 8px; }
+.linkSection a { border-radius: 8px; border-color: #262626; }
+.social a { width: 44px; height: 44px; }
 .social svg { width: 18px; height: 18px; }
-.sections a { min-height: 43.2px; gap: 10.8px; padding: 10.8px 12.6px; }
-.sections a span { font-size: 12.6px; line-height: 18px; }
-.sections a > :first-child { width: 16.2px; height: 16.2px; }
-.sections a > svg:last-child { width: 12.6px; height: 12.6px; color: #626262; }
+.sections a { min-height: 44px; gap: 12px; padding: 12px; }
+.sections a span { font-size: 13px; line-height: 20px; }
+.sections a > :first-child { width: 16px; height: 16px; }
+.sections a > svg:last-child { width: 12px; height: 12px; color: #626262; }
 
 @media (max-width: 499px) {
   .portrait { width: 47%; height: auto; right: 0; }
