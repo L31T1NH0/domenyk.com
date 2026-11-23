@@ -160,7 +160,7 @@ O card de músicas em `/links` consulta `/api/links/music` a cada 15 segundos.
 Usa a mesma origem Go configurada para links (`GO_ADMIN_API_URL` ou
 `CONTENT_API_URL`). O segredo do dispositivo pertence somente ao Music Go e ao
 projeto Go da API; nenhuma variável pública de música é necessária no Next.
-O card reproduz prévias do iTunes de até 30 segundos e permite navegar entre
-a faixa atual e até 15 outras mais ouvidas. Sua seleção não altera o player
-nem a contagem pessoal do dono. Configuração e contrato completos estão em
-`../domenyk-api/docs/deployment.md`, na seção de Music Go.
+O card mostra somente a música em reprodução, com capa, título, artista e uma
+busca no YouTube baseada no título. Não reproduz áudio nem exibe o ranking.
+Quando a reprodução para ou expira, o card fica oculto. Configuração e contrato
+completos estão em `../domenyk-api/docs/deployment.md`, na seção de Music Go.
