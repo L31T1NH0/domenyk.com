@@ -5,14 +5,14 @@ import { formatSiteDate } from "@/lib/datetime"
 import { usePostsTable, translationStatuses } from "./usePostsTable"
 import { Button, Check, DeleteButton, Disclosure, Feedback, HStack, Input, Link, PageHeader, Table, TableRegion, Text, VStack } from "../_components/ui"
 import { Selector } from "@astryxdesign/core/Selector"
-import type { TableColumn } from "@astryxdesign/core/Table"
+import { pixel, proportional, type TableColumn } from "@astryxdesign/core/Table"
 
 export function PostsWorkspace({ posts }: { posts: SerializedPostSummary[] }) {
   const s = usePostsTable({ posts })
   const columns: TableColumn<SerializedPostSummary>[] = [
-    { key: "selection", width: 48, header: <Check label="Selecionar resultados" isLabelHidden value={s.allFilteredSelected ? true : s.selectedIds.length ? "indeterminate" : false} onChange={s.toggleFilteredSelection} />,
+    { key: "selection", width: pixel(48), header: <Check label="Selecionar resultados" isLabelHidden value={s.allFilteredSelected ? true : s.selectedIds.length ? "indeterminate" : false} onChange={s.toggleFilteredSelection} />,
       renderCell: post => <Check label={`Selecionar ${post.title}`} isLabelHidden value={s.selected[post._id] === true} onChange={checked => s.setPostSelected(post._id, checked)} /> },
-    { key: "title", width: "40%", header: "Post", renderCell: post => <VStack gap={1}>
+    { key: "title", width: proportional(3), header: "Post", renderCell: post => <VStack gap={1}>
       <Link href={`/admin/posts/${post._id}`}>{post.title}</Link>
       <Text type="supporting">{post.pinned ? "Fixado. " : ""}{post.hiddenFromTimeline ? "Fora da timeline. " : ""}{post.series ? `Capítulo ${post.series.position}` : post.slug}</Text>
       <Disclosure title="Idiomas">{translationStatuses(post).map(version => <Text key={version.locale} type="supporting">{version.locale.toUpperCase()}: {version.exists ? version.published ? "Publicado" : "Rascunho" : "Sem tradução"}{version.stale ? "; revisar tradução" : ""}</Text>)}</Disclosure>
