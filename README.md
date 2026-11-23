@@ -155,3 +155,12 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+O card de músicas em `/links` consulta `/api/links/music` a cada 15 segundos.
+Usa a mesma origem Go configurada para links (`GO_ADMIN_API_URL` ou
+`CONTENT_API_URL`). O segredo do dispositivo pertence somente ao Music Go e ao
+projeto Go da API; nenhuma variável pública de música é necessária no Next.
+O card reproduz prévias do iTunes de até 30 segundos e permite navegar entre
+a faixa atual e até 15 outras mais ouvidas. Sua seleção não altera o player
+nem a contagem pessoal do dono. Configuração e contrato completos estão em
+`../domenyk-api/docs/deployment.md`, na seção de Music Go.

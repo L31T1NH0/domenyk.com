@@ -6,6 +6,7 @@ import { ArrowUpRightIcon } from "@heroicons/react/24/outline"
 import type { LinkContent, LinkPageData } from "@/lib/link-page"
 import type { SiteLink } from "@/lib/links"
 import { LinkIcon } from "./LinkIcon"
+import { MusicCard } from "./MusicCard"
 import styles from "./LinksPageView.module.css"
 
 function ContentLink({ kind, id, url, track, children, className }: { kind: LinkContent["kind"]; id: string; url: string; track: boolean; children: ReactNode; className?: string }) {
@@ -89,6 +90,7 @@ export function LinksPageView({ data, links, preview = false }: { data: LinkPage
     </header>}
     {social.length > 0 && <div className={styles.social}>{social.map(renderSection)}</div>}
     <FeaturedCarousel key={data.featured.map(item => `${item.kind}:${item.id}`).join(",")} heading={settings?.featuredHeading || ""} items={data.featured} track={!preview} />
+    {!preview && <MusicCard />}
     <div className={styles.sections}>{remaining.map(renderSection)}</div>
     {data.readings.length > 0 && <section className={styles.readings} aria-label={settings?.readingsHeading || "Leituras"}>
       {settings?.readingsHeading && <h2 className="mb-2 text-xs font-semibold uppercase tracking-[.1em]">{settings?.readingsHeading}</h2>}
