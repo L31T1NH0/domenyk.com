@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useRef, useState, type ReactNode } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 import { ArrowUpRightIcon } from "@heroicons/react/24/outline"
 import type { LinkContent, LinkPageData } from "@/lib/link-page"
 import type { SiteLink } from "@/lib/links"
@@ -21,12 +21,35 @@ function ContentLink({ kind, id, url, track, children, className }: { kind: Link
 export function LinkContentCard({ item, track = true, featured = false }: { item: LinkContent; track?: boolean; featured?: boolean }) {
   const reading = item.kind !== "link"
   const vertical = featured || reading
+  const description = item.kind === "note" ? item.content : item.description
+  const fillsCard = featured || (reading && Boolean(item.cover))
+  const descriptionRef = useRef<HTMLSpanElement>(null)
+
+  useEffect(() => {
+    const element = descriptionRef.current
+    if (!fillsCard || !element) return
+    const measure = () => {
+      const lineHeight = Number.parseFloat(getComputedStyle(element).lineHeight)
+      const footer = element.nextElementSibling
+      if (lineHeight > 0 && footer) {
+        const available = footer.getBoundingClientRect().top - element.getBoundingClientRect().top
+        element.style.setProperty("--description-lines", String(Math.max(1, Math.floor(available / lineHeight))))
+      }
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    if (element.parentElement) observer.observe(element.parentElement)
+    if (element.previousElementSibling) observer.observe(element.previousElementSibling)
+    return () => observer.disconnect()
+  }, [fillsCard, description])
+
   return <ContentLink kind={item.kind} id={item.id} url={item.url} track={track} className={`flex h-full overflow-hidden rounded-xl border border-neutral-200 transition-colors hover:border-neutral-400 focus-visible:outline-2 focus-visible:outline-offset-4 dark:border-white/15 dark:hover:border-white/40 ${vertical ? styles.featuredCard : "items-center"}`}>
     {item.cover && <img src={item.cover} alt={item.coverAlt} loading="lazy" className={vertical ? styles.contentCover : "aspect-square w-20 shrink-0 self-stretch object-cover grayscale-0"} />}
     <span className={`flex min-w-0 flex-1 flex-col ${vertical ? styles.featuredCopy : "justify-center p-4"}`}>
       {reading && <span className={styles.featuredLabel}>{item.kind === "note" ? "Nota" : "Artigo"}</span>}
       <span className={`break-words font-semibold leading-snug ${vertical ? styles.featuredTitle : "text-sm"}`}>{item.title}</span>
-      {(item.kind === "note" ? item.content : item.description) && <span className={`mt-2 line-clamp-3 break-words text-neutral-600 dark:text-neutral-400 ${vertical ? styles.featuredDescription : "text-xs leading-relaxed"}`}>{item.kind === "note" ? item.content : item.description}</span>}
+      {description && <span ref={descriptionRef} className={`mt-2 break-words text-neutral-600 dark:text-neutral-400 ${fillsCard ? styles.fillingDescription : "line-clamp-3"} ${vertical ? styles.featuredDescription : "text-xs leading-relaxed"}`}>{description}</span>}
       {reading && <span className={styles.continueReading}>Continuar lendo</span>}
     </span>
   </ContentLink>

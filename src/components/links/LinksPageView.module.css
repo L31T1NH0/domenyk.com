@@ -69,7 +69,7 @@
 .track { padding-bottom: 8px; scrollbar-width: none; }
 
 .slide { width: 100%; }
-.slide .featuredCard { width: 100%; height: 20rem; }
+.slide .featuredCard { width: 100%; height: 18.75rem; }
 .slide .featuredCopy { min-height: 0; }
 .slide .featuredCard:focus-visible { outline-offset: -4px; }
 .slide .featuredTitle { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
@@ -84,16 +84,18 @@
 
 .featuredCard:has(> .contentCover) {
   width: 100%;
-  height: 20rem;
+  height: 18.75rem;
   flex-direction: row;
 }
 
 .page img { filter: none; }
-.contentCover { width: 11.25rem; height: 20rem; flex-shrink: 0; align-self: center; object-fit: cover; object-position: center; background: #0b0b0b; }
+.contentCover { width: 11.25rem; height: 18.75rem; flex-shrink: 0; align-self: center; object-fit: cover; object-position: center; background: #0b0b0b; }
 .featuredCopy { min-height: 0; padding: 16px; }
 .featuredLabel { margin-bottom: 8px; font-size: 10px; font-weight: 600; line-height: 1.5; text-transform: uppercase; letter-spacing: .12em; color: #858585; }
 .featuredTitle { font-size: 18px; line-height: 1.375; letter-spacing: -.025em; }
 .featuredDescription { margin-top: 8px; font-size: 14px; line-height: 1.5; color: #858585; }
+.fillingDescription { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--description-lines, 3); line-clamp: var(--description-lines, 3); flex: 0 1 auto; min-height: 0; overflow: clip; }
+.featuredLabel, .featuredTitle, .continueReading { flex-shrink: 0; }
 .continueReading { margin-top: auto; padding-top: 12px; font-size: 12px; font-weight: 500; }
 
 .indicators { margin-top: 8px; gap: 4px; }
