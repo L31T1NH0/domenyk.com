@@ -17,14 +17,7 @@
 }
 
 :global([data-public-shell]):has(.page[data-public-links]) {
-  width: 100%;
-  max-width: none;
   margin-bottom: 0;
-}
-
-:global(body):has(.page[data-public-links]) :global([data-public-header]) {
-  width: 100%;
-  max-width: none;
 }
 
 :global(body):has(.page[data-public-links]) > :global(.pointer-events-none.fixed) {
