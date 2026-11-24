@@ -59,3 +59,10 @@ next-env.d.ts
 /output/
 *.swp
 *.swo
+
+# Generated Astryx theme review artifacts
+/themes/.astryx-render-*/
+/themes/domenyk/*.html
+/themes/domenyk/*.png
+/themes/domenyk/*.pictures.json
+/themes/domenyk/*.history.json

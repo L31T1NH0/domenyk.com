@@ -1,0 +1,32 @@
+{
+  "name": "domenyk",
+  "like": "neutral",
+  "mode": "both",
+  "settings": [
+    {
+      "thing": "--color-background-body",
+      "value": "#040404",
+      "source": "token",
+      "mode": "dark"
+    },
+    {
+      "thing": "accent",
+      "value": "#E00070",
+      "source": "dial"
+    },
+    {
+      "thing": "surfaces",
+      "value": "outlined",
+      "source": "dial"
+    },
+    {
+      "thing": "background-color",
+      "value": "#ef7ab5",
+      "source": "property",
+      "on": "progress-bar-fill",
+      "mode": "dark"
+    }
+  ],
+  "lifted": [],
+  "palette": "9c5f8a182d5941f67436546a6bf8d31e7097182aec0a75e440c1aa9e644a871d"
+}

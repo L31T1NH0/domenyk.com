@@ -10,6 +10,7 @@ import { Heading } from "@astryxdesign/core/Heading"
 import { HStack, VStack } from "@astryxdesign/core/Stack"
 import { Text } from "@astryxdesign/core/Text"
 import { Tab, TabList } from "@astryxdesign/core/TabList"
+import { Section } from "@astryxdesign/core/Section"
 
 export { Button, Heading, HStack, VStack, Text }
 export { TextArea as Area } from "@astryxdesign/core/TextArea"
@@ -27,7 +28,7 @@ export function Input({ maxLength, onChange, ...props }: ComponentProps<typeof T
 }
 
 export function PageHeader({ title, description, actions, back }: { title: string; description?: string; actions?: ReactNode; back?: ReactNode }) {
-  return <VStack as="header" gap={4}>
+  return <VStack as="header" gap={4} className="border-b border-border pb-6">
     {back}
     <HStack hAlign="between" vAlign="start" wrap="wrap" gap={4}>
       <VStack gap={2} className="min-w-0 flex-1">
@@ -40,13 +41,13 @@ export function PageHeader({ title, description, actions, back }: { title: strin
 }
 
 export function Panel({ title, children, actions }: { title: string; children: ReactNode; actions?: ReactNode }) {
-  return <VStack as="section" gap={4} className="min-w-0">
+  return <Section><VStack as="section" gap={4} className="min-w-0">
     <HStack hAlign="between" wrap="wrap" gap={3}>
       <Heading level={2}>{title}</Heading>
       {actions}
     </HStack>
     {children}
-  </VStack>
+  </VStack></Section>
 }
 
 export function Disclosure({ title, children, open = false }: { title: string; children: ReactNode; open?: boolean }) {
@@ -115,7 +116,7 @@ export function Facts({ items }: { items: Array<[string, ReactNode]> }) {
 }
 
 export function TableRegion({ label, children }: { label: string; children: ReactNode }) {
-  return <section role="region" aria-label={label} tabIndex={0} className="max-w-full overflow-auto rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 [&_table]:min-w-2xl [&_th]:whitespace-nowrap">
+  return <section role="region" aria-label={label} tabIndex={0} className="max-w-full overflow-auto rounded-lg border border-border bg-background-surface focus-visible:outline-2 focus-visible:outline-offset-2 [&_table]:min-w-2xl [&_th]:whitespace-nowrap">
     {children}
   </section>
 }
