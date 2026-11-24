@@ -17,6 +17,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Astryx regenerates these declarations and its theme descriptor.
+    "src/themes/domenyk/domenyk.d.ts",
+    "themes/domenyk/domenyk.d.ts",
+    "src/themes/domenyk/domenykTheme.doc.mjs",
   ]),
 ]);
 
