@@ -4,8 +4,7 @@ import { usePathname } from "next/navigation"
 import { PublicMenu } from "./PublicMenu"
 
 export function PublicHeader() {
-  if (usePathname() === "/links") return null
-  return <header className="mx-auto flex w-full max-w-[36rem] items-center justify-end px-4 py-1 sm:w-[min(100%,34.5rem)] sm:max-w-[100vw]">
+  return <header data-public-header className="mx-auto flex w-full max-w-[36rem] items-center justify-end px-4 py-1 sm:w-[min(100%,34.5rem)] sm:max-w-[100vw]">
     <PublicMenu />
   </header>
 }

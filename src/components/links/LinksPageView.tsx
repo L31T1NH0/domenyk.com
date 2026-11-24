@@ -49,7 +49,7 @@ export function LinkContentCard({ item, track = true, featured = false }: { item
     <span className={`flex min-w-0 flex-1 flex-col ${vertical ? styles.featuredCopy : "justify-center p-4"}`}>
       {reading && <span className={styles.featuredLabel}>{item.kind === "note" ? "Nota" : "Artigo"}</span>}
       <span className={`break-words font-semibold leading-snug ${vertical ? styles.featuredTitle : "text-sm"}`}>{item.title}</span>
-      {description && <span ref={descriptionRef} className={`mt-2 break-words text-neutral-600 dark:text-neutral-400 ${fillsCard ? styles.fillingDescription : "line-clamp-3"} ${vertical ? styles.featuredDescription : "text-xs leading-relaxed"}`}>{description}</span>}
+      {description && <span ref={descriptionRef} className={`mt-2 break-words text-neutral-600 dark:text-neutral-400 ${fillsCard ? styles.fillingDescription : "line-clamp-3"} ${vertical ? styles.featuredDescription : "text-xs leading-relaxed"} ${item.kind === "note" ? styles.noteDescription : ""}`}>{description}</span>}
       {reading && <span className={styles.continueReading}>Continuar lendo</span>}
     </span>
   </ContentLink>

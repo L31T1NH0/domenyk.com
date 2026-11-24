@@ -50,3 +50,8 @@ test("missing notes and unsafe image sources do not create a cover", async () =>
     assert.equal(result.cover, "")
   }
 })
+
+test("note cards keep the paragraph and manual line breaks from their source", async () => {
+  const [result] = await load({ content: "Primeira linha.\nSegunda linha.\n\nOutro parágrafo." })([card])
+  assert.equal(result.content, "Primeira linha.\nSegunda linha.\n\nOutro parágrafo.")
+})

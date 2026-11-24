@@ -92,7 +92,7 @@ export function parseLinkContent(value: unknown): LinkContent {
 const noteCardContent = cache(async (id: string) => {
   const note = await getNote(id)
   return {
-    content: note ? descriptionFromMarkdown(note.content, 1000) : "",
+    content: note ? descriptionFromMarkdown(note.content, 1000, { preserveLineBreaks: true }) : "",
     cover: note ? preferredContentImages({ images: note.images, markdown: note.content }).find(isSafeLinkURL) ?? "" : "",
   }
 })

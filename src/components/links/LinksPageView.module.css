@@ -24,6 +24,14 @@
   display: none;
 }
 
+:global(body):has(.page[data-public-links]) :global([data-public-header] button[aria-haspopup="menu"]) {
+  color: #ebebeb;
+}
+
+:global(body):has(.page[data-public-links]) :global([data-public-header] button[aria-haspopup="menu"]:hover) {
+  background: #262626;
+}
+
 .hero {
   position: relative;
   isolation: isolate;
@@ -94,6 +102,7 @@
 .featuredLabel { margin-bottom: 8px; font-size: 10px; font-weight: 600; line-height: 1.5; text-transform: uppercase; letter-spacing: .12em; color: #858585; }
 .featuredTitle { font-size: 18px; line-height: 1.375; letter-spacing: -.025em; }
 .featuredDescription { margin-top: 8px; font-size: 14px; line-height: 1.5; color: #858585; }
+.noteDescription { white-space: pre-line; }
 .fillingDescription { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--description-lines, 3); line-clamp: var(--description-lines, 3); flex: 0 1 auto; min-height: 0; overflow: clip; }
 .featuredLabel, .featuredTitle, .continueReading { flex-shrink: 0; }
 .continueReading { margin-top: auto; padding-top: 12px; font-size: 12px; font-weight: 500; }

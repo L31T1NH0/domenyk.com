@@ -60,19 +60,24 @@ function decodeHtmlEntities(value: string): string {
     .replace(/&#x([a-f\d]+);/gi, (_match, code) => codePoint(code, 16))
 }
 
-export function descriptionFromMarkdown(markdown: string, maxLength = 155): string {
-  const text = decodeHtmlEntities(stripInlineCssHookSyntax(markdown)
+export function descriptionFromMarkdown(markdown: string, maxLength = 155, { preserveLineBreaks = false }: { preserveLineBreaks?: boolean } = {}): string {
+  const source = preserveLineBreaks ? markdown
+    .replace(/\r\n?/g, "\n")
+    .replace(/<br\b[^>]*>/gi, "\n")
+    .replace(/<\/(?:p|div|h[1-6]|blockquote|li|section|article|pre)>/gi, "\n\n") : markdown
+  let text = decodeHtmlEntities(stripInlineCssHookSyntax(source)
     .replace(/```[\s\S]*?```/g, " ")
     .replace(/^:::editor [^\n]+$|^:::$/gm, " ")
     .replace(/`[^`]*`/g, " ")
     .replace(/!\[[^\]]*]\([^)]*\)/g, " ")
     .replace(/\[([^\]]+)]\([^)]*\)/g, "$1")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/^\s*[-*_]{3,}\s*$/gm, " ")
-    .replace(/^\s*[-+]\s+/gm, " ")
+    .replace(/<[^>]+>/g, preserveLineBreaks ? "" : " ")
+    .replace(preserveLineBreaks ? /^[ \t]*[-*_]{3,}[ \t]*$/gm : /^\s*[-*_]{3,}\s*$/gm, " ")
+    .replace(preserveLineBreaks ? /^[ \t]*[-+][ \t]+/gm : /^\s*[-+]\s+/gm, " ")
     .replace(/[#>*_~]+/g, " ")
-    .replace(/\s+/g, " ")
+    .replace(preserveLineBreaks ? /[^\S\n]+/g : /\s+/g, " ")
     .trim())
+  if (preserveLineBreaks) text = text.replace(/ *\n */g, "\n").trim()
 
   if (text.length <= maxLength) return text
   const truncated = text.slice(0, maxLength + 1)

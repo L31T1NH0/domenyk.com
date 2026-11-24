@@ -17,6 +17,18 @@ import {
 test("note excerpts preserve hyphens and negative numbers while removing list markers", () => {
   assert.equal(descriptionFromMarkdown("- Vale colocá-la em palavras.\n- Custo-benefício: -5.\n---"), "Vale colocá-la em palavras. Custo-benefício: -5.")
 })
+
+test("note previews preserve authored line breaks and blank paragraphs without changing SEO summaries", () => {
+  const content = "Primeira linha.\r\nSegunda linha.\r\n\r\nOutro parágrafo."
+  assert.equal(descriptionFromMarkdown(content, 1000, { preserveLineBreaks: true }), "Primeira linha.\nSegunda linha.\n\nOutro parágrafo.")
+  assert.equal(descriptionFromMarkdown(content, 1000), "Primeira linha. Segunda linha. Outro parágrafo.")
+  assert.equal(descriptionFromMarkdown("- Primeiro item\n- Segundo item\n\nOutro parágrafo.", 1000, { preserveLineBreaks: true }), "Primeiro item\nSegundo item\n\nOutro parágrafo.")
+})
+
+test("HTML note previews retain paragraphs and br elements as plain text", () => {
+  const content = '<div data-editor-document="html"><p>Primeira <strong>linha</strong>.<br>Segunda linha.</p><p>Outro parágrafo.</p></div>'
+  assert.equal(descriptionFromMarkdown(content, 1000, { preserveLineBreaks: true }), "Primeira linha.\nSegunda linha.\n\nOutro parágrafo.")
+})
 import {
   isPostVersionIndexable,
   postSeoDescription,
