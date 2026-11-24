@@ -97,10 +97,7 @@
 }
 
 .page img { filter: none; }
-.contentCover { position: relative; isolation: isolate; width: 8rem; height: 16rem; margin: 0; flex-shrink: 0; align-self: center; overflow: hidden; background: #0b0b0b; }
-.contentCover img { position: absolute; inset: 0; width: 100%; height: 100%; object-position: center; }
-.contentCover .coverBackdrop { object-fit: cover; filter: blur(.75rem) brightness(.65); transform: scale(1.25); }
-.coverImage { object-fit: contain; }
+.contentCover { width: 8rem; height: 16rem; flex-shrink: 0; align-self: center; object-fit: cover; object-position: center; background: #0b0b0b; }
 .featuredCopy { min-height: 0; padding: 16px; }
 .featuredLabel { margin-bottom: 8px; font-size: 10px; font-weight: 600; line-height: 1.5; text-transform: uppercase; letter-spacing: .12em; color: #858585; }
 .featuredTitle { font-size: 18px; line-height: 1.375; letter-spacing: -.025em; }
