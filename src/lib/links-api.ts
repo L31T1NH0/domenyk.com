@@ -1,12 +1,12 @@
 import "server-only"
 
 import { getNote } from "./db/notes"
-import { descriptionFromMarkdown } from "./seo"
+import { descriptionFromMarkdown, preferredContentImages } from "./seo"
 import { auth } from "@clerk/nextjs/server"
 import { cache } from "react"
 import { GoAdminError, goAdminOrigin, goAPIHeaders, requestGoAdmin } from "./go-admin"
 import { isSafeLinkURL, parseLinkInput, type SiteLink } from "./links"
-import { parseLinkPageSettings, type LinkContent, type LinkPageData } from "./link-page"
+import { parseLinkPageSettings, type ContentSelection, type LinkContent, type LinkPageData } from "./link-page"
 
 export async function requestAdminLinks<T>(method = "GET", id?: string, body?: unknown, page?: number): Promise<T> {
   const path = "/v1/admin/links" + (id ? `/${id}` : "") + (page ? `?page=${page}&limit=50` : "")
@@ -91,21 +91,29 @@ export function parseLinkContent(value: unknown): LinkContent {
 
 const noteCardContent = cache(async (id: string) => {
   const note = await getNote(id)
-  return note ? descriptionFromMarkdown(note.content, 1000) : ""
+  return {
+    content: note ? descriptionFromMarkdown(note.content, 1000) : "",
+    cover: note ? preferredContentImages({ images: note.images, markdown: note.content }).find(isSafeLinkURL) ?? "" : "",
+  }
 })
 
-export async function getLinkContents(values: unknown[]): Promise<LinkContent[]> {
+export async function getLinkContents(values: unknown[], selections: ContentSelection[] = []): Promise<LinkContent[]> {
   return Promise.all(values.map(async value => {
     const item = parseLinkContent(value)
-    return item.kind === "note" ? { ...item, content: await noteCardContent(item.id) } : item
+    if (item.kind !== "note") return item
+    const note = await noteCardContent(item.id)
+    const selection = selections.find(entry => entry.kind === "note" && entry.id === item.id)
+    const cover = item.cover || (!selection || selection.coverMode === "original" ? note.cover : "")
+    return { ...item, content: note.content, cover, coverAlt: item.coverAlt || (cover ? item.title : "") }
   }))
 }
 
 export const getLinkPage = cache(async (): Promise<LinkPageData> => {
   const data = await publicLinkRequest("/v1/links/page")
   if (!data || !Array.isArray(data.featured) || data.featured.length > 3 || !Array.isArray(data.readings) || data.readings.length > 20) throw new GoAdminError(503)
-  const [featured, readings] = await Promise.all([getLinkContents(data.featured), getLinkContents(data.readings)])
-  return { settings: data.settings === null ? null : parseLinkPageSettings(data.settings), featured, readings }
+  const settings = data.settings === null ? null : parseLinkPageSettings(data.settings)
+  const [featured, readings] = await Promise.all([getLinkContents(data.featured, settings?.featured), getLinkContents(data.readings, settings?.readings)])
+  return { settings, featured, readings }
 })
 
 export function linkActionError(error: unknown): Response {
