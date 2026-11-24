@@ -45,7 +45,10 @@ export function LinkContentCard({ item, track = true, featured = false }: { item
   }, [fillsCard, description])
 
   return <ContentLink kind={item.kind} id={item.id} url={item.url} track={track} className={`flex h-full overflow-hidden rounded-xl border border-neutral-200 transition-colors hover:border-neutral-400 focus-visible:outline-2 focus-visible:outline-offset-4 dark:border-white/15 dark:hover:border-white/40 ${vertical ? styles.featuredCard : "items-center"}`}>
-    {item.cover && <img src={item.cover} alt={item.coverAlt} loading="lazy" className={vertical ? styles.contentCover : "aspect-square w-20 shrink-0 self-stretch object-cover grayscale-0"} />}
+    {item.cover && (vertical ? <figure className={styles.contentCover}>
+      <img src={item.cover} alt="" aria-hidden="true" loading="lazy" className={styles.coverBackdrop} />
+      <img src={item.cover} alt={item.coverAlt} loading="lazy" width={128} height={256} className={styles.coverImage} />
+    </figure> : <img src={item.cover} alt={item.coverAlt} loading="lazy" className="aspect-square w-20 shrink-0 self-stretch object-cover grayscale-0" />)}
     <span className={`flex min-w-0 flex-1 flex-col ${vertical ? styles.featuredCopy : "justify-center p-4"}`}>
       {reading && <span className={styles.featuredLabel}>{item.kind === "note" ? "Nota" : "Artigo"}</span>}
       <span className={`break-words font-semibold leading-snug ${vertical ? styles.featuredTitle : "text-sm"}`}>{item.title}</span>

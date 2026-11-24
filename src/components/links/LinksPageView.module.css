@@ -77,7 +77,7 @@
 .track { padding-bottom: 8px; scrollbar-width: none; }
 
 .slide { width: 100%; }
-.slide .featuredCard { width: 100%; height: 18.75rem; }
+.slide .featuredCard { width: 100%; height: 16rem; }
 .slide .featuredCopy { min-height: 0; }
 .slide .featuredCard:focus-visible { outline-offset: -4px; }
 .slide .featuredTitle { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
@@ -92,12 +92,15 @@
 
 .featuredCard:has(> .contentCover) {
   width: 100%;
-  height: 18.75rem;
+  height: 16rem;
   flex-direction: row;
 }
 
 .page img { filter: none; }
-.contentCover { width: 11.25rem; height: 18.75rem; flex-shrink: 0; align-self: center; object-fit: cover; object-position: center; background: #0b0b0b; }
+.contentCover { position: relative; isolation: isolate; width: 8rem; height: 16rem; margin: 0; flex-shrink: 0; align-self: center; overflow: hidden; background: #0b0b0b; }
+.contentCover img { position: absolute; inset: 0; width: 100%; height: 100%; object-position: center; }
+.contentCover .coverBackdrop { object-fit: cover; filter: blur(.75rem) brightness(.65); transform: scale(1.25); }
+.coverImage { object-fit: contain; }
 .featuredCopy { min-height: 0; padding: 16px; }
 .featuredLabel { margin-bottom: 8px; font-size: 10px; font-weight: 600; line-height: 1.5; text-transform: uppercase; letter-spacing: .12em; color: #858585; }
 .featuredTitle { font-size: 18px; line-height: 1.375; letter-spacing: -.025em; }
