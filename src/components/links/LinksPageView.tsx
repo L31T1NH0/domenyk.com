@@ -2,7 +2,6 @@
 
 import Link from "next/link"
 import { useEffect, useRef, useState, type ReactNode } from "react"
-import { ArrowUpRightIcon } from "@heroicons/react/24/outline"
 import type { LinkContent, LinkPageData } from "@/lib/link-page"
 import type { SiteLink } from "@/lib/links"
 import { LinkIcon } from "./LinkIcon"
@@ -90,18 +89,21 @@ export function LinksPageView({ data, links, preview = false }: { data: LinkPage
   function renderSection(section: (typeof sections)[number]) {
     const items = visible.filter(link => link.section === section.id).sort((a, b) => a.order - b.order)
     if (!items.length) return null
+    const iconOnly = section.id === "social" && section.layout === "row"
     return <section key={section.id} className={styles.linkSection} aria-labelledby={section.title ? `links-section-${section.id}` : undefined}>
       {section.title && <h2 id={`links-section-${section.id}`} className="mb-2 text-xs font-semibold uppercase tracking-[.1em]">{section.title}</h2>}
-      <ul className={section.layout === "cards" ? "grid grid-cols-1 gap-3 sm:grid-cols-2" : "flex flex-wrap gap-2.5"}>
-        {items.map(link => <li key={link.id} className={section.layout === "cards" ? "min-w-0" : "shrink-0"}>
-          {section.layout === "row" ? <ContentLink kind="link" id={link.id} url={link.url} track={!preview} className="grid size-12 place-items-center rounded-lg border border-neutral-200 transition-colors hover:border-neutral-400 focus-visible:outline-2 focus-visible:outline-offset-4 dark:border-white/15 dark:hover:border-white/40">
+      <ul className={iconOnly ? "flex flex-wrap gap-2" : "flex flex-col gap-2"}>
+        {items.map(link => <li key={link.id} className={iconOnly ? "shrink-0" : "min-w-0"}>
+          {iconOnly ? <ContentLink kind="link" id={link.id} url={link.url} track={!preview} className="grid size-12 place-items-center rounded-lg border border-neutral-200 transition-colors hover:border-neutral-400 focus-visible:outline-2 focus-visible:outline-offset-4 dark:border-white/15 dark:hover:border-white/40">
             <LinkIcon name={link.icon} url={link.url} className="size-5" />
             <span className="sr-only">{link.title}</span>
           </ContentLink> : link.appearance === "image" && link.cover ? <LinkContentCard item={{ kind: "link", id: link.id, title: link.title, description: link.description, url: link.url, cover: link.cover, coverAlt: link.coverAlt, publishedAt: "" }} track={!preview} /> :
-            <ContentLink kind="link" id={link.id} url={link.url} track={!preview} className="group flex h-full min-h-12 items-center gap-3 rounded-lg border border-neutral-200 px-3.5 py-3 transition-colors hover:border-neutral-400 focus-visible:outline-2 focus-visible:outline-offset-4 dark:border-white/15 dark:hover:border-white/40">
-              <LinkIcon name={link.icon} url={link.url} className="size-[18px] shrink-0" />
-              <span className="min-w-0 flex-1"><span className="block break-words text-sm font-medium">{link.title}</span>{link.appearance !== "simple" && link.description && <span className="mt-1 block break-words text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">{link.description}</span>}</span>
-              <ArrowUpRightIcon className="size-3.5 shrink-0 text-neutral-500" aria-hidden="true" />
+            <ContentLink kind="link" id={link.id} url={link.url} track={!preview} className="flex w-full min-h-16 items-start gap-3 rounded-lg border border-neutral-200 p-3 transition-colors hover:border-neutral-400 focus-visible:outline-2 focus-visible:outline-offset-4 dark:border-white/15 dark:hover:border-white/40">
+              <LinkIcon name={link.icon} url={link.url} className="size-4 shrink-0" />
+              <section className="flex min-w-0 flex-1 flex-col gap-1">
+                <strong className="break-words text-sm font-medium leading-4">{link.title}</strong>
+                {link.appearance !== "simple" && link.description && <small className="break-words text-xs leading-4 text-neutral-500 dark:text-neutral-400">{link.description}</small>}
+              </section>
             </ContentLink>}
         </li>)}
       </ul>
@@ -121,7 +123,7 @@ export function LinksPageView({ data, links, preview = false }: { data: LinkPage
     <div className={styles.sections}>{remaining.map(renderSection)}</div>
     {data.readings.length > 0 && <section className={styles.readings} aria-label={settings?.readingsHeading || "Leituras"}>
       {settings?.readingsHeading && <h2 className="mb-2 text-xs font-semibold uppercase tracking-[.1em]">{settings?.readingsHeading}</h2>}
-      <ul className="flex flex-wrap gap-3">{data.readings.map(item => <li key={`${item.kind}:${item.id}`} className="min-w-0 max-w-full"><LinkContentCard item={item} track={!preview} /></li>)}</ul>
+      <ul className="flex flex-col gap-3">{data.readings.map(item => <li key={`${item.kind}:${item.id}`} className="min-w-0"><LinkContentCard item={item} track={!preview} /></li>)}</ul>
     </section>}
   </div>
 }
