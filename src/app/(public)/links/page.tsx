@@ -2,6 +2,8 @@ import type { Metadata } from "next"
 import { buildPageMetadata } from "@/lib/seo"
 import { getLinkPage, getLinks } from "@/lib/links-api"
 import { LinksPageView } from "@/components/links/LinksPageView"
+import "@astryxdesign/core/reset.css"
+import "@astryxdesign/core/astryx.css"
 
 export async function generateMetadata(): Promise<Metadata> {
   try {

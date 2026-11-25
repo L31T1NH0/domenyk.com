@@ -89,6 +89,7 @@ export default function AboutPage() {
           <p>Não espero concordância em cada texto. Quero que o leitor consiga identificar a pergunta, acompanhar o mecanismo e comparar a explicação com a realidade. Uma regra pode parecer boa até perguntarmos quem terá o poder de aplicá-la e onde a conta vai parar. Com os princípios acontece algo parecido: o teste fica mais difícil quando eles protegem um adversário.</p>
         </div>
       </article>
+      <p className="py-4 text-xs text-neutral-500">Capas complementares de séries: <a href="https://www.tvmaze.com" className="underline">TVmaze</a>, sob licença <a href="https://creativecommons.org/licenses/by-sa/4.0/" className="underline">CC BY-SA</a>.</p>
       <div id="about-content-boundary" />
       <BackHome boundaryId="about-content-boundary" label="Voltar para a página inicial" />
     </>

@@ -164,3 +164,12 @@ O card mostra somente a música em reprodução, com capa, título, artista e um
 busca no YouTube baseada no título. Não reproduz áudio nem exibe o ranking.
 Quando a reprodução para ou expira, o card fica oculto. Configuração e contrato
 completos estão em `../domenyk-api/docs/deployment.md`, na seção de Music Go.
+
+O bloco “Assistindo agora” segue o mesmo fluxo com o backend Go: a extensão
+própria para Brave envia eventos autenticados para `/v1/watching/events`; o
+site consulta `/api/links/watching` a cada 15 segundos. Pausa/parada oculta o
+bloco, e o estado expira após 45 segundos sem sinal. Instalação e configuração
+em [extensions/netflix/README.md](extensions/netflix/README.md).
+A API Go completa capas ausentes com o TVmaze, sem chave adicional, e mantém
+o resultado em cache por 24 horas. Títulos ambíguos não recebem capa automática;
+o crédito e a licença da fonte estão na página “Sobre”.

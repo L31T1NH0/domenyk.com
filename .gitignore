@@ -47,6 +47,9 @@ next-env.d.ts
 # clerk configuration (can include secrets)
 /.clerk/
 
+# Private device credential for the unpacked Netflix extension.
+/extensions/netflix/config.json
+
 # work in progress: books/library feature
 /.drafts/livros/
 /public/livros/
