@@ -13,6 +13,7 @@ import { currentWatching, parseWatchingStatus, type WatchingStatus } from "@/lib
 export function WatchingCard() {
   const { darkMode } = useThemeSwitcher()
   const [status, setStatus] = useState<{ data: WatchingStatus; now: number } | null>(null)
+  const [failedCover, setFailedCover] = useState<string | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -48,11 +49,10 @@ export function WatchingCard() {
   return <Theme theme={themes[defaultThemeSlug]} mode={darkMode ? "dark" : "light"}><a href={video.url} target="_blank" rel="noopener noreferrer" aria-label={`Assistindo agora: ${video.title}${video.episode ? `, ${video.episode}` : ""}. Abrir na Netflix`} className="relative isolate mt-6 block overflow-hidden rounded-xl border border-neutral-200 bg-neutral-950 text-inherit no-underline hover:border-neutral-400 focus-visible:outline-2 focus-visible:outline-offset-4 dark:border-white/15 dark:hover:border-white/40">
     <MediaTheme mode="dark">
       <figure className="pointer-events-none absolute inset-y-0 left-0 m-0 w-20 overflow-clip forced-colors:hidden">
-        <Stack vAlign="center" hAlign="center" className="absolute inset-y-0 left-0 w-12">
+        {!video.cover || video.cover === failedCover ? <Stack vAlign="center" hAlign="center" className="absolute inset-y-0 left-0 w-12">
           <FilmIcon aria-hidden="true" className="size-6 text-neutral-500" />
-        </Stack>
-        {video.cover &&
-          <img key={video.cover} src={video.cover} alt="" loading="lazy" referrerPolicy="no-referrer" className="absolute inset-0 size-full object-cover opacity-50 blur-md" onError={event => { event.currentTarget.hidden = true }} />
+        </Stack> :
+          <img key={video.cover} src={video.cover} alt="" loading="lazy" referrerPolicy="no-referrer" className="absolute inset-0 size-full object-cover opacity-50 blur-md" onError={() => setFailedCover(video.cover)} />
         }
         <Stack className="absolute inset-0 bg-linear-to-r/oklab from-transparent from-40% via-neutral-950/95 via-80% to-neutral-950" />
       </figure>
