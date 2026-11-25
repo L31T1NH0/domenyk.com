@@ -1,3 +1,5 @@
+import { readNetflixPlayer } from "./player.mjs"
+
 const ready = chrome.storage.session.setAccessLevel({ accessLevel: "TRUSTED_CONTEXTS" })
 let queue = Promise.resolve()
 
@@ -25,7 +27,13 @@ function snapshotFrom(message, sender) {
 async function publish(tabId, snapshot) {
   await ready
   const { current } = await chrome.storage.session.get("current")
-  if (!snapshot?.playing && (!current || current.tabId !== tabId || (snapshot && current.url !== snapshot.url))) return
+  if (!snapshot?.playing && (!current || current.tabId !== tabId || (snapshot && current.url !== snapshot.url))) {
+    if (!current) {
+      await chrome.action.setBadgeText({ text: "..." })
+      await chrome.action.setTitle({ title: "Netflix conectada. Aguardando os metadados do vídeo." })
+    }
+    return
+  }
   const same = current?.tabId === tabId && (!snapshot || current.url === snapshot.url)
   const data = snapshot || { ...current, playing: false }
   const sessionId = same ? current.sessionId : [...crypto.getRandomValues(new Uint8Array(32))].map(byte => byte.toString(16).padStart(2, "0")).join("")
@@ -59,11 +67,44 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
   if (message?.type !== "netflix-playback") return
   let snapshot
   try { snapshot = snapshotFrom(message, sender) } catch { respond({ ok: false }); return }
-  enqueue(() => publish(sender.tab.id, snapshot)).then(() => respond({ ok: true }), () => respond({ ok: false }))
+  enqueue(async () => {
+    if (!message.leaving) {
+      const [probe] = await chrome.scripting.executeScript({ target: { tabId: sender.tab.id }, world: "MAIN", func: readNetflixPlayer })
+      if (probe?.result) snapshot = snapshotFrom({ snapshot: probe.result }, sender)
+    }
+    await publish(sender.tab.id, snapshot)
+  }).then(() => respond({ ok: true }), () => respond({ ok: false }))
   return true
 })
 chrome.tabs.onRemoved.addListener(tabId => { void enqueue(() => publish(tabId, null)).catch(() => {}) })
-chrome.tabs.onUpdated.addListener((tabId, changes) => {
+chrome.tabs.onUpdated.addListener((tabId, changes, tab) => {
   if (changes.url && !/^https:\/\/www\.netflix\.com\/watch\/\d+(?:[?#]|$)/.test(changes.url)) void enqueue(() => publish(tabId, null)).catch(() => {})
+  if (changes.status === "complete" && tab?.url?.startsWith("https://www.netflix.com/")) void injectReporter(tabId).catch(() => {})
 })
 chrome.action.onClicked.addListener(() => { chrome.tabs.create({ url: "https://domenyk.com/links" }) })
+
+
+async function injectReporter(tabId) {
+  await chrome.scripting.executeScript({ target: { tabId }, files: ["detector.js", "content.js"] })
+}
+
+// Reloading the extension also connects tabs that were already open.
+function connectExistingTabs() {
+  void chrome.tabs.query({ url: "https://www.netflix.com/*" }).then(async tabs => {
+    if (tabs.length) {
+      if (!await chrome.alarms.get("netflix-presence")) await chrome.alarms.create("netflix-presence", { periodInMinutes: 0.5 })
+      await chrome.action.setBadgeText({ text: "..." })
+      await chrome.action.setTitle({ title: "Conectando ao player da Netflix…" })
+    } else await chrome.alarms.clear("netflix-presence")
+    await Promise.all(tabs.map(tab => injectReporter(tab.id)))
+  }).catch(async () => {
+    await chrome.action.setBadgeText({ text: "!" })
+    await chrome.action.setTitle({ title: "Não foi possível ler a aba. Confira se a extensão tem acesso à Netflix." })
+  })
+}
+chrome.runtime.onInstalled.addListener(connectExistingTabs)
+chrome.runtime.onStartup.addListener(connectExistingTabs)
+chrome.alarms.onAlarm.addListener(alarm => {
+  if (alarm.name === "netflix-presence") connectExistingTabs()
+})
+connectExistingTabs()

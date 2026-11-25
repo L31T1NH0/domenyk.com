@@ -17,6 +17,6 @@ globalThis.NetflixWatching = {
       const image = new URL(candidate)
       if (image.protocol === "https:" && !image.username && !image.password && !image.port && /(^|\.)nflx(?:img|so)\.net$/.test(image.hostname) && candidate.length <= 2048) cover = image.href
     } catch { /* Missing artwork uses the site's video icon. */ }
-    return { title: [...title].slice(0, 500).join(""), episode: [...episode].slice(0, 300).join(""), cover, url, playing: !video.paused && !video.ended && video.readyState >= 3 }
+    return { title: [...title].slice(0, 500).join(""), episode: [...episode].slice(0, 300).join(""), cover, url, playing: !video.ended }
   }
 }

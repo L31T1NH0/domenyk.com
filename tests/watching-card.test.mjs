@@ -5,7 +5,7 @@ import vm from "node:vm"
 import ts from "typescript"
 import * as watching from "../src/lib/watching.ts"
 
-test("watching card hides on pause, expiry and failure, and removes stale state without another response", async () => {
+test("watching card hides on stop, expiry and failure, and removes stale state without another response", async () => {
   let state = null, effect, refresh, expiry, updated
   let payload = { current: null }, failed = false
   const exports = {}

@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Domenyk · Assistindo agora",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Mostra na página de links o que está tocando na Netflix neste navegador.",
   "minimum_chrome_version": "120",
-  "permissions": ["storage"],
+  "permissions": ["storage", "scripting", "alarms"],
   "host_permissions": ["https://www.netflix.com/*", "https://domenyk-api.vercel.app/*", "http://localhost:8080/*"],
   "background": { "service_worker": "background.js", "type": "module" },
   "action": { "default_title": "Domenyk · Assistindo agora" },
