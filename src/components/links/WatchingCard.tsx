@@ -52,7 +52,7 @@ export function WatchingCard() {
           <FilmIcon aria-hidden="true" className="size-6 text-neutral-500" />
         </Stack>
         {video.cover &&
-          <img key={video.cover} src={video.cover} alt="" loading="lazy" referrerPolicy="no-referrer" className="absolute inset-y-0 left-0 h-full w-auto max-w-12 object-contain" onError={event => { event.currentTarget.hidden = true }} />
+          <img key={video.cover} src={video.cover} alt="" loading="lazy" referrerPolicy="no-referrer" className="absolute inset-0 size-full object-cover opacity-50 blur-md" onError={event => { event.currentTarget.hidden = true }} />
         }
         <Stack className="absolute inset-0 bg-linear-to-r/oklab from-transparent from-40% via-neutral-950/95 via-80% to-neutral-950" />
       </figure>
