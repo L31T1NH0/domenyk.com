@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Stack } from "@astryxdesign/core/Stack"
 import { Grid } from "@astryxdesign/core/Grid"
 import { Text } from "@astryxdesign/core/Text"
-import { Theme } from "@astryxdesign/core/theme"
+import { MediaTheme, Theme } from "@astryxdesign/core/theme"
 import { FilmIcon, ArrowUpRightIcon } from "@heroicons/react/24/outline"
 import { useThemeSwitcher } from "@/components/ThemeSwitcher"
 import { themes, defaultThemeSlug } from "@/astryx-themes"
@@ -45,20 +45,26 @@ export function WatchingCard() {
   const video = status ? currentWatching(status.data, status.now) : null
   if (!video) return null
 
-  return <Theme theme={themes[defaultThemeSlug]} mode={darkMode ? "dark" : "light"}><a href={video.url} target="_blank" rel="noopener noreferrer" aria-label={`Assistindo agora: ${video.title}${video.episode ? `, ${video.episode}` : ""}. Abrir na Netflix`} className="mt-6 block rounded-xl border border-neutral-200 text-inherit no-underline hover:border-neutral-400 focus-visible:outline-2 focus-visible:outline-offset-4 dark:border-white/15 dark:hover:border-white/40">
-    <Stack as="article" direction="horizontal" gap={2} padding={2} vAlign="center">
-      <figure className="relative m-0 grid size-12 shrink-0 place-items-center overflow-hidden rounded-md bg-neutral-100 dark:bg-neutral-900">
-        {video.cover && <img key={video.cover} src={video.cover} width={48} height={48} alt="" loading="lazy" referrerPolicy="no-referrer" className="absolute inset-0 z-10 size-full object-cover" onError={event => { event.currentTarget.hidden = true }} />}
-        <FilmIcon aria-hidden="true" className="size-5 text-neutral-500" />
+  return <Theme theme={themes[defaultThemeSlug]} mode={darkMode ? "dark" : "light"}><a href={video.url} target="_blank" rel="noopener noreferrer" aria-label={`Assistindo agora: ${video.title}${video.episode ? `, ${video.episode}` : ""}. Abrir na Netflix`} className="relative isolate mt-6 block overflow-hidden rounded-xl border border-neutral-200 bg-neutral-950 text-inherit no-underline hover:border-neutral-400 focus-visible:outline-2 focus-visible:outline-offset-4 dark:border-white/15 dark:hover:border-white/40">
+    <MediaTheme mode="dark">
+      <figure className="pointer-events-none absolute inset-0 m-0 forced-colors:hidden">
+        <Stack vAlign="center" hAlign="center" className="absolute inset-y-0 left-0 w-1/3">
+          <FilmIcon aria-hidden="true" className="size-6 text-neutral-500" />
+        </Stack>
+        {video.cover && <img key={video.cover} src={video.cover} alt="" loading="lazy" referrerPolicy="no-referrer" className="absolute inset-0 size-full object-cover object-center" onError={event => { event.currentTarget.hidden = true }} />}
+        <Stack className="absolute inset-0 bg-linear-to-r/oklab from-neutral-950/10 via-neutral-950/95 via-35% to-neutral-950" />
       </figure>
-      <Stack as="header" gap={0} className="h-12 min-w-0 flex-1 leading-4">
-        <Grid columns={1} gap={0} height="100%" align="center">
-          <Text as="p" type="inherit" size="xsm" color="secondary" maxLines={1} hasCapsize>Assistindo agora · Netflix</Text>
-          <Text as="h2" type="inherit" size="sm" weight="semibold" maxLines={1} hasCapsize>{video.title}</Text>
-          {video.episode && <Text as="p" type="inherit" size="xsm" color="secondary" maxLines={1} hasCapsize>{video.episode}</Text>}
-        </Grid>
+      <Stack as="article" direction="horizontal" gap={2} padding={2} vAlign="center" className="relative">
+        <Stack className="h-12 w-1/3 shrink-0" />
+        <Stack as="header" gap={0} className="h-12 min-w-0 flex-1 leading-4">
+          <Grid columns={1} gap={0} height="100%" align="center">
+            <Text as="p" type="inherit" size="xsm" color="secondary" maxLines={1}>Assistindo agora · Netflix</Text>
+            <Text as="h2" type="inherit" size="sm" weight="semibold" maxLines={1}>{video.title}</Text>
+            {video.episode && <Text as="p" type="inherit" size="xsm" color="secondary" maxLines={1}>{video.episode}</Text>}
+          </Grid>
+        </Stack>
+        <ArrowUpRightIcon aria-hidden="true" className="size-4 shrink-0 text-neutral-400" />
       </Stack>
-      <ArrowUpRightIcon aria-hidden="true" className="size-4 shrink-0 text-neutral-500" />
-    </Stack>
+    </MediaTheme>
   </a></Theme>
 }
