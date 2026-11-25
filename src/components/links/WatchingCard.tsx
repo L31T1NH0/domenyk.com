@@ -56,9 +56,9 @@ export function WatchingCard() {
       </figure>
       <Stack as="article" direction="horizontal" gap={2} padding={2} vAlign="center" className="relative">
         <Stack className="h-12 w-1/3 shrink-0" />
-        <Stack as="header" gap={0} className="h-12 min-w-0 flex-1 leading-4">
-          <Grid columns={1} gap={0} height="100%" align="center">
-            <Text as="p" type="inherit" size="xsm" color="secondary" maxLines={1}>Assistindo agora · Netflix</Text>
+        <Stack as="header" gap={0} vAlign="between" className="h-12 min-w-0 flex-1 leading-3.5">
+          <Text as="p" type="inherit" size="xsm" color="secondary" maxLines={1}>Assistindo agora · Netflix</Text>
+          <Grid columns={1} gap={0} align="center">
             <Text as="h2" type="inherit" size="sm" weight="semibold" maxLines={1}>{video.title}</Text>
             {video.episode && <Text as="p" type="inherit" size="xsm" color="secondary" maxLines={1}>{video.episode}</Text>}
           </Grid>
