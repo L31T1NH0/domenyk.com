@@ -51,10 +51,9 @@ export function WatchingCard() {
         <Stack vAlign="center" hAlign="center" className="absolute inset-y-0 left-0 w-12">
           <FilmIcon aria-hidden="true" className="size-6 text-neutral-500" />
         </Stack>
-        {video.cover && <>
-          <img key={`${video.cover}-fade`} src={video.cover} alt="" loading="lazy" referrerPolicy="no-referrer" className="absolute inset-0 size-full object-cover opacity-50 blur-md" onError={event => { event.currentTarget.hidden = true }} />
+        {video.cover &&
           <img key={video.cover} src={video.cover} alt="" loading="lazy" referrerPolicy="no-referrer" className="absolute inset-y-0 left-0 h-full w-auto max-w-12 object-contain" onError={event => { event.currentTarget.hidden = true }} />
-        </>}
+        }
         <Stack className="absolute inset-0 bg-linear-to-r/oklab from-transparent from-40% via-neutral-950/95 via-80% to-neutral-950" />
       </figure>
       <Stack as="article" direction="horizontal" gap={2} padding={2} vAlign="center" className="relative">
