@@ -53,7 +53,6 @@ export const metadata: Metadata = {
   category: "politics",
   keywords: ["Domenyk", "política", "liberalismo", "ideias", "opinião", "debate público"],
   icons: {
-    icon: [{ url: "/favicon.ico", sizes: "256x256", type: "image/x-icon" }],
     shortcut: "/favicon.ico",
   },
   alternates: {
