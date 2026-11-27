@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./admin/admin.css";
 
 :root { --editorial-tone-neutral: #ececec; --editorial-tone-sand: #f2ebdc; --editorial-tone-rose: #f5e4e9; --editorial-tone-blue: #e3edf5; }
 .dark-mode { --editorial-tone-neutral: #222; --editorial-tone-sand: #302b22; --editorial-tone-rose: #33232a; --editorial-tone-blue: #202d38; }

@@ -1,86 +1,125 @@
 "use client"
 
+import NextLink from "next/link"
 import { useId } from "react"
-import { Card } from "@astryxdesign/core/Card"
-import { ChatBubbleLeftRightIcon, DocumentTextIcon, EyeIcon, UsersIcon } from "@heroicons/react/24/outline"
+import { ChatBubbleLeftRightIcon, DocumentTextIcon, EyeIcon, UsersIcon, PencilSquareIcon, ArrowDownTrayIcon, ArrowTopRightOnSquareIcon, CalendarDaysIcon } from "@heroicons/react/24/outline"
 import type { loadAdminDashboard } from "../data"
-import { Button, Disclosure, Empty, Facts, Grid, HStack, Link, PageHeader, Panel, Table, TableRegion, Text, VStack } from "./ui"
+import { buttonVariants, Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 type Props = Awaited<ReturnType<typeof loadAdminDashboard>>
 const number = (value: number) => value.toLocaleString("pt-BR")
+const dayLabel = (date: string) => new Date(`${date}T12:00:00Z`).toLocaleDateString("pt-BR", { timeZone: "UTC", day: "2-digit", month: "short" })
+const linkStyle = "rounded-sm font-medium hover:underline underline-offset-4 break-words"
 
 export function Overview({ total, activity }: Props) {
   const chartId = useId()
   const max = Math.max(1, ...activity.days.map(day => day.views))
-  const points = activity.days.map((day, i) => `${48 + i / Math.max(1, activity.days.length - 1) * 872},${220 - day.views / max * 180}`).join(" ")
+  const x = (index: number) => 16 + index / Math.max(1, activity.days.length - 1) * 768
+  const y = (value: number) => 220 - value / max * 192
+  const points = activity.days.map((day, i) => `${x(i)},${y(day.views)}`).join(" ")
   const metrics = [
     { label: "Leituras", value: activity.totals.views, detail: "Nos últimos 14 dias", icon: EyeIcon },
     { label: "Visitantes", value: activity.totals.visitors, detail: "Pessoas que chegaram até aqui", icon: UsersIcon },
-    { label: "Comentários", value: activity.totals.comments, detail: "Conversas no período", icon: ChatBubbleLeftRightIcon },
+    { label: "Comentários", value: activity.totals.comments, detail: "Conversas nos últimos 14 dias", icon: ChatBubbleLeftRightIcon },
     { label: "Posts no acervo", value: total, detail: "Publicados e rascunhos", icon: DocumentTextIcon },
   ]
-  const recentActivity = (events: Props["activity"]["recent"]) => events.map(event => <HStack as="li" key={event.id} gap={3} vAlign="start" paddingBlock={3} className="border-b border-border last:border-0">
-    <HStack className="rounded-lg bg-background-muted p-2" aria-hidden="true">
-      {event.type === "post_view" ? <EyeIcon className="size-4" /> : <ChatBubbleLeftRightIcon className="size-4" />}
-    </HStack>
-    <VStack gap={1} className="min-w-0 flex-1">
-      <Text type="label">{event.type === "post_view" ? "Nova leitura" : "Novo comentário"}</Text>
-      {event.postSlug ? <Link href={`/posts/${event.postSlug}`} target="_blank">{event.postTitle ?? "Ver post"}</Link> : <Text>{event.postTitle ?? "Conteúdo removido"}</Text>}
-      <Text type="supporting" color="secondary">{event.isAuthenticated ? event.userName ?? "Pessoa identificada" : "Visitante anônimo"}</Text>
-      <Text type="supporting" color="secondary">{new Date(event.occurredAt).toLocaleString("pt-BR", { timeZone: "America/Fortaleza", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</Text>
-    </VStack>
-  </HStack>)
-  return <VStack gap={6}>
-    <PageHeader title="Visão geral" description="Acompanhe suas publicações e o movimento dos leitores."
-      actions={<HStack gap={2}><Button label="Ver notas" href="/admin/notes" /><Button label="Escrever post" variant="primary" href="/admin/posts/new" /></HStack>} />
-    <Grid columns={{ minWidth: 200, max: 4 }} gap={4}>
+
+  function recentActivity(events: Props["activity"]["recent"]) {
+    return events.map(event => <li key={event.id} className="flex min-w-0 gap-3 py-4 first:pt-0 last:pb-0">
+      <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-full border border-admin-border bg-admin-muted">
+        {event.type === "post_view" ? <EyeIcon className="size-4" /> : <ChatBubbleLeftRightIcon className="size-4" />}
+      </span>
+      <div className="min-w-0 flex-1 space-y-1">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <p className="text-sm font-medium">{event.type === "post_view" ? "Nova leitura" : "Novo comentário"}</p>
+          <time dateTime={event.occurredAt} className="text-xs text-admin-muted-foreground">{new Date(event.occurredAt).toLocaleString("pt-BR", { timeZone: "America/Fortaleza", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</time>
+        </div>
+        <p className="text-sm">{event.postSlug ? <NextLink className={linkStyle} href={`/posts/${event.postSlug}`} target="_blank" rel="noopener noreferrer">{event.postTitle ?? "Ver post"}<span className="sr-only"> (abre em outra aba)</span></NextLink> : event.postTitle ?? "Conteúdo removido"}</p>
+        <p className="text-xs text-admin-muted-foreground">{event.isAuthenticated ? event.userName ?? "Pessoa identificada" : "Visitante anônimo"}</p>
+      </div>
+    </li>)
+  }
+
+  return <div className="space-y-6 text-admin-foreground">
+    <header className="flex flex-wrap items-start justify-between gap-4">
+      <div className="space-y-2">
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Visão geral</h1>
+        <p className="max-w-prose text-sm text-admin-muted-foreground">Suas publicações e o movimento dos leitores, em um só lugar.</p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <NextLink href="/admin/notes" className={buttonVariants({ variant: "outline" })}>Ver notas</NextLink>
+        <NextLink href="/admin/posts/new" className={buttonVariants()}><PencilSquareIcon aria-hidden="true" />Escrever post</NextLink>
+      </div>
+    </header>
+
+    <section aria-label="Indicadores do painel" className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {metrics.map(({ label, value, detail, icon: Icon }) => <Card key={label}>
-        <VStack gap={4}>
-          <HStack hAlign="between"><Text type="label" color="secondary">{label}</Text><Icon aria-hidden="true" className="size-5 text-icon-secondary" /></HStack>
-          <Text type="display-3" className="tabular-nums font-semibold">{number(value)}</Text>
-          <Text type="supporting" color="secondary">{detail}</Text>
-        </VStack>
+        <CardHeader><div className="flex items-center justify-between gap-3"><h2 className="text-sm font-medium text-admin-muted-foreground">{label}</h2><Icon aria-hidden="true" className="size-4 text-admin-muted-foreground" /></div></CardHeader>
+        <CardContent><p className="text-3xl font-semibold tracking-tight tabular-nums">{number(value)}</p><p className="mt-2 text-xs text-admin-muted-foreground">{detail}</p></CardContent>
       </Card>)}
-    </Grid>
-    <Panel title="Leituras ao longo do tempo" actions={<Text type="supporting" color="secondary">Últimos 14 dias</Text>}>
-      <HStack gap={6} wrap="wrap" vAlign="end">
-        <VStack gap={1}><Text type="display-3" className="tabular-nums">{number(activity.totals.views)}</Text><Text color="secondary">leituras no período</Text></VStack>
-        <Text color="secondary">{number(activity.totals.authenticated)} ações de pessoas identificadas</Text>
-      </HStack>
-      <figure className="min-w-0">
-        <svg viewBox="0 0 960 260" className="w-full" role="img" aria-labelledby={`${chartId}-title`}>
-          <title id={`${chartId}-title`}>Leituras diárias nos últimos 14 dias. Consulte os valores em Dados do período.</title>
-          <defs><linearGradient id={`${chartId}-fill`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--color-accent)" stopOpacity="0.2" /><stop offset="100%" stopColor="var(--color-accent)" stopOpacity="0" /></linearGradient></defs>
-          {[0, 1, 2, 3].map(i => <g key={i}><path d={`M48 ${40 + i * 60}H920`} fill="none" stroke="var(--color-border)" strokeDasharray="4 6" /><text x="0" y={45 + i * 60} fill="var(--color-text-secondary)" fontSize="12">{number(Math.round(max * (3 - i) / 3))}</text></g>)}
-          {activity.days.length > 1 && <polygon points={`48,220 ${points} 920,220`} fill={`url(#${chartId}-fill)`} />}
-          <polyline points={points} fill="none" stroke="var(--color-accent)" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
-          {activity.days.map((day, i) => <circle key={day.date} cx={48 + i / Math.max(1, activity.days.length - 1) * 872} cy={220 - day.views / max * 180} r="3" fill="var(--color-accent)"><title>{`${day.date}: ${number(day.views)} leituras`}</title></circle>)}
-        </svg>
-        <figcaption><HStack hAlign="between"><Text type="supporting" color="secondary">Há 14 dias</Text><HStack gap={2}><EyeIcon aria-hidden="true" className="size-4 text-icon-accent" /><Text type="supporting" color="secondary">Leituras por dia</Text></HStack><Text type="supporting" color="secondary">Hoje</Text></HStack></figcaption>
-      </figure>
-      <Disclosure title="Dados do período">
-        <TableRegion label="Leituras e comentários por dia"><Table data={activity.days} idKey="date" columns={[
-          { key: "date", header: "Dia" }, { key: "views", header: "Leituras", align: "end" }, { key: "comments", header: "Comentários", align: "end" },
-        ]} /></TableRegion>
-      </Disclosure>
-    </Panel>
-    <Grid columns={{ minWidth: 400, max: 2 }} gap={6}>
-      <Panel title="Mais lidos" actions={<Button label="Todos os posts" href="/admin/posts" variant="ghost" size="sm" />}>
-        {activity.topPosts.length ? <VStack as="ol" gap={0}>
-          {activity.topPosts.map(post => <HStack as="li" key={post.publicId} gap={4} paddingBlock={4} className="border-b border-border last:border-0">
-            <VStack className="min-w-0 flex-1" gap={1}><Link href={`/posts/${post.slug}`} target="_blank">{post.title}</Link><Text type="supporting" color="secondary">{number(post.comments)} comentários</Text></VStack>
-            <VStack gap={1} className="shrink-0 text-end"><Text type="label" className="tabular-nums">{number(post.views)}</Text><Text type="supporting" color="secondary">leituras</Text></VStack>
-          </HStack>)}
-        </VStack> : <Empty>As primeiras leituras aparecerão aqui.</Empty>}
-      </Panel>
-      <Panel title="Atividade recente" actions={<Button label="Comentários" href="/admin/comments" variant="ghost" size="sm" />}>
-        {activity.recent.length ? <VStack as="ol" gap={0}>{recentActivity(activity.recent.slice(0, 5))}</VStack> : <Empty>Nenhuma atividade recente.</Empty>}
-        {activity.recent.length > 5 && <Disclosure title="Ver mais atividades"><VStack as="ol" gap={0}>{recentActivity(activity.recent.slice(5))}</VStack></Disclosure>}
-      </Panel>
-    </Grid>
-    <Disclosure title="Acervo e backup">
-      <Facts items={[["Posts no acervo", total], ["Ações autenticadas", activity.totals.authenticated]]} />
-      <form method="post" action="/api/admin/database/download"><Button type="submit" label="Baixar backup do banco" /></form>
-    </Disclosure>
-  </VStack>
+    </section>
+
+    <Card>
+      <CardHeader>
+        <div className="flex flex-wrap items-center justify-between gap-3"><CardTitle>Leituras ao longo do tempo</CardTitle><p className="flex items-center gap-2 text-xs text-admin-muted-foreground"><CalendarDaysIcon aria-hidden="true" className="size-4" />Últimos 14 dias</p></div>
+        <CardDescription>{number(activity.totals.views)} leituras e {number(activity.totals.authenticated)} ações de pessoas identificadas no período.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {activity.days.length ? <figure>
+          <svg viewBox="0 0 800 240" className="block w-full" role="img" aria-labelledby={`${chartId}-title ${chartId}-description`}>
+            <title id={`${chartId}-title`}>Leituras diárias nos últimos 14 dias</title>
+            <desc id={`${chartId}-description`}>Total de {number(activity.totals.views)} leituras. Os valores de cada dia estão disponíveis na tabela Dados do período.</desc>
+            <defs><linearGradient id={`${chartId}-fill`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--admin-chart)" stopOpacity="0.18" /><stop offset="100%" stopColor="var(--admin-chart)" stopOpacity="0" /></linearGradient></defs>
+            {[0, 1, 2, 3].map(i => <path key={i} d={`M16 ${28 + i * 64}H784`} fill="none" stroke="var(--admin-border)" strokeDasharray="4 6" />)}
+            {activity.days.length > 1 && <polygon points={`16,220 ${points} 784,220`} fill={`url(#${chartId}-fill)`} />}
+            <polyline points={points} fill="none" stroke="var(--admin-chart)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+            {activity.days.map((day, i) => <circle key={day.date} cx={x(i)} cy={y(day.views)} r="3" fill="var(--admin-chart)"><title>{`${dayLabel(day.date)}: ${number(day.views)} leituras`}</title></circle>)}
+          </svg>
+          <figcaption className="flex flex-wrap items-center justify-between gap-2 text-xs text-admin-muted-foreground">
+            <span>{dayLabel(activity.days[0].date)}</span><span className="flex items-center gap-2"><span aria-hidden="true" className="size-2 rounded-full bg-admin-chart" />Leituras por dia</span><span>{dayLabel(activity.days[activity.days.length - 1].date)}</span>
+          </figcaption>
+          {activity.totals.views === 0 && <p className="mt-4 text-sm text-admin-muted-foreground">As primeiras leituras aparecerão aqui.</p>}
+        </figure> : <p className="py-12 text-center text-sm text-admin-muted-foreground">Ainda não há dados de leitura neste período.</p>}
+        <details className="mt-6 border-t border-admin-border pt-4">
+          <summary className="w-fit cursor-pointer rounded-sm text-sm font-medium">Dados do período</summary>
+          <div role="region" aria-label="Leituras e comentários por dia" tabIndex={0} className="mt-4 max-h-80 overflow-auto overscroll-contain rounded-md border border-admin-border">
+            <Table><caption className="sr-only">Leituras e comentários nos últimos 14 dias</caption><TableHeader><TableRow><TableHead>Dia</TableHead><TableHead className="text-end">Leituras</TableHead><TableHead className="text-end">Comentários</TableHead></TableRow></TableHeader>
+              <TableBody>{activity.days.map(day => <TableRow key={day.date}><TableHead scope="row" className="whitespace-nowrap">{dayLabel(day.date)}</TableHead><TableCell className="text-end tabular-nums">{number(day.views)}</TableCell><TableCell className="text-end tabular-nums">{number(day.comments)}</TableCell></TableRow>)}</TableBody>
+            </Table>
+            {!activity.days.length && <p className="p-4 text-sm text-admin-muted-foreground">Nenhum dado no período.</p>}
+          </div>
+        </details>
+      </CardContent>
+    </Card>
+
+    <div className="grid min-w-0 items-start gap-6 xl:grid-cols-2">
+      <Card>
+        <CardHeader><div className="flex flex-wrap items-center justify-between gap-3"><CardTitle>Mais lidos</CardTitle><NextLink href="/admin/posts" className={buttonVariants({ variant: "ghost", size: "sm" })}>Todos os posts<ArrowTopRightOnSquareIcon aria-hidden="true" /></NextLink></div><CardDescription>Posts com mais leituras nos últimos 14 dias.</CardDescription></CardHeader>
+        <CardContent>
+          {activity.topPosts.length ? <div role="region" aria-label="Posts mais lidos" tabIndex={0} className="max-h-96 overflow-auto overscroll-contain">
+            <Table><caption className="sr-only">Posts mais lidos nos últimos 14 dias</caption><TableHeader><TableRow><TableHead>Publicação</TableHead><TableHead className="text-end">Leituras</TableHead><TableHead className="text-end">Comentários</TableHead></TableRow></TableHeader>
+              <TableBody>{activity.topPosts.map(post => <TableRow key={post.publicId}><TableCell className="min-w-40"><NextLink href={`/posts/${post.slug}`} className={linkStyle} target="_blank" rel="noopener noreferrer">{post.title}<span className="sr-only"> (abre em outra aba)</span></NextLink></TableCell><TableCell className="text-end font-medium tabular-nums">{number(post.views)}</TableCell><TableCell className="text-end tabular-nums text-admin-muted-foreground">{number(post.comments)}</TableCell></TableRow>)}</TableBody>
+            </Table>
+          </div> : <p className="py-10 text-center text-sm text-admin-muted-foreground">As primeiras leituras aparecerão aqui.</p>}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader><div className="flex flex-wrap items-center justify-between gap-3"><CardTitle>Atividade recente</CardTitle><NextLink href="/admin/comments" className={buttonVariants({ variant: "ghost", size: "sm" })}>Comentários</NextLink></div><CardDescription>As últimas leituras e conversas do site.</CardDescription></CardHeader>
+        <CardContent>
+          {activity.recent.length ? <ol className="divide-y divide-admin-border">{recentActivity(activity.recent.slice(0, 5))}</ol> : <p className="py-10 text-center text-sm text-admin-muted-foreground">Nenhuma atividade recente.</p>}
+          {activity.recent.length > 5 && <details className="mt-5 border-t border-admin-border pt-4"><summary className="w-fit cursor-pointer rounded-sm text-sm font-medium">Ver mais atividades</summary><ol className="mt-5 divide-y divide-admin-border">{recentActivity(activity.recent.slice(5))}</ol></details>}
+        </CardContent>
+      </Card>
+    </div>
+
+    <details className="rounded-xl border border-admin-border bg-admin-card p-5">
+      <summary className="w-fit cursor-pointer rounded-sm text-sm font-medium">Acervo e backup</summary>
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-5">
+        <dl className="flex flex-wrap gap-6 text-sm"><div><dt className="text-admin-muted-foreground">Posts no acervo</dt><dd className="mt-1 font-medium tabular-nums">{number(total)}</dd></div><div><dt className="text-admin-muted-foreground">Ações autenticadas no período</dt><dd className="mt-1 font-medium tabular-nums">{number(activity.totals.authenticated)}</dd></div></dl>
+        <form method="post" action="/api/admin/database/download"><Button type="submit" variant="outline"><ArrowDownTrayIcon aria-hidden="true" />Baixar backup do banco</Button></form>
+      </div>
+    </details>
+  </div>
 }

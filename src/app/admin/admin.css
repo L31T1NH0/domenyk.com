@@ -1,0 +1,49 @@
+/* shadcn/ui neutral tokens, scoped so the public site and Astryx keep their themes. */
+@theme inline {
+  --color-admin-background: var(--admin-background);
+  --color-admin-foreground: var(--admin-foreground);
+  --color-admin-card: var(--admin-card);
+  --color-admin-primary: var(--admin-primary);
+  --color-admin-primary-foreground: var(--admin-primary-foreground);
+  --color-admin-muted: var(--admin-muted);
+  --color-admin-muted-foreground: var(--admin-muted-foreground);
+  --color-admin-border: var(--admin-border);
+  --color-admin-ring: var(--admin-ring);
+  --color-admin-chart: var(--admin-chart);
+}
+
+.admin-workspace {
+  --admin-background: #fafafa;
+  --admin-foreground: #171717;
+  --admin-card: #fff;
+  --admin-primary: #171717;
+  --admin-primary-foreground: #fafafa;
+  --admin-muted: #f0f0f0;
+  --admin-muted-foreground: #646464;
+  --admin-border: #e5e5e5;
+  --admin-ring: #737373;
+  --admin-chart: #e00070;
+  font-family: var(--font-text), system-ui, sans-serif;
+  color-scheme: light;
+}
+
+.admin-workspace[data-admin-theme="dark"] {
+  --admin-background: #171717;
+  --admin-foreground: #fafafa;
+  --admin-card: #1c1c1c;
+  --admin-primary: #fafafa;
+  --admin-primary-foreground: #171717;
+  --admin-muted: #292929;
+  --admin-muted-foreground: #a3a3a3;
+  --admin-border: #353535;
+  --admin-ring: #a3a3a3;
+  --admin-chart: #ff64ae;
+  color-scheme: dark;
+}
+
+.admin-workspace :where(h1,h2,h3,button,nav,header,footer,th,summary) { font-family: inherit; }
+.admin-workspace :where(a,button,summary,[tabindex]):focus-visible { outline: 2px solid var(--admin-ring); outline-offset: 3px; }
+.admin-workspace :where(nav,[role="region"],dialog) { scrollbar-width: thin; }
+.admin-workspace :where(nav,[role="region"],dialog)::-webkit-scrollbar { display: block; inline-size: .5rem; block-size: .5rem; }
+.admin-workspace dialog::backdrop { background: rgb(0 0 0 / 55%); }
+body:has(.admin-workspace dialog[open]) { overflow: hidden; }

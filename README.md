@@ -173,3 +173,21 @@ em [extensions/netflix/README.md](extensions/netflix/README.md).
 A API Go completa capas ausentes com o TVmaze, sem chave adicional, e mantém
 o resultado em cache por 24 horas. Títulos ambíguos não recebem capa automática;
 o crédito e a licença da fonte estão na página “Sobre”.
+
+## Dashboard de administração
+
+A visão geral (`/admin`) usa componentes incorporados manualmente do
+[shadcn/ui, estilo New York](https://ui.shadcn.com/blocks/dashboard), adaptados em
+`src/components/ui` (licença MIT incluída). Os componentes de origem são
+[Button](https://ui.shadcn.com/r/styles/new-york/button.json),
+[Card](https://ui.shadcn.com/r/styles/new-york/card.json) e
+[Table](https://ui.shadcn.com/r/styles/new-york/table.json).
+As variantes de botão usam classes diretas, sem Slot ou `asChild`; links usam
+`next/link` com `buttonVariants`. A navegação móvel usa `<dialog>` nativo.
+
+Os tokens e utilitários têm o namespace `admin-`, em
+`src/app/admin/admin.css`, para conviver com o tema público e com Astryx.
+Ao incorporar outros componentes shadcn, adapte seus tokens para esse namespace.
+As telas de gestão internas continuam usando Astryx e seus providers; a
+navegação compartilhada e a visão geral usam a nova interface. Os dados vêm do
+mesmo `loadAdminDashboard`, e a autorização continua no layout do admin.
