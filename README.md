@@ -174,6 +174,28 @@ A API Go completa capas ausentes com o TVmaze, sem chave adicional, e mantém
 o resultado em cache por 24 horas. Títulos ambíguos não recebem capa automática;
 o crédito e a licença da fonte estão na página “Sobre”.
 
+## The Bridge 1v1
+
+O confronto em `/links` aparece somente quando o Dolly identifica uma partida
+The Bridge 1v1 no Mush com dois jogadores e times sem ambiguidade. O bloco usa
+`public/images/links/the-bridge.png`, nomes e scores vermelhos/azuis e a fonte
+Monocraft local (licença em `public/fonts/monocraft/LICENSE.txt`). O título e o
+tempo ficam centralizados acima do confronto, usando o componente aprovado
+`BridgeMatch`. A prévia pode ser regenerada com `node scripts/preview-bridge.mjs`;
+os dados de exemplo ficam somente no artefato HTML, sem fallback de demonstração
+na página pública.
+
+O site consulta `/api/links/bridge` a cada três segundos e avança o relógio a
+cada segundo. O proxy usa a origem Go já configurada para links. Ao terminar,
+sair ou perder o sinal por 20 segundos, o bloco desaparece; erros também o
+ocultam. O tempo exibido vem dos 15 minutos menos o tempo restante da scoreboard,
+com avanço local entre atualizações. A UI nunca recebe o token do Dolly.
+
+Publique primeiro a API com `/v1/bridge` e `/v1/bridge/events` e configure nela
+`BRIDGE_DEVICE_TOKEN_SHA256`, conforme `../domenyk-api/README.md`. Depois publique
+o site e atualize o Dolly. A captura da versão anterior não tinha os nomes do TAB;
+a associação real de nomes/times ainda precisa ser conferida numa nova partida.
+
 ## Dashboard de administração
 
 A visão geral (`/admin`) usa componentes incorporados manualmente do

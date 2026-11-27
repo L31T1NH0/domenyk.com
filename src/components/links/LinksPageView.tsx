@@ -7,6 +7,7 @@ import type { SiteLink } from "@/lib/links"
 import { LinkIcon } from "./LinkIcon"
 import { MusicCard } from "./MusicCard"
 import { WatchingCard } from "./WatchingCard"
+import { BridgeCard } from "./BridgeCard"
 import styles from "./LinksPageView.module.css"
 
 function ContentLink({ kind, id, url, track, children, className }: { kind: LinkContent["kind"]; id: string; url: string; track: boolean; children: ReactNode; className?: string }) {
@@ -122,6 +123,7 @@ export function LinksPageView({ data, links, preview = false }: { data: LinkPage
     <FeaturedCarousel key={data.featured.map(item => `${item.kind}:${item.id}`).join(",")} heading={settings?.featuredHeading || ""} items={data.featured} track={!preview} />
     {!preview && <MusicCard />}
     {!preview && <WatchingCard />}
+    {!preview && <BridgeCard />}
     <div className={styles.sections}>{remaining.map(renderSection)}</div>
     {data.readings.length > 0 && <section className={styles.readings} aria-label={settings?.readingsHeading || "Leituras"}>
       {settings?.readingsHeading && <h2 className="mb-2 text-xs font-semibold uppercase tracking-[.1em]">{settings?.readingsHeading}</h2>}
