@@ -185,6 +185,10 @@ tempo ficam centralizados acima do confronto, usando o componente aprovado
 os dados de exemplo ficam somente no artefato HTML, sem fallback de demonstração
 na página pública.
 
+Se um adversário sair, somente seu nome fica cinza; o confronto, os scores e o
+tempo continuam visíveis enquanto o Dolly permanecer na mesma partida. Ao voltar,
+o nome recupera a cor do time. A saída também é informada no rótulo acessível.
+
 O site consulta `/api/links/bridge` a cada três segundos e avança o relógio a
 cada segundo. O proxy usa a origem Go já configurada para links. Ao terminar,
 sair ou perder o sinal por 20 segundos, o bloco desaparece; erros também o
@@ -193,8 +197,8 @@ com avanço local entre atualizações. A UI nunca recebe o token do Dolly.
 
 Publique primeiro a API com `/v1/bridge` e `/v1/bridge/events` e configure nela
 `BRIDGE_DEVICE_TOKEN_SHA256`, conforme `../domenyk-api/README.md`. Depois publique
-o site e atualize o Dolly. A captura da versão anterior não tinha os nomes do TAB;
-a associação real de nomes/times ainda precisa ser conferida numa nova partida.
+o site e atualize o Dolly. A captura real da versão 0.1.21 confirmou os nomes e
+times; a versão 0.1.22 também preserva adversários que saíram do TAB.
 
 ## Dashboard de administração
 

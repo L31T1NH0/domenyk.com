@@ -1,12 +1,12 @@
-export type BridgePlayer = { name: string; score: number }
+export type BridgePlayer = { name: string; score: number; disconnected?: boolean }
 export type BridgeGame = { red: BridgePlayer; blue: BridgePlayer; elapsedSeconds: number }
 export type BridgeStatus = { current: { match: BridgeGame; updatedAt: string; expiresAt: string } | null }
 
 function player(value: unknown): BridgePlayer {
   if (!value || typeof value !== "object") throw new Error("Jogador inválido")
   const input = value as Record<string, unknown>
-  if (typeof input.name !== "string" || !/^[A-Za-z0-9_]{1,16}$/.test(input.name) || !Number.isInteger(input.score) || (input.score as number) < 0 || (input.score as number) > 5) throw new Error("Jogador inválido")
-  return { name: input.name, score: input.score as number }
+  if (typeof input.name !== "string" || !/^[A-Za-z0-9_]{1,16}$/.test(input.name) || !Number.isInteger(input.score) || (input.score as number) < 0 || (input.score as number) > 5 || (input.disconnected !== undefined && typeof input.disconnected !== "boolean")) throw new Error("Jogador inválido")
+  return { name: input.name, score: input.score as number, ...(input.disconnected ? { disconnected: true } : {}) }
 }
 
 export function parseBridgeStatus(value: unknown): BridgeStatus {

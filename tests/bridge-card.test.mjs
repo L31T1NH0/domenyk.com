@@ -43,6 +43,11 @@ test("bridge card polls without credentials, ticks elapsed time and hides on idl
   now += 5000
   card = await flush(clock)
   assert.equal(card.props.elapsedSeconds, 144)
+  match.blue.disconnected = true
+  card = await flush(refresh)
+  assert.equal(card.props.blue.disconnected, true)
+  assert.equal(card.props.blue.name, "Other")
+  assert.equal(card.props.blue.score, 2)
   now += 15_000
   assert.equal(await flush(clock), null)
   payload = { current: { match, updatedAt: new Date(now).toISOString(), expiresAt: new Date(now + 20_000).toISOString() } }
