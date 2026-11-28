@@ -176,7 +176,13 @@ o crédito e a licença da fonte estão na página “Sobre”.
 
 ## The Bridge 1v1
 
-O confronto em `/links` aparece somente quando o Dolly identifica uma partida
+O bloco em `/links` mostra “Jogando Minecraft” com o ícone de bloco de grama
+quando o Dolly está aberto no menu, lobby ou outros modos. Na fila do The Bridge
+1v1, mostra o ícone próprio e “Aguardando a partida começar”. O ícone do Minecraft
+vem do asset local `icons/icon_128x128.png` do jogo, copiado para
+`public/images/links/minecraft.png`.
+
+O confronto detalhado aparece somente quando o Dolly identifica uma partida
 The Bridge 1v1 no Mush com dois jogadores e times sem ambiguidade. O bloco usa
 `public/images/links/the-bridge.png`, nomes e scores vermelhos/azuis e a fonte
 Monocraft local (licença em `public/fonts/monocraft/LICENSE.txt`). O título e o
@@ -190,8 +196,9 @@ tempo continuam visíveis enquanto o Dolly permanecer na mesma partida. Ao volta
 o nome recupera a cor do time. A saída também é informada no rótulo acessível.
 
 O site consulta `/api/links/bridge` a cada três segundos e avança o relógio a
-cada segundo. O proxy usa a origem Go já configurada para links. Ao terminar,
-sair ou perder o sinal por 20 segundos, o bloco desaparece; erros também o
+cada segundo. O proxy usa a origem Go já configurada para links. Ao terminar ou
+sair da partida, o bloco volta à presença genérica ou à espera da próxima partida.
+Ao fechar o jogo ou perder o sinal por 20 segundos, o bloco desaparece; erros também o
 ocultam. O tempo exibido vem dos 15 minutos menos o tempo restante da scoreboard,
 com avanço local entre atualizações. A UI nunca recebe o token do Dolly.
 

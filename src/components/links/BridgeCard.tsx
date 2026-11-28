@@ -1,8 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { currentBridge, parseBridgeStatus, type BridgeStatus } from "@/lib/bridge"
-import { BridgeMatch } from "./BridgeMatch"
+import { currentBridge, currentBridgePresence, parseBridgeStatus, type BridgeStatus } from "@/lib/bridge"
+import { BridgeMatch, MinecraftPresence } from "./BridgeMatch"
 
 export function BridgeCard() {
   const [status, setStatus] = useState<BridgeStatus>({ current: null })
@@ -32,5 +32,7 @@ export function BridgeCard() {
   }, [])
 
   const match = currentBridge(status, now)
-  return match ? <BridgeMatch {...match} /> : null
+  if (match) return <BridgeMatch {...match} />
+  const presence = currentBridgePresence(status, now)
+  return presence ? <MinecraftPresence waiting={presence.activity === "waiting"} /> : null
 }

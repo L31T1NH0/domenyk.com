@@ -38,3 +38,15 @@ export function BridgeMatch({ red, blue, elapsedSeconds }: { red: BridgePlayer; 
     </Stack>
   </Theme>
 }
+
+export function MinecraftPresence({ waiting }: { waiting: boolean }) {
+  return <Theme theme={themes[defaultThemeSlug]} mode="dark">
+    <Stack as="article" direction="horizontal" gap={2} padding={2} vAlign="center" className="mt-6 min-w-0 rounded-(--radius-container) border border-neutral-800 bg-neutral-950">
+      <img src={waiting ? "/images/links/the-bridge.png" : "/images/links/minecraft.png"} width={48} height={48} alt="" className="size-12 shrink-0 object-contain" />
+      <Stack gap={1.5} className="min-w-0 flex-1">
+        {waiting && <Text as="p" type="inherit" size="xsm" color="secondary" justify="center">The Bridge 1v1</Text>}
+        <Text as="p" type="inherit" size="base" color="inherit" justify="center" className={`${monocraft.className} text-neutral-100`}>{waiting ? "Aguardando a partida começar" : "Jogando Minecraft"}</Text>
+      </Stack>
+    </Stack>
+  </Theme>
+}

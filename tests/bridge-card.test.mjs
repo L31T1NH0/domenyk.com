@@ -24,7 +24,7 @@ test("bridge card polls without credentials, ticks elapsed time and hides on idl
       if (name === "react") return { useState: initial => { const index = cursor++; if (!(index in state)) state[index] = typeof initial === "function" ? initial() : initial; return [state[index], value => { state[index] = value }] }, useEffect: callback => { effect ??= callback } }
       if (name === "react/jsx-runtime") return { jsx, jsxs: jsx }
       if (name === "@/lib/bridge") return bridge
-      if (name === "./BridgeMatch") return { BridgeMatch: "bridge-match" }
+      if (name === "./BridgeMatch") return { BridgeMatch: "bridge-match", MinecraftPresence: "minecraft-presence" }
       throw new Error(`Unexpected dependency: ${name}`)
     },
   })
@@ -48,6 +48,14 @@ test("bridge card polls without credentials, ticks elapsed time and hides on idl
   assert.equal(card.props.blue.disconnected, true)
   assert.equal(card.props.blue.name, "Other")
   assert.equal(card.props.blue.score, 2)
+  payload = { current: { ...payload.current, activity: "waiting", match: null } }
+  card = await flush(refresh)
+  assert.equal(card.type, "minecraft-presence")
+  assert.equal(card.props.waiting, true)
+  payload = { current: { ...payload.current, activity: "minecraft" } }
+  card = await flush(refresh)
+  assert.equal(card.type, "minecraft-presence")
+  assert.equal(card.props.waiting, false)
   now += 15_000
   assert.equal(await flush(clock), null)
   payload = { current: { match, updatedAt: new Date(now).toISOString(), expiresAt: new Date(now + 20_000).toISOString() } }

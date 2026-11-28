@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import { currentBridge, parseBridgeStatus } from "../src/lib/bridge.ts"
+import { currentBridge, currentBridgePresence, parseBridgeStatus } from "../src/lib/bridge.ts"
 
 const now = Date.now()
 const match = { red: { name: "Domenyk", score: 3 }, blue: { name: "Adversario", score: 2 }, elapsedSeconds: 139 }
@@ -28,4 +28,16 @@ test("bridge keeps both names and scores when a player disconnects and supports 
   assert.deepEqual(currentBridge(status, now), departed)
   const rejoined = parseBridgeStatus({ current: { ...current, match: { ...match, blue: { ...match.blue, disconnected: false } } } })
   assert.deepEqual(currentBridge(rejoined, now), match)
+})
+
+test("Minecraft menu and Bridge queue are visible without match data and expire normally", () => {
+  for (const activity of ["minecraft", "waiting"]) {
+    const data = parseBridgeStatus({ current: { ...current, activity, match: null } })
+    assert.equal(currentBridgePresence(data, now).activity, activity)
+    assert.equal(currentBridge(data, now), null)
+    assert.equal(currentBridgePresence(data, now + 20_000), null)
+    assert.throws(() => parseBridgeStatus({ current: { ...current, activity } }))
+  }
+  assert.throws(() => parseBridgeStatus({ current: { ...current, activity: "playing", match: null } }))
+  assert.throws(() => parseBridgeStatus({ current: { ...current, activity: "offline", match: null } }))
 })
